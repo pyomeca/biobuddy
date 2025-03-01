@@ -32,25 +32,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Setup environment
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          miniforge-version: latest
-          activate-environment: biobuddy
-          environment-file: environment.yml
-  
-      - name: Print conda info
-        run: | 
-          conda info
-          conda list
+      - name: Set up Python
+        uses: actions/setup-python@v5
 
-      - name: Install extra common dependencies
-        run: | 
-          conda install pytest -cconda-forge
-          conda list
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov codecov
 
       - name: Run tests with code coverage
-        run: pytest -v --color=yes --cov-report term-missing --cov=biobuddy tests
+        run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests
         if: matrix.os == 'ubuntu-latest'
         
       - name: Send Codecov report
