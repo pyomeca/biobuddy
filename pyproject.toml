@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name =  "biobuddy"
+description = "A generic interface to generate a virtual buddy"
+dynamic = ["version"]
+authors = [
+    {name = "Pariterre", email = "pariterre@hotmail.com"},
+]
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python"
+]
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Documentation = "https://github.com/pyomeca/biobuddy/tree/main#readme"
+Source = "https://github.com/pyomeca/biobuddy"
+Tracker = "https://github.com/pyomeca/biobuddy/issues"
+
+[tool.setuptools]
+packages = ["biobuddy"]
+
+[tool.setuptools.dynamic]
+version = {attr = "biobuddy.__version__"}
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = "tests"

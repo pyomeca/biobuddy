@@ -1,0 +1,73 @@
+name: Run the tests
+
+on: [pull_request]
+
+env:
+  EXAMPLES_FOLDER: examples
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/biobuddy
+          - os: macos-latest
+            label: osx-arm64
+            prefix: /Users/runner/miniconda3/envs/biobuddy
+          - os: macos-13
+            label: osx-intel
+            prefix: /Users/runner/miniconda3/envs/biobuddy
+          - os: windows-latest
+            label: win-64
+            prefix: C:\Miniconda3\envs\biobuddy
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+          activate-environment: biobuddy
+          environment-file: environment.yml
+  
+      - name: Print conda info
+        run: | 
+          conda info
+          conda list
+
+      - name: Install extra common dependencies
+        run: | 
+          conda install pytest -cconda-forge
+          conda list
+
+      - name: Run tests with code coverage
+        run: pytest -v --color=yes --cov-report term-missing --cov=biobuddy tests
+        if: matrix.os == 'ubuntu-latest'
+        
+      - name: Send Codecov report
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
+        if: matrix.os == 'ubuntu-latest'
+
+          
+      - name: Test installed version of python
+        run: | 
+          BASE_FOLDER=`pwd`
+          pip install .
+          cd
+          python -c "import biobuddy"
+          cd $BASE_FOLDER
+
