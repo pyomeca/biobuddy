@@ -83,8 +83,11 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
                                                         )
 
 
-    # Put the model together, print it and print it to a bioMod file
-    bio_model.to_biomod(kinematic_model_file_path, {})
+    # Put the model together
+    bio_model.personalize_model({})
+
+    # Pprint it to a bioMod file
+    bio_model.to_biomod(kinematic_model_file_path)
 
     model = biorbd.Model(kinematic_model_file_path)
     assert model.nbQ() == 4

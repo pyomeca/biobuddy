@@ -1,3 +1,9 @@
+from lxml import etree
+from xml.etree import ElementTree
+import numpy as np
+from time import strftime
+
+from model_readers.osim_reader import OsimReader
 from .protocols import Data
 from .segment_real import SegmentReal
 from .muscle_group import MuscleGroup
@@ -8,11 +14,58 @@ from .biomechanical_model_real import BiomechanicalModelReal
 
 class BiomechanicalModel:
     def __init__(self):
+        self.header = None
+        self.warnings = None
+        self.gravity = np.array([0.0, 0.0, 9.81])  # default value
         self.segments = {}
         self.muscle_groups = {}
         self.muscles = {}
         self.via_points = {}
         self.model = None
+
+    def set_gravity(self, gravity_vector: np.ndarray[float | int, 3]):
+        if not isinstance(gravity_vector, np.ndarray) or gravity_vector.shape != (3,):
+            raise ValueError("The gravity vector must be a np.ndarray of shape (3,) like np.array([0, 0, 9.81])")
+        if not all(isinstance(x, (int, float)) for x in gravity_vector):
+            raise ValueError("All components of the gravity vector must be int of float")
+        self.gravity = gravity_vector
+
+    def set_header(self, path: str, publications: str = None, credit: str = None, force_units: str = None, length_units: str = None):
+        out_string = ""
+        out_string += f"\n// File extracted from {path} on the {strftime('%Y-%m-%d %H:%M')}\n"
+        if publications:
+            out_string += f"\n// Original file publication : {publications}\n"
+        if credit:
+            out_string += f"\n// Original file credit : {credit}\n"
+        if force_units:
+            out_string += f"\n// Force units : {force_units}\n"
+        if length_units:
+            out_string += f"\n// Length units : {length_units}\n"
+        self.header = out_string
+
+    def from_osim(self, osim_path: str) -> BiomechanicalModelReal:
+        """
+        Read an osim file and create both a generic biomechanical model and a personalized model.
+
+        Parameters
+        ----------
+        osim_path
+            The path to the osim file to read from
+        """
+
+        osim_model = OsimReader(osim_path=osim_path, output_model=self)
+        osim_model.read()
+
+        self.set_gravity(osim_model.gravity)
+        self.set_header(path=osim_path,
+                        publications=osim_model.publications,
+                        credit=osim_model.credit,
+                        force_units=osim_model.force_units,
+                        length_units=osim_model.length_units)
+
+
+
+
 
     def to_real(self, data: Data) -> BiomechanicalModelReal:
         """
@@ -25,6 +78,9 @@ class BiomechanicalModel:
             The data to collapse the model from
         """
         model = BiomechanicalModelReal()
+
+        model.gravity = self.gravity
+
         for name in self.segments:
             s = self.segments[name]
 
@@ -129,3 +185,16 @@ class BiomechanicalModel:
             raise RuntimeError("The model was not created yet. You can create the model using BiomechanicalModel.personalize_model,  BiomechanicalModel.from_osim, or BiomechanicalModel.from_biomod.")
 
         self.model.to_biomod(save_path)
+
+    def to_osim(self, save_path: str, print_warnings: bool = True):
+        """
+        Write the .osim file
+
+        Parameters
+        ----------
+        save_path
+            The path to save the osim to
+        print_warnings
+            If the function should print warnings or not in the osim output file if problems are encountered
+        """
+        raise NotImplementedError("meh")

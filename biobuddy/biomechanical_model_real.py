@@ -5,6 +5,7 @@ class BiomechanicalModelReal:
         from .muscle_real import MuscleReal
         from .via_point_real import ViaPointReal
 
+        self.gravity = None
         self.segments: dict[str:SegmentReal, ...] = {}
         # From Pythom 3.7 the insertion order in a dict is preserved. This is important because when writing a new
         # .bioMod file, the order of the segment matters
@@ -24,6 +25,8 @@ class BiomechanicalModelReal:
 
         # Collect the text to write
         out_string = "version 4\n\n"
+
+
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
