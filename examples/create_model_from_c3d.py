@@ -4,38 +4,22 @@ Example taken from biorbd.model_creation
 """
 
 import os
-from pathlib import Path
 
 import numpy as np
 import biorbd
-from biorbd.model_creation import (
+from biobuddy import (
     Axis,
     BiomechanicalModel,
-    BiomechanicalModelReal,
     C3dData,
     Marker,
-    MarkerReal,
     Mesh,
-    MeshReal,
-    MeshFile,
     Segment,
-    SegmentReal,
-    SegmentCoordinateSystemReal,
     SegmentCoordinateSystem,
-    Contact,
-    MuscleGroup,
-    Muscle,
-    MuscleType,
-    MuscleStateType,
     Translations,
     Rotations,
-    RangeOfMotion,
-    Ranges,
-    ViaPoint,
+    DeLevaTable,
 )
 import ezc3d
-
-from de_leva import DeLevaTable
 
 def model_creation_from_measured_data(remove_temporary: bool = True):
     """
@@ -62,7 +46,6 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
 
     kinematic_model_file_path = "temporary.bioMod"
     c3d_file_path = "temporary.c3d"
-    model_creation_from_static_trial(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
     model = biorbd.Model(kinematic_model_file_path)

@@ -1,5 +1,5 @@
 # Version
-from version import __version__
+from .version import __version__
 
 # The actual model to inherit from
 from .biomechanical_model import BiomechanicalModel
@@ -36,3 +36,6 @@ from .inertia_parameters_real import InertiaParametersReal
 
 # The accepted data formating
 from .c3d_data import C3dData
+
+# Segment predefined characteristics
+from .characteristics.de_leva import DeLevaTable

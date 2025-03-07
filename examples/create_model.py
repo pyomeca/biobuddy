@@ -8,20 +8,10 @@ from pathlib import Path
 
 import numpy as np
 import biorbd
-from biorbd.model_creation import (
-    Axis,
+from biobuddy import (
     BiomechanicalModel,
-    BiomechanicalModelReal,
-    C3dData,
-    Marker,
-    MarkerReal,
-    Mesh,
-    MeshReal,
     MeshFile,
     Segment,
-    SegmentReal,
-    SegmentCoordinateSystemReal,
-    SegmentCoordinateSystem,
     Contact,
     MuscleGroup,
     Muscle,
@@ -33,9 +23,6 @@ from biorbd.model_creation import (
     Ranges,
     ViaPoint,
 )
-import ezc3d
-
-from de_leva import DeLevaTable
 
 
 def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):

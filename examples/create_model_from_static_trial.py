@@ -4,48 +4,18 @@ Example taken from biorbd.model_creation
 """
 
 import os
-from pathlib import Path
 
 import numpy as np
 import biorbd
-from biorbd.model_creation import (
-    Axis,
-    BiomechanicalModel,
+from biobuddy import (
     BiomechanicalModelReal,
-    C3dData,
-    Marker,
     MarkerReal,
-    Mesh,
     MeshReal,
-    MeshFile,
-    Segment,
     SegmentReal,
     SegmentCoordinateSystemReal,
-    SegmentCoordinateSystem,
-    Contact,
-    MuscleGroup,
-    Muscle,
-    MuscleType,
-    MuscleStateType,
     Translations,
     Rotations,
-    RangeOfMotion,
-    Ranges,
-    ViaPoint,
 )
-import ezc3d
-
-from de_leva import DeLevaTable
-
-
-#
-# This examples shows how to
-#     1. Create a model from scratch using specified dimensions (model_creation_from_static)
-#     2. Create a complex model from scratch (complex_model_from_scratch)
-#     3. Create a model from scratch using a template with marker names (model_creation_from_data)
-#
-# Please note that this example will work only with the Eigen backend
-#
 
 
 def model_creation_from_static_trial(remove_temporary: bool = True):
