@@ -177,7 +177,8 @@ class MuscleReal:
             maximal_excitation,
         )
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"muscle\t{self.name}\n"
         out_string += f"\ttype\t{self.muscle_type.value}\n"

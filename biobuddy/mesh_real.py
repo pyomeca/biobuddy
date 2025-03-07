@@ -65,7 +65,8 @@ class MeshReal:
 
         return MeshReal(tuple(all_p))
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
         for position in self.positions:

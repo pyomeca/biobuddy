@@ -13,7 +13,8 @@ class RangeOfMotion:
         self.min_bound = min_bound
         self.max_bound = max_bound
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         if self.range_type == Ranges.Q:
             out_string = f"\trangesQ \n"

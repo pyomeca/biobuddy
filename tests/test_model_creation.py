@@ -152,7 +152,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=(0, 1, 1)))
 
     # Put the model together, print it and print it to a bioMod file
-    bio_model.write(kinematic_model_file_path)
+    bio_model.to_biomod(kinematic_model_file_path)
 
     model = Model(kinematic_model_file_path)
     assert model.nbQ() == 7
@@ -317,8 +317,11 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
-    # Put the model together, print it and print it to a bioMod file
-    model.write(kinematic_model_file_path, C3dData(c3d_file_path))
+    # Put the model together
+    model.personalize_model(C3dData(c3d_file_path))
+
+    # print it to a bioMod file
+    model.to_biomod(kinematic_model_file_path)
 
     model = Model(kinematic_model_file_path)
     assert model.nbQ() == 7
@@ -390,8 +393,11 @@ def test_complex_model(remove_temporary: bool = True):
                                                            muscle_group="PENDULUM_MUSCLE_GROUP",
                                                            )
 
-    # Put the model together, print it and print it to a bioMod file
-    bio_model.write(kinematic_model_file_path, {})
+    # Put the model together
+    bio_model.personalize_model({})
+
+    # Print it to a bioMod file
+    bio_model.to_biomod(kinematic_model_file_path)
 
     model = Model(kinematic_model_file_path)
     assert model.nbQ() == 4

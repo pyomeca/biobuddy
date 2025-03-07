@@ -12,21 +12,31 @@ class BiomechanicalModelReal:
         self.muscles: dict[str:MuscleReal, ...] = {}
         self.via_points: dict[str:ViaPointReal, ...] = {}
 
-    def __str__(self):
+    def to_biomod(self, file_path: str):
+        """
+        Write the bioMod file.
+
+        Parameters
+        ----------
+        file_path
+            The path to save the bioMod
+        """
+
+        # Collect the text to write
         out_string = "version 4\n\n"
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.segments:
-            out_string += str(self.segments[name])
+            out_string += self.segments[name].to_biomod
             out_string += "\n\n\n"  # Give some space between segments
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// MUSCLE GROUPS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.muscle_groups:
-            out_string += str(self.muscle_groups[name])
+            out_string += self.muscle_groups[name].to_biomod
             out_string += "\n"
         out_string += "\n\n\n"  # Give some space after muscle groups
 
@@ -34,19 +44,17 @@ class BiomechanicalModelReal:
         out_string += "// MUSCLES\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.muscles:
-            out_string += str(self.muscles[name])
+            out_string += self.muscles[name].to_biomod
             out_string += "\n\n\n"  # Give some space between muscles
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// MUSCLES VIA POINTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.via_points:
-            out_string += str(self.via_points[name])
+            out_string += self.via_points[name].to_biomod
             out_string += "\n\n\n"  # Give some space between via points
 
-        return out_string
 
-    def write(self, file_path: str):
-        # Method to write the current KinematicChain to a file
+        # Actually write it to the .bioMod file
         with open(file_path, "w") as file:
-            file.write(str(self))
+            file.write(out_string)

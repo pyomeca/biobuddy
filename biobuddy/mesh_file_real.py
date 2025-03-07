@@ -124,7 +124,8 @@ class MeshFileReal:
             mesh_translation=mesh_translation,
         )
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
         out_string += f"\tmeshfile\t{self.mesh_file_name}\n"

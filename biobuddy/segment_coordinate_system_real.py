@@ -165,7 +165,8 @@ class SegmentCoordinateSystemReal:
         """
         return self.mean_homogenous_matrix(self.scs)
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         rt = self.scs
         if self.is_in_global:
             rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]

@@ -77,7 +77,8 @@ class InertiaParametersReal:
 
         return InertiaParametersReal(mass, com, inertia)
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         com = np.nanmean(self.center_of_mass, axis=1)[:3]
 

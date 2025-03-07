@@ -7,15 +7,12 @@ from .biomechanical_model_real import BiomechanicalModelReal
 
 
 class BiomechanicalModel:
-    def __init__(self, bio_sym_path: str = None):
+    def __init__(self):
         self.segments = {}
         self.muscle_groups = {}
         self.muscles = {}
         self.via_points = {}
-
-        if bio_sym_path is None:
-            return
-        raise NotImplementedError("bioMod files are not readable yet")
+        self.model = None
 
     def to_real(self, data: Data) -> BiomechanicalModelReal:
         """
@@ -106,17 +103,29 @@ class BiomechanicalModel:
 
         return model
 
-    def write(self, save_path: str, data: Data):
+
+    def personalize_model(self, data: Data):
         """
         Collapse the model to an actual personalized biomechanical model based on the generic model and the data
         file (usually a static trial)
 
         Parameters
         ----------
-        save_path
-            The path to save the bioMod
         data
             The data to collapse the model from
         """
-        model = self.to_real(data)
-        model.write(save_path)
+        self.model = self.to_real(data)
+
+    def to_biomod(self, save_path: str):
+        """
+        Write the .bioMod file
+
+        Parameters
+        ----------
+        save_path
+            The path to save the bioMod
+        """
+        if self.model is None:
+            raise RuntimeError("The model was not created yet. You can create the model using BiomechanicalModel.personalize_model,  BiomechanicalModel.from_osim, or BiomechanicalModel.from_biomod.")
+
+        self.model.to_biomod(save_path)

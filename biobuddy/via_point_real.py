@@ -78,7 +78,8 @@ class ViaPointReal:
 
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"

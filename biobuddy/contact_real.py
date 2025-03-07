@@ -70,7 +70,8 @@ class ContactReal:
 
         return ContactReal(name, parent_name, p, axis)
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"

@@ -133,7 +133,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=(0, 1, 1)))
 
     # Put the model together, print it and print it to a bioMod file
-    bio_model.write(kinematic_model_file_path)
+    bio_model.to_biomod(kinematic_model_file_path)
 
     model = biorbd.Model(kinematic_model_file_path)
     assert model.nbQ() == 7

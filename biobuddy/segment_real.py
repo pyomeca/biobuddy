@@ -44,39 +44,40 @@ class SegmentReal:
             raise RuntimeError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
         self.contacts.append(contact)
 
-    def __str__(self):
+    @property
+    def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"segment\t{self.name}\n"
         if self.parent_name:
             out_string += f"\tparent\t{self.parent_name}\n"
         if self.segment_coordinate_system:
-            out_string += f"\tRT\t{self.segment_coordinate_system}\n"
+            out_string += f"\tRT\t{self.segment_coordinate_system.to_biomod}\n"
         if self.translations != Translations.NONE:
             out_string += f"\ttranslations\t{self.translations.value}\n"
         if self.rotations != Rotations.NONE:
             out_string += f"\trotations\t{self.rotations.value}\n"
         if self.q_ranges is not None:
-            out_string += str(self.q_ranges)
+            out_string += self.q_ranges.to_biomod
         if self.qdot_ranges is not None:
-            out_string += str(self.qdot_ranges)
+            out_string += self.qdot_ranges.to_biomod
         if self.inertia_parameters:
-            out_string += str(self.inertia_parameters)
+            out_string += self.inertia_parameters.to_biomod
         if self.mesh:
-            out_string += str(self.mesh)
+            out_string += self.mesh.to_biomod
         if self.mesh_file:
-            out_string += str(self.mesh_file)
+            out_string += self.mesh_file.to_biomod
         out_string += "endsegment\n"
 
         # Also print the markers attached to the segment
         if self.markers:
             for marker in self.markers:
                 marker.parent_name = marker.parent_name if marker.parent_name is not None else self.name
-                out_string += str(marker)
+                out_string += marker.to_biomod
 
         # Also print the contacts attached to the segment
         if self.contacts:
             for contact in self.contacts:
                 contact.parent_name = contact.parent_name
-                out_string += str(contact)
+                out_string += contact.to_biomod
 
         return out_string

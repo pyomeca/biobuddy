@@ -178,7 +178,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together, print it and print it to a bioMod file
-    model.write(kinematic_model_file_path, C3dData(c3d_file_path))
+    model.to_biomod(kinematic_model_file_path, C3dData(c3d_file_path))
 
     model = biorbd.Model(kinematic_model_file_path)
     assert model.nbQ() == 7
