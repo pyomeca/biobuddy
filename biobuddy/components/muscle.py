@@ -1,7 +1,7 @@
 from typing import Callable
 from enum import Enum
 
-from .protocols import Data
+from biobuddy.protocols import Data
 from .muscle_real import MuscleReal, MuscleType, MuscleStateType
 
 

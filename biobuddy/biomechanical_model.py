@@ -1,14 +1,11 @@
-from lxml import etree
-from xml.etree import ElementTree
 import numpy as np
 from time import strftime
 
-from model_readers.osim_reader import OsimReader
+from biobuddy.model_readers.osim_reader import OsimReader
 from .protocols import Data
-from .segment_real import SegmentReal
-from .muscle_group import MuscleGroup
-from .muscle_real import MuscleReal
-from .segment_coordinate_system_real import SegmentCoordinateSystemReal
+from biobuddy.components.segment_real import SegmentReal
+from biobuddy.components.muscle_group import MuscleGroup
+from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from .biomechanical_model_real import BiomechanicalModelReal
 
 

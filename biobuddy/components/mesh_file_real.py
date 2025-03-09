@@ -2,8 +2,8 @@ from typing import Callable
 
 import numpy as np
 
-from .biomechanical_model_real import BiomechanicalModelReal
-from .protocols import Data
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.protocols import Data
 
 
 class MeshFileReal:

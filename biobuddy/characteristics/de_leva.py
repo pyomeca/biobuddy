@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from ..inertia_parameters import InertiaParameters
+from biobuddy.components.inertia_parameters import InertiaParameters
 
 
 def point_on_vector(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:

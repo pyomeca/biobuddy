@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .protocols import Data
+from biobuddy.protocols import Data
 from .via_point_real import ViaPointReal
 
 

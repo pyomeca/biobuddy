@@ -2,7 +2,7 @@ from typing import Callable
 
 import numpy as np
 
-from .protocols import Data
+from biobuddy.protocols import Data
 from .translations import Translations
 
 

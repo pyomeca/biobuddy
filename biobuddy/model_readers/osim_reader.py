@@ -6,7 +6,7 @@ import numpy as np
 from lxml import etree
 
 from biobuddy.utils import find,OrthoMatrix
-from biobuddy.segment_real import SegmentReal
+from biobuddy.components.segment_real import SegmentReal
 
 
 class OsimReader:

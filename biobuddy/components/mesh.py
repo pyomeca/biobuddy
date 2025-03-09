@@ -1,8 +1,8 @@
 from typing import Callable
 
-from .biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
 from .mesh_real import MeshReal
-from .protocols import Data
+from biobuddy.protocols import Data
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 
 

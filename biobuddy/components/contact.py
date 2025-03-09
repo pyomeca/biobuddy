@@ -1,6 +1,6 @@
 from typing import Callable
 
-from .protocols import Data
+from biobuddy.protocols import Data
 from .translations import Translations
 from .contact_real import ContactReal
 

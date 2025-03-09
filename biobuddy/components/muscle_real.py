@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 from enum import Enum
 
-from .protocols import Data
+from biobuddy.protocols import Data
 from .via_point_real import ViaPointReal
 
 

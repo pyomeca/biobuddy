@@ -2,9 +2,9 @@ from typing import Callable
 
 import numpy as np
 
-from .biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
 from .inertia_parameters_real import InertiaParametersReal
-from .protocols import Data
+from biobuddy.protocols import Data
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 
 
