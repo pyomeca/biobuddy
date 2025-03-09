@@ -12,6 +12,7 @@ from biobuddy.components.inertia_parameters_real import InertiaParametersReal
 from biobuddy.components.rotations import Rotations
 from biobuddy.components.translations import Translations
 from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from biobuddy.components.marker_real import MarkerReal
 from biobuddy.mesh_modifications.vtp_parser import read_vtp_file, write_vtp_file
 from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triangles
 
@@ -163,14 +164,14 @@ class OsimReader:
                 if joint:
                     try:
                         # Parse joint offset values
-                        translation = list(map(float, joint.child_offset_trans.split()))
-                        rotation = list(map(float, joint.child_offset_rot.split()))
+                        translation = joint.child_offset_trans
+                        rotation = joint.child_offset_rot
                         angle_sequence = ''.join(rotation_axes).lower() if rotation_axes else 'xyz'
                         
                         scs = SegmentCoordinateSystemReal.from_euler_and_translation(
                             angles=rotation,
                             angle_sequence=angle_sequence,
-                            translations=translation
+                            translations=translation,
                         )
                     except Exception as e:
                         self.warnings.append(
