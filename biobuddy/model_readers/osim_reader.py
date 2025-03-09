@@ -254,17 +254,29 @@ class OsimReader:
             # joints = self._reorder_joints(joints)
             return joints
 
-    @staticmethod
-    def add_markers_to_segments(bodies, markers):
-        for b, body in enumerate(bodies):
-            # TODO: Do not add a try here. If the you can know in advance the error, test it with a if. If you actually need a try, catch a specific error (`except ERRORNAME:` instead of `except:`)
-            try:
-                for marker in markers:
-                    if body.socket_frame == marker.parent:
-                        bodies[b].markers.append(marker)
-            except:
-                pass
-        return bodies
+    def add_markers_to_segments(self, markers):
+        # Add markers to their parent segments
+        for marker in markers:
+            parent_segment_name = marker.parent
+            if parent_segment_name in self.output_model.segments:
+                # Convert position string to numpy array with proper float conversion
+                position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
+                
+                # Create MarkerReal instance
+                marker_real = MarkerReal(
+                    name=marker.name,
+                    parent_name=parent_segment_name,
+                    position=position,
+                    is_technical=True,
+                    is_anatomical=False
+                )
+                
+                # Add to parent segment
+                self.output_model.segments[parent_segment_name].add_marker(marker_real)
+            else:
+                self.warnings.append(
+                    f"Marker {marker.name} references unknown parent segment {parent_segment_name}, skipping"
+                )
 
     @staticmethod
     def _reorder_joints(joints: list):
