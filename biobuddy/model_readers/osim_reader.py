@@ -105,15 +105,24 @@ class OsimReader:
             return None
         else:
             for element in body_set:
-                name, mass, inertia, center_of_mass  = Body().get_body_attrib(element).return_segment_attrib()
+                body = Body().get_body_attrib(element)
+                name, mass, inertia, center_of_mass = body.return_segment_attrib()
+                
+                # Create inertia parameters
+                inertia_params = InertiaParametersReal(
+                    mass=mass,
+                    center_of_mass=center_of_mass,
+                    inertia=inertia
+                )
+                
+                # Create segment with basic properties
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
-                    mass=mass,
-                    inertia=inertia,
-                    center_of_mass=center_of_mass,
-                    # translations=Translations.YZ,
-                    # rotations=Rotations.X,
-                    # mesh=MeshReal(((0, 0, 0), (0, 0, 0.53))),
+                    parent_name=body.socket_frame if body.socket_frame != name else "",
+                    translations=Translations.NONE,
+                    rotations=Rotations.NONE,
+                    inertia_parameters=inertia_params,
+                    segment_coordinate_system=SegmentCoordinateSystemReal()
                 )
             return
 
