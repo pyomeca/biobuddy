@@ -186,7 +186,11 @@ class OsimReader:
                     rotations=rotations,
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=scs,
-                    mesh_file=mesh_file,
+                    mesh_file=MeshFileReal(
+                        mesh_file_name=f"{self.new_mesh_dir}/{body.mesh[0]}" if body.mesh else None,
+                        mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
+                        mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
+                    ) if body.mesh else None,
                 )
             return
 
