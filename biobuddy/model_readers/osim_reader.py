@@ -199,7 +199,7 @@ class OsimReader:
                 body_mesh_list.extend(Body().get_body_attrib(element).mesh)
             return body_mesh_list
 
-    def get_marker_set(self, markers_to_ignore: list[str]):
+    def get_marker_set(self):
         markers = []
         if self._is_element_empty(self.markerset_elt):
             return None
@@ -208,16 +208,10 @@ class OsimReader:
             for element in self.markerset_elt[0]:
                 marker = Marker().get_marker_attrib(element)
                 original_marker_names += [marker.name]
-                if marker.name not in markers_to_ignore:
-                    markers.append(marker)
-            # for marker_to_ignore in markers_to_ignore:
-            #     if marker_to_ignore not in original_marker_names:
-            #         raise RuntimeError(
-            #             f"The marker {marker_to_ignore} cannot be ignored as it is not present in the original osim model."
-            #         )
+                markers.append(marker)
             return markers
 
-    def get_force_set(self, ignore_muscle_applied_tag=False, muscles_to_ignore=None):
+    def get_force_set(self, ignore_muscle_applied_tag=False):
         forces = []
         wrap = []
         original_muscle_names = []
@@ -227,7 +221,7 @@ class OsimReader:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
                     original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
-                    current_muscle = Muscle().get_muscle_attributes(element, ignore_muscle_applied_tag, muscles_to_ignore)
+                    current_muscle = Muscle().get_muscle_attributes(element, ignore_muscle_applied_tag)
                     # TODO: insersion = current_muscle.return_muscle_attrib()
                     if current_muscle is not None:
                         forces.append(current_muscle)
@@ -243,13 +237,6 @@ class OsimReader:
                     f"Some wrapping objects were present on the muscles :{wrap} in the original file force set.\n"
                     "Only via point are supported in biomod so they will be ignored."
                 )
-
-            for muscle_to_ignore in muscles_to_ignore:
-                if muscle_to_ignore not in original_muscle_names:
-                    raise RuntimeError(
-                        f"The muscle {muscle_to_ignore} cannot be ignored as it is not present in the original osim model."
-                    )
-
             return forces
 
     def get_joint_set(self, ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False):
@@ -368,13 +355,14 @@ class OsimReader:
     def read(self):
 
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
+        self.markers = self.get_marker_set()
+
         self.get_segments(body_set=[self.ground_elt])
         self.get_segments()
         self.add_markers_to_segments(self.markers)
 
+        # self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
         #
-        # self.forces = self.get_force_set(ignore_muscle_applied_tag=False, muscles_to_ignore=None)
-        # self.markers = self.get_marker_set(markers_to_ignore=markers_to_ignore)
         # self.infos, self.warnings = self.infos, self.get_warnings()
         # self.ground = self.add_markers_to_bodies(self.ground, self.markers)
         #
@@ -733,10 +721,8 @@ class Muscle:
         self.state_type = None
 
 
-    def get_muscle_attrib(self, element, ignore_applied, muscles_to_ignore):
+    def get_muscle_attrib(self, element, ignore_applied):
         name = (element.attrib["name"]).split("/")[-1]
-        if name in muscles_to_ignore:
-            return None
         self.name = name
         self.maximal_force = find(element, "max_isometric_force")
         self.optimal_length = find(element, "optimal_fiber_length")

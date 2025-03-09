@@ -39,10 +39,16 @@ class SegmentReal:
     def add_marker(self, marker: MarkerReal):
         self.markers.append(marker)
 
+    def remove_marker(self, marker: MarkerReal):
+        self.markers.remove(marker)
+
     def add_contact(self, contact: Contact):
         if contact.parent_name is None:
             raise RuntimeError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
         self.contacts.append(contact)
+
+    def remove_contact(self, contact: Contact):
+        self.contacts.remove(contact)
 
     @property
     def to_biomod(self):

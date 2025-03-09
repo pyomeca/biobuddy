@@ -13,6 +13,55 @@ class BiomechanicalModelReal:
         self.muscles: dict[str:MuscleReal, ...] = {}
         self.via_points: dict[str:ViaPointReal, ...] = {}
 
+
+    def remove_segment(self, segment_name: str):
+        """
+        Remove a segment from the model
+
+        Parameters
+        ----------
+        segment_name
+            The name of the segment to remove
+        """
+        self.segments = [segment for segment in self.segments if segment.name != segment_name]
+
+    def remove_muscle_group(self, muscle_group_name: str):
+        """
+        Remove a muscle group from the model
+
+        Parameters
+        ----------
+        muscle_group_name
+            The name of the muscle group to remove
+        """
+        self.muscle_groups = [muscle_group for muscle_group in self.muscle_groups if
+                              muscle_group.name != muscle_group_name]
+
+
+    def remove_muscle(self, muscle_name: str):
+        """
+        Remove a muscle from the model
+
+        Parameters
+        ----------
+        muscle_name
+            The name of the muscle to remove
+        """
+        self.muscles = [muscle for muscle in self.muscles if muscle.name != muscle_name]
+
+
+    def remove_via_point(self, via_point_name: str):
+        """
+        Remove a via point from the model
+
+        Parameters
+        ----------
+        via_point_name
+            The name of the via point to remove
+        """
+        self.via_points = [via_point for via_point in self.via_points if via_point.name != via_point_name]
+
+
     def to_biomod(self, file_path: str):
         """
         Write the bioMod file.
