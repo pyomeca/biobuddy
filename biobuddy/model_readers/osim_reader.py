@@ -12,6 +12,8 @@ from biobuddy.components.inertia_parameters_real import InertiaParametersReal
 from biobuddy.components.rotations import Rotations
 from biobuddy.components.translations import Translations
 from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from biobuddy.mesh_modifications.vtp_parser import read_vtp_file, write_vtp_file
+from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triangles
 
 
 class OsimReader:
@@ -103,7 +105,7 @@ class OsimReader:
         else:
             return True
 
-    def get_body_set(self, body_set=None):
+    def get_segments(self, body_set=None):
         body_set = body_set if body_set else self.bodyset_elt[0]
         if self._is_element_empty(body_set):
             return None
@@ -266,7 +268,7 @@ class OsimReader:
             return joints
 
     @staticmethod
-    def add_markers_to_bodies(bodies, markers):
+    def add_markers_to_segments(bodies, markers):
         for b, body in enumerate(bodies):
             # TODO: Do not add a try here. If the you can know in advance the error, test it with a if. If you actually need a try, catch a specific error (`except ERRORNAME:` instead of `except:`)
             try:
@@ -366,8 +368,9 @@ class OsimReader:
     def read(self):
 
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
-        self.ground = self.get_body_set(body_set=[self.ground_elt])
-        self.bodies = self.get_body_set()
+        self.get_segments(body_set=[self.ground_elt])
+        self.get_segments()
+        self.add_markers_to_segments(self.markers)
 
         #
         # self.forces = self.get_force_set(ignore_muscle_applied_tag=False, muscles_to_ignore=None)
