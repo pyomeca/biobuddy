@@ -156,6 +156,25 @@ class OsimReader:
                         translation_name = ''.join(translation_axes)
                         translations = getattr(Translations, translation_name, Translations.NONE)
                 
+                # Create segment coordinate system from joint offsets
+                scs = SegmentCoordinateSystemReal()
+                if joint:
+                    try:
+                        # Parse joint offset values
+                        translation = list(map(float, joint.child_offset_trans.split()))
+                        rotation = list(map(float, joint.child_offset_rot.split()))
+                        angle_sequence = ''.join(rotation_axes).lower() if rotation_axes else 'xyz'
+                        
+                        scs = SegmentCoordinateSystemReal.from_euler_and_translation(
+                            angles=rotation,
+                            angle_sequence=angle_sequence,
+                            translations=translation
+                        )
+                    except Exception as e:
+                        self.warnings.append(
+                            f"Could not parse joint offsets for segment {name}: {str(e)}. Using default coordinate system."
+                        )
+
                 # Create segment with basic properties
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
@@ -163,7 +182,7 @@ class OsimReader:
                     translations=translations,
                     rotations=rotations,
                     inertia_parameters=inertia_params,
-                    segment_coordinate_system=SegmentCoordinateSystemReal()
+                    segment_coordinate_system=scs
                 )
             return
 
