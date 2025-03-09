@@ -104,7 +104,6 @@ class OsimReader:
             return True
 
     def get_body_set(self, body_set=None):
-        bodies = []
         body_set = body_set if body_set else self.bodyset_elt[0]
         if self._is_element_empty(body_set):
             return None
