@@ -119,12 +119,50 @@ class OsimReader:
                     inertia=inertia
                 )
                 
+                # Find corresponding joint
+                joint = next((j for j in self.joints if j.child_body == name), None)
+                
+                # Determine translations and rotations from joint
+                translations = Translations.NONE
+                rotations = Rotations.NONE
+                if joint:
+                    rotation_axes = []
+                    translation_axes = []
+                    for transform in joint.spatial_transform:
+                        if transform.type == 'rotation':
+                            axis = list(map(float, transform.axis.split()))
+                            if axis == [1.0, 0.0, 0.0]:
+                                rotation_axes.append('X')
+                            elif axis == [0.0, 1.0, 0.0]:
+                                rotation_axes.append('Y')
+                            elif axis == [0.0, 0.0, 1.0]:
+                                rotation_axes.append('Z')
+                        elif transform.type == 'translation':
+                            axis = list(map(float, transform.axis()))
+()))
+                            if axis == [1.0, 0.0, 0.0]:
+                                translation_axes.append('X')
+                            elif axis == [0.0, 1.0, 0.0]:
+                                translation_axes.append('Y')
+                            elif axis == [0.0, 0.0, 1.0]:
+                                translation_axes.append('Z')
+                    
+                    # Get rotations enum
+                    if rotation_axes:
+                        rotation_name = ''.join(sorted(rotation_axes))
+                        rotations = getattr(Rotations, rotation_name, Rotations.NONE)
+                    
+                    # Get translations enum
+                    if translation_axes:
+                        translation_name = ''.join(sorted(translation_axes))
+                        translations = getattr(Translations, translation_name, Translations.NONE)
+                
                 # Create segment with basic properties
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
                     parent_name=body.socket_frame if body.socket_frame != name else "",
-                    translations=Translations.NONE,
-                    rotations=Rotations.NONE,
+                    translations=translations,
+                    rotations=rotations,
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=SegmentCoordinateSystemReal()
                 )
