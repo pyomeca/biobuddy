@@ -185,7 +185,8 @@ class OsimReader:
                     translations=translations,
                     rotations=rotations,
                     inertia_parameters=inertia_params,
-                    segment_coordinate_system=scs
+                    segment_coordinate_system=scs,
+                    mesh_file=mesh_file,
                 )
             return
 
@@ -369,6 +370,7 @@ class OsimReader:
 
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
         self.markers = self.get_marker_set()
+        self.geometry_set = self.get_body_mesh_list()
 
         self.get_segments(body_set=[self.ground_elt])
         self.get_segments()
@@ -377,12 +379,10 @@ class OsimReader:
         # self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
         #
         # self.infos, self.warnings = self.infos, self.get_warnings()
-        # self.ground = self.add_markers_to_bodies(self.ground, self.markers)
-        #
-        # self.bodies = self.add_markers_to_bodies(self.bodies, self.markers)
         # self.muscle_type = muscle_type if muscle_type else "hilldegroote"
         # self.state_type = state_type
         # self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
+        # self.vtp_files = self.get_body_mesh_list()
         #
         # self.new_mesh_dir = self.mesh_dir + "_cleaned"
         # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
