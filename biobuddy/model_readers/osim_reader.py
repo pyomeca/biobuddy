@@ -13,6 +13,7 @@ from biobuddy.components.rotations import Rotations
 from biobuddy.components.translations import Translations
 from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from biobuddy.components.marker_real import MarkerReal
+from biobuddy.components.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.components.mesh_file_real import MeshFileReal
 from biobuddy.mesh_modifications.vtp_parser import read_vtp_file, write_vtp_file
 from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triangles
@@ -179,12 +180,22 @@ class OsimReader:
                             f"Could not parse joint offsets for segment {name}: {str(e)}. Using default coordinate system."
                         )
 
+                # Get coordinate ranges from joint
+                q_ranges = []
+                if joint:
+                    for coord in joint.coordinates:
+                        if coord.range:
+                            min_val, max_val = map(float, coord.range.split())
+                            q_ranges.append((min_val, max_val))
+                
                 # Create segment with basic properties
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
                     parent_name=body.socket_frame if body.socket_frame != name else "",
                     translations=translations,
                     rotations=rotations,
+                    q_ranges=RangeOfMotion(Ranges.UNIVERSAL, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
+                    qdot_ranges=None,  # OpenSim doesn't provide velocity ranges by default
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=scs,
                     mesh_file=MeshFileReal(
