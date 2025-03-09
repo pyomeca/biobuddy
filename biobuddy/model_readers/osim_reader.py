@@ -1,11 +1,12 @@
 import os
 import shutil
 from xml.etree import ElementTree
+from enum import Enum
 
 import numpy as np
 from lxml import etree
 
-from biobuddy.utils import find, OrthoMatrix
+from biobuddy.utils import find, OrthoMatrix, compute_matrix_rotation, rot2eul
 from biobuddy.components.segment_real import SegmentReal
 from biobuddy.components.inertia_parameters_real import InertiaParametersReal
 from biobuddy.components.rotations import Rotations
@@ -131,30 +132,29 @@ class OsimReader:
                     for transform in joint.spatial_transform:
                         if transform.type == 'rotation':
                             axis = list(map(float, transform.axis.split()))
-                            if axis == [1.0, 0.0, 0.0]:
+                            if axis[0] == 1.0:
                                 rotation_axes.append('X')
-                            elif axis == [0.0, 1.0, 0.0]:
+                            elif axis[1] == 1.0:
                                 rotation_axes.append('Y')
-                            elif axis == [0.0, 0.0, 1.0]:
+                            elif axis[2] == 1.0:
                                 rotation_axes.append('Z')
                         elif transform.type == 'translation':
-                            axis = list(map(float, transform.axis()))
-()))
-                            if axis == [1.0, 0.0, 0.0]:
+                            axis = list(map(float, transform.axis.split()))
+                            if axis[0] == 1.0:
                                 translation_axes.append('X')
-                            elif axis == [0.0, 1.0, 0.0]:
+                            elif axis[1] == 1.0:
                                 translation_axes.append('Y')
-                            elif axis == [0.0, 0.0, 1.0]:
+                            elif axis[2] == 1.0:
                                 translation_axes.append('Z')
                     
                     # Get rotations enum
                     if rotation_axes:
-                        rotation_name = ''.join(sorted(rotation_axes))
+                        rotation_name = ''.join(rotation_axes)
                         rotations = getattr(Rotations, rotation_name, Rotations.NONE)
                     
                     # Get translations enum
                     if translation_axes:
-                        translation_name = ''.join(sorted(translation_axes))
+                        translation_name = ''.join(translation_axes)
                         translations = getattr(Translations, translation_name, Translations.NONE)
                 
                 # Create segment with basic properties
@@ -347,8 +347,8 @@ class OsimReader:
 
     def read(self):
 
+        self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
         self.ground = self.get_body_set(body_set=[self.ground_elt])
-        self.joints = self.get_joint_set(ignore_fixed_dof_tag, ignore_clamped_dof_tag)
         self.bodies = self.get_body_set()
 
         #
@@ -547,10 +547,12 @@ class Body:
 
     def return_segment_attrib(self):
         name = self.name
-        mass = 1e-8 if not self.mass else float(self.mass.text)
-        inertia = np.eye(3) if not self.inertia else np.array([float(i) for i in self.inertia.text.split(" ")])
-        center_of_mass = np.zeros(3) if not self.mass_center else np.array([float(i) for i in self.mass_center.text.split(" ")])
-        # Add meshes
+        mass = 1e-8 if not self.mass else float(self.mass)
+        inertia = np.eye(3)
+        if self.inertia:
+            [i11, i22, i33, i12, i13, i23] = self.inertia.split(" ")
+            inertia = np.array([[i11, i12, i13], [i12, i22, i23], [i13, i23, i33]])
+        center_of_mass = np.zeros(3) if not self.mass_center else np.array([float(i) for i in self.mass_center.split(" ")])
         return name, mass, inertia, center_of_mass
 
 
@@ -781,3 +783,25 @@ class Marker:
         fixed = find(element, "fixed")
         self.fixed = fixed == "true" if fixed else None
         return self
+
+
+# Enums used to read the osim file
+class MuscleType(Enum):
+    HILL = "hill"
+    HILL_THELEN = "hillethelen"
+    HILL_DE_GROOTE = "hilldegroote"
+
+
+class MuscleStateType(Enum):
+    DEGROOTE = "degroote"
+    DEFAULT = "default"
+    BUCHANAN = "buchanan"
+
+
+class JointType(Enum):
+    WELD_JOINT = "WeldJoint"
+    CUSTOM_JOINT = "CustomJoint"
+
+
+class ForceType(Enum):
+    MUSCLE = "Muscle"
