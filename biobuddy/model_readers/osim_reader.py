@@ -5,12 +5,16 @@ from xml.etree import ElementTree
 import numpy as np
 from lxml import etree
 
-from biobuddy.utils import find,OrthoMatrix
+from biobuddy.utils import find, OrthoMatrix
 from biobuddy.components.segment_real import SegmentReal
+from biobuddy.components.inertia_parameters_real import InertiaParametersReal
+from biobuddy.components.rotations import Rotations
+from biobuddy.components.translations import Translations
+from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
 
 
 class OsimReader:
-    def __init__(self, osim_path: str, output_model: "BiomechanicalModel", print_warnings: bool = True):
+    def __init__(self, osim_path: str, output_model, print_warnings: bool = True):
         self.osim_path = osim_path
         self.osim_model = etree.parse(self.osim_path)
         self.model = ElementTree.parse(self.osim_path)
@@ -306,36 +310,38 @@ class OsimReader:
     def read(self):
 
         self.ground = self.get_body_set(body_set=[self.ground_elt])
-        self.forces = self.get_force_set(ignore_muscle_applied_tag=False, muscles_to_ignore=None)
         self.joints = self.get_joint_set(ignore_fixed_dof_tag, ignore_clamped_dof_tag)
         self.bodies = self.get_body_set()
-        self.markers = self.get_marker_set(markers_to_ignore=markers_to_ignore)
-        self.infos, self.warnings = self.infos, self.get_warnings()
-        self.ground = self.add_markers_to_bodies(self.ground, self.markers)
 
-        self.bodies = self.add_markers_to_bodies(self.bodies, self.markers)
-        self.muscle_type = muscle_type if muscle_type else "hilldegroote"
-        self.state_type = state_type
-        self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
-
-        self.new_mesh_dir = self.mesh_dir + "_cleaned"
-        self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
-        self.vtp_files = self.get_body_mesh_list()
-
-        if isinstance(self.muscle_type, MuscleType):
-            self.muscle_type = self.muscle_type.value
-        if isinstance(self.state_type, MuscleStateType):
-            self.state_type = self.state_type.value
-
-        if isinstance(muscle_type, str):
-            if self.muscle_type not in [e.value for e in MuscleType]:
-                raise RuntimeError(f"Muscle of type {self.muscle_type} is not a biorbd muscle.")
-
-        if isinstance(muscle_type, str):
-            if self.state_type not in [e.value for e in MuscleStateType]:
-                raise RuntimeError(f"Muscle state type {self.state_type} is not a biorbd muscle state type.")
-        if self.state_type == "default":
-            self.state_type = None
+        #
+        # self.forces = self.get_force_set(ignore_muscle_applied_tag=False, muscles_to_ignore=None)
+        # self.markers = self.get_marker_set(markers_to_ignore=markers_to_ignore)
+        # self.infos, self.warnings = self.infos, self.get_warnings()
+        # self.ground = self.add_markers_to_bodies(self.ground, self.markers)
+        #
+        # self.bodies = self.add_markers_to_bodies(self.bodies, self.markers)
+        # self.muscle_type = muscle_type if muscle_type else "hilldegroote"
+        # self.state_type = state_type
+        # self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
+        #
+        # self.new_mesh_dir = self.mesh_dir + "_cleaned"
+        # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
+        # self.vtp_files = self.get_body_mesh_list()
+        #
+        # if isinstance(self.muscle_type, MuscleType):
+        #     self.muscle_type = self.muscle_type.value
+        # if isinstance(self.state_type, MuscleStateType):
+        #     self.state_type = self.state_type.value
+        #
+        # if isinstance(muscle_type, str):
+        #     if self.muscle_type not in [e.value for e in MuscleType]:
+        #         raise RuntimeError(f"Muscle of type {self.muscle_type} is not a biorbd muscle.")
+        #
+        # if isinstance(muscle_type, str):
+        #     if self.state_type not in [e.value for e in MuscleStateType]:
+        #         raise RuntimeError(f"Muscle state type {self.state_type} is not a biorbd muscle state type.")
+        # if self.state_type == "default":
+        #     self.state_type = None
 
 
     def convert_file(self):
