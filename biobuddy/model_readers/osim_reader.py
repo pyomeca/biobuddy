@@ -276,6 +276,30 @@ class OsimReader:
                     virtual_names.append(virt_name)
                     current_parent = virt_name
 
+                # Add reset axis segment if needed
+                if virtual_names:
+                    last_virt_segment = self.output_model.segments[virtual_names[-1]]
+                    rot_matrix = last_virt_segment.segment_coordinate_system.get_rotation().T
+                    reset_rot = OrthoMatrix()
+                    reset_rot.set_rotation_matrix(np.linalg.inv(rot_matrix))
+                    
+                    if not np.allclose(reset_rot.get_rotation_matrix(), np.eye(3)):
+                        reset_name = f"{name}_reset_axis"
+                        self.output_model.segments[reset_name] = SegmentReal(
+                            name=reset_name,
+                            parent_name=current_parent,
+                            translations=Translations.NONE,
+                            rotations=Rotations.NONE,
+                            segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
+                                angles=tuple(map(float, rot2eul(reset_rot.get_rotation_matrix()).flatten())),
+                                angle_sequence="zyx",
+                                translations=(0.0, 0.0, 0.0),
+                            ),
+                            mesh_file=None,
+                        )
+                        current_parent = reset_name
+                        virtual_names.append(reset_name)
+
                 # Create main segment as child of last virtual parent (with inertial properties)
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
