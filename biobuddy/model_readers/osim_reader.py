@@ -271,7 +271,6 @@ class OsimReader:
                             mesh_color=tuple(map(float, body.mesh_color[i-1].split())) if body.mesh_color else None,
                             mesh_scale=tuple(map(float, body.mesh_scale_factor[i-1].split())) if body.mesh_scale_factor else None,
                         ) if i <= len(body.mesh) else None,
-                        q_ranges=RangeOfMotion(Ranges.Q, [0]*len(rotation_axes), [0]*len(rotation_axes)) if rotation_axes else None
                     )
 
                     virtual_names.append(virt_name)
@@ -293,7 +292,7 @@ class OsimReader:
                         mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[0].get_rotation_matrix().T).flatten())) if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
-                    )
+                    ) if body.mesh else None,
                 )
 
                 # Add child geometry virtual segments with proper transformations
