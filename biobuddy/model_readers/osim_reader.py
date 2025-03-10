@@ -211,10 +211,41 @@ class OsimReader:
                             min_val, max_val = map(float, coord.range.split())
                             q_ranges.append((min_val, max_val))
 
-                # Create the main segment with inertia
+                # Create virtual parent chain first
+                current_parent: str = body.socket_frame if body.socket_frame != name else ""
+                virtual_names: list[str] = []
+
+                # Create transformation virtual segments first in parent chain
+                for i, virt_body in enumerate(body.virtual_body):
+                    if i == 0:  # Skip first body as it's the main segment we'll add later
+                        continue
+
+                    virt_name = f"{name}_{virt_body}"
+                    if i >= len(body.mesh_offset):
+                        break  # For safety if offsets list is shorter
+
+                    # Create virtual segment with transformation
+                    mesh_offset = body.mesh_offset[i]
+                    self.output_model.segments[virt_name] = SegmentReal(
+                        name=virt_name,
+                        parent_name=current_parent,
+                        translations=Translations.NONE,
+                        rotations=Rotations.NONE,
+                        segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
+                            angles=mesh_offset.get_rotation(),
+                            angle_sequence="xyz",
+                            translations=mesh_offset.get_translation(),
+                        ),
+                        mesh_file=None  # Virtual segments in parent chain don't carry meshes
+                    )
+
+                    virtual_names.append(virt_name)
+                    current_parent = virt_name
+
+                # Create main segment as child of last virtual parent
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
-                    parent_name=body.socket_frame if body.socket_frame != name else "",
+                    parent_name=current_parent,
                     translations=translations,
                     rotations=rotations,
                     q_ranges=RangeOfMotion(Ranges.Q, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
@@ -223,22 +254,25 @@ class OsimReader:
                     segment_coordinate_system=scs,
                     mesh_file=MeshFileReal(
                         mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
-                        mesh_translation=body.mesh_offset.get_translation() if body.mesh_offset else None,
-                        mesh_rotation=body.mesh_offset.get_rotation() if body.mesh_offset else None,
+                        mesh_translation=body.mesh_offset[0].get_translation() if body.mesh_offset else None,
+                        mesh_rotation=body.mesh_offset[0].get_rotation() if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
                     ) if body.mesh else None,
                 )
 
-                # Create virtual segments for additional geometries
-                for i, virt_body in enumerate(body.virtual_body):
+                # Add geometry virtual segments as children of main segment
+                for i, virt_body in reversed(list(enumerate(body.virtual_body))):
                     if i == 0:  # Skip first body as it's the main segment
                         continue
 
-                    virt_name = f"{name}_{virt_body}"
+                    virt_name = f"{name}_{virt_body}_geom"
+                    if i >= len(body.mesh):
+                        break  # For safety if meshes list is shorter
+
                     self.output_model.segments[virt_name] = SegmentReal(
                         name=virt_name,
-                        parent_name=name,  # Parent is the main segment
+                        parent_name=name,
                         translations=Translations.NONE,
                         rotations=Rotations.NONE,
                         segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
@@ -247,12 +281,12 @@ class OsimReader:
                             translations=[0, 0, 0]
                         ),
                         mesh_file=MeshFileReal(
-                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}" if i < len(body.mesh) else None,
-                            mesh_translation=body.mesh_offset[i].get_translation() if i < len(body.mesh_offset) else None,
-                            mesh_rotation=body.mesh_offset[i].get_rotation() if i < len(body.mesh_offset) else None,
-                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if i < len(body.mesh_color) else None,
-                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if i < len(body.mesh_scale_factor) else None,
-                        ) if body.mesh and i < len(body.mesh) else None,
+                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}",
+                            mesh_translation=body.mesh_offset[i].get_translation() if body.mesh_offset else None,
+                            mesh_rotation=body.mesh_offset[i].get_rotation() if body.mesh_offset else None,
+                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if body.mesh_color else None,
+                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if body.mesh_scale_factor else None,
+                        )
                     )
             return
 
