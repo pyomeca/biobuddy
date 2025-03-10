@@ -30,7 +30,8 @@ class BiomechanicalModel:
     def from_osim(self,
                   osim_path: str,
                   muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
-                  muscle_state_type: MuscleStateType=MuscleStateType.DEGROOTE) -> BiomechanicalModelReal:
+                  muscle_state_type: MuscleStateType=MuscleStateType.DEGROOTE,
+                  mesh_dir: str = "Geometry_cleaned") -> BiomechanicalModelReal:
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
 
@@ -42,9 +43,14 @@ class BiomechanicalModel:
             The type of muscle to assume when interpreting the osim model
         muscle_state_type : MuscleStateType
             The muscle state type to assume when interpreting the osim model
+        mesh_dir: str
+            The directory where the meshes are located
         """
 
-        osim_model = OsimReader(osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type)
+        osim_model = OsimReader(osim_path=osim_path,
+                                muscle_type=muscle_type,
+                                muscle_state_type=muscle_state_type,
+                                mesh_dir=mesh_dir)
         osim_model.read()
 
         self.model = osim_model.output_model

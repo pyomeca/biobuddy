@@ -47,7 +47,7 @@ class OsimReader:
     print_warnings : bool, optional
         Whether to print conversion warnings, default True
     mesh_dir : str, optional
-        Directory containing mesh files, defaults to 'Geometry'
+        Directory containing mesh files, defaults to 'Geometry_cleaned'
     Raises
     ------
     RuntimeError
@@ -57,14 +57,14 @@ class OsimReader:
                  osim_path: str,
                  muscle_type: MuscleType,
                  muscle_state_type: MuscleStateType,
+                 mesh_dir: str,
                  print_warnings: bool = True,
-                 mesh_dir: str = None,
                  ):
 
         # Initial attributes
         self.osim_path = osim_path
         self.osim_model = etree.parse(self.osim_path)
-        self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
+        self.mesh_dir = mesh_dir
         self.muscle_type = muscle_type
         self.muscle_state_type = muscle_state_type
 
@@ -205,6 +205,8 @@ class OsimReader:
                     if translation_axes:
                         translation_name = ''.join(translation_axes)
                         translations = getattr(Translations, translation_name, Translations.NONE)
+                    else:
+                        translations = None
                 
                 # Create segment coordinate system from joint offsets
                 scs = SegmentCoordinateSystemReal()
