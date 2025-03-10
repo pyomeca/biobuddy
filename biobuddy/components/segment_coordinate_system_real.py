@@ -95,6 +95,25 @@ class SegmentCoordinateSystemReal:
 
         return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs)
 
+
+    @staticmethod
+    def from_rt_matrix(
+        rt_matrix: np.ndarray,
+        parent_scs: "SegmentCoordinateSystemReal" = None,
+    ) -> "SegmentCoordinateSystemReal":
+        """
+        Construct a SegmentCoordinateSystemReal from angles and translations
+
+        Parameters
+        ----------
+        rt_matrix: np.ndarray
+            The RT matrix
+        parent_scs
+            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
+            is in parent's local reference frame
+        """
+        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+
     @staticmethod
     def from_euler_and_translation(
         angles: tuple[float | int, ...],
