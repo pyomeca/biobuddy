@@ -252,8 +252,8 @@ class OsimReader:
                     segment_coordinate_system=scs,
                     mesh_file=MeshFileReal(
                         mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
-                        mesh_translation=body.mesh_offset[0].get_translation() if body.mesh_offset else None,
-                        mesh_rotation=rot2eul(body.mesh_offset[0].get_rotation_matrix()) if body.mesh_offset else None,
+                        mesh_translation=tuple(map(float, body.mesh_offset[0].get_translation().flatten())) if body.mesh_offset else None,
+                        mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[0].get_rotation_matrix()).flatten())) if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
                     ) if body.mesh else None,
@@ -279,11 +279,11 @@ class OsimReader:
                             translations=[0, 0, 0]
                         ),
                         mesh_file=MeshFileReal(
-                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}",
-                            mesh_translation=body.mesh_offset[i].get_translation() if body.mesh_offset else None,
-                            mesh_rotation=rot2eul(body.mesh_offset[i].get_rotation_matrix()) if body.mesh_offset else None,
-                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if body.mesh_color else None,
-                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if body.mesh_scale_factor else None,
+                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i-1]}",  # Use i-1 since main segment is index 0
+                            mesh_translation=tuple(map(float, body.mesh_offset[i].get_translation().flatten())) if body.mesh_offset else None,
+                            mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[i].get_rotation_matrix()).flatten())) if body.mesh_offset else None,
+                            mesh_color=tuple(map(float, body.mesh_color[i-1].split())) if body.mesh_color else None,
+                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i-1].split())) if body.mesh_scale_factor else None,
                         )
                     )
             return
