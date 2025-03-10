@@ -20,9 +20,14 @@ from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triang
 
 
 class OsimReader:
-    def __init__(self, osim_path: str, output_model, print_warnings: bool = True):
+    def __init__(self, osim_path: str, output_model, print_warnings: bool = True, mesh_dir: str = None):
+
+        # Initial attributes
         self.osim_path = osim_path
         self.osim_model = etree.parse(self.osim_path)
+        self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
+
+        # Extended attributes
         self.model = ElementTree.parse(self.osim_path)
         self.root = self.model.getroot()[0]
         self.print_warnings = print_warnings
@@ -187,19 +192,21 @@ class OsimReader:
                         if coord.range:
                             min_val, max_val = map(float, coord.range.split())
                             q_ranges.append((min_val, max_val))
-                
-                # Create segment with basic properties
+
+                # Create the segment
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
                     parent_name=body.socket_frame if body.socket_frame != name else "",
                     translations=translations,
                     rotations=rotations,
-                    q_ranges=RangeOfMotion(Ranges.UNIVERSAL, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
+                    q_ranges=RangeOfMotion(Ranges.Q, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
                     qdot_ranges=None,  # OpenSim doesn't provide velocity ranges by default
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=scs,
                     mesh_file=MeshFileReal(
-                        mesh_file_name=f"{self.new_mesh_dir}/{body.mesh[0]}" if body.mesh else None,
+                        mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
+                        mesh_translation = body.mesh_offset.get_translation() if body.mesh_offset else None,
+                        mesh_rotation = body.mesh_offset.get_rotation() if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
                     ) if body.mesh else None,
@@ -397,8 +404,6 @@ class OsimReader:
         # self.infos, self.warnings = self.infos, self.get_warnings()
         # self.muscle_type = muscle_type if muscle_type else "hilldegroote"
         # self.state_type = state_type
-        # self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
-        # self.vtp_files = self.get_body_mesh_list()
         #
         # self.new_mesh_dir = self.mesh_dir + "_cleaned"
         # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
