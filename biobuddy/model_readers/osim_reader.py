@@ -353,6 +353,45 @@ class OsimReader:
             # joints = self._reorder_joints(joints)
             return joints
 
+    def set_muscles(self):
+        """Convert OpenSim muscles to BiomechanicalModelReal muscles."""
+        if not self.forces:
+            return
+
+        for muscle in self.forces:
+            try:
+                # Convert muscle properties
+                muscle_real = MuscleReal(
+                    name=muscle.name,
+                    muscle_type=muscle.type,
+                    state_type=muscle.state_type,
+                    muscle_group=f"{muscle.group[0]}_to_{muscle.group[1]}",
+                    origin_position=np.array([float(v) for v in muscle.origin.split()]),
+                    insertion_position=np.array([float(v) for v in muscle.insersion.split()]),
+                    optimal_length=float(muscle.optimal_length) if muscle.optimal_length else 0.1,
+                    maximal_force=float(muscle.maximal_force) if muscle.maximal_force else 1000.0,
+                    tendon_slack_length=float(muscle.tendon_slack_length) if muscle.tendon_slack_length else None,
+                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0
+                )
+
+                # Add via points if any
+                for via_point in muscle.via_point:
+                    via_real = ViaPointReal(
+                        name=via_point.name,
+                        parent_name=via_point.body,
+                        muscle_name=muscle.name,
+                        muscle_group=muscle_real.muscle_group,
+                        position=np.array([float(v) for v in via_point.position.split()])
+                    )
+                    self.output_model.via_points[via_real.name] = via_real
+
+                self.output_model.muscles[muscle.name] = muscle_real
+
+            except Exception as e:
+                self.warnings.append(
+                    f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped."
+                )
+
     def add_markers_to_segments(self, markers):
         # Add markers to their parent segments
         for marker in markers:
@@ -494,9 +533,6 @@ class OsimReader:
 
         # Muscles
         self.set_muscles()
-
-
-        # self.new_mesh_dir = self.mesh_dir + "_cleaned"
         # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
         # self.vtp_files = self.get_body_mesh_list()
         #
