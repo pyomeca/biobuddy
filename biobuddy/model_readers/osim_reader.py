@@ -80,6 +80,7 @@ class OsimReader:
                 "Opensim 4.0 or later."
             )
 
+        self.gravity = np.array([0.0, 0.0, -9.81])
         self.output_model.gravity = np.array([0.0, 0.0, -9.81])
         self.ground_elt, self.default_elt, self.credit, self.publications = None, None, None, None
         self.bodyset_elt, self.jointset_elt, self.forceset_elt, self.markerset_elm = None, None, None, None
@@ -90,6 +91,7 @@ class OsimReader:
         for element in self.root:
             if element.tag == "gravity":
                 gravity = [float(i) for i in element.text.split(' ')]
+                self.gravity = np.array(gravity)
                 self.output_model.gravity = np.array(gravity)
             elif element.tag == "Ground":
                 self.ground_elt = element
@@ -181,32 +183,36 @@ class OsimReader:
                     for transform in joint.spatial_transform:
                         if transform.type == 'rotation':
                             axis = list(map(float, transform.axis.split()))
-                            if axis[0] == 1.0:
-                                rotation_axes.append('X')
-                            elif axis[1] == 1.0:
-                                rotation_axes.append('Y')
-                            elif axis[2] == 1.0:
-                                rotation_axes.append('Z')
+                            if transform.coordinate != [] and not transform.coordinate.locked:
+                                if axis[0] == 1.0:
+                                    rotation_axes.append('X')
+                                elif axis[1] == 1.0:
+                                    rotation_axes.append('Y')
+                                elif axis[2] == 1.0:
+                                    rotation_axes.append('Z')
                         elif transform.type == 'translation':
                             axis = list(map(float, transform.axis.split()))
-                            if axis[0] == 1.0:
-                                translation_axes.append('X')
-                            elif axis[1] == 1.0:
-                                translation_axes.append('Y')
-                            elif axis[2] == 1.0:
-                                translation_axes.append('Z')
+                            if transform.coordinate != [] and not transform.coordinate.locked:
+                                if axis[0] == 1.0:
+                                    translation_axes.append('X')
+                                elif axis[1] == 1.0:
+                                    translation_axes.append('Y')
+                                elif axis[2] == 1.0:
+                                    translation_axes.append('Z')
                     
                     # Get rotations enum
                     if rotation_axes:
                         rotation_name = ''.join(rotation_axes)
                         rotations = getattr(Rotations, rotation_name, Rotations.NONE)
+                    else:
+                        rotations = Rotations.NONE
                     
                     # Get translations enum
                     if translation_axes:
                         translation_name = ''.join(translation_axes)
                         translations = getattr(Translations, translation_name, Translations.NONE)
                     else:
-                        translations = None
+                        translations = Translations.NONE
                 
                 # Create segment coordinate system from joint offsets
                 scs = SegmentCoordinateSystemReal()
@@ -538,6 +544,7 @@ class OsimReader:
             out_string += f"\n// Force units : {self.force_units}\n"
         if self.length_units:
             out_string += f"\n// Length units : {self.length_units}\n"
+        out_string += f"\n\ngravity\t{self.gravity[0]}\t{self.gravity[1]}\t{self.gravity[2]}"
         self.output_model.header = out_string
 
 
