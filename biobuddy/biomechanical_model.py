@@ -1,18 +1,18 @@
 import numpy as np
-from time import strftime
 
 from biobuddy.model_readers.osim_reader import OsimReader
-from .protocols import Data
+from biobuddy.protocols import Data
 from biobuddy.components.segment_real import SegmentReal
 from biobuddy.components.muscle_group import MuscleGroup
 from biobuddy.components.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from .biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.components.muscle_real import MuscleType, MuscleStateType
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
 
 
 class BiomechanicalModel:
     def __init__(self):
-        self.header = None
-        self.warnings = None
+        self.header = ""
+        self.warnings = ""
         self.gravity = np.array([0.0, 0.0, 9.81])  # default value
         self.segments = {}
         self.muscle_groups = {}
@@ -27,38 +27,25 @@ class BiomechanicalModel:
             raise ValueError("All components of the gravity vector must be int of float")
         self.gravity = gravity_vector
 
-    def set_header(self, path: str, publications: str = None, credit: str = None, force_units: str = None, length_units: str = None):
-        out_string = ""
-        out_string += f"\n// File extracted from {path} on the {strftime('%Y-%m-%d %H:%M')}\n"
-        if publications:
-            out_string += f"\n// Original file publication : {publications}\n"
-        if credit:
-            out_string += f"\n// Original file credit : {credit}\n"
-        if force_units:
-            out_string += f"\n// Force units : {force_units}\n"
-        if length_units:
-            out_string += f"\n// Length units : {length_units}\n"
-        self.header = out_string
-
-    def from_osim(self, osim_path: str) -> BiomechanicalModelReal:
+    def from_osim(self,
+                  osim_path: str,
+                  muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
+                  muscle_state_type: MuscleStateType=MuscleStateType.DEGROOTE) -> BiomechanicalModelReal:
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
 
         Parameters
         ----------
-        osim_path
+        osim_path: str
             The path to the osim file to read from
+        muscle_type: MuscleType
+            The type of muscle to assume when interpreting the osim model
+        muscle_state_type : MuscleStateType
+            The muscle state type to assume when interpreting the osim model
         """
 
-        osim_model = OsimReader(osim_path=osim_path)
+        osim_model = OsimReader(osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type)
         osim_model.read()
-
-        self.set_gravity(osim_model.gravity)
-        self.set_header(path=osim_path,
-                        publications=osim_model.publications,
-                        credit=osim_model.credit,
-                        force_units=osim_model.force_units,
-                        length_units=osim_model.length_units)
 
         self.model = osim_model.output_model
 

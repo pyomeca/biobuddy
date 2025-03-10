@@ -8,13 +8,15 @@ from .via_point_real import ViaPointReal
 
 
 class MuscleType(Enum):
-    HILLTHELEN = "hillthelen"
-    # TODO: @pariterre to be completed
+    HILL = "hill"
+    HILL_THELEN = "hillethelen"
+    HILL_DE_GROOTE = "hilldegroote"
 
 
 class MuscleStateType(Enum):
-    DEGROOTE = "DeGroote"
-    # TODO: @pariterre to be completed
+    DEGROOTE = "degroote"
+    DEFAULT = "default"
+    BUCHANAN = "buchanan"
 
 
 class MuscleReal:

@@ -376,7 +376,7 @@ def test_complex_model(remove_temporary: bool = True):
 
     # The pendulum muscle
     bio_model.muscles["PENDULUM_MUSCLE"] = Muscle("PENDULUM_MUSCLE",
-                                                      muscle_type=MuscleType.HILLTHELEN,
+                                                      muscle_type=MuscleType.HILL_THELEN,
                                                       state_type=MuscleStateType.DEGROOTE,
                                                       muscle_group="PENDULUM_MUSCLE_GROUP",
                                                       origin_position_function=lambda m: np.array([0, 0, 0]),

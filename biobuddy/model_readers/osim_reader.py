@@ -1,7 +1,6 @@
-import os
-import shutil
 from xml.etree import ElementTree
 from enum import Enum
+from time import strftime
 
 import numpy as np
 from lxml import etree
@@ -15,9 +14,23 @@ from biobuddy.components.segment_coordinate_system_real import SegmentCoordinate
 from biobuddy.components.marker_real import MarkerReal
 from biobuddy.components.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.components.mesh_file_real import MeshFileReal
-from biobuddy.mesh_modifications.vtp_parser import read_vtp_file, write_vtp_file
-from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triangles
+from biobuddy.components.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from biobuddy.components.muscle_group import MuscleGroup
+from biobuddy.components.via_point_real import ViaPointReal
 from biobuddy.biomechanical_model_real import BiomechanicalModelReal
+
+
+class JointType(Enum):
+    WELD_JOINT = "WeldJoint"
+    CUSTOM_JOINT = "CustomJoint"
+
+
+class ForceType(Enum):
+    MUSCLE = "Muscle"
+
+
+class Controller(Enum):
+    NONE = None
 
 
 class OsimReader:
@@ -27,24 +40,36 @@ class OsimReader:
     ----------
     osim_path : str
         Path to the OpenSim .osim file to read
+    muscle_type: MuscleType
+        The type of muscle to assume when interpreting the osim model
+    muscle_state_type : MuscleStateType
+        The muscle state type to assume when interpreting the osim model
     print_warnings : bool, optional
         Whether to print conversion warnings, default True
     mesh_dir : str, optional
         Directory containing mesh files, defaults to 'Geometry'
-    
     Raises
     ------
     RuntimeError
         If file version is too old or units are not meters/newtons
     """
-    def __init__(self, osim_path: str, print_warnings: bool = True, mesh_dir: str = None):
+    def __init__(self,
+                 osim_path: str,
+                 muscle_type: MuscleType,
+                 muscle_state_type: MuscleStateType,
+                 print_warnings: bool = True,
+                 mesh_dir: str = None,
+                 ):
 
         # Initial attributes
         self.osim_path = osim_path
         self.osim_model = etree.parse(self.osim_path)
         self.mesh_dir = "Geometry" if mesh_dir is None else mesh_dir
+        self.muscle_type = muscle_type
+        self.muscle_state_type = muscle_state_type
 
         # Extended attributes
+        self.output_model = BiomechanicalModelReal()
         self.model = ElementTree.parse(self.osim_path)
         self.root = self.model.getroot()[0]
         self.print_warnings = print_warnings
@@ -55,7 +80,7 @@ class OsimReader:
                 "Opensim 4.0 or later."
             )
 
-        self.gravity = np.array([0.0, 0.0, -9.81])
+        self.output_model.gravity = np.array([0.0, 0.0, -9.81])
         self.ground_elt, self.default_elt, self.credit, self.publications = None, None, None, None
         self.bodyset_elt, self.jointset_elt, self.forceset_elt, self.markerset_elm = None, None, None, None
         self.controllerset_elt, self.constraintset_elt, self.contact_geometryset_elt = None, None, None
@@ -65,7 +90,7 @@ class OsimReader:
         for element in self.root:
             if element.tag == "gravity":
                 gravity = [float(i) for i in element.text.split(' ')]
-                self.gravity = np.array(gravity)
+                self.output_model.gravity = np.array(gravity)
             elif element.tag == "Ground":
                 self.ground_elt = element
             elif element.tag == "defaults":
@@ -117,7 +142,6 @@ class OsimReader:
         self.geometry_set = []
         self.warnings = []
 
-        self.output_model = BiomechanicalModelReal()
 
     @staticmethod
     def _is_element_empty(element):
@@ -360,18 +384,26 @@ class OsimReader:
 
         for muscle in self.forces:
             try:
+                # Add muscle group if it does not exist already
+                muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
+                if muscle_group_name not in self.output_model.muscle_groups:
+                    self.output_model.muscle_groups[muscle_group_name] = MuscleGroup(name=muscle_group_name,
+                                                                                    origin_parent_name=muscle.group[0],
+                                                                                    insertion_parent_name=muscle.group[1])
+
                 # Convert muscle properties
                 muscle_real = MuscleReal(
                     name=muscle.name,
-                    muscle_type=muscle.type,
-                    state_type=muscle.state_type,
-                    muscle_group=f"{muscle.group[0]}_to_{muscle.group[1]}",
+                    muscle_type=self.muscle_type,
+                    state_type=self.muscle_state_type,
+                    muscle_group=muscle_group_name,
                     origin_position=np.array([float(v) for v in muscle.origin.split()]),
                     insertion_position=np.array([float(v) for v in muscle.insersion.split()]),
                     optimal_length=float(muscle.optimal_length) if muscle.optimal_length else 0.1,
                     maximal_force=float(muscle.maximal_force) if muscle.maximal_force else 1000.0,
                     tendon_slack_length=float(muscle.tendon_slack_length) if muscle.tendon_slack_length else None,
-                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0
+                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0,
+                    maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation.
                 )
 
                 # Add via points if any
@@ -482,25 +514,30 @@ class OsimReader:
                 "This feature is not implemented in biorbd yet so it will be ignored."
             )
 
-    def get_warnings(self):
+    def set_warnings(self):
         self.get_probe_set()
         self.get_component_set()
         self.get_contact_geometry_set()
         self.get_constraint_set()
-        return self.warnings
+        self.output_model.warnings = self.warnings
 
     def get_file_version(self):
         return int(self.model.getroot().attrib["Version"])
 
-    def get_infos(self):
+
+    def set_header(self):
+        out_string = ""
+        out_string += f"\n// File extracted from {self.osim_path} on the {strftime('%Y-%m-%d %H:%M')}\n"
         if self.publications:
-            self.infos["Publication"] = self.publications
+            out_string += f"\n// Original file publication : {self.publications}\n"
         if self.credit:
-            self.infos["Credit"] = self.credit
+            out_string += f"\n// Original file credit : {self.credit}\n"
         if self.force_units:
-            self.infos["Force units"] = self.force_units
+            out_string += f"\n// Force units : {self.force_units}\n"
         if self.length_units:
-            self.infos["Length units"] = self.length_units
+            out_string += f"\n// Length units : {self.length_units}\n"
+        self.output_model.header = out_string
+
 
     def read(self):
         """Parse the OpenSim model file and populate the output model.
@@ -526,6 +563,9 @@ class OsimReader:
         self.geometry_set = self.get_body_mesh_list()
         self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
 
+        # Header
+        self.set_header()
+
         # Segments
         self.set_segments(body_set=[self.ground_elt])
         self.set_segments()
@@ -533,141 +573,9 @@ class OsimReader:
 
         # Muscles
         self.set_muscles()
-        # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
-        # self.vtp_files = self.get_body_mesh_list()
-        #
-        # if isinstance(self.muscle_type, MuscleType):
-        #     self.muscle_type = self.muscle_type.value
-        # if isinstance(self.state_type, MuscleStateType):
-        #     self.state_type = self.state_type.value
-        #
-        # if isinstance(muscle_type, str):
-        #     if self.muscle_type not in [e.value for e in MuscleType]:
-        #         raise RuntimeError(f"Muscle of type {self.muscle_type} is not a biorbd muscle.")
-        #
-        # if isinstance(muscle_type, str):
-        #     if self.state_type not in [e.value for e in MuscleStateType]:
-        #         raise RuntimeError(f"Muscle state type {self.state_type} is not a biorbd muscle state type.")
-        # if self.state_type == "default":
-        #     self.state_type = None
 
-
-    def convert_file(self):
-
-        if self.vtp_polygons_to_triangles:
-            self.convert_vtp_to_triangles()
-
-        # segment
-        self.writer.write("\n// SEGMENT DEFINITION\n")
-        # Handle the ground frame as a segment
-        if self.ground:
-            body = self.ground[0]
-            dof = Joint()
-            dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
-            self.writer.write_dof(
-                body,
-                dof,
-                self.new_mesh_dir if self.vtp_polygons_to_triangles else self.mesh_dir,
-                skip_virtual=True,
-                parent="base",
-            )
-            self.writer.write(f"\n\t// Markers\n")
-            for marker in body.markers:
-                self.writer.write_marker(marker)
-        for dof in self.joints:
-            for body in self.bodies:
-                if body.socket_frame == dof.child_body:
-                    self.writer.write_dof(
-                        body,
-                        dof,
-                        self.new_mesh_dir if self.vtp_polygons_to_triangles else self.mesh_dir,
-                    )
-                    self.writer.write(f"\n\t// Markers\n")
-                    for marker in body.markers:
-                        self.writer.write_marker(marker)
-
-        muscle_groups = []
-        for muscle in self.forces:
-            group = muscle.group
-            if group not in muscle_groups:
-                muscle_groups.append(group)
-
-        self.writer.write("\n// MUSCLE DEFINIION\n")
-        muscles = self.forces
-        while len(muscles) != 0:
-            for muscle_group in muscle_groups:
-                idx = []
-                self.writer.write_muscle_group(muscle_group)
-                for m, muscle in enumerate(muscles):
-                    if muscle.group == muscle_group:
-                        if not muscle.applied:
-                            self.writer.write("\n/*")
-                        self.writer.write_muscle(muscle, self.muscle_type, self.state_type)
-                        for via_point in muscle.via_point:
-                            self.writer.write_via_point(via_point)
-                        if not muscle.applied:
-                            self.writer.write("*/\n")
-                        idx.append(m)
-                count = 0
-                for i in idx:
-                    muscles.pop(i - count)
-                    count += 1
-            muscle_groups.pop(0)
-
-        if self.print_warnings:
-            self.writer.write("\n/*-------------- WARNINGS---------------\n")
-            for warning in self.warnings:
-                self.writer.write("\n" + warning)
-            self.writer.write("*/\n")
-        self.writer.biomod_file.close()
-        print(f"\nYour file {self.osim_path} has been converted into {self.biomod_path}.")
-
-    def convert_vtp_to_triangles(self):
-        """
-        Convert vtp mesh to triangles mesh
-        """
-        mesh_dir_relative = os.path.join(self.biomod_path[: self.biomod_path.rindex("/")], self.mesh_dir)
-        new_mesh_dir_relative = os.path.join(self.biomod_path[: self.biomod_path.rindex("/")], self.new_mesh_dir)
-
-        if not os.path.exists(new_mesh_dir_relative):
-            os.makedirs(new_mesh_dir_relative)
-
-        log_file_failed = []
-        print("Cleaning vtp file into triangles: ")
-
-        # select only files in such that filename.endswith('.vtp') or filename in self.vtp_files
-        files = [
-            filename
-            for filename in os.listdir(mesh_dir_relative)
-            if filename.endswith(".vtp") and filename in self.vtp_files
-        ]
-
-        for filename in files:
-            complete_path = os.path.join(mesh_dir_relative, filename)
-
-            with open(complete_path, "r") as f:
-                print(complete_path)
-                try:
-                    mesh = read_vtp_file(complete_path)
-                    if mesh["polygons"].shape[1] == 3:  # it means it doesn't need to be converted into triangles
-                        shutil.copy(complete_path, new_mesh_dir_relative)
-                    else:
-                        poly, nodes, normals = transform_polygon_to_triangles(
-                            mesh["polygons"], mesh["nodes"], mesh["normals"]
-                        )
-                        new_mesh = dict(polygons=poly, nodes=nodes, normals=normals)
-
-                        write_vtp_file(new_mesh, new_mesh_dir_relative, filename)
-
-                except:
-                    print(f"Error with {filename}")
-                    log_file_failed.append(filename)
-                    # if failed we just copy the file in the new folder
-                    shutil.copy(complete_path, new_mesh_dir_relative)
-
-        if len(log_file_failed) > 0:
-            print("Files failed to clean:")
-            print(log_file_failed)
+        # Warnings
+        self.set_warnings()
 
 
 class Body:
@@ -946,25 +854,3 @@ class Marker:
         fixed = find(element, "fixed")
         self.fixed = fixed == "true" if fixed else None
         return self
-
-
-# Enums used to read the osim file
-class MuscleType(Enum):
-    HILL = "hill"
-    HILL_THELEN = "hillethelen"
-    HILL_DE_GROOTE = "hilldegroote"
-
-
-class MuscleStateType(Enum):
-    DEGROOTE = "degroote"
-    DEFAULT = "default"
-    BUCHANAN = "buchanan"
-
-
-class JointType(Enum):
-    WELD_JOINT = "WeldJoint"
-    CUSTOM_JOINT = "CustomJoint"
-
-
-class ForceType(Enum):
-    MUSCLE = "Muscle"

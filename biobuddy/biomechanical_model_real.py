@@ -6,6 +6,8 @@ class BiomechanicalModelReal:
         from biobuddy.components.via_point_real import ViaPointReal
 
         self.gravity = None
+        self.header = ""
+        self.warnings = ""
         self.segments: dict[str:SegmentReal, ...] = {}
         # From Pythom 3.7 the insertion order in a dict is preserved. This is important because when writing a new
         # .bioMod file, the order of the segment matters
@@ -75,7 +77,7 @@ class BiomechanicalModelReal:
         # Collect the text to write
         out_string = "version 4\n\n"
 
-
+        out_string += self.header
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
@@ -105,6 +107,12 @@ class BiomechanicalModelReal:
         for name in self.via_points:
             out_string += self.via_points[name].to_biomod
             out_string += "\n\n\n"  # Give some space between via points
+
+        if self.warnings:
+            out_string += "\n/*-------------- WARNINGS---------------\n"
+            for warning in self.warnings:
+                out_string += "\n" + warning
+            out_string +="*/\n"
 
 
         # Actually write it to the .bioMod file
