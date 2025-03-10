@@ -246,16 +246,14 @@ class OsimReader:
                 virtual_names: list[str] = []
 
                 # Create transformation virtual segments first in parent chain
-                for i, virt_body in enumerate(body.virtual_body):
-                    if i == 0:  # Skip first body as it's the main segment we'll add later
-                        continue
+                for i in range(1, len(body.mesh_offset)):
+                    if i >= len(body.virtual_body):
+                        break
 
+                    virt_body = body.virtual_body[i]
                     virt_name = f"{name}_{virt_body}"
-                    if i >= len(body.mesh_offset):
-                        break  # For safety if offsets list is shorter
-
-                    # Create virtual segment with transformation
                     mesh_offset = body.mesh_offset[i]
+
                     self.output_model.segments[virt_name] = SegmentReal(
                         name=virt_name,
                         parent_name=current_parent,
@@ -263,17 +261,23 @@ class OsimReader:
                         rotations=Rotations.NONE,
                         segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
                             angles=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
-                            angle_sequence="zyx" if rotation_axes else "xyz",
+                            angle_sequence="zyx",
                             translations=tuple(map(float, mesh_offset.get_translation().flatten())),
                         ),
-                        mesh_file=None,  # Virtual segments in parent chain don't carry meshes
+                        mesh_file=MeshFileReal(  # Add mesh to parent virtual segments
+                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i-1]}",
+                            mesh_translation=tuple(map(float, mesh_offset.get_translation().flatten())),
+                            mesh_rotation=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
+                            mesh_color=tuple(map(float, body.mesh_color[i-1].split())) if body.mesh_color else None,
+                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i-1].split())) if body.mesh_scale_factor else None,
+                        ) if i <= len(body.mesh) else None,
                         q_ranges=RangeOfMotion(Ranges.Q, [0]*len(rotation_axes), [0]*len(rotation_axes)) if rotation_axes else None
                     )
 
                     virtual_names.append(virt_name)
                     current_parent = virt_name
 
-                # Create main segment as child of last virtual parent
+                # Create main segment as child of last virtual parent (with inertial properties)
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
                     parent_name=current_parent,
@@ -283,23 +287,23 @@ class OsimReader:
                     qdot_ranges=None,
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=scs,
-                    mesh_file=MeshFileReal(
-                        mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
+                    mesh_file=MeshFileReal(  # Only add mesh if no parent virtual segments
+                        mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh and not virtual_names else None,
                         mesh_translation=tuple(map(float, body.mesh_offset[0].get_translation().flatten())) if body.mesh_offset else None,
-                        mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[0].get_rotation_matrix()).flatten())) if body.mesh_offset else None,
+                        mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[0].get_rotation_matrix().T).flatten())) if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
-                    ) if body.mesh else None,
+                    )
                 )
 
-                # Add geometry virtual segments as children of main segment
-                for i, virt_body in reversed(list(enumerate(body.virtual_body))):
-                    if i == 0:  # Skip first body as it's the main segment
-                        continue
+                # Add child geometry virtual segments with proper transformations
+                for i in range(1, len(body.mesh)):
+                    if i >= len(body.virtual_body):
+                        break
 
+                    virt_body = body.virtual_body[i]
                     virt_name = f"{name}_{virt_body}_geom"
-                    if i >= len(body.mesh):
-                        break  # For safety if meshes list is shorter
+                    mesh_offset = body.mesh_offset[i]
 
                     self.output_model.segments[virt_name] = SegmentReal(
                         name=virt_name,
@@ -307,16 +311,16 @@ class OsimReader:
                         translations=Translations.NONE,
                         rotations=Rotations.NONE,
                         segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=[0, 0, 0],
-                            angle_sequence="xyz",
-                            translations=[0, 0, 0]
+                            angles=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
+                            angle_sequence="zyx",
+                            translations=tuple(map(float, mesh_offset.get_translation().flatten())),
                         ),
                         mesh_file=MeshFileReal(
-                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i-1]}",  # Use i-1 since main segment is index 0
-                            mesh_translation=tuple(map(float, body.mesh_offset[i].get_translation().flatten())) if body.mesh_offset else None,
-                            mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[i].get_rotation_matrix()).flatten())) if body.mesh_offset else None,
-                            mesh_color=tuple(map(float, body.mesh_color[i-1].split())) if body.mesh_color else None,
-                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i-1].split())) if body.mesh_scale_factor else None,
+                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}",
+                            mesh_translation=tuple(map(float, mesh_offset.get_translation().flatten())),
+                            mesh_rotation=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
+                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if body.mesh_color else None,
+                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if body.mesh_scale_factor else None,
                         )
                     )
             return
