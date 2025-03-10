@@ -153,43 +153,6 @@ class OsimReader:
         else:
             return True
 
-    def _get_transformation_parameters(self, parent_element):
-        """Parse transformation parameters from XML element.
-        
-        Parameters
-        ----------
-        parent_element : lxml.etree.Element
-            Parent element containing transformation parameters
-            
-        Returns
-        -------
-        tuple:
-            - translations (list[float]): Translation vector [x, y, z]
-            - rotations (list[float]): Rotation vector [x, y, z] in radians
-            - translation_axes (list[str]): Translation axes order
-            - rotation_axes (list[str]): Rotation axes order
-        """
-        translations = [0.0, 0.0, 0.0]
-        rotations = [0.0, 0.0, 0.0]
-        translation_axes = []
-        rotation_axes = []
-
-        # Get transformations from parent element components
-        for transform in parent_element.findall(".//TransformAxis"):
-            axis_type = transform.find("axis_type").text
-            axis_values = list(map(float, transform.find("axis").text.split()))
-            
-            if axis_type == "translation":
-                translation_axes.append('X' if axis_values[0] else 'Y' if axis_values[1] else 'Z')
-                translations = [v + float(t.find("value").text) 
-                              for v, t in zip(translations, transform.findall(".//value"))]
-            elif axis_type == "rotation":
-                rotation_axes.append('X' if axis_values[0] else 'Y' if axis_values[1] else 'Z')
-                rotations = [v + float(r.find("value").text)
-                           for v, r in zip(rotations, transform.findall(".//value"))]
-
-        return translations, rotations, translation_axes, rotation_axes
-
     def set_segments(self, body_set=None):
         body_set = body_set if body_set else self.bodyset_elt[0]
         if self._is_element_empty(body_set):
