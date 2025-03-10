@@ -213,37 +213,18 @@ class OsimReader:
                 translations = Translations.NONE
                 rotations = Rotations.NONE
                 if joint:
-                    rotation_axes = []
-                    translation_axes = []
-                    for transform in joint.spatial_transform:
-                        if transform.type == 'rotation':
-                            axis = list(map(float, transform.axis.split()))
-                            if axis[0] == 1.0:
-                                rotation_axes.append('X')
-                            elif axis[1] == 1.0:
-                                rotation_axes.append('Y')
-                            elif axis[2] == 1.0:
-                                rotation_axes.append('Z')
-                        elif transform.type == 'translation':
-                            axis = list(map(float, transform.axis.split()))
-                            if axis[0] == 1.0:
-                                translation_axes.append('X')
-                            elif axis[1] == 1.0:
-                                translation_axes.append('Y')
-                            elif axis[2] == 1.0:
-                                translation_axes.append('Z')
+                    # Get transformation parameters from joint
+                    (translations_list,
+                     rotations_list,
+                     translation_axes,
+                     rotation_axes) = self._get_transformation_parameters(joint.element)
                     
-                    # Get rotations enum
-                    if rotation_axes:
-                        rotation_name = ''.join(rotation_axes)
-                        rotations = getattr(Rotations, rotation_name, Rotations.NONE)
+                    # Convert axes lists to enums
+                    rotation_name = ''.join(rotation_axes) if rotation_axes else ''
+                    rotations = getattr(Rotations, rotation_name, Rotations.NONE)
                     
-                    # Get translations enum
-                    if translation_axes:
-                        translation_name = ''.join(translation_axes)
-                        translations = getattr(Translations, translation_name, Translations.NONE)
-                    else:
-                        translations = None
+                    translation_name = ''.join(translation_axes) if translation_axes else ''
+                    translations = getattr(Translations, translation_name, Translations.NONE)
                 
                 # Create segment coordinate system from joint offsets
                 scs = SegmentCoordinateSystemReal()
