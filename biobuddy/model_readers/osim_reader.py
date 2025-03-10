@@ -262,11 +262,12 @@ class OsimReader:
                         translations=Translations.NONE,
                         rotations=Rotations.NONE,
                         segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=rot2eul(mesh_offset.get_rotation_matrix()).reshape(3, ),
-                            angle_sequence="xyz",
-                            translations=mesh_offset.get_translation().reshape(3, ),
+                            angles=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
+                            angle_sequence="zyx" if rotation_axes else "xyz",
+                            translations=tuple(map(float, mesh_offset.get_translation().flatten())),
                         ),
-                        mesh_file=None  # Virtual segments in parent chain don't carry meshes
+                        mesh_file=None,  # Virtual segments in parent chain don't carry meshes
+                        q_ranges=RangeOfMotion(Ranges.Q, [0]*len(rotation_axes), [0]*len(rotation_axes)) if rotation_axes else None
                     )
 
                     virtual_names.append(virt_name)
