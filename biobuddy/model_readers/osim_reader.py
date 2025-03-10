@@ -20,6 +20,24 @@ from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triang
 
 
 class OsimReader:
+    """Reads and converts OpenSim model files (.osim) to a biomechanical model representation.
+    
+    Parameters
+    ----------
+    osim_path : str
+        Path to the OpenSim .osim file to read
+    output_model : BiomechanicalModel
+        The model instance to populate with parsed data
+    print_warnings : bool, optional
+        Whether to print conversion warnings, default True
+    mesh_dir : str, optional
+        Directory containing mesh files, defaults to 'Geometry'
+    
+    Raises
+    ------
+    RuntimeError
+        If file version is too old or units are not meters/newtons
+    """
     def __init__(self, osim_path: str, output_model, print_warnings: bool = True, mesh_dir: str = None):
 
         # Initial attributes
@@ -390,6 +408,23 @@ class OsimReader:
             self.infos["Length units"] = self.length_units
 
     def read(self):
+        """Parse the OpenSim model file and populate the output model.
+        
+        Processes:
+        - Joints and their coordinate ranges
+        - Body segments with inertia properties
+        - Markers and their parent segments
+        - Mesh geometry references
+        
+        Raises
+        ------
+        RuntimeError
+            If critical model components are missing or invalid
+            
+        Note
+        ----
+        Modifies the output_model object in place by adding segments, markers, etc.
+        """
 
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
         self.markers = self.get_marker_set()
