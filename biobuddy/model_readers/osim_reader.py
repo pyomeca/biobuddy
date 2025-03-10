@@ -17,6 +17,7 @@ from biobuddy.components.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.components.mesh_file_real import MeshFileReal
 from biobuddy.mesh_modifications.vtp_parser import read_vtp_file, write_vtp_file
 from biobuddy.mesh_modifications.mesh_cleaner import transform_polygon_to_triangles
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
 
 
 class OsimReader:
@@ -26,8 +27,6 @@ class OsimReader:
     ----------
     osim_path : str
         Path to the OpenSim .osim file to read
-    output_model : BiomechanicalModel
-        The model instance to populate with parsed data
     print_warnings : bool, optional
         Whether to print conversion warnings, default True
     mesh_dir : str, optional
@@ -38,7 +37,7 @@ class OsimReader:
     RuntimeError
         If file version is too old or units are not meters/newtons
     """
-    def __init__(self, osim_path: str, output_model, print_warnings: bool = True, mesh_dir: str = None):
+    def __init__(self, osim_path: str, print_warnings: bool = True, mesh_dir: str = None):
 
         # Initial attributes
         self.osim_path = osim_path
@@ -118,8 +117,7 @@ class OsimReader:
         self.geometry_set = []
         self.warnings = []
 
-        # TODO: @Pariterre: How should I have done this ?
-        self.output_model = output_model
+        self.output_model = BiomechanicalModelReal()
 
     @staticmethod
     def _is_element_empty(element):
@@ -232,9 +230,9 @@ class OsimReader:
                         translations=Translations.NONE,
                         rotations=Rotations.NONE,
                         segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=mesh_offset.get_rotation(),
+                            angles=rot2eul(mesh_offset.get_rotation_matrix()).reshape(3, ),
                             angle_sequence="xyz",
-                            translations=mesh_offset.get_translation(),
+                            translations=mesh_offset.get_translation().reshape(3, ),
                         ),
                         mesh_file=None  # Virtual segments in parent chain don't carry meshes
                     )
@@ -255,7 +253,7 @@ class OsimReader:
                     mesh_file=MeshFileReal(
                         mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
                         mesh_translation=body.mesh_offset[0].get_translation() if body.mesh_offset else None,
-                        mesh_rotation=body.mesh_offset[0].get_rotation() if body.mesh_offset else None,
+                        mesh_rotation=rot2eul(body.mesh_offset[0].get_rotation_matrix()) if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
                     ) if body.mesh else None,
@@ -283,7 +281,7 @@ class OsimReader:
                         mesh_file=MeshFileReal(
                             mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}",
                             mesh_translation=body.mesh_offset[i].get_translation() if body.mesh_offset else None,
-                            mesh_rotation=body.mesh_offset[i].get_rotation() if body.mesh_offset else None,
+                            mesh_rotation=rot2eul(body.mesh_offset[i].get_rotation_matrix()) if body.mesh_offset else None,
                             mesh_color=tuple(map(float, body.mesh_color[i].split())) if body.mesh_color else None,
                             mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if body.mesh_scale_factor else None,
                         )
