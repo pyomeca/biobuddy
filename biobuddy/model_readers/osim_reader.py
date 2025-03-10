@@ -211,24 +211,49 @@ class OsimReader:
                             min_val, max_val = map(float, coord.range.split())
                             q_ranges.append((min_val, max_val))
 
-                # Create the segment
+                # Create the main segment with inertia
                 self.output_model.segments[name] = SegmentReal(
                     name=name,
                     parent_name=body.socket_frame if body.socket_frame != name else "",
                     translations=translations,
                     rotations=rotations,
                     q_ranges=RangeOfMotion(Ranges.Q, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
-                    qdot_ranges=None,  # OpenSim doesn't provide velocity ranges by default
+                    qdot_ranges=None,
                     inertia_parameters=inertia_params,
                     segment_coordinate_system=scs,
                     mesh_file=MeshFileReal(
                         mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh else None,
-                        mesh_translation = body.mesh_offset.get_translation() if body.mesh_offset else None,
-                        mesh_rotation = body.mesh_offset.get_rotation() if body.mesh_offset else None,
+                        mesh_translation=body.mesh_offset.get_translation() if body.mesh_offset else None,
+                        mesh_rotation=body.mesh_offset.get_rotation() if body.mesh_offset else None,
                         mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
                         mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
                     ) if body.mesh else None,
                 )
+
+                # Create virtual segments for additional geometries
+                for i, virt_body in enumerate(body.virtual_body):
+                    if i == 0:  # Skip first body as it's the main segment
+                        continue
+
+                    virt_name = f"{name}_{virt_body}"
+                    self.output_model.segments[virt_name] = SegmentReal(
+                        name=virt_name,
+                        parent_name=name,  # Parent is the main segment
+                        translations=Translations.NONE,
+                        rotations=Rotations.NONE,
+                        segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
+                            angles=[0, 0, 0],
+                            angle_sequence="xyz",
+                            translations=[0, 0, 0]
+                        ),
+                        mesh_file=MeshFileReal(
+                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}" if i < len(body.mesh) else None,
+                            mesh_translation=body.mesh_offset[i].get_translation() if i < len(body.mesh_offset) else None,
+                            mesh_rotation=body.mesh_offset[i].get_rotation() if i < len(body.mesh_offset) else None,
+                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if i < len(body.mesh_color) else None,
+                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if i < len(body.mesh_scale_factor) else None,
+                        ) if body.mesh and i < len(body.mesh) else None,
+                    )
             return
 
     def get_body_mesh_list(self, body_set=None) -> list[str]:
