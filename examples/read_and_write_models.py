@@ -5,23 +5,8 @@ This example shows how to read and write models.
 import os
 from pathlib import Path
 
-import numpy as np
-import biorbd
-from biobuddy import (
-    BiomechanicalModel,
-    MeshFile,
-    Segment,
-    Contact,
-    MuscleGroup,
-    Muscle,
-    MuscleType,
-    MuscleStateType,
-    Translations,
-    Rotations,
-    RangeOfMotion,
-    Ranges,
-    ViaPoint,
-)
+from biobuddy import BiomechanicalModel
+
 
 if __name__ == "__main__":
 

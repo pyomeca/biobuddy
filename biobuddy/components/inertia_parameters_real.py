@@ -80,9 +80,19 @@ class InertiaParametersReal:
     @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
-        com = np.nanmean(self.center_of_mass, axis=1)[:3]
+        com = np.nanmean(self.center_of_mass, axis=1)[:3] if len(self.center_of_mass.shape) == 2 else self.center_of_mass[:3]
 
         out_string = f"\tmass\t{self.mass}\n"
         out_string += f"\tCenterOfMass\t{com[0]:0.5f}\t{com[1]:0.5f}\t{com[2]:0.5f}\n"
-        out_string += f"\tinertia_xxyyzz\t{self.inertia[0]}\t{self.inertia[1]}\t{self.inertia[2]}\n"
+        if len(self.inertia.shape) == 2:
+            if self.inertia.shape != (3, 3):
+                raise ValueError("The inertia matrix must be of shape (3, 3) for a matrix or (3,) for the diagonal elements only.")
+            out_string += f"\tinertia\n"
+            out_string += f"\t\t{self.inertia[0, 0]}\t{self.inertia[0, 1]}\t{self.inertia[0, 2]}\n"
+            out_string += f"\t\t{self.inertia[1, 0]}\t{self.inertia[1, 1]}\t{self.inertia[1, 2]}\n"
+            out_string += f"\t\t{self.inertia[2, 0]}\t{self.inertia[2, 1]}\t{self.inertia[2, 2]}\n"
+        elif len(self.inertia.shape) == 1:
+            if self.inertia.shape != (3,):
+                raise ValueError("The inertia matrix must be of shape (3, 3) for a matrix or (3,) for the diagonal elements only.")
+            out_string += f"\tinertia_xxyyzz\t{self.inertia[0]}\t{self.inertia[1]}\t{self.inertia[2]}\n"
         return out_string

@@ -129,7 +129,7 @@ class OsimReader:
         else:
             return True
 
-    def get_segments(self, body_set=None):
+    def set_segments(self, body_set=None):
         body_set = body_set if body_set else self.bodyset_elt[0]
         if self._is_element_empty(body_set):
             return None
@@ -322,7 +322,6 @@ class OsimReader:
                 if "Muscle" in element.tag:
                     original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
                     current_muscle = Muscle().get_muscle_attributes(element, ignore_muscle_applied_tag)
-                    # TODO: insersion = current_muscle.return_muscle_attrib()
                     if current_muscle is not None:
                         forces.append(current_muscle)
                         if forces[-1].wrap:
@@ -486,17 +485,17 @@ class OsimReader:
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
         self.markers = self.get_marker_set()
         self.geometry_set = self.get_body_mesh_list()
+        self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
 
-        self.get_segments(body_set=[self.ground_elt])
-        self.get_segments()
+        # Segments
+        self.set_segments(body_set=[self.ground_elt])
+        self.set_segments()
         self.add_markers_to_segments(self.markers)
 
-        # self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
-        #
-        # self.infos, self.warnings = self.infos, self.get_warnings()
-        # self.muscle_type = muscle_type if muscle_type else "hilldegroote"
-        # self.state_type = state_type
-        #
+        # Muscles
+        self.set_muscles()
+
+
         # self.new_mesh_dir = self.mesh_dir + "_cleaned"
         # self.vtp_polygons_to_triangles = vtp_polygons_to_triangles
         # self.vtp_files = self.get_body_mesh_list()
@@ -847,7 +846,7 @@ class Muscle:
         self.state_type = None
 
 
-    def get_muscle_attrib(self, element, ignore_applied):
+    def get_muscle_attributes(self, element, ignore_applied):
         name = (element.attrib["name"]).split("/")[-1]
         self.name = name
         self.maximal_force = find(element, "max_isometric_force")
@@ -880,11 +879,6 @@ class Muscle:
         self.via_point = self.via_point[1:-1]
 
         return self
-
-    def return_muscle_attrib(self):
-        insersion = None if not self.insersion else float(self.insersion)
-        # TODO: via points
-        return insersion
 
 
 class PathPoint:

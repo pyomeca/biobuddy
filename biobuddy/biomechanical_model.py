@@ -50,7 +50,7 @@ class BiomechanicalModel:
             The path to the osim file to read from
         """
 
-        osim_model = OsimReader(osim_path=osim_path, output_model=self)
+        osim_model = OsimReader(osim_path=osim_path)
         osim_model.read()
 
         self.set_gravity(osim_model.gravity)
@@ -59,6 +59,10 @@ class BiomechanicalModel:
                         credit=osim_model.credit,
                         force_units=osim_model.force_units,
                         length_units=osim_model.length_units)
+
+        self.model = osim_model.output_model
+
+        return osim_model.output_model
 
 
 
