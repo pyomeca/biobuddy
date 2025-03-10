@@ -14,7 +14,6 @@ from biobuddy.components.muscle_group import MuscleGroup
 from biobuddy.components.via_point import ViaPoint
 from biobuddy.components.mesh import Mesh
 from biobuddy.components.mesh_file import MeshFile
-from .protocols import Data, GenericDynamicModel
 from biobuddy.components.rotations import Rotations
 from biobuddy.components.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.components.segment import Segment
@@ -22,7 +21,7 @@ from biobuddy.components.segment_coordinate_system import SegmentCoordinateSyste
 from biobuddy.components.translations import Translations
 
 # Add also the "Real" version of classes to create models from values
-from .biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.biomechanical_model_real import BiomechanicalModelReal
 from biobuddy.components.axis_real import AxisReal
 from biobuddy.components.marker_real import MarkerReal
 from biobuddy.components.contact_real import ContactReal
@@ -35,7 +34,11 @@ from biobuddy.components.segment_coordinate_system_real import SegmentCoordinate
 from biobuddy.components.inertia_parameters_real import InertiaParametersReal
 
 # The accepted data formating
-from .c3d_data import C3dData
+from biobuddy.c3d_data import C3dData
+from biobuddy.protocols import Data, GenericDynamicModel
 
 # Segment predefined characteristics
-from .characteristics.de_leva import DeLevaTable
+from biobuddy.characteristics.de_leva import DeLevaTable
+
+# Mesh modifications
+from biobuddy.mesh_modifications.vtp_parser import VtpParser

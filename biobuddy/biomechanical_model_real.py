@@ -79,6 +79,7 @@ class BiomechanicalModelReal:
 
         out_string += self.header
 
+        out_string += "\n\n\n"
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"

@@ -1,6 +1,10 @@
 import numpy as np
 
 
+def norm2(v):
+    """Compute the squared norm of each row of the matrix v."""
+    return np.sum(v ** 2, axis=1)
+
 def compute_matrix_rotation(_rot_value):
     rot_x = np.array(
         [

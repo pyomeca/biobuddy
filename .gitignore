@@ -177,3 +177,7 @@ sandbox/
 .aider*
 
 .DS_Store
+
+examples/models/Geometry/
+
+examples/models/Geometry_cleaned/
