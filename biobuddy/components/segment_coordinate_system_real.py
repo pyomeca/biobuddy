@@ -201,12 +201,14 @@ class SegmentCoordinateSystemReal:
         if self.is_in_global:
             rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
-        mean_rt = self.mean_homogenous_matrix(rt)
-
-        sequence = "xyz"
-        tx, ty, tz = mean_rt[0:3, 3]
-        rx, ry, rz = self.to_euler(mean_rt[:, :, np.newaxis], sequence)
-        return f"{rx[0]:0.3f} {ry[0]:0.3f} {rz[0]:0.3f} {sequence} {tx:0.3f} {ty:0.3f} {tz:0.3f}"
+        mean_rt = self.mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
+        out_string = f"\tRTinMatrix	1\n"
+        out_string += f"\tRT\n"
+        out_string += f"\t\t{mean_rt[0, 0]}\t{mean_rt[0, 1]}\t{mean_rt[0, 2]}\t{mean_rt[0, 3]}\n"
+        out_string += f"\t\t{mean_rt[1, 0]}\t{mean_rt[1, 1]}\t{mean_rt[1, 2]}\t{mean_rt[1, 3]}\n"
+        out_string += f"\t\t{mean_rt[2, 0]}\t{mean_rt[2, 1]}\t{mean_rt[2, 2]}\t{mean_rt[2, 3]}\n"
+        out_string += f"\t\t{mean_rt[3, 0]}\t{mean_rt[3, 1]}\t{mean_rt[3, 2]}\t{mean_rt[3, 3]}\n"
+        return out_string
 
     @staticmethod
     def to_euler(rt, sequence: str) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

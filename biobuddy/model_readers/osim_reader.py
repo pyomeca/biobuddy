@@ -306,7 +306,7 @@ class OsimReader:
             dof = Joint()
             dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
             self.write_dof(
-                Body().get_body_attrib(ground_set[0]),
+                Body().get_body_attrib(ground_set),
                 dof,
                 self.mesh_dir,
                 skip_virtual=True,
@@ -505,6 +505,9 @@ class OsimReader:
                 f"You skipped virtual segment definition without define a parent." f" Please provide a parent name."
             )
 
+        # True segment
+        frame_offset = [dof.child_offset_trans, dof.child_offset_rot]
+
         body.mesh = body.mesh if len(body.mesh) != 0 else [None]
         body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
         body.mesh_scale_factor = body.mesh_scale_factor if len(body.mesh_scale_factor) != 0 else [None]
@@ -512,7 +515,7 @@ class OsimReader:
         self.write_true_segment(
             name=body.name,
             parent_name=parent,
-            frame_offset=[dof.child_offset_trans, dof.child_offset_rot],
+            frame_offset=frame_offset,
             com=body.mass_center,
             mass=body.mass,
             inertia=body.inertia,
@@ -555,20 +558,14 @@ class OsimReader:
         y = axis[1]
         z = axis[2]
         frame_offset.set_rotation_matrix(np.append(x, np.append(y, z)).reshape(3, 3).T)
-
-        translations = getattr(Translations, ''.join(trans_dof), Translations.NONE)
-        rotations = getattr(Rotations, ''.join(rot_dof), Rotations.NONE)
-        segment_coordinate_system = self.get_scs_from_offset(rt_in_matrix, frame_offset)
-        self.output_model.segments[name] = SegmentReal(
+        self.write_virtual_segment(
             name=name,
             parent_name=parent,
-            translations=translations,
-            rotations=rotations,
-            q_ranges=self.get_q_range(q_range) if (translations != Translations.NONE and rotations != Rotations.NONE) else None,
-            qdot_ranges=None,  # OpenSim does not handle qdot ranges
-            inertia_parameters=None,  # TODO: Charbie -> verify this
-            segment_coordinate_system=segment_coordinate_system,
-            mesh_file=None,
+            frame_offset=frame_offset,
+            q_range=q_range,
+            rt_in_matrix=rt_in_matrix,
+            trans_dof=trans_dof,
+            rot_dof=rot_dof,
         )
         return axis_offset.dot(frame_offset.get_rotation_matrix())
 
@@ -682,8 +679,8 @@ class OsimReader:
         """
         This function aims to add virtual segment to convert osim dof in biomod dof.
         """
-        translations = getattr(Translations, trans_dof, Translations.NONE)
-        rotations = getattr(Rotations, rot_dof, Rotations.NONE)
+        translations = getattr(Translations, trans_dof.upper(), Translations.NONE)
+        rotations = getattr(Rotations, rot_dof.upper(), Rotations.NONE)
 
         self.output_model.segments[name] = SegmentReal(
             name=name,

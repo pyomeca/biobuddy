@@ -82,7 +82,7 @@ class SegmentReal:
         if self.parent_name:
             out_string += f"\tparent\t{self.parent_name}\n"
         if self.segment_coordinate_system:
-            out_string += f"\tRT\t{self.segment_coordinate_system.to_biomod}\n"
+            out_string += f"{self.segment_coordinate_system.to_biomod}\n"
         if self.translations != Translations.NONE:
             out_string += f"\ttranslations\t{self.translations.value}\n"
         if self.rotations != Rotations.NONE:
