@@ -33,7 +33,7 @@ class InertiaParametersReal:
             raise RuntimeError(f"The inertia must be a np.ndarray, not {type(inertia)}")
         if inertia.shape != (3, 3):
             raise RuntimeError(f"The inertia must be a np.ndarray of shape (3, 3) not {inertia.shape}")
-        
+
         self.mass = mass
         self.center_of_mass = center_of_mass
         self.inertia = inertia

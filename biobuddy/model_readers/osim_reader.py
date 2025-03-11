@@ -5,7 +5,7 @@ from time import strftime
 import numpy as np
 from lxml import etree
 
-from biobuddy.utils import find, OrthoMatrix, compute_matrix_rotation, rot2eul
+from biobuddy.utils import find, OrthoMatrix, compute_matrix_rotation, rot2eul, is_ortho_basis, ortho_norm_basis
 from biobuddy.components.segment_real import SegmentReal
 from biobuddy.components.inertia_parameters_real import InertiaParametersReal
 from biobuddy.components.rotations import Rotations
@@ -155,198 +155,15 @@ class OsimReader:
         else:
             return True
 
-    def set_segments(self, body_set=None):
+    def get_body_set(self, body_set=None):
+        bodies = []
         body_set = body_set if body_set else self.bodyset_elt[0]
         if self._is_element_empty(body_set):
             return None
         else:
             for element in body_set:
-                body = Body().get_body_attrib(element)
-                name, mass, inertia, center_of_mass = body.return_segment_attrib()
-                
-                # Create inertia parameters
-                inertia_params = InertiaParametersReal(
-                    mass=mass,
-                    center_of_mass=center_of_mass,
-                    inertia=inertia
-                )
-                
-                # Find corresponding joint
-                joint = next((j for j in self.joints if j.child_body == name), None)
-                
-                # Determine translations and rotations from joint
-                translations = Translations.NONE
-                rotations = Rotations.NONE
-                if joint:
-                    rotation_axes = []
-                    translation_axes = []
-                    for transform in joint.spatial_transform:
-                        if transform.type == 'rotation':
-                            axis = list(map(float, transform.axis.split()))
-                            if transform.coordinate != [] and not transform.coordinate.locked:
-                                if axis[0] == 1.0:
-                                    rotation_axes.append('X')
-                                elif axis[1] == 1.0:
-                                    rotation_axes.append('Y')
-                                elif axis[2] == 1.0:
-                                    rotation_axes.append('Z')
-                        elif transform.type == 'translation':
-                            axis = list(map(float, transform.axis.split()))
-                            if transform.coordinate != [] and not transform.coordinate.locked:
-                                if axis[0] == 1.0:
-                                    translation_axes.append('X')
-                                elif axis[1] == 1.0:
-                                    translation_axes.append('Y')
-                                elif axis[2] == 1.0:
-                                    translation_axes.append('Z')
-                    
-                    # Get rotations enum
-                    if rotation_axes:
-                        rotation_name = ''.join(rotation_axes)
-                        rotations = getattr(Rotations, rotation_name, Rotations.NONE)
-                    else:
-                        rotations = Rotations.NONE
-                    
-                    # Get translations enum
-                    if translation_axes:
-                        translation_name = ''.join(translation_axes)
-                        translations = getattr(Translations, translation_name, Translations.NONE)
-                    else:
-                        translations = Translations.NONE
-                
-                # Create segment coordinate system from joint offsets
-                scs = SegmentCoordinateSystemReal()
-                if joint:
-                    try:
-                        # Parse joint offset values
-                        translation = joint.child_offset_trans
-                        rotation = joint.child_offset_rot
-                        angle_sequence = ''.join(rotation_axes).lower() if rotation_axes else 'xyz'
-                        
-                        scs = SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=rotation,
-                            angle_sequence=angle_sequence,
-                            translations=translation,
-                        )
-                    except Exception as e:
-                        self.warnings.append(
-                            f"Could not parse joint offsets for segment {name}: {str(e)}. Using default coordinate system."
-                        )
-
-                # Get coordinate ranges from joint
-                q_ranges = []
-                if joint:
-                    for coord in joint.coordinates:
-                        if coord.range:
-                            min_val, max_val = map(float, coord.range.split())
-                            q_ranges.append((min_val, max_val))
-
-                # Create virtual parent chain first
-                current_parent: str = body.socket_frame if body.socket_frame != name else ""
-                virtual_names: list[str] = []
-
-                # Create transformation virtual segments first in parent chain
-                for i in range(1, len(body.mesh_offset)):
-                    if i >= len(body.virtual_body):
-                        break
-
-                    virt_body = body.virtual_body[i]
-                    virt_name = f"{name}_{virt_body}"
-                    mesh_offset = body.mesh_offset[i]
-
-                    self.output_model.segments[virt_name] = SegmentReal(
-                        name=virt_name,
-                        parent_name=current_parent,
-                        translations=Translations.NONE,
-                        rotations=Rotations.NONE,
-                        segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
-                            angle_sequence="zyx",
-                            translations=tuple(map(float, mesh_offset.get_translation().flatten())),
-                        ),
-                        mesh_file=MeshFileReal(  # Add mesh to parent virtual segments
-                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i-1]}",
-                            mesh_translation=tuple(map(float, mesh_offset.get_translation().flatten())),
-                            mesh_rotation=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
-                            mesh_color=tuple(map(float, body.mesh_color[i-1].split())) if body.mesh_color else None,
-                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i-1].split())) if body.mesh_scale_factor else None,
-                        ) if i <= len(body.mesh) else None,
-                    )
-
-                    virtual_names.append(virt_name)
-                    current_parent = virt_name
-
-                # Add reset axis segment if needed
-                if virtual_names:
-                    last_virt_segment = self.output_model.segments[virtual_names[-1]]
-                    rot_matrix = last_virt_segment.segment_coordinate_system.get_rotation().T
-                    reset_rot = OrthoMatrix()
-                    reset_rot.set_rotation_matrix(np.linalg.inv(rot_matrix))
-                    
-                    if not np.allclose(reset_rot.get_rotation_matrix(), np.eye(3)):
-                        reset_name = f"{name}_reset_axis"
-                        self.output_model.segments[reset_name] = SegmentReal(
-                            name=reset_name,
-                            parent_name=current_parent,
-                            translations=Translations.NONE,
-                            rotations=Rotations.NONE,
-                            segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                                angles=tuple(map(float, rot2eul(reset_rot.get_rotation_matrix()).flatten())),
-                                angle_sequence="zyx",
-                                translations=(0.0, 0.0, 0.0),
-                            ),
-                            mesh_file=None,
-                        )
-                        current_parent = reset_name
-                        virtual_names.append(reset_name)
-
-                # Create main segment as child of last virtual parent (with inertial properties)
-                self.output_model.segments[name] = SegmentReal(
-                    name=name,
-                    parent_name=current_parent,
-                    translations=translations,
-                    rotations=rotations,
-                    q_ranges=RangeOfMotion(Ranges.Q, [r[0] for r in q_ranges], [r[1] for r in q_ranges]) if q_ranges else None,
-                    qdot_ranges=None,
-                    inertia_parameters=inertia_params,
-                    segment_coordinate_system=scs,
-                    mesh_file=MeshFileReal(  # Only add mesh if no parent virtual segments
-                        mesh_file_name=f"{self.mesh_dir}/{body.mesh[0]}" if body.mesh and not virtual_names else None,
-                        mesh_translation=tuple(map(float, body.mesh_offset[0].get_translation().flatten())) if body.mesh_offset else None,
-                        mesh_rotation=tuple(map(float, rot2eul(body.mesh_offset[0].get_rotation_matrix().T).flatten())) if body.mesh_offset else None,
-                        mesh_color=tuple(map(float, body.mesh_color[0].split())) if body.mesh_color else None,
-                        mesh_scale=tuple(map(float, body.mesh_scale_factor[0].split())) if body.mesh_scale_factor else None,
-                    ) if body.mesh else None,
-                )
-
-                # Add child geometry virtual segments with proper transformations
-                for i in range(1, len(body.mesh)):
-                    if i >= len(body.virtual_body):
-                        break
-
-                    virt_body = body.virtual_body[i]
-                    virt_name = f"{name}_{virt_body}_geom"
-                    mesh_offset = body.mesh_offset[i]
-
-                    self.output_model.segments[virt_name] = SegmentReal(
-                        name=virt_name,
-                        parent_name=name,
-                        translations=Translations.NONE,
-                        rotations=Rotations.NONE,
-                        segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                            angles=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
-                            angle_sequence="zyx",
-                            translations=tuple(map(float, mesh_offset.get_translation().flatten())),
-                        ),
-                        mesh_file=MeshFileReal(
-                            mesh_file_name=f"{self.mesh_dir}/{body.mesh[i]}",
-                            mesh_translation=tuple(map(float, mesh_offset.get_translation().flatten())),
-                            mesh_rotation=tuple(map(float, rot2eul(mesh_offset.get_rotation_matrix().T).flatten())),
-                            mesh_color=tuple(map(float, body.mesh_color[i].split())) if body.mesh_color else None,
-                            mesh_scale=tuple(map(float, body.mesh_scale_factor[i].split())) if body.mesh_scale_factor else None,
-                        )
-                    )
-            return
+                bodies.append(Body().get_body_attrib(element))
+            return bodies
 
     def get_body_mesh_list(self, body_set=None) -> list[str]:
         """returns the list of vtp files included in the model"""
@@ -412,98 +229,6 @@ class OsimReader:
                     )
             # joints = self._reorder_joints(joints)
             return joints
-
-    def set_muscles(self):
-        """Convert OpenSim muscles to BiomechanicalModelReal muscles."""
-        if not self.forces:
-            return
-
-        for muscle in self.forces:
-            try:
-                # Add muscle group if it does not exist already
-                muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
-                if muscle_group_name not in self.output_model.muscle_groups:
-                    self.output_model.muscle_groups[muscle_group_name] = MuscleGroup(name=muscle_group_name,
-                                                                                    origin_parent_name=muscle.group[0],
-                                                                                    insertion_parent_name=muscle.group[1])
-
-                # Convert muscle properties
-                muscle_real = MuscleReal(
-                    name=muscle.name,
-                    muscle_type=self.muscle_type,
-                    state_type=self.muscle_state_type,
-                    muscle_group=muscle_group_name,
-                    origin_position=np.array([float(v) for v in muscle.origin.split()]),
-                    insertion_position=np.array([float(v) for v in muscle.insersion.split()]),
-                    optimal_length=float(muscle.optimal_length) if muscle.optimal_length else 0.1,
-                    maximal_force=float(muscle.maximal_force) if muscle.maximal_force else 1000.0,
-                    tendon_slack_length=float(muscle.tendon_slack_length) if muscle.tendon_slack_length else None,
-                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0,
-                    maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation.
-                )
-
-                # Add via points if any
-                for via_point in muscle.via_point:
-                    via_real = ViaPointReal(
-                        name=via_point.name,
-                        parent_name=via_point.body,
-                        muscle_name=muscle.name,
-                        muscle_group=muscle_real.muscle_group,
-                        position=np.array([float(v) for v in via_point.position.split()])
-                    )
-                    self.output_model.via_points[via_real.name] = via_real
-
-                self.output_model.muscles[muscle.name] = muscle_real
-
-            except Exception as e:
-                self.warnings.append(
-                    f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped."
-                )
-
-    def add_markers_to_segments(self, markers):
-        # Add markers to their parent segments
-        for marker in markers:
-            parent_segment_name = marker.parent
-            if parent_segment_name in self.output_model.segments:
-                # Convert position string to numpy array with proper float conversion
-                position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
-                
-                # Create MarkerReal instance
-                marker_real = MarkerReal(
-                    name=marker.name,
-                    parent_name=parent_segment_name,
-                    position=position,
-                    is_technical=True,
-                    is_anatomical=False
-                )
-                
-                # Add to parent segment
-                self.output_model.segments[parent_segment_name].add_marker(marker_real)
-            else:
-                self.warnings.append(
-                    f"Marker {marker.name} references unknown parent segment {parent_segment_name}, skipping"
-                )
-
-    @staticmethod
-    def _reorder_joints(joints: list):
-        # TODO: This function is not actually called. Is it necessary?
-        ordered_joints = [joints[0]]
-        joints.pop(0)
-        while len(joints) != 0:
-            for o, ord_joint in enumerate(ordered_joints):
-                idx = []
-                for j, joint in enumerate(joints):
-                    if joint.parent == ord_joint.child:
-                        ordered_joints = ordered_joints + [joint]
-                        idx.append(j)
-                    elif ord_joint.parent == joint.child:
-                        ordered_joints = [joint] + ordered_joints
-                        idx.append(j)
-                if len(idx) != 0:
-                    joints.pop(idx[0])
-                elif len(idx) > 1:
-                    raise RuntimeError("Two segment can't have the same parent in a biomod.")
-        return ordered_joints
 
     def get_controller_set(self):
         if self._is_element_empty(self.controllerset_elt):
@@ -575,6 +300,496 @@ class OsimReader:
         out_string += f"\n\ngravity\t{self.gravity[0]}\t{self.gravity[1]}\t{self.gravity[2]}"
         self.output_model.header = out_string
 
+    def set_ground(self):
+        ground_set = self.ground_elt
+        if not self._is_element_empty(ground_set):
+            dof = Joint()
+            dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
+            self.write_dof(
+                Body().get_body_attrib(ground_set[0]),
+                dof,
+                self.mesh_dir,
+                skip_virtual=True,
+                parent="base",
+            )
+            for marker in self.markers:
+                if marker.parent == "ground":
+                    self.output_model.segments["ground"].add_marker(MarkerReal(
+                        name=marker.name,
+                        parent_name="ground",
+                        position=marker.position,
+                    ))
+
+    def set_segments(self):
+        for dof in self.joints:
+            for body in self.bodies:
+                if body.socket_frame == dof.child_body:
+                    self.write_dof(
+                        body,
+                        dof,
+                        self.mesh_dir,
+                    )
+
+    def add_markers_to_segments(self, markers):
+        # Add markers to their parent segments
+        for marker in markers:
+            parent_segment_name = marker.parent
+            if parent_segment_name in self.output_model.segments:
+                # Convert position string to numpy array with proper float conversion
+                position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
+
+                # Create MarkerReal instance
+                marker_real = MarkerReal(
+                    name=marker.name,
+                    parent_name=parent_segment_name,
+                    position=position,
+                    is_technical=True,
+                    is_anatomical=False
+                )
+
+                # Add to parent segment
+                self.output_model.segments[parent_segment_name].add_marker(marker_real)
+            else:
+                self.warnings.append(
+                    f"Marker {marker.name} references unknown parent segment {parent_segment_name}, skipping"
+                )
+
+    def set_muscles(self):
+        """Convert OpenSim muscles to BiomechanicalModelReal muscles."""
+        if not self.forces:
+            return
+
+        for muscle in self.forces:
+            try:
+                # Add muscle group if it does not exist already
+                muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
+                if muscle_group_name not in self.output_model.muscle_groups:
+                    self.output_model.muscle_groups[muscle_group_name] = MuscleGroup(name=muscle_group_name,
+                                                                                     origin_parent_name=
+                                                                                     muscle.group[0],
+                                                                                     insertion_parent_name=
+                                                                                     muscle.group[1])
+
+                # Convert muscle properties
+                muscle_real = MuscleReal(
+                    name=muscle.name,
+                    muscle_type=self.muscle_type,
+                    state_type=self.muscle_state_type,
+                    muscle_group=muscle_group_name,
+                    origin_position=np.array([float(v) for v in muscle.origin.split()]),
+                    insertion_position=np.array([float(v) for v in muscle.insersion.split()]),
+                    optimal_length=float(muscle.optimal_length) if muscle.optimal_length else 0.1,
+                    maximal_force=float(muscle.maximal_force) if muscle.maximal_force else 1000.0,
+                    tendon_slack_length=float(muscle.tendon_slack_length) if muscle.tendon_slack_length else None,
+                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0,
+                    maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation.
+                )
+
+                # Add via points if any
+                for via_point in muscle.via_point:
+                    via_real = ViaPointReal(
+                        name=via_point.name,
+                        parent_name=via_point.body,
+                        muscle_name=muscle.name,
+                        muscle_group=muscle_real.muscle_group,
+                        position=np.array([float(v) for v in via_point.position.split()])
+                    )
+                    self.output_model.via_points[via_real.name] = via_real
+
+                self.output_model.muscles[muscle.name] = muscle_real
+
+            except Exception as e:
+                self.warnings.append(
+                    f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped."
+                )
+
+    def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
+        rotomatrix = OrthoMatrix([0, 0, 0])
+        if not skip_virtual:
+            parent = dof.parent_body.split("/")[-1]
+            axis_offset = np.identity(3)
+            # Parent offset
+            body_name = body.name + "_parent_offset"
+            offset = [dof.parent_offset_trans, dof.parent_offset_rot]
+            self.write_virtual_segment(
+                name=body_name,
+                parent_name=parent,
+                frame_offset=offset,
+                rt_in_matrix=0)
+
+            parent = body_name
+            # Coordinates
+            (
+                translations,
+                q_ranges_trans,
+                is_dof_trans,
+                default_value_trans,
+                rotations,
+                q_ranges_rot,
+                is_dof_rot,
+                default_value_rot,
+            ) = self._get_transformation_parameters(dof.spatial_transform)
+
+            is_dof_trans, is_dof_rot = np.array(is_dof_trans), np.array(is_dof_rot)
+            dof_axis = np.array(["x", "y", "z"])
+            # if len(translations) != 0 or len(rotations) != 0 -> Segments to define transformation axis.\n")
+
+            # Translations
+            if len(translations) != 0:
+                body_name = body.name + "_translation"
+                if is_ortho_basis(translations):
+                    trans_axis = ""
+                    for idx in np.where(is_dof_trans != None)[0]:
+                        trans_axis += dof_axis[idx]
+                    axis_offset = self.write_ortho_segment(
+                        axis=translations,
+                        axis_offset=axis_offset,
+                        name=body_name,
+                        parent=parent,
+                        rt_in_matrix=1,
+                        frame_offset=rotomatrix,
+                        q_range=q_ranges_trans,
+                        trans_dof=trans_axis,
+                    )
+                    parent = body_name
+                else:
+                    raise RuntimeError("Non orthogonal translation vector not implemented yet.")
+
+            # Rotations
+            if len(rotations) != 0:
+                if is_ortho_basis(rotations):
+                    rot_axis = ""
+                    for idx in np.where(is_dof_rot != None)[0]:
+                        rot_axis += dof_axis[idx]
+                    body_name = body.name + "_rotation_transform"
+                    axis_offset = self.write_ortho_segment(
+                        axis=rotations,
+                        axis_offset=axis_offset,
+                        name=body_name,
+                        parent=parent,
+                        rt_in_matrix=1,
+                        frame_offset=rotomatrix,
+                        q_range=q_ranges_rot,
+                        rot_dof=rot_axis,
+                    )
+                    parent = body_name
+                else:
+                    body_name = body.name
+                    axis_offset, parent = self.write_non_ortho_rot_segment(
+                        rotations,
+                        axis_offset,
+                        body_name,
+                        parent,
+                        frame_offset=rotomatrix,
+                        rt_in_matrix=1,
+                        spatial_transform=dof.spatial_transform,
+                        q_ranges=q_ranges_rot,
+                        default_values=default_value_rot,
+                    )
+
+            # segment to cancel axis effects
+            rotomatrix.set_rotation_matrix(np.linalg.inv(axis_offset))
+
+            if not rotomatrix.has_no_transformation():
+                body_name = body.name + "_reset_axis"
+                self.write_virtual_segment(
+                    name=body_name,
+                    parent_name=parent,
+                    frame_offset=rotomatrix,
+                    rt_in_matrix=1,
+                )
+                parent = body_name
+
+        if parent is None:
+            raise RuntimeError(
+                f"You skipped virtual segment definition without define a parent." f" Please provide a parent name."
+            )
+
+        body.mesh = body.mesh if len(body.mesh) != 0 else [None]
+        body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
+        body.mesh_scale_factor = body.mesh_scale_factor if len(body.mesh_scale_factor) != 0 else [None]
+
+        self.write_true_segment(
+            name=body.name,
+            parent_name=parent,
+            frame_offset=[dof.child_offset_trans, dof.child_offset_rot],
+            com=body.mass_center,
+            mass=body.mass,
+            inertia=body.inertia,
+            mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] else None,
+            mesh_color=body.mesh_color[0],
+            mesh_scale=body.mesh_scale_factor[0],
+            rt_in_matrix=0,
+        )
+        self.write_segments_with_a_geometry_only(body, body.name, mesh_dir)
+
+    @staticmethod
+    def get_scs_from_offset(rt_in_matrix, frame_offset):
+        if rt_in_matrix == 0:
+            frame_offset = frame_offset if frame_offset else [[0, 0, 0], [0, 0, 0]]
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_euler_and_translation(
+                angles=frame_offset[1],
+                angle_sequence="xyz",
+                translations=frame_offset[0],
+            )
+        else:
+            frame_offset = frame_offset if frame_offset else OrthoMatrix([0, 0, 0])
+            [[r14], [r24], [r34]] = frame_offset.get_translation().tolist()
+            [r41, r42, r43, r44] = [0, 0, 0, 1]
+
+            r11, r12, r13 = frame_offset.get_rotation_matrix()[0, :]
+            r21, r22, r23 = frame_offset.get_rotation_matrix()[1, :]
+            r31, r32, r33 = frame_offset.get_rotation_matrix()[2, :]
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
+                rt_matrix = np.array([[r11, r12, r13, r14],
+                                      [r21, r22, r23, r24],
+                                      [r31, r32, r33, r34],
+                                      [r41, r42, r43, r44]])
+            )
+        return segment_coordinate_system
+
+    def write_ortho_segment(
+        self, axis, axis_offset, name, parent, rt_in_matrix, frame_offset, q_range=None, trans_dof="", rot_dof=""
+    ):
+        x = axis[0]
+        y = axis[1]
+        z = axis[2]
+        frame_offset.set_rotation_matrix(np.append(x, np.append(y, z)).reshape(3, 3).T)
+
+        translations = getattr(Translations, ''.join(trans_dof), Translations.NONE)
+        rotations = getattr(Rotations, ''.join(rot_dof), Rotations.NONE)
+        segment_coordinate_system = self.get_scs_from_offset(rt_in_matrix, frame_offset)
+        self.output_model.segments[name] = SegmentReal(
+            name=name,
+            parent_name=parent,
+            translations=translations,
+            rotations=rotations,
+            q_ranges=self.get_q_range(q_range) if (translations != Translations.NONE and rotations != Rotations.NONE) else None,
+            qdot_ranges=None,  # OpenSim does not handle qdot ranges
+            inertia_parameters=None,  # TODO: Charbie -> verify this
+            segment_coordinate_system=segment_coordinate_system,
+            mesh_file=None,
+        )
+        return axis_offset.dot(frame_offset.get_rotation_matrix())
+
+    def write_non_ortho_rot_segment(
+        self,
+        axis,
+        axis_offset,
+        name,
+        parent,
+        rt_in_matrix,
+        frame_offset,
+        spatial_transform,
+        q_ranges=None,
+        default_values=None,
+    ):
+        default_values = [0, 0, 0] if not default_values else default_values
+        axis_basis = []
+        list_rot_dof = ["x", "y", "z"]
+        count_dof_rot = 0
+        q_range = None
+        for i, axe in enumerate(axis):
+            if len(axis_basis) == 0:
+                axis_basis.append(ortho_norm_basis(axe, i))
+                initial_rotation = compute_matrix_rotation([float(default_values[i]), 0, 0])
+            elif len(axis_basis) == 1:
+                axis_basis.append(np.linalg.inv(axis_basis[i - 1]).dot(ortho_norm_basis(axe, i)))
+                initial_rotation = compute_matrix_rotation([0, float(default_values[i]), 0])
+            else:
+                axis_basis.append(
+                    np.linalg.inv(axis_basis[i - 1]).dot(np.linalg.inv(axis_basis[i - 2])).dot(ortho_norm_basis(axe, i))
+                )
+                initial_rotation = compute_matrix_rotation([0, 0, float(default_values[i])])
+
+            # TODO: Do not add a try here. If the you can know in advance the error, test it with a if.
+            #  If you actually need a try, catch a specific error (`except ERRORNAME:` instead of `except:`)
+            try:
+                coordinate = spatial_transform[i].coordinate
+                rot_dof = list_rot_dof[count_dof_rot] if not coordinate.locked else "//" + list_rot_dof[count_dof_rot]
+                body_dof = name + "_" + spatial_transform[i].coordinate.name
+                q_range = q_ranges[i]
+            except:
+                body_dof = name + f"_rotation_{i}"
+                rot_dof = ""
+
+            frame_offset.set_rotation_matrix(axis_basis[i].dot(initial_rotation))
+            count_dof_rot += 1
+            self.write_virtual_segment(
+                name=body_dof,
+                parent_name=parent,
+                frame_offset=frame_offset,
+                q_range=self.get_q_range(q_range),
+                rt_in_matrix=rt_in_matrix,
+                rot_dof=rot_dof
+            )
+            axis_offset = axis_offset.dot(frame_offset.get_rotation_matrix())
+            parent = body_dof
+        return axis_offset, parent
+
+
+    def write_true_segment(
+        self,
+        name,
+        parent_name,
+        frame_offset,
+        com,
+        mass,
+        inertia,
+        mesh_file=None,
+        mesh_scale=None,
+        mesh_color=None,
+        rt_in_matrix=0,
+    ):
+        """
+        True segments hold the inertia and markers, but do not have any DoFs.
+        These segments are the last "segment" to be added.
+        """
+
+        inertia_parameters = None
+        if inertia:
+            [i11, i22, i33, i12, i13, i23] = inertia.split(" ")
+            inertia_parameters = InertiaParametersReal(
+                mass=float(mass),
+                center_of_mass=np.array([float(c) for c in com.split(" ")]),
+                inertia=np.array([[float(i11), float(i12), float(i13)], [float(i12), float(i22), float(i23)], [float(i13), float(i23), float(i33)]]),
+                )
+        self.output_model.segments[name] = SegmentReal(
+            name=name,
+            parent_name=parent_name,
+            inertia_parameters=inertia_parameters,
+            segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
+            mesh_file=MeshFileReal(
+                mesh_file_name=mesh_file,
+                mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
+                mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
+            ) if mesh_file else None,
+        )
+
+    def write_virtual_segment(
+        self,
+        name,
+        parent_name,
+        frame_offset,
+        q_range=None,
+        rt_in_matrix=0,
+        trans_dof="",
+        rot_dof="",
+        mesh_file=None,
+        mesh_color=None,
+        mesh_scale=None,
+    ):
+        """
+        This function aims to add virtual segment to convert osim dof in biomod dof.
+        """
+        translations = getattr(Translations, trans_dof, Translations.NONE)
+        rotations = getattr(Rotations, rot_dof, Rotations.NONE)
+
+        self.output_model.segments[name] = SegmentReal(
+            name=name,
+            parent_name=parent_name,
+            translations=translations,
+            rotations=rotations,
+            q_ranges=self.get_q_range(q_range) if (translations != Translations.NONE and rotations != Rotations.NONE) else None,
+            qdot_ranges=None,  # OpenSim does not handle qdot ranges
+            inertia_parameters=None,
+            segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
+            mesh_file=MeshFileReal(
+                mesh_file_name=mesh_file,
+                mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
+                mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
+            ) if mesh_file else None,
+        )
+
+    def write_segments_with_a_geometry_only(self, body, parent, mesh_dir):
+        for i, virt_body in enumerate(body.virtual_body):
+            if i == 0:
+                # ignore the first body as already printed as a true segment
+                continue
+
+            body_name = virt_body
+            self.write_virtual_segment(
+                name=body_name,
+                parent_name=parent,
+                frame_offset=body.mesh_offset[i],
+                mesh_file=f"{mesh_dir}/{body.mesh[i]}",
+                mesh_color=body.mesh_color[i],
+                mesh_scale=body.mesh_scale_factor[i],
+                rt_in_matrix=1,
+            )
+
+    @staticmethod
+    def get_q_range(q_range):
+        if isinstance(q_range, RangeOfMotion) or q_range is None:
+            return q_range
+        elif isinstance(q_range, list) or isinstance(q_range, str):
+            q_range = [q_range] if isinstance(q_range, str) else q_range
+            min_bound = []
+            max_bound = []
+            for range in q_range:
+                if range is None:
+                    min_bound += [-2*np.pi]
+                    max_bound += [2*np.pi]
+                else:
+                    if "// " in range:
+                        range = range.replace("// ", "")
+                    r = range.split(" ")
+                    min_bound += [float(r[0])]
+                    max_bound += [float(r[1])]
+            q_range = RangeOfMotion(range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound)
+            return q_range
+        else:
+            raise NotImplementedError(f"You have provided {q_range}, q_range type {type(q_range)} not implemented.")
+
+    @staticmethod
+    def _get_transformation_parameters(spatial_transform):
+        translations = []
+        rotations = []
+        q_ranges_trans = []
+        q_ranges_rot = []
+        is_dof_trans = []
+        default_value_trans = []
+        default_value_rot = []
+        is_dof_rot = []
+        for transform in spatial_transform:
+            q_range = None
+            axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]
+            if transform.coordinate:
+                if transform.coordinate.range:
+                    q_range = transform.coordinate.range
+                    if not transform.coordinate.clamped:
+                        q_range = "// " + q_range
+                else:
+                    q_range = None
+                value = transform.coordinate.default_value
+                default_value = value if value else 0
+                is_dof_tmp = None if transform.coordinate.locked else transform.coordinate.name
+            else:
+                is_dof_tmp = None
+                default_value = 0
+            if transform.type == "translation":
+                translations.append(axis)
+                q_ranges_trans.append(q_range)
+                is_dof_trans.append(is_dof_tmp)
+                default_value_trans.append(default_value)
+            elif transform.type == "rotation":
+                rotations.append(axis)
+                q_ranges_rot.append(q_range)
+                is_dof_rot.append(is_dof_tmp)
+                default_value_rot.append(default_value)
+            else:
+                raise RuntimeError("Transform must be 'rotation' or 'translation'")
+        return (
+            translations,
+            q_ranges_trans,
+            is_dof_trans,
+            default_value_trans,
+            rotations,
+            q_ranges_rot,
+            is_dof_rot,
+            default_value_rot,
+        )
+
 
     def read(self):
         """Parse the OpenSim model file and populate the output model.
@@ -595,16 +810,16 @@ class OsimReader:
         Modifies the output_model object in place by adding segments, markers, etc.
         """
 
+        # Read the .osim file
+        self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
         self.joints = self.get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
+        self.bodies = self.get_body_set()
         self.markers = self.get_marker_set()
         self.geometry_set = self.get_body_mesh_list()
-        self.forces = self.get_force_set(ignore_muscle_applied_tag=False)
 
-        # Header
+        # Fill the biomechanical model
         self.set_header()
-
-        # Segments
-        self.set_segments(body_set=[self.ground_elt])
+        self.set_ground()
         self.set_segments()
         self.add_markers_to_segments(self.markers)
 
@@ -738,8 +953,10 @@ class Joint:
         for frame in element.find("frames").findall("PhysicalOffsetFrame"):
             if self.parent == frame.attrib["name"]:
                 self.parent_body = frame.find("socket_parent").text.split("/")[-1]
-                self.parent_offset_rot = frame.find("orientation").text
-                self.parent_offset_trans = frame.find("translation").text
+                offset_rot = frame.find("orientation").text
+                offset_trans = frame.find("translation").text
+                self.parent_offset_rot = [-float(i) for i in offset_rot.split(" ")]
+                self.parent_offset_trans = [float(i) for i in offset_trans.split(" ")]
             elif self.child == frame.attrib["name"]:
                 self.child_body = frame.find("socket_parent").text.split("/")[-1]
                 offset_rot = frame.find("orientation").text
@@ -820,8 +1037,7 @@ class Muscle:
         self.tendon_slack_length = None
         self.pennation_angle = None
         self.applied = True
-        self.pcsa = None
-        self.maximal_velocity = None
+        self.maximal_velocity = None  # TODO: This is read but not used in the biomod yet (Charbie does not know what it is --')
         self.wrap = False
         self.group = None
         self.state_type = None

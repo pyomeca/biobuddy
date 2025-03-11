@@ -3,6 +3,7 @@ This example shows how to read and write models.
 """
 
 from pathlib import Path
+import biorbd
 
 from biobuddy import BiomechanicalModel, MuscleType, MuscleStateType
 
@@ -22,6 +23,9 @@ if __name__ == "__main__":
 
     # And convert it to a .bioMod file
     model.to_biomod(biomod_file_path)
+
+    # Test that the model create is valid
+    biorbd.Model(biomod_file_path)
 
     # Compare the result visually
     import pyorerun

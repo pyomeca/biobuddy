@@ -116,9 +116,9 @@ class SegmentCoordinateSystemReal:
 
     @staticmethod
     def from_euler_and_translation(
-        angles: tuple[float | int, ...],
+        angles: tuple[float | int, ...] | list[float | int, ...] | np.ndarray[float | int, ...],
         angle_sequence: str,
-        translations: tuple[float | int, float | int, float | int],
+        translations: tuple[float | int, float | int, float | int] | list[float | int, float | int, float | int],
         parent_scs: "SegmentCoordinateSystemReal" = None,
     ) -> "SegmentCoordinateSystemReal":
         """
@@ -136,10 +136,10 @@ class SegmentCoordinateSystemReal:
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
         """
-        if not isinstance(angles, tuple):
-            raise ValueError("angles must be a tuple")
-        if not isinstance(translations, tuple):
-            raise ValueError("translations must be a tuple")
+        if not isinstance(angles, (tuple, list, np.ndarray)):
+            raise ValueError("angles must be a tuple, list, or np.ndarray")
+        if not isinstance(translations, (tuple, list, np.ndarray)):
+            raise ValueError("translations must be a tuple, list, or np.ndarray")
         if len(angles) != 3:
             raise ValueError("angles must have 3 elements")
         if len(translations) != 3:
