@@ -172,3 +172,12 @@ cython_debug/
 
 # Working directory
 sandbox/
+
+.idea/
+.aider*
+
+.DS_Store
+
+examples/models/Geometry/
+
+examples/models/Geometry_cleaned/
