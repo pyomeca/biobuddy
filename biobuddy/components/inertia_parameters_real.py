@@ -23,6 +23,17 @@ class InertiaParametersReal:
         inertia
             The inertia xx, yy and zz parameters of the segment
         """
+        if not isinstance(mass, float):
+            raise RuntimeError(f"The mass must be a float, not {type(mass)}")
+        if not isinstance(center_of_mass, np.ndarray):
+            raise RuntimeError(f"The center of mass must be a np.ndarray, not {type(center_of_mass)}")
+        if center_of_mass.shape != (3, ):
+            raise RuntimeError(f"The center of mass must be a np.ndarray of shape (3,) not {center_of_mass.shape}")
+        if not isinstance(inertia, np.ndarray):
+            raise RuntimeError(f"The inertia must be a np.ndarray, not {type(inertia)}")
+        if inertia.shape != (3, 3):
+            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3, 3) not {inertia.shape}")
+        
         self.mass = mass
         self.center_of_mass = center_of_mass
         self.inertia = inertia

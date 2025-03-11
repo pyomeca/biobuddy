@@ -63,6 +63,35 @@ class MuscleReal:
         via_points
             The via points of the muscle
         """
+        if not isinstance(name, str):
+            raise ValueError("The name of the muscle must be a string")
+        if not isinstance(muscle_type, MuscleType):
+            raise ValueError("The muscle type must be a MuscleType")
+        if not isinstance(state_type, MuscleStateType):
+            raise ValueError("The state type must be a MuscleStateType")
+        if not isinstance(muscle_group, str):
+            raise ValueError("The muscle group must be a string")
+        if not isinstance(origin_position, np.ndarray):
+            raise ValueError("The origin position must be a np.ndarray")
+        if origin_position.shape != (3,):
+            raise ValueError("The origin position must be a np.ndarray of shape (3,)")
+        if not isinstance(insertion_position, np.ndarray):
+            raise ValueError("The insertion position must be a np.ndarray")
+        if insertion_position.shape != (3,):
+            raise ValueError("The insertion position must be a np.ndarray of shape (3,)")
+        if not isinstance(optimal_length, float):
+            raise ValueError("The optimal length must be a float")
+        if not isinstance(maximal_force, float):
+            raise ValueError("The maximal force must be a float")
+        if not isinstance(tendon_slack_length, float):
+            raise ValueError("The tendon slack length must be a float")
+        if not isinstance(pennation_angle, float):
+            raise ValueError("The pennation angle must be a float")
+        if not isinstance(maximal_excitation, float):
+            raise ValueError("The maximal excitation must be a float")
+        if via_points is not None and not isinstance(via_points, list):
+            raise ValueError("The via points must be a list")
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -77,6 +106,7 @@ class MuscleReal:
         self.pennation_angle = pennation_angle
         self.maximal_excitation = maximal_excitation
         self.via_points = via_points
+        # TODO: missing PCSA and  maxVelocity
 
     @staticmethod
     def from_data(

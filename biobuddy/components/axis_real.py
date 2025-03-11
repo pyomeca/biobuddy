@@ -18,6 +18,13 @@ class AxisReal:
         start:
             The initial Marker
         """
+        if not isinstance(name, AxisReal.Name):
+            raise ValueError("The name must be an AxisReal.Name")
+        if not isinstance(start, MarkerReal):
+            raise ValueError("The start must be a MarkerReal")
+        if not isinstance(end, MarkerReal):
+            raise ValueError("The end must be a MarkerReal")
+
         self.name = name
         self.start_point = start
         self.end_point = end

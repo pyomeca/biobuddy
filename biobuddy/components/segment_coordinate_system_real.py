@@ -136,6 +136,17 @@ class SegmentCoordinateSystemReal:
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
         """
+        if not isinstance(angles, tuple):
+            raise ValueError("angles must be a tuple")
+        if not isinstance(translations, tuple):
+            raise ValueError("translations must be a tuple")
+        if len(angles) != 3:
+            raise ValueError("angles must have 3 elements")
+        if len(translations) != 3:
+            raise ValueError("translations must have 3 elements")
+        if parent_scs is not None and not isinstance(parent_scs, SegmentCoordinateSystemReal):
+            raise ValueError("parent_scs must be a SegmentCoordinateSystemReal")
+
         matrix = {
             "x": lambda x: np.array(((1, 0, 0), (0, np.cos(x), -np.sin(x)), (0, np.sin(x), np.cos(x)))),
             "y": lambda y: np.array(((np.cos(y), 0, np.sin(y)), (0, 1, 0), (-np.sin(y), 0, np.cos(y)))),

@@ -10,10 +10,10 @@ class MeshFileReal:
     def __init__(
         self,
         mesh_file_name: str,
-        mesh_color: np.ndarray[float] | list[float] | tuple[float],
-        mesh_scale: np.ndarray[float] | list[float] | tuple[float],
-        mesh_rotation: np.ndarray[float] | list[float] | tuple[float],
-        mesh_translation: np.ndarray[float] | list[float] | tuple[float],
+        mesh_color: np.ndarray[float] | list[float] | tuple[float] = None,
+        mesh_scale: np.ndarray[float] | list[float] | tuple[float] = None,
+        mesh_rotation: np.ndarray[float] | list[float] | tuple[float] = None,
+        mesh_translation: np.ndarray[float] | list[float] | tuple[float] = None,
     ):
         """
         Parameters
@@ -29,6 +29,16 @@ class MeshFileReal:
         mesh_translation
             The translation that must be applied to the mesh (XYZ)
         """
+        if not isinstance(mesh_file_name, str):
+            raise RuntimeError("The mesh_file_name must be a string")
+        if mesh_color is not None and not isinstance(mesh_color, (np.ndarray, list, tuple)):
+            raise RuntimeError("The mesh_color must be a vector of dimension 3 (RGB)")
+        if mesh_scale is not None and not isinstance(mesh_scale, (np.ndarray, list, tuple)):
+            raise RuntimeError("The mesh_scale must be a vector of dimension 3 (XYZ)")
+        if mesh_rotation is not None and not isinstance(mesh_rotation, (np.ndarray, list, tuple)):
+            raise RuntimeError("The mesh_rotation must be a vector of dimension 3 (XYZ)")
+        if mesh_translation is not None and not isinstance(mesh_translation, (np.ndarray, list, tuple)):
+            raise RuntimeError("The mesh_translation must be a vector of dimension 3 (XYZ)")
 
         self.mesh_file_name = mesh_file_name
         self.mesh_color = mesh_color

@@ -26,6 +26,19 @@ class ContactReal:
         axis
             The axis of the contact
         """
+        if not isinstance(name, str):
+            raise RuntimeError(f"The name must be a string, not {type(name)}")
+        if not isinstance(parent_name, str):
+            raise RuntimeError(f"The parent name must be a string, not {type(parent_name)}")
+        if position is not None:
+            if not isinstance(position, np.ndarray):
+                raise RuntimeError(f"The position must be a np.ndarray, not {type(position)}")
+            if position.shape != (3, ):
+                raise RuntimeError(f"The position must be a np.ndarray of shape (3,) not {position.shape}")
+        if axis is not None:
+            if not isinstance(axis, Translations):
+                raise RuntimeError(f"The axis must be a Translations, not {type(axis)}")
+
         self.name = name
         self.parent_name = parent_name
         if position is None:

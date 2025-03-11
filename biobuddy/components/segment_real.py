@@ -23,6 +23,31 @@ class SegmentReal:
         mesh: MeshReal = None,
         mesh_file: MeshFileReal = None,
     ):
+        if not isinstance(name, str):
+            raise RuntimeError(f"The name must be a str, not {type(name)}")
+        if not isinstance(parent_name, str):
+            raise RuntimeError(f"The parent_name must be a str, not {type(parent_name)}")
+        if not isinstance(segment_coordinate_system, SegmentCoordinateSystemReal):
+            raise RuntimeError(
+                f"The segment_coordinate_system must be a SegmentCoordinateSystemReal, not {type(segment_coordinate_system)}"
+            )
+        if not isinstance(translations, Translations):
+            raise RuntimeError(f"The translations must be a Translations, not {type(translations)}")
+        if not isinstance(rotations, Rotations):
+            raise RuntimeError(f"The rotations must be a Rotations, not {type(rotations)}")
+        if q_ranges is not None and not isinstance(q_ranges, RangeOfMotion):
+            raise RuntimeError(f"The q_ranges must be a RangeOfMotion, not {type(q_ranges)}")
+        if qdot_ranges is not None and not isinstance(qdot_ranges, RangeOfMotion):
+            raise RuntimeError(f"The qdot_ranges must be a RangeOfMotion, not {type(qdot_ranges)}")
+        if inertia_parameters is not None and not isinstance(inertia_parameters, InertiaParametersReal):
+            raise RuntimeError(
+                f"The inertia_parameters must be a InertiaParametersReal, not {type(inertia_parameters)}"
+            )
+        if mesh is not None and not isinstance(mesh, MeshReal):
+            raise RuntimeError(f"The mesh must be a MeshReal, not {type(mesh)}")
+        if mesh_file is not None and not isinstance(mesh_file, MeshFileReal):
+            raise RuntimeError(f"The mesh_file must be a MeshFileReal, not {type(mesh_file)}")
+
         self.name = name
         self.parent_name = parent_name
         self.translations = translations

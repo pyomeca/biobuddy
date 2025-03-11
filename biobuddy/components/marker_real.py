@@ -29,6 +29,15 @@ class MarkerReal:
         is_anatomical
             If the marker should be flagged as an anatomical marker
         """
+        if not isinstance(name, str):
+            raise RuntimeError(f"The name must be a string, not {type(name)}")
+        if not isinstance(parent_name, str):
+            raise RuntimeError(f"The parent_name must be a string, not {type(parent_name)}")
+        if not isinstance(is_technical, bool):
+            raise RuntimeError(f"The is_technical must be a bool, not {type(is_technical)}")
+        if not isinstance(is_anatomical, bool):
+            raise RuntimeError(f"The is_anatomical must be a bool, not {type(is_anatomical)}")
+
         self.name = name
         self.parent_name = parent_name
         if position is None:

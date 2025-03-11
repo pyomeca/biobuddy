@@ -28,6 +28,17 @@ class ViaPointReal:
         position
             The 3d position of the via point in the local reference frame
         """
+        if not isinstance(name, str):
+            raise RuntimeError(f"The name must be a string, not {type(name)}")
+        if not isinstance(parent_name, str):
+            raise RuntimeError(f"The parent name must be a string, not {type(parent_name)}")
+        if not isinstance(muscle_name, str):
+            raise RuntimeError(f"The muscle name must be a string, not {type(muscle_name)}")
+        if not isinstance(muscle_group, str):
+            raise RuntimeError(f"The muscle group must be a string, not {type(muscle_group)}")
+        if position is not None and not isinstance(position, (tuple, np.ndarray)):
+            raise RuntimeError(f"The position must be a tuple or np.ndarray, not {type(position)}")
+
         self.name = name
         self.parent_name = parent_name
         self.muscle_name = muscle_name
