@@ -10,6 +10,7 @@ class SegmentCoordinateSystemReal:
         scs: np.ndarray = np.identity(4),
         parent_scs: "SegmentCoordinateSystemReal" = None,
         is_scs_local: bool = False,
+        rt_in_matrix: bool = None
     ):
         """
         Parameters
@@ -22,12 +23,23 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
+        if not isinstance(scs, np.ndarray):
+            raise ValueError("scs must be a np.ndarray")
+        if scs.shape != (4, 4):
+            raise ValueError("scs must be a 4x4 matrix")
+        if not isinstance(parent_scs, (SegmentCoordinateSystemReal, type(None))):
+            raise ValueError("parent_scs must be a SegmentCoordinateSystemReal")
+        if not isinstance(is_scs_local, bool):
+            raise ValueError("is_scs_local must be a bool")
+        if not isinstance(rt_in_matrix, bool):
+            raise ValueError("rt_in_matrix must be a bool")
 
         self.scs = scs
         if len(self.scs.shape) == 2:
             self.scs = self.scs[:, :, np.newaxis]
         self.parent_scs = parent_scs
         self.is_in_global = not is_scs_local
+        self.rt_in_matrix = rt_in_matrix
 
     @staticmethod
     def from_markers(
@@ -112,7 +124,7 @@ class SegmentCoordinateSystemReal:
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
         """
-        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True, rt_in_matrix=True)
 
     @staticmethod
     def from_euler_and_translation(
@@ -156,7 +168,7 @@ class SegmentCoordinateSystemReal:
         for angle, axis in zip(angles, angle_sequence):
             rt[:3, :3] = rt[:3, :3] @ matrix[axis](angle)
         rt[:3, 3] = translations
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True, rt_in_matrix=False)
 
     def copy(self):
         return SegmentCoordinateSystemReal(scs=np.array(self.scs), parent_scs=self.parent_scs)
@@ -201,13 +213,23 @@ class SegmentCoordinateSystemReal:
         if self.is_in_global:
             rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
-        mean_rt = self.mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
-        out_string = f"\tRTinMatrix	1\n"
-        out_string += f"\tRT\n"
-        out_string += f"\t\t{mean_rt[0, 0]}\t{mean_rt[0, 1]}\t{mean_rt[0, 2]}\t{mean_rt[0, 3]}\n"
-        out_string += f"\t\t{mean_rt[1, 0]}\t{mean_rt[1, 1]}\t{mean_rt[1, 2]}\t{mean_rt[1, 3]}\n"
-        out_string += f"\t\t{mean_rt[2, 0]}\t{mean_rt[2, 1]}\t{mean_rt[2, 2]}\t{mean_rt[2, 3]}\n"
-        out_string += f"\t\t{mean_rt[3, 0]}\t{mean_rt[3, 1]}\t{mean_rt[3, 2]}\t{mean_rt[3, 3]}\n"
+        out_string = ""
+        if self.rt_in_matrix:
+
+            mean_rt = self.mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
+            out_string += f"\tRTinMatrix	1\n"
+            out_string += f"\tRT\n"
+            out_string += f"\t\t{mean_rt[0, 0]:0.5f}\t{mean_rt[0, 1]:0.5f}\t{mean_rt[0, 2]:0.5f}\t{mean_rt[0, 3]:0.5f}\n"
+            out_string += f"\t\t{mean_rt[1, 0]:0.5f}\t{mean_rt[1, 1]:0.5f}\t{mean_rt[1, 2]:0.5f}\t{mean_rt[1, 3]:0.5f}\n"
+            out_string += f"\t\t{mean_rt[2, 0]:0.5f}\t{mean_rt[2, 1]:0.5f}\t{mean_rt[2, 2]:0.5f}\t{mean_rt[2, 3]:0.5f}\n"
+            out_string += f"\t\t{mean_rt[3, 0]:0.5f}\t{mean_rt[3, 1]:0.5f}\t{mean_rt[3, 2]:0.5f}\t{mean_rt[3, 3]:0.5f}\n"
+        else:
+            out_string += f"\tRTinMatrix	0\n"
+            mean_rt = self.mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
+            sequence = "xyz"
+            tx, ty, tz = mean_rt[0:3, 3]
+            rx, ry, rz = self.to_euler(mean_rt[:, :, np.newaxis], sequence)
+            return f"\tRT\t{rx[0]:0.5f} {ry[0]:0.5f} {rz[0]:0.5f} {sequence} {tx:0.5f} {ty:0.5f} {tz:0.5f}"
         return out_string
 
     @staticmethod

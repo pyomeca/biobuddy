@@ -5,7 +5,7 @@ This example shows how to read and write models.
 from pathlib import Path
 import biorbd
 
-from biobuddy import BiomechanicalModel, MuscleType, MuscleStateType
+from biobuddy import BiomechanicalModel, MuscleType, MuscleStateType, VtpParser
 
 
 if __name__ == "__main__":
@@ -14,6 +14,11 @@ if __name__ == "__main__":
     current_path_file = Path(__file__).parent
     biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
+    geometry_path = f"{current_path_file}/models/Geometry"
+    geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
+
+    # Convert vtp files
+    VtpParser(geometry_path, geometry_cleaned_path)
 
     # Read an .osim file
     model = BiomechanicalModel().from_osim(osim_file_path,
@@ -24,7 +29,7 @@ if __name__ == "__main__":
     # And convert it to a .bioMod file
     model.to_biomod(biomod_file_path)
 
-    # Test that the model create is valid
+    # Test that the model created is valid
     biorbd.Model(biomod_file_path)
 
     # Compare the result visually

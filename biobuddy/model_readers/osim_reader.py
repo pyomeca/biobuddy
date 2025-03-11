@@ -512,6 +512,8 @@ class OsimReader:
         body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
         body.mesh_scale_factor = body.mesh_scale_factor if len(body.mesh_scale_factor) != 0 else [None]
 
+        axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir)
+
         self.write_true_segment(
             name=body.name,
             parent_name=parent,
@@ -524,7 +526,6 @@ class OsimReader:
             mesh_scale=body.mesh_scale_factor[0],
             rt_in_matrix=0,
         )
-        self.write_segments_with_a_geometry_only(body, body.name, mesh_dir)
 
     @staticmethod
     def get_scs_from_offset(rt_in_matrix, frame_offset):
@@ -537,17 +538,11 @@ class OsimReader:
             )
         else:
             frame_offset = frame_offset if frame_offset else OrthoMatrix([0, 0, 0])
-            [[r14], [r24], [r34]] = frame_offset.get_translation().tolist()
-            [r41, r42, r43, r44] = [0, 0, 0, 1]
-
-            r11, r12, r13 = frame_offset.get_rotation_matrix()[0, :]
-            r21, r22, r23 = frame_offset.get_rotation_matrix()[1, :]
-            r31, r32, r33 = frame_offset.get_rotation_matrix()[2, :]
+            translation_vector = frame_offset.get_translation().tolist()
+            rotation_matrix = frame_offset.get_rotation_matrix()
+            rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
             segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
-                rt_matrix = np.array([[r11, r12, r13, r14],
-                                      [r21, r22, r23, r24],
-                                      [r31, r32, r33, r34],
-                                      [r41, r42, r43, r44]])
+                rt_matrix=rt_matrix
             )
         return segment_coordinate_system
 
@@ -699,6 +694,8 @@ class OsimReader:
         )
 
     def write_segments_with_a_geometry_only(self, body, parent, mesh_dir):
+        parent_name = parent
+        frame_offset = body.socket_frame
         for i, virt_body in enumerate(body.virtual_body):
             if i == 0:
                 # ignore the first body as already printed as a true segment
@@ -714,6 +711,9 @@ class OsimReader:
                 mesh_scale=body.mesh_scale_factor[i],
                 rt_in_matrix=1,
             )
+            parent_name = body_name
+            frame_offset = body.mesh_offset[i]
+        return frame_offset, parent_name
 
     @staticmethod
     def get_q_range(q_range):
@@ -952,7 +952,7 @@ class Joint:
                 self.parent_body = frame.find("socket_parent").text.split("/")[-1]
                 offset_rot = frame.find("orientation").text
                 offset_trans = frame.find("translation").text
-                self.parent_offset_rot = [-float(i) for i in offset_rot.split(" ")]
+                self.parent_offset_rot = [float(i) for i in offset_rot.split(" ")]
                 self.parent_offset_trans = [float(i) for i in offset_trans.split(" ")]
             elif self.child == frame.attrib["name"]:
                 self.child_body = frame.find("socket_parent").text.split("/")[-1]
