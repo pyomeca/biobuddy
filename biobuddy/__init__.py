@@ -41,4 +41,4 @@ from biobuddy.protocols import Data, GenericDynamicModel
 from biobuddy.characteristics.de_leva import DeLevaTable
 
 # Mesh modifications
-from biobuddy.mesh_modifications.vtp_parser import VtpParser
+from .mesh_utils import *
