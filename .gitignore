@@ -172,3 +172,9 @@ cython_debug/
 
 # Working directory
 sandbox/
+
+.idea/
+.aider*
+
+.DS_Store
+examples/*.bioMod
