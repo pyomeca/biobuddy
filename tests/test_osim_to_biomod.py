@@ -341,15 +341,17 @@ def test_kinematics():
         os.remove(biomod_file_path)
 
     # Convert osim to biomod
-    model = BiomechanicalModel().from_osim(osim_file_path,
-                                           muscle_type=MuscleType.HILL_DE_GROOTE,
-                                           muscle_state_type=MuscleStateType.DEGROOTE,
-                                           mesh_dir="Geometry_cleaned")
+    model = BiomechanicalModel().from_osim(
+        osim_file_path,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir="Geometry_cleaned",
+    )
     model.to_biomod(biomod_file_path)
 
     # Test that the model created is valid
     biomod_model = biorbd.Model(biomod_file_path)
-    nb_q =biomod_model.nbQ()
+    nb_q = biomod_model.nbQ()
 
     # Test the kinematics
     kin_test = KinematicsTest(biomod=biomod_file_path, osim_model=osim_file_path)
@@ -366,11 +368,7 @@ def test_moment_arm():
     muscle_error = muscle_test.from_markers(markers=np.random.rand(3, 22, 20), plot=False)
     np.testing.assert_almost_equal(np.median(muscle_error), 0.0017046780530509224, decimal=4)
 
-    muscle_test = MomentArmTest(
-        biomod=biomod_model, osim_model=osim_model
-    )
+    muscle_test = MomentArmTest(biomod=biomod_model, osim_model=osim_model)
     print(muscle_test.from_markers(markers=np.random.rand(3, 22, 20), plot=False))
-    kin_test = KinematicsTest(
-        biomod=biomod_model, osim_model=osim_model
-    )
+    kin_test = KinematicsTest(biomod=biomod_model, osim_model=osim_model)
     print(kin_test.from_states(states=np.random.rand(16, 20) * 0.2, plot=False))

@@ -1,7 +1,6 @@
-
 import numpy as np
 
-from biobuddy.components.inertia_parameters import InertiaParameters
+from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
 
 
 def point_on_vector(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
@@ -19,7 +18,7 @@ class DeLevaTable:
         sex
             The sex ('male' or 'female') of the subject
         """
-        
+
         self.sex = sex
         self.de_leva_table = {
             "male": {

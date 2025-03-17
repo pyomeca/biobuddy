@@ -76,12 +76,13 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         rotations=Rotations.X,
         mesh=MeshReal(((0, 0, 0), (0, 0, -0.28))),
     )
+    bio_model.segments["UPPER_ARM"].add_marker(MarkerReal(name="SHOULDER", parent_name="UPPER_ARM", position=(0, 0, 0)))
     bio_model.segments["UPPER_ARM"].add_marker(
-        MarkerReal(name="SHOULDER", parent_name="UPPER_ARM", position=(0, 0, 0)))
+        MarkerReal(name="SHOULDER_X", parent_name="UPPER_ARM", position=(1, 0, 0))
+    )
     bio_model.segments["UPPER_ARM"].add_marker(
-        MarkerReal(name="SHOULDER_X", parent_name="UPPER_ARM", position=(1, 0, 0)))
-    bio_model.segments["UPPER_ARM"].add_marker(
-        MarkerReal(name="SHOULDER_XY", parent_name="UPPER_ARM", position=(1, 1, 0)))
+        MarkerReal(name="SHOULDER_XY", parent_name="UPPER_ARM", position=(1, 1, 0))
+    )
 
     bio_model.segments["LOWER_ARM"] = SegmentReal(
         name="LOWER_ARM",
@@ -91,12 +92,9 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         ),
         mesh=MeshReal(((0, 0, 0), (0, 0, -0.27))),
     )
-    bio_model.segments["LOWER_ARM"].add_marker(
-        MarkerReal(name="ELBOW", parent_name="LOWER_ARM", position=(0, 0, 0)))
-    bio_model.segments["LOWER_ARM"].add_marker(
-        MarkerReal(name="ELBOW_Y", parent_name="LOWER_ARM", position=(0, 1, 0)))
-    bio_model.segments["LOWER_ARM"].add_marker(
-        MarkerReal(name="ELBOW_XY", parent_name="LOWER_ARM", position=(1, 1, 0)))
+    bio_model.segments["LOWER_ARM"].add_marker(MarkerReal(name="ELBOW", parent_name="LOWER_ARM", position=(0, 0, 0)))
+    bio_model.segments["LOWER_ARM"].add_marker(MarkerReal(name="ELBOW_Y", parent_name="LOWER_ARM", position=(0, 1, 0)))
+    bio_model.segments["LOWER_ARM"].add_marker(MarkerReal(name="ELBOW_XY", parent_name="LOWER_ARM", position=(1, 1, 0)))
 
     bio_model.segments["HAND"] = SegmentReal(
         name="HAND",
@@ -189,7 +187,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
 
     # Prepare a fake model and a fake static from the previous test
     model = Model(kinematic_model_file_path)
-    write_markers_to_c3d(c3d_file_path,  model)
+    write_markers_to_c3d(c3d_file_path, model)
     os.remove(kinematic_model_file_path)
 
     # Fill the kinematic chain model
@@ -335,7 +333,6 @@ def test_model_creation_from_data(remove_temporary: bool = True):
         os.remove(c3d_file_path)
 
 
-
 def test_complex_model(remove_temporary: bool = True):
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
@@ -355,43 +352,53 @@ def test_complex_model(remove_temporary: bool = True):
         translations=Translations.XYZ,
         rotations=Rotations.X,
         q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-1, -1, -1, -np.pi], max_bound=[1, 1, 1, np.pi]),
-        qdot_ranges=RangeOfMotion(range_type=Ranges.Qdot, min_bound=[-10, -10, -10, -np.pi * 10],
-                                      max_bound=[10, 10, 10, np.pi * 10]),
-        mesh_file=MeshFile(mesh_file_name=mesh_path,
-                               mesh_color=np.array([0, 0, 1]),
-                               scaling_function=lambda m: np.array([1, 1, 10]),
-                               rotation_function=lambda m: np.array([np.pi / 2, 0, 0]),
-                               translation_function=lambda m: np.array([0.1, 0, 0])),
+        qdot_ranges=RangeOfMotion(
+            range_type=Ranges.Qdot, min_bound=[-10, -10, -10, -np.pi * 10], max_bound=[10, 10, 10, np.pi * 10]
+        ),
+        mesh_file=MeshFile(
+            mesh_file_name=mesh_path,
+            mesh_color=np.array([0, 0, 1]),
+            scaling_function=lambda m: np.array([1, 1, 10]),
+            rotation_function=lambda m: np.array([np.pi / 2, 0, 0]),
+            translation_function=lambda m: np.array([0.1, 0, 0]),
+        ),
     )
     # The pendulum segment contact point
-    bio_model.segments["PENDULUM"].add_contact(Contact(name="PENDULUM_CONTACT",
-                                                           function=lambda m: np.array([0, 0, 0]),
-                                                           parent_name="PENDULUM",
-                                                           axis=Translations.XYZ))
+    bio_model.segments["PENDULUM"].add_contact(
+        Contact(
+            name="PENDULUM_CONTACT",
+            function=lambda m: np.array([0, 0, 0]),
+            parent_name="PENDULUM",
+            axis=Translations.XYZ,
+        )
+    )
 
     # The pendulum muscle group
-    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"] = MuscleGroup(name="PENDULUM_MUSCLE_GROUP",
-                                                                       origin_parent_name="GROUND",
-                                                                       insertion_parent_name="PENDULUM")
+    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"] = MuscleGroup(
+        name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM"
+    )
 
     # The pendulum muscle
-    bio_model.muscles["PENDULUM_MUSCLE"] = Muscle("PENDULUM_MUSCLE",
-                                                      muscle_type=MuscleType.HILL_THELEN,
-                                                      state_type=MuscleStateType.DEGROOTE,
-                                                      muscle_group="PENDULUM_MUSCLE_GROUP",
-                                                      origin_position_function=lambda m: np.array([0, 0, 0]),
-                                                      insertion_position_function=lambda m: np.array([0, 0, 1]),
-                                                      optimal_length_function=lambda model, m: 0.1,
-                                                      maximal_force_function=lambda m: 100.0,
-                                                      tendon_slack_length_function=lambda model, m: 0.05,
-                                                      pennation_angle_function=lambda model, m: 0.05,
-                                                      maximal_excitation=1)
-    bio_model.via_points["PENDULUM_MUSCLE"] = ViaPoint("PENDULUM_MUSCLE",
-                                                           position_function=lambda m: np.array([0, 0, 0.5]),
-                                                           parent_name="PENDULUM",
-                                                           muscle_name="PENDULUM_MUSCLE",
-                                                           muscle_group="PENDULUM_MUSCLE_GROUP",
-                                                           )
+    bio_model.muscles["PENDULUM_MUSCLE"] = Muscle(
+        "PENDULUM_MUSCLE",
+        muscle_type=MuscleType.HILL_THELEN,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="PENDULUM_MUSCLE_GROUP",
+        origin_position_function=lambda m: np.array([0, 0, 0]),
+        insertion_position_function=lambda m: np.array([0, 0, 1]),
+        optimal_length_function=lambda model, m: 0.1,
+        maximal_force_function=lambda m: 100.0,
+        tendon_slack_length_function=lambda model, m: 0.05,
+        pennation_angle_function=lambda model, m: 0.05,
+        maximal_excitation=1,
+    )
+    bio_model.via_points["PENDULUM_MUSCLE"] = ViaPoint(
+        "PENDULUM_MUSCLE",
+        position_function=lambda m: np.array([0, 0, 0.5]),
+        parent_name="PENDULUM",
+        muscle_name="PENDULUM_MUSCLE",
+        muscle_group="PENDULUM_MUSCLE_GROUP",
+    )
 
     # Put the model together
     bio_model.personalize_model({})

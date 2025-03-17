@@ -6,7 +6,7 @@ from biobuddy import MeshParser, MeshFormat
 import pytest
 
 
-def test_cleaning_vtp_files():
+def test_process_vtp_files():
 
     # Paths
     current_path_file = Path(__file__).parent
