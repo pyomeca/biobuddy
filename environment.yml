@@ -1,6 +1,0 @@
-# create a dev conda environment with: `make create_env` or `conda env create -f environment.yml`
-name: biobuddy
-channels:
-- conda-forge
-dependencies:
-- numpy

@@ -31,12 +31,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
       
       - name: Set up Python
-        uses: actions/setup-python@v5
+        run: |
+          conda install -cconda-forge python>=3.10 pip 
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: | 
+          pip install . && pip uninstall -y biobuddy
+          conda install -c opensim-org opensim
 
       - name: Install test dependencies
         run: pip install pytest pytest-cov codecov
