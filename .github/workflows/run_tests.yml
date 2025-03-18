@@ -51,7 +51,6 @@ jobs:
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests
-        if: matrix.os == 'ubuntu-latest'
         
       - name: Send Codecov report
         uses: codecov/codecov-action@v5
