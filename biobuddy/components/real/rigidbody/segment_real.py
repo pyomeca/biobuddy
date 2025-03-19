@@ -1,4 +1,5 @@
 from .contact_real import ContactReal
+from .inertial_measurement_units_real import InertialMeasurementUnitReal
 from .inertia_parameters_real import InertiaParametersReal
 from .marker_real import MarkerReal
 from .mesh_file_real import MeshFileReal
@@ -31,6 +32,7 @@ class SegmentReal:
         self.qdot_ranges = qdot_ranges
         self.markers: list[MarkerReal] = []
         self.contacts: list[ContactReal] = []
+        self.imus: list[InertialMeasurementUnitReal] = []
         self.segment_coordinate_system = segment_coordinate_system
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh

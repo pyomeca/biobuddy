@@ -1,5 +1,6 @@
 from .axis_real import AxisReal
 from .contact_real import ContactReal
+from .inertial_measurement_units_real import InertialMeasurementUnitsReal
 from .inertia_parameters_real import InertiaParametersReal
 from .marker_real import MarkerReal
 from .mesh_file_real import MeshFileReal
