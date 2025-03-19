@@ -178,3 +178,5 @@ sandbox/
 
 .DS_Store
 examples/*.bioMod
+
+examples/models/Geometry_cleaned/
