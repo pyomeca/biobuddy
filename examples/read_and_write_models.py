@@ -51,7 +51,7 @@ if __name__ == "__main__":
     )
 
     # And convert it to a .bioMod file
-    model.to_biomod(biomod_file_path, with_mesh=False)
+    model.to_biomod(biomod_file_path, with_mesh=True)
 
     # Test that the model created is valid
     biorbd.Model(biomod_file_path)

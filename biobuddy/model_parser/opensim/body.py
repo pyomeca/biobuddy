@@ -68,6 +68,7 @@ class Body:
             if socket_frame == "..":
                 socket_frame = name
 
+        wrap = False
         if element.find("WrapObjectSet") is not None:
             wrap = len(element.find("WrapObjectSet").text) != 0
 

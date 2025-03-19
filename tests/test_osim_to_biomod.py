@@ -2,12 +2,11 @@ import os
 import biorbd
 from math import ceil
 import numpy as np
-from biobuddy.utils import *
 import matplotlib.pyplot as plt
 import opensim as osim
 import pytest
 
-from biobuddy import BiomechanicalModel, MuscleType, MuscleStateType
+from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
 
 
 class ModelEvaluation:
@@ -341,13 +340,13 @@ def test_kinematics():
         os.remove(biomod_file_path)
 
     # Convert osim to biomod
-    model = BiomechanicalModel().from_osim(
-        osim_file_path,
+    model = BiomechanicalModelReal.from_osim(
+        filepath = osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir="Geometry_cleaned",
+        mesh_dir="Geometry_cleaned"
     )
-    model.to_biomod(biomod_file_path)
+    model.to_biomod(biomod_file_path, with_mesh=False)
 
     # Test that the model created is valid
     biomod_model = biorbd.Model(biomod_file_path)

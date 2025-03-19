@@ -60,15 +60,12 @@ def read_vtp(filename: str) -> Mesh:
             else:
                 raise ValueError("The line type is not valid.")
 
-    if mesh.polygons.shape[1] == 3:  # it means it doesn't need to be converted into triangles
-        return mesh
-    else:
-        return _transform_polygon_to_mesh(mesh)
+    return _transform_polygon_to_mesh(mesh)
 
 
 def _format_row_data(fid, data: Iterable[float], format_string: str, indent_level: int = 0):
     for row in data:
-        fid.write(f"{"\t"* indent_level}{format_string % tuple(row)}\n")
+        fid.write("\t" * indent_level + (format_string % tuple(row)) + "\n")
 
 
 def write_vtp(filepath: str, mesh: Mesh) -> None:
@@ -89,9 +86,9 @@ def write_vtp(filepath: str, mesh: Mesh) -> None:
         )
         fid.write("\t<PolyData>\n")
 
+        nb_points = mesh.nodes.shape[0]
         nb_polys = mesh.polygons.shape[0]
         nb_nodes_polys = mesh.polygons.shape[1]
-        nb_points = mesh.nodes.shape[0]
 
         fid.write(
             f'\t\t<Piece NumberOfPoints="{nb_points}" NumberOfVerts="0" NumberOfLines="0" NumberOfStrips="0" NumberOfPolys="{nb_polys}">\n'
