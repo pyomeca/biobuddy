@@ -4,7 +4,7 @@ import numpy as np
 from enum import Enum
 
 from .via_point_real import ViaPointReal
-from ....utils.aliases import Points, points_to_array
+from ....utils.aliases import Points, point_to_array
 from ....utils.protocols import Data
 
 
@@ -68,8 +68,8 @@ class MuscleReal:
         self.muscle_type = muscle_type
         self.state_type = state_type
         self.muscle_group = muscle_group
-        self.origin_position = points_to_array(name="origin position", points=origin_position)
-        self.insertion_position = points_to_array(name="insertion position", points=insertion_position)
+        self.origin_position = point_to_array(name="origin position", point=origin_position)
+        self.insertion_position = point_to_array(name="insertion position", point=insertion_position)
         self.optimal_length = optimal_length
         self.maximal_force = maximal_force
         self.tendon_slack_length = tendon_slack_length
@@ -149,8 +149,8 @@ class MuscleReal:
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
-        out_string += f"\toriginposition\t{np.round(self.origin_position[0], 4)}\t{np.round(self.origin_position[1], 4)}\t{np.round(self.origin_position[2], 4)}\n"
-        out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0], 4)}\t{np.round(self.insertion_position[1], 4)}\t{np.round(self.insertion_position[2], 4)}\n"
+        out_string += f"\toriginposition\t{np.round(self.origin_position[0, 0], 4)}\t{np.round(self.origin_position[1, 0], 4)}\t{np.round(self.origin_position[2, 0], 4)}\n"
+        out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0, 0], 4)}\t{np.round(self.insertion_position[1, 0], 4)}\t{np.round(self.insertion_position[2, 0], 4)}\n"
         out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
         out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
         out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"

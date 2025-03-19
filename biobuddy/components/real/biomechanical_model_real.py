@@ -12,11 +12,13 @@ class BiomechanicalModelReal:
         from .muscle.via_point_real import ViaPointReal
         from .rigidbody.segment_real import SegmentReal
 
+        self.header = ""
         self.gravity = None if gravity is None else point_to_array("gravity", gravity)
         self.segments: dict[str, SegmentReal] = {}
         self.muscle_groups: dict[str, MuscleGroup] = {}
         self.muscles: dict[str, MuscleReal] = {}
         self.via_points: dict[str, ViaPointReal] = {}
+        self.warnings = ""
 
     def remove_segment(self, segment_name: str):
         """
@@ -95,7 +97,7 @@ class BiomechanicalModelReal:
             osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
 
-    def to_biomod(self, file_path: str):
+    def to_biomod(self, file_path: str, with_mesh: bool = True):
         """
         Write the bioMod file.
 
@@ -103,6 +105,8 @@ class BiomechanicalModelReal:
         ----------
         file_path
             The path to save the bioMod
+        with_mesh
+            If the mesh should be written to the bioMod file
         """
 
         # Collect the text to write
@@ -115,7 +119,7 @@ class BiomechanicalModelReal:
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.segments:
-            out_string += self.segments[name].to_biomod
+            out_string += self.segments[name].to_biomod(with_mesh)
             out_string += "\n\n\n"  # Give some space between segments
 
         out_string += "// --------------------------------------------------------------\n"

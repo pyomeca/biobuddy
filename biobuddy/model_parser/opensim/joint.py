@@ -13,6 +13,7 @@ from ...utils.linear_algebra import compute_matrix_rotation, rot2eul
 class JointType(Enum):
     WELD_JOINT = "WeldJoint"
     CUSTOM_JOINT = "CustomJoint"
+    GROUND = "Ground"  # This is not an actual joint, but it creates an empty Joint object
 
 
 def _convert_offset_child(offset_child_rot, offset_child_trans):
@@ -96,6 +97,12 @@ class Joint:
                 function = spat_transform.function
                 spatial_transform.append(spat_transform)
 
+        parent_offset_trans = ["0", "0", "0"]
+        parent_offset_rot = ["0", "0", "0"]
+        child_offset_trans = ["0", "0", "0"]
+        child_offset_rot = ["0", "0", "0"]
+        child_body = None,
+        parent_body = None,
         for frame in element.find("frames").findall("PhysicalOffsetFrame"):
             if parent == frame.attrib["name"]:
                 parent_body = frame.find("socket_parent").text.split("/")[-1]

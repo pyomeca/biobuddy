@@ -50,8 +50,7 @@ class SegmentReal:
     def remove_contact(self, contact: ContactReal):
         self.contacts.remove(contact)
 
-    @property
-    def to_biomod(self):
+    def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"segment\t{self.name}\n"
         if self.parent_name:
@@ -68,9 +67,9 @@ class SegmentReal:
             out_string += self.qdot_ranges.to_biomod
         if self.inertia_parameters:
             out_string += self.inertia_parameters.to_biomod
-        if self.mesh:
+        if self.mesh and with_mesh:
             out_string += self.mesh.to_biomod
-        if self.mesh_file:
+        if self.mesh_file and with_mesh:
             out_string += self.mesh_file.to_biomod
         out_string += "endsegment\n"
 

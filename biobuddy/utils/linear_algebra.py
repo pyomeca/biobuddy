@@ -24,13 +24,13 @@ def euler_and_translation_to_matrix(
         is in parent's local reference frame
     """
 
-    angles = points_to_array(name="angles", points=angles)
-    translations = point_to_array(name="translations", point=translations)
+    angles = point_to_array(name="angles", point=angles).reshape(4, )
+    translations = point_to_array(name="translations", point=translations).reshape(4, )
 
     matrix = {
-        "x": lambda x: np.array(((1, 0, 0), (0, np.cos(x), -np.sin(x)), (0, np.sin(x), np.cos(x)))),
-        "y": lambda y: np.array(((np.cos(y), 0, np.sin(y)), (0, 1, 0), (-np.sin(y), 0, np.cos(y)))),
-        "z": lambda z: np.array(((np.cos(z), -np.sin(z), 0), (np.sin(z), np.cos(z), 0), (0, 0, 1))),
+        "x": lambda x: np.array([[1, 0, 0], [0, np.cos(x), -np.sin(x)], [0, np.sin(x), np.cos(x)]]),
+        "y": lambda y: np.array([[np.cos(y), 0, np.sin(y)], [0, 1, 0], [-np.sin(y), 0, np.cos(y)]]),
+        "z": lambda z: np.array([[np.cos(z), -np.sin(z), 0], [np.sin(z), np.cos(z), 0], [0, 0, 1]]),
     }
     rt = np.identity(4)
     for angle, axis in zip(angles, angle_sequence):

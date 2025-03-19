@@ -58,6 +58,9 @@ def points_to_array(name: str, points: Points) -> np.ndarray:
     np.ndarray
         The points as a numpy array
     """
+    if isinstance(points, list):
+        points = np.array(points)
+
     if isinstance(points, np.ndarray):
         if len(points.shape) == 1:
             points = points[:, None]
@@ -71,5 +74,5 @@ def points_to_array(name: str, points: Points) -> np.ndarray:
             points = np.vstack((points, np.ones(points.shape[1])))
 
         return points
-
-    return np.array([point_to_array(name=name, point=point) for point in points])
+    else:
+        raise RuntimeError(f"The {name} must be a list or np.ndarray, but received: {type(points)}")

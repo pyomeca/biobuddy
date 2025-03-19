@@ -195,6 +195,7 @@ class SegmentCoordinateSystemReal:
             sequence = "xyz"
             tx, ty, tz = mean_rt[0:3, 3]
             rx, ry, rz = to_euler(mean_rt[:, :, np.newaxis], sequence)
+            out_string += f"\tRTinMatrix	0\n"
             out_string += f"\tRT\t{rx[0]:0.5f} {ry[0]:0.5f} {rz[0]:0.5f} {sequence} {tx:0.5f} {ty:0.5f} {tz:0.5f}"
 
         return out_string

@@ -48,18 +48,21 @@ def _get_file_version(model: ElementTree) -> int:
 class OsimModelParser:
     def __init__(
         self,
-        filepath: str,
+        osim_path: str,
         muscle_type: MuscleType,
         muscle_state_type: MuscleStateType,
         mesh_dir: str,
         print_warnings: bool = True,
+        ignore_fixed_dof_tag: bool =False,
+        ignore_clamped_dof_tag: bool =False,
+        ignore_muscle_applied_tag: bool = False,
     ):
         """
         Reads and converts OpenSim model files (.osim) to a biomechanical model representation.
 
         Parameters
         ----------
-        filepath : str
+        osim_path : str
             Path to the OpenSim .osim file to read
         muscle_type: MuscleType
             The type of muscle to assume when interpreting the osim model
@@ -75,9 +78,18 @@ class OsimModelParser:
         RuntimeError
             If file version is too old or units are not meters/newtons
         """
+        # Initial attributes
+        self.osim_path = osim_path
+        self.muscle_type = muscle_type
+        self.muscle_state_type = muscle_state_type
+        self.mesh_dir = mesh_dir
+        self.print_warnings = print_warnings
+        self.ignore_fixed_dof_tag = ignore_fixed_dof_tag
+        self.ignore_clamped_dof_tag = ignore_clamped_dof_tag
+        self.ignore_muscle_applied_tag = ignore_muscle_applied_tag
 
         # Extended attributes
-        self.model = ElementTree.parse(filepath)
+        self.model = ElementTree.parse(osim_path)
         file_version = _get_file_version(self.model)
         if file_version < 40000:
             raise RuntimeError(
@@ -153,6 +165,8 @@ class OsimModelParser:
         self.biomechanical_model_real = BiomechanicalModelReal()
         self._read()
 
+    def to_real(self) -> BiomechanicalModelReal:
+        return self.biomechanical_model_real
 
     def _get_body_mesh_list(self, body_set=None) -> list[str]:
         """returns the list of vtp files included in the model"""
@@ -162,7 +176,8 @@ class OsimModelParser:
             return None
         else:
             for element in body_set:
-                body_mesh_list.extend(Body().get_body_attrib(element).mesh)
+                mesh = Body.from_element(element).mesh
+                body_mesh_list.append(mesh)
             return body_mesh_list
 
     def _get_marker_set(self):
@@ -177,19 +192,19 @@ class OsimModelParser:
                 markers.append(marker)
             return markers
 
-    def _get_joint_set(self, ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False):
+    def _get_joint_set(self):
         joints = []
         if _is_element_empty(self.forceset_elt):
             return None
         else:
             for element in self.jointset_elt[0]:
-                joints.append(Joint().get_joint_attrib(element, ignore_fixed_dof_tag, ignore_clamped_dof_tag))
-                if joints[-1].function:
+                joint = Joint.from_element(element, self.ignore_fixed_dof_tag, self.ignore_clamped_dof_tag)
+                if joint.function:
                     self.warnings.append(
                         f"Some functions were present for the {joints[-1].name} joint. "
                         "This feature is not implemented in biorbd yet so it will be ignored."
                     )
-            # joints = self._reorder_joints(joints)
+                joints.append(joint)
             return joints
 
     def get_controller_set(self):
@@ -242,6 +257,7 @@ class OsimModelParser:
         self.get_component_set()
         self.get_contact_geometry_set()
         self.get_constraint_set()
+        self.biomechanical_model_real.warnings = self.warnings
 
     def _set_header(self):
         out_string = ""
@@ -255,12 +271,12 @@ class OsimModelParser:
         if self.length_units:
             out_string += f"\n// Length units : {self.length_units}\n"
         out_string += f"\n\ngravity\t{self.gravity[0]}\t{self.gravity[1]}\t{self.gravity[2]}"
-        self.header = out_string
+        self.biomechanical_model_real.header = out_string
 
     def _set_ground(self):
         ground_set = self.ground_elt
         if not _is_element_empty(ground_set):
-            dof = Joint()
+            dof = Joint
             dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
             self.write_dof(
                 Body.from_element(ground_set),
@@ -726,8 +742,8 @@ class OsimModelParser:
         """
 
         # Read the .osim file
-        self.forces = self._get_force_set(ignore_muscle_applied_tag=False)
-        self.joints = self._get_joint_set(ignore_fixed_dof_tag=False, ignore_clamped_dof_tag=False)
+        self.forces = self._get_force_set()
+        self.joints = self._get_joint_set()
         self.bodies = self._get_body_set()
         self.markers = self._get_marker_set()
         self.geometry_set = self._get_body_mesh_list()
@@ -754,7 +770,7 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self, ignore_muscle_applied_tag=False):
+    def _get_force_set(self):
         forces = []
         wrap = []
         original_muscle_names = []
@@ -764,7 +780,7 @@ class OsimModelParser:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
                     original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
-                    current_muscle = Muscle.from_element(element, ignore_muscle_applied_tag)
+                    current_muscle = Muscle.from_element(element, self.ignore_muscle_applied_tag)
                     if current_muscle is not None:
                         forces.append(current_muscle)
                         if forces[-1].wrap:
@@ -781,7 +797,7 @@ class OsimModelParser:
                 )
             return forces
 
-    def _get_transformation_parameters(spatial_transform):
+    def _get_transformation_parameters(self, spatial_transform):
         translations = []
         rotations = []
         q_ranges_trans = []
