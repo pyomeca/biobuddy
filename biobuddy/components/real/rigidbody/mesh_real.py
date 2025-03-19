@@ -20,7 +20,9 @@ class MeshReal:
             The 3d position of the all the mesh points
         """
 
-        self.positions = points_to_array(name="positions", points=positions)
+        self.positions = (
+            np.ndarray((3, 0)) if positions is None else points_to_array(name="positions", points=positions)
+        )
 
     @staticmethod
     def from_data(
