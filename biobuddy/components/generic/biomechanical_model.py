@@ -6,12 +6,13 @@ from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ..real.rigidbody.segment_real import SegmentReal
 from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...utils.aliases import Point, point_to_array
+from ...utils.named_list import NamedList
 from ...utils.protocols import Data
 
 
 class BiomechanicalModel:
     def __init__(self):
-        self.segments: dict[str, Segment] = {}
+        self.segments: NamedList[Segment] = []
         self.muscle_groups: dict[str, MuscleGroup] = {}
         self.muscles: dict[str, Muscle] = {}
         self.via_points: dict[str, ViaPoint] = {}
@@ -52,17 +53,19 @@ class BiomechanicalModel:
             if s.mesh_file is not None:
                 mesh_file = s.mesh_file.to_mesh_file(data)
 
-            model.segments[s.name] = SegmentReal(
-                name=s.name,
-                parent_name=s.parent_name,
-                segment_coordinate_system=scs,
-                translations=s.translations,
-                rotations=s.rotations,
-                q_ranges=s.q_ranges,
-                qdot_ranges=s.qdot_ranges,
-                inertia_parameters=inertia_parameters,
-                mesh=mesh,
-                mesh_file=mesh_file,
+            model.segments.append(
+                SegmentReal(
+                    name=s.name,
+                    parent_name=s.parent_name,
+                    segment_coordinate_system=scs,
+                    translations=s.translations,
+                    rotations=s.rotations,
+                    q_ranges=s.q_ranges,
+                    qdot_ranges=s.qdot_ranges,
+                    inertia_parameters=inertia_parameters,
+                    mesh=mesh,
+                    mesh_file=mesh_file,
+                )
             )
 
             for marker in s.markers:

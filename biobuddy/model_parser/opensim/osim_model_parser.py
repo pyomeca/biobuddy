@@ -53,8 +53,8 @@ class OsimModelParser:
         muscle_state_type: MuscleStateType,
         mesh_dir: str,
         print_warnings: bool = True,
-        ignore_fixed_dof_tag: bool =False,
-        ignore_clamped_dof_tag: bool =False,
+        ignore_fixed_dof_tag: bool = False,
+        ignore_clamped_dof_tag: bool = False,
         ignore_muscle_applied_tag: bool = False,
     ):
         """
@@ -618,20 +618,22 @@ class OsimModelParser:
                     ]
                 ),
             )
-        self.biomechanical_model_real.segments[name] = SegmentReal(
-            name=name,
-            parent_name=parent_name,
-            inertia_parameters=inertia_parameters,
-            segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
-            mesh_file=(
-                MeshFileReal(
-                    mesh_file_name=mesh_file,
-                    mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
-                    mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
-                )
-                if mesh_file
-                else None
-            ),
+        self.biomechanical_model_real.segments.append(
+            SegmentReal(
+                name=name,
+                parent_name=parent_name,
+                inertia_parameters=inertia_parameters,
+                segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
+                mesh_file=(
+                    MeshFileReal(
+                        mesh_file_name=mesh_file,
+                        mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
+                        mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
+                    )
+                    if mesh_file
+                    else None
+                ),
+            )
         )
 
     def write_virtual_segment(
@@ -653,28 +655,30 @@ class OsimModelParser:
         translations = getattr(Translations, trans_dof.upper(), Translations.NONE)
         rotations = getattr(Rotations, rot_dof.upper(), Rotations.NONE)
 
-        self.biomechanical_model_real.segments[name] = SegmentReal(
-            name=name,
-            parent_name=parent_name,
-            translations=translations,
-            rotations=rotations,
-            q_ranges=(
-                self.get_q_range(q_range)
-                if (translations != Translations.NONE and rotations != Rotations.NONE)
-                else None
-            ),
-            qdot_ranges=None,  # OpenSim does not handle qdot ranges
-            inertia_parameters=None,
-            segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
-            mesh_file=(
-                MeshFileReal(
-                    mesh_file_name=mesh_file,
-                    mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
-                    mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
-                )
-                if mesh_file
-                else None
-            ),
+        self.biomechanical_model_real.segments.append(
+            SegmentReal(
+                name=name,
+                parent_name=parent_name,
+                translations=translations,
+                rotations=rotations,
+                q_ranges=(
+                    self.get_q_range(q_range)
+                    if (translations != Translations.NONE and rotations != Rotations.NONE)
+                    else None
+                ),
+                qdot_ranges=None,  # OpenSim does not handle qdot ranges
+                inertia_parameters=None,
+                segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
+                mesh_file=(
+                    MeshFileReal(
+                        mesh_file_name=mesh_file,
+                        mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
+                        mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
+                    )
+                    if mesh_file
+                    else None
+                ),
+            )
         )
 
     def write_segments_with_a_geometry_only(self, body, parent, mesh_dir):

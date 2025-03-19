@@ -2,6 +2,7 @@ from typing import Self
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
+from ...utils.named_list import NamedList
 
 
 class BiomechanicalModelReal:
@@ -14,7 +15,7 @@ class BiomechanicalModelReal:
 
         self.header = ""
         self.gravity = None if gravity is None else point_to_array("gravity", gravity)
-        self.segments: dict[str, SegmentReal] = {}
+        self.segments: NamedList[SegmentReal] = NamedList()
         self.muscle_groups: dict[str, MuscleGroup] = {}
         self.muscles: dict[str, MuscleReal] = {}
         self.via_points: dict[str, ViaPointReal] = {}
