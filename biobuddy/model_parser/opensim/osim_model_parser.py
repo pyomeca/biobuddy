@@ -148,6 +148,7 @@ class OsimModelParser:
                     f" in the github repository."
                 )
 
+        # TODO Add the type hints for all and/or use NamedList
         self.bodies: list[Body] = []
         self.forces = []
         self.joints: list[Joint] = []
@@ -338,11 +339,13 @@ class OsimModelParser:
             try:
                 # Add muscle group if it does not exist already
                 muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
-                if muscle_group_name not in self.biomechanical_model_real.muscle_groups:
-                    self.biomechanical_model_real.muscle_groups[muscle_group_name] = MuscleGroup(
-                        name=muscle_group_name,
-                        origin_parent_name=muscle.group[0],
-                        insertion_parent_name=muscle.group[1],
+                if muscle_group_name not in [group.name for group in self.biomechanical_model_real.muscle_groups]:
+                    self.biomechanical_model_real.muscle_groups.append(
+                        MuscleGroup(
+                            name=muscle_group_name,
+                            origin_parent_name=muscle.group[0],
+                            insertion_parent_name=muscle.group[1],
+                        )
                     )
 
                 # Convert muscle properties
@@ -369,9 +372,9 @@ class OsimModelParser:
                         muscle_group=muscle_real.muscle_group,
                         position=np.array([float(v) for v in via_point.position.split()]),
                     )
-                    self.biomechanical_model_real.via_points[via_real.name] = via_real
+                    self.biomechanical_model_real.via_points.append(via_real)
 
-                self.biomechanical_model_real.muscles[muscle.name] = muscle_real
+                self.biomechanical_model_real.muscles.append(muscle_real)
 
             except Exception as e:
                 self.warnings.append(f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped.")

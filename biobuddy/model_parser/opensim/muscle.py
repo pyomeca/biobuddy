@@ -48,6 +48,7 @@ class Muscle:
         if element.find("appliesForce") is not None and not ignore_applied:
             applied = element.find("appliesForce").text == "true"
 
+        # TODO: add type hints to general lists
         via_points = []
         for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("PathPoint"):
             via_point = PathPoint.from_element(path_point_elt)

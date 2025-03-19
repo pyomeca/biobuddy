@@ -15,10 +15,10 @@ class BiomechanicalModelReal:
 
         self.header = ""
         self.gravity = None if gravity is None else point_to_array("gravity", gravity)
-        self.segments: NamedList[SegmentReal] = NamedList()
-        self.muscle_groups: dict[str, MuscleGroup] = {}
-        self.muscles: dict[str, MuscleReal] = {}
-        self.via_points: dict[str, ViaPointReal] = {}
+        self.segments = NamedList[SegmentReal]()
+        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscles = NamedList[MuscleReal]()
+        self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
     def remove_segment(self, segment_name: str):
@@ -127,8 +127,8 @@ class BiomechanicalModelReal:
             out_string += "// --------------------------------------------------------------\n"
             out_string += "// MUSCLE GROUPS\n"
             out_string += "// --------------------------------------------------------------\n\n"
-            for name in self.muscle_groups:
-                out_string += self.muscle_groups[name].to_biomod()
+            for muscle_group in self.muscle_groups:
+                out_string += muscle_group.to_biomod()
                 out_string += "\n"
             out_string += "\n\n\n"  # Give some space after muscle groups
 
@@ -136,8 +136,8 @@ class BiomechanicalModelReal:
             out_string += "// --------------------------------------------------------------\n"
             out_string += "// MUSCLES\n"
             out_string += "// --------------------------------------------------------------\n\n"
-            for name in self.muscles:
-                out_string += self.muscles[name].to_biomod()
+            for muscle in self.muscles:
+                out_string += muscle.to_biomod()
                 out_string += "\n\n\n"  # Give some space between muscles
 
         if self.via_points:

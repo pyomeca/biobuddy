@@ -432,30 +432,34 @@ def test_complex_model(remove_temporary: bool = True):
     )
 
     # The pendulum muscle group
-    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"] = MuscleGroup(
-        name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM"
+    bio_model.muscle_groups.append(
+        MuscleGroup(name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM")
     )
 
     # The pendulum muscle
-    bio_model.muscles["PENDULUM_MUSCLE"] = Muscle(
-        "PENDULUM_MUSCLE",
-        muscle_type=MuscleType.HILL_THELEN,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group="PENDULUM_MUSCLE_GROUP",
-        origin_position_function=lambda m: np.array([0, 0, 0]),
-        insertion_position_function=lambda m: np.array([0, 0, 1]),
-        optimal_length_function=lambda model, m: 0.1,
-        maximal_force_function=lambda m: 100.0,
-        tendon_slack_length_function=lambda model, m: 0.05,
-        pennation_angle_function=lambda model, m: 0.05,
-        maximal_excitation=1,
+    bio_model.muscles.append(
+        Muscle(
+            "PENDULUM_MUSCLE",
+            muscle_type=MuscleType.HILL_THELEN,
+            state_type=MuscleStateType.DEGROOTE,
+            muscle_group="PENDULUM_MUSCLE_GROUP",
+            origin_position_function=lambda m: np.array([0, 0, 0]),
+            insertion_position_function=lambda m: np.array([0, 0, 1]),
+            optimal_length_function=lambda model, m: 0.1,
+            maximal_force_function=lambda m: 100.0,
+            tendon_slack_length_function=lambda model, m: 0.05,
+            pennation_angle_function=lambda model, m: 0.05,
+            maximal_excitation=1,
+        )
     )
-    bio_model.via_points["PENDULUM_MUSCLE"] = ViaPoint(
-        "PENDULUM_MUSCLE",
-        position_function=lambda m: np.array([0, 0, 0.5]),
-        parent_name="PENDULUM",
-        muscle_name="PENDULUM_MUSCLE",
-        muscle_group="PENDULUM_MUSCLE_GROUP",
+    bio_model.via_points.append(
+        ViaPoint(
+            "PENDULUM_MUSCLE",
+            position_function=lambda m: np.array([0, 0, 0.5]),
+            parent_name="PENDULUM",
+            muscle_name="PENDULUM_MUSCLE",
+            muscle_group="PENDULUM_MUSCLE_GROUP",
+        )
     )
 
     # Put the model together

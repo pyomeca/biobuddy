@@ -12,10 +12,10 @@ from ...utils.protocols import Data
 
 class BiomechanicalModel:
     def __init__(self):
-        self.segments: NamedList[Segment] = []
-        self.muscle_groups: dict[str, MuscleGroup] = {}
-        self.muscles: dict[str, Muscle] = {}
-        self.via_points: dict[str, ViaPoint] = {}
+        self.segments = NamedList[Segment]()
+        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscles = NamedList[Muscle]()
+        self.via_points = NamedList[ViaPoint]()
 
     def to_real(self, data: Data, gravity: Point = None) -> BiomechanicalModelReal:
         """
@@ -67,43 +67,39 @@ class BiomechanicalModel:
             )
 
             for marker in segment.markers:
-                model.segments[name].add_marker(marker.to_marker(data, model, scs))
+                model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs))
 
             for contact in segment.contacts:
-                model.segments[name].add_contact(contact.to_contact(data))
+                model.segments[contact.parent_name].add_contact(contact.to_contact(data))
 
-        for name in self.muscle_groups:
-            mg = self.muscle_groups[name]
-
-            model.muscle_groups[mg.name] = MuscleGroup(
-                name=mg.name,
-                origin_parent_name=mg.origin_parent_name,
-                insertion_parent_name=mg.insertion_parent_name,
+        for muscle_group in self.muscle_groups:
+            model.muscle_groups.append(
+                MuscleGroup(
+                    name=muscle_group.name,
+                    origin_parent_name=muscle_group.origin_parent_name,
+                    insertion_parent_name=muscle_group.insertion_parent_name,
+                )
             )
 
-        for name in self.muscles:
-            m = self.muscles[name]
-
-            if m.muscle_group not in model.muscle_groups:
+        for muscle in self.muscles:
+            if muscle.muscle_group not in [group.name for group in model.muscle_groups]:
                 raise RuntimeError(
-                    f"Please create the muscle group {m.muscle_group} before putting the muscle {m.name} in it."
+                    f"Please create the muscle group {muscle.muscle_group} before putting the muscle {muscle.name} in it."
                 )
 
-            model.muscles[m.name] = m.to_muscle(model, data)
+            model.muscles.append(muscle.to_muscle(model, data))
 
-        for name in self.via_points:
-            vp = self.via_points[name]
-
-            if vp.muscle_name not in model.muscles:
+        for via_point in self.via_points:
+            if via_point.muscle_name not in [muscle.name for muscle in model.muscles]:
                 raise RuntimeError(
-                    f"Please create the muscle {vp.muscle_name} before putting the via point {vp.name} in it."
+                    f"Please create the muscle {via_point.muscle_name} before putting the via point {via_point.name} in it."
                 )
 
-            if vp.muscle_group not in model.muscle_groups:
+            if via_point.muscle_group not in [group.name for group in model.muscle_groups]:
                 raise RuntimeError(
-                    f"Please create the muscle group {vp.muscle_group} before putting the via point {vp.name} in it."
+                    f"Please create the muscle group {via_point.muscle_group} before putting the via point {via_point.name} in it."
                 )
 
-            model.via_points[vp.name] = vp.to_via_point(data)
+            model.via_points.append(via_point.to_via_point(data))
 
         return model
