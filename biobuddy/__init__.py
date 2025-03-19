@@ -13,5 +13,8 @@ from .characteristics import *
 # Mesh modifications
 from .mesh_parser import *
 
+# Model parsers
+from .model_parser import *
+
 
 __all__ = components.__all__ + utils.__all__ + characteristics.__all__ + mesh_parser.__all__

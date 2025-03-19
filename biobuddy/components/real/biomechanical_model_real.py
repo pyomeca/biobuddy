@@ -63,6 +63,12 @@ class BiomechanicalModelReal:
         self.via_points.pop(via_point_name)
 
     @staticmethod
+    def from_biomod() -> Self:
+        """
+        Create a biomechanical model from a biorbd model
+        """
+
+    @staticmethod
     def from_osim(
         osim_path: str,
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
@@ -83,9 +89,9 @@ class BiomechanicalModelReal:
         mesh_dir: str
             The directory where the meshes are located
         """
-        from ...model_parser.opensim import OpensimModel
+        from ...model_parser.opensim import OsimModelParser
 
-        return OpensimModel(
+        return OsimModelParser(
             osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
 

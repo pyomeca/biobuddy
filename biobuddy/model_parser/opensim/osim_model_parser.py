@@ -45,10 +45,10 @@ def _get_file_version(model: ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
 
 
-class OpensimModel:
+class OsimModelParser:
     def __init__(
         self,
-        osim_path: str,
+        filepath: str,
         muscle_type: MuscleType,
         muscle_state_type: MuscleStateType,
         mesh_dir: str,
@@ -59,7 +59,7 @@ class OpensimModel:
 
         Parameters
         ----------
-        osim_path : str
+        filepath : str
             Path to the OpenSim .osim file to read
         muscle_type: MuscleType
             The type of muscle to assume when interpreting the osim model
@@ -77,7 +77,7 @@ class OpensimModel:
         """
 
         # Extended attributes
-        self.model = ElementTree.parse(osim_path)
+        self.model = ElementTree.parse(filepath)
         file_version = _get_file_version(self.model)
         if file_version < 40000:
             raise RuntimeError(

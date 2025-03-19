@@ -1,5 +1,5 @@
-from .opensim_model import OpensimModel
+from .osim_model_parser import OsimModelParser
 
 __all__ = [
-    OpensimModel.__name__,
+    OsimModelParser.__name__,
 ]
