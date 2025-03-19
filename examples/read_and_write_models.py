@@ -5,7 +5,14 @@ This example shows how to read and write models.
 from pathlib import Path
 import biorbd
 
-from biobuddy import BiomechanicalModel, MuscleType, MuscleStateType, VtpParser
+from biobuddy import (
+    MuscleType,
+    MuscleStateType,
+    MeshParser,
+    MeshFormat,
+    OsimModelParser,
+    BiomechanicalModelReal,
+)
 
 
 if __name__ == "__main__":
@@ -14,20 +21,24 @@ if __name__ == "__main__":
     current_path_file = Path(__file__).parent
     biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
-    geometry_path = f"{current_path_file}/models/Geometry"
+    geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
 
-    # Convert vtp files
-    VtpParser(geometry_path, geometry_cleaned_path)
+    # Convert the vtp files
+    mesh = MeshParser(geometry_folder=geometry_path)
+    mesh.process_meshes()
+    mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # Read an .osim file
-    model = BiomechanicalModel().from_osim(osim_file_path,
-                                           muscle_type=MuscleType.HILL_DE_GROOTE,
-                                           muscle_state_type=MuscleStateType.DEGROOTE,
-                                           mesh_dir="Geometry_cleaned")
+    model = BiomechanicalModelReal.from_osim(
+        osim_path = osim_file_path,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir="Geometry_cleaned"
+    )
 
     # And convert it to a .bioMod file
-    model.to_biomod(biomod_file_path)
+    model.to_biomod(biomod_file_path, with_mesh=False)
 
     # Test that the model created is valid
     biorbd.Model(biomod_file_path)

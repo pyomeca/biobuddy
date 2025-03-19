@@ -6,7 +6,7 @@ from pathlib import Path
 import biorbd
 
 from biobuddy import (
-    BiomechanicalModel,
+    BiomechanicalModelReal,
     MuscleType,
     MuscleStateType,
     MeshParser,
@@ -23,6 +23,7 @@ if __name__ == "__main__":
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
     scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
+    static_file_path = f"{current_path_file}/models/static.c3d"
 
     # Convert the vtp files
     mesh = MeshParser(geometry_folder=geometry_path)
@@ -30,16 +31,18 @@ if __name__ == "__main__":
     mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # Read an .osim file
-    model = OsimModelParser(osim_file_path,
-                           muscle_type=MuscleType.HILL_DE_GROOTE,
-                           muscle_state_type=MuscleStateType.DEGROOTE,
-                           mesh_dir="Geometry_cleaned").biomechanical_model_real
+    model = BiomechanicalModelReal.from_osim(
+        osim_path = osim_file_path,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir="Geometry_cleaned"
+    )
 
     # Setup the scaling configuration (which markers to use)
     # TODO
 
     # Scale the model
-    # TODO
+    model.scale(static_file_path, scaling_configuration)
 
     # Write the scaled model to a .bioMod file
     model.to_biomod(scaled_biomod_file_path)
