@@ -165,7 +165,7 @@ class SegmentReal:
         if self.parent_name:
             out_string += f"\tparent\t{self.parent_name}\n"
         if self.segment_coordinate_system:
-            out_string += f"{self.segment_coordinate_system.to_biomod()}\n"
+            out_string += f"{self.segment_coordinate_system.to_biomod()}"
         if self.translations != Translations.NONE:
             out_string += f"\ttranslations\t{self.translations.value}\n"
         if self.rotations != Rotations.NONE:
@@ -184,14 +184,21 @@ class SegmentReal:
 
         # Also print the markers attached to the segment
         if self.markers:
+            out_string += "\n"
             for marker in self.markers:
                 marker.parent_name = marker.parent_name if marker.parent_name is not None else self.name
                 out_string += marker.to_biomod()
 
         # Also print the contacts attached to the segment
         if self.contacts:
+            out_string += "\n"
             for contact in self.contacts:
                 contact.parent_name = contact.parent_name
                 out_string += contact.to_biomod()
+
+        if self.imus:
+            out_string += "\n"
+            for imu in self.imus:
+                out_string += imu.to_biomod()
 
         return out_string

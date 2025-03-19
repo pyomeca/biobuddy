@@ -24,7 +24,7 @@ class RangeOfMotion:
             raise RuntimeError("RangeOfMotion's range_type must be Range.Q or Ranges.Qdot")
 
         for i_dof in range(len(self.min_bound)):
-            out_string += f"\t\t{self.min_bound[i_dof]:0.5f}\t{self.max_bound[i_dof]:0.5f}\n"
+            out_string += f"\t\t{self.min_bound[i_dof]:0.6f}\t{self.max_bound[i_dof]:0.6f}\n"
         out_string += "\n"
 
         return out_string

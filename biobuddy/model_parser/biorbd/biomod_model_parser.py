@@ -79,18 +79,21 @@ class BiomodModelParser:
                         current_component.translations = _read_str(next_token=next_token)
                     elif token == "rotations":
                         current_component.rotations = _read_str(next_token=next_token)
-                    elif token in ("mass", "com", "inertia"):
+                    elif token in ("mass", "com", "centerofmass", "inertia", "inertia_xxyyzz"):
                         if current_component.inertia_parameters is None:
                             current_component.inertia_parameters = InertiaParametersReal()
 
                         if token == "mass":
                             current_component.inertia_parameters.mass = _read_float(next_token=next_token)
-                        elif token == "com":
+                        elif token == "com" or token == "centerofmass":
                             com = _read_float_vector(next_token=next_token, length=3)
                             current_component.inertia_parameters.center_of_mass = com
                         elif token == "inertia":
                             inertia = _read_float_vector(next_token=next_token, length=9).reshape((3, 3))
                             current_component.inertia_parameters.inertia = inertia
+                        elif token == "inertia_xxyyzz":
+                            inertia = _read_float_vector(next_token=next_token, length=3)
+                            current_component.inertia_parameters.inertia = np.diag(inertia)
                     elif token == "mesh":
                         if current_component.mesh is None:
                             current_component.mesh = MeshReal()
@@ -159,14 +162,21 @@ def _tokenize_biomod(filepath: str) -> list[str]:
         line = line.split("//")[0]
         line = line.strip()
         lines[line_index] = line
+    tokens = lines
 
     # Make spaces also a separator
-    tokens = []
-    for line in lines:
-        tokens.extend(line.split(" "))
+    tokens_tp: list[str] = []
+    for line in tokens:
+        tokens_tp.extend(line.split(" "))
+    tokens = [token for token in tokens_tp if token != ""]
 
-    # Remove empty lines
-    return [token for token in tokens if token]
+    # Make tabs also a separator
+    tokens_tp: list[str] = []
+    for token in tokens:
+        tokens_tp.extend(token.split("\t"))
+    tokens = [token for token in tokens_tp if token != ""]
+
+    return tokens
 
 
 def _read_str(next_token: Callable) -> str:

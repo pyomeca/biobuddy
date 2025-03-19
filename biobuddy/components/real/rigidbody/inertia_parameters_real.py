@@ -52,7 +52,11 @@ class InertiaParametersReal:
     @inertia.setter
     def inertia(self, value: Points):
         self._inertia = points_to_array(name="inertia", points=value)
-        if self.inertia.shape[1] not in [0, 1, 3]:
+        if self.inertia.shape[1] == 0:
+            return
+        if self.inertia.shape[1] == 1:
+            self._inertia = np.diag(self.inertia[:, 0])
+        elif self.inertia.shape[1] != 3:
             raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
 
     @staticmethod
@@ -101,17 +105,14 @@ class InertiaParametersReal:
         if self.mass is not None:
             out_string = f"\tmass\t{self.mass}\n"
 
-        if self.center_of_mass is not None:
+        if np.any(self.center_of_mass):
             com = np.nanmean(self.center_of_mass, axis=1)[:3]
-            out_string += f"\tCenterOfMass\t{com[0]:0.5f}\t{com[1]:0.5f}\t{com[2]:0.5f}\n"
+            out_string += f"\tCenterOfMass\t{com[0]:0.6f}\t{com[1]:0.6f}\t{com[2]:0.6f}\n"
 
-        if self.inertia is not None:
-            if self.inertia.shape[1] == 1:
-                out_string += f"\tinertia_xxyyzz\t{self.inertia[0]}\t{self.inertia[1]}\t{self.inertia[2]}\n"
-            elif self.inertia.shape[1] == 3:
-                out_string += f"\tinertia\n"
-                out_string += f"\t\t{self.inertia[0, 0]}\t{self.inertia[0, 1]}\t{self.inertia[0, 2]}\n"
-                out_string += f"\t\t{self.inertia[1, 0]}\t{self.inertia[1, 1]}\t{self.inertia[1, 2]}\n"
-                out_string += f"\t\t{self.inertia[2, 0]}\t{self.inertia[2, 1]}\t{self.inertia[2, 2]}\n"
+        if np.any(self.inertia):
+            out_string += f"\tinertia\n"
+            out_string += f"\t\t{self.inertia[0, 0]:0.6f}\t{self.inertia[0, 1]:0.6f}\t{self.inertia[0, 2]:0.6f}\n"
+            out_string += f"\t\t{self.inertia[1, 0]:0.6f}\t{self.inertia[1, 1]:0.6f}\t{self.inertia[1, 2]:0.6f}\n"
+            out_string += f"\t\t{self.inertia[2, 0]:0.6f}\t{self.inertia[2, 1]:0.6f}\t{self.inertia[2, 2]:0.6f}\n"
 
         return out_string

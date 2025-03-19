@@ -89,17 +89,21 @@ class InertialMeasurementUnitReal:
         return InertialMeasurementUnitReal(name=self.name, parent_name=self.parent_name, scs=np.array(self.scs))
 
     def to_biomod(self):
-        rt = self.scs
+        out_string = f"imu\t{self.name}\n"
+        out_string += f"\tparent\t{self.parent_name}\n"
 
-        out_string = ""
-        mean_rt = mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
+        rt = self.scs
+        mean_rt = mean_homogenous_matrix(rt) if rt.shape[2] > 1 else rt[:, :, 0]
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
-        out_string += f"\t\t{mean_rt[0, 0]:0.5f}\t{mean_rt[0, 1]:0.5f}\t{mean_rt[0, 2]:0.5f}\t{mean_rt[0, 3]:0.5f}\n"
-        out_string += f"\t\t{mean_rt[1, 0]:0.5f}\t{mean_rt[1, 1]:0.5f}\t{mean_rt[1, 2]:0.5f}\t{mean_rt[1, 3]:0.5f}\n"
-        out_string += f"\t\t{mean_rt[2, 0]:0.5f}\t{mean_rt[2, 1]:0.5f}\t{mean_rt[2, 2]:0.5f}\t{mean_rt[2, 3]:0.5f}\n"
-        out_string += f"\t\t{mean_rt[3, 0]:0.5f}\t{mean_rt[3, 1]:0.5f}\t{mean_rt[3, 2]:0.5f}\t{mean_rt[3, 3]:0.5f}\n"
+        out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[1, 0]:0.6f}\t{mean_rt[1, 1]:0.6f}\t{mean_rt[1, 2]:0.6f}\t{mean_rt[1, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[2, 0]:0.6f}\t{mean_rt[2, 1]:0.6f}\t{mean_rt[2, 2]:0.6f}\t{mean_rt[2, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[3, 0]:0.6f}\t{mean_rt[3, 1]:0.6f}\t{mean_rt[3, 2]:0.6f}\t{mean_rt[3, 3]:0.6f}\n"
 
+        out_string += f"\ttechnical\t{1 if self.is_technical else 0}\n"
+        out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
+        out_string += "endimu\n"
         return out_string
 
     @property

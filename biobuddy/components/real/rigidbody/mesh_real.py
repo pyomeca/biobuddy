@@ -69,10 +69,11 @@ class MeshReal:
         return MeshReal(tuple(all_p))
 
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
+        # Do a sanity check
+        if np.any(np.isnan(self.positions)):
+            raise RuntimeError("The mesh contains nan values")
+
         out_string = ""
-        for position in self.positions:
-            # Do a sanity check
-            p = np.nanmean(position, axis=1)
-            out_string += f"\tmesh\t{p[0]:0.4f}\t{p[1]:0.4f}\t{p[2]:0.4f}\n"
+        for p in self.positions.T:
+            out_string += f"\tmesh\t{p[0]:0.6f}\t{p[1]:0.6f}\t{p[2]:0.6f}\n"
         return out_string
