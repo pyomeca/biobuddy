@@ -116,7 +116,7 @@ class ModelEvaluation:
 
     def _update_osim_model(
         self, my_state: osim.Model.initializeState, states: np.ndarray, ordered_idx: list
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         Update the osim model to match the biomod model
 
@@ -341,10 +341,10 @@ def test_kinematics():
 
     # Convert osim to biomod
     model = BiomechanicalModelReal.from_osim(
-        filepath = osim_file_path,
+        filepath=osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir="Geometry_cleaned"
+        mesh_dir="Geometry_cleaned",
     )
     model.to_biomod(biomod_file_path, with_mesh=False)
 

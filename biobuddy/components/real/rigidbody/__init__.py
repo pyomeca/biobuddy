@@ -1,6 +1,6 @@
 from .axis_real import AxisReal
 from .contact_real import ContactReal
-from .inertial_measurement_units_real import InertialMeasurementUnitsReal
+from .inertial_measurement_unit_real import InertialMeasurementUnitReal
 from .inertia_parameters_real import InertiaParametersReal
 from .marker_real import MarkerReal
 from .mesh_file_real import MeshFileReal
@@ -13,6 +13,7 @@ from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 __all__ = [
     AxisReal.__name__,
     ContactReal.__name__,
+    InertialMeasurementUnitReal.__name__,
     InertiaParametersReal.__name__,
     MarkerReal.__name__,
     MeshFileReal.__name__,

@@ -1,5 +1,5 @@
 from .contact_real import ContactReal
-from .inertial_measurement_units_real import InertialMeasurementUnitReal
+from .inertial_measurement_unit_real import InertialMeasurementUnitReal
 from .inertia_parameters_real import InertiaParametersReal
 from .marker_real import MarkerReal
 from .mesh_file_real import MeshFileReal
@@ -8,6 +8,7 @@ from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
+from ....utils.named_list import NamedList
 
 
 class SegmentReal:
@@ -30,13 +31,115 @@ class SegmentReal:
         self.rotations = rotations
         self.q_ranges = q_ranges
         self.qdot_ranges = qdot_ranges
-        self.markers: list[MarkerReal] = []
-        self.contacts: list[ContactReal] = []
-        self.imus: list[InertialMeasurementUnitReal] = []
+        self.markers = NamedList[MarkerReal]()
+        self.contacts = NamedList[ContactReal]()
+        self.imus = NamedList[InertialMeasurementUnitReal]()
         self.segment_coordinate_system = segment_coordinate_system
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh
         self.mesh_file = mesh_file
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str):
+        self._parent_name = value
+
+    @property
+    def translations(self) -> Translations:
+        return self._translations
+
+    @translations.setter
+    def translations(self, value: Translations):
+        self._translations = value
+
+    @property
+    def rotations(self) -> Rotations:
+        return self._rotations
+
+    @rotations.setter
+    def rotations(self, value: Rotations):
+        self._rotations = value
+
+    @property
+    def q_ranges(self) -> RangeOfMotion:
+        return self._q_ranges
+
+    @q_ranges.setter
+    def q_ranges(self, value: RangeOfMotion):
+        self._q_ranges = value
+
+    @property
+    def qdot_ranges(self) -> RangeOfMotion:
+        return self._qdot_ranges
+
+    @qdot_ranges.setter
+    def qdot_ranges(self, value: RangeOfMotion):
+        self._qdot_ranges = value
+
+    @property
+    def markers(self) -> NamedList[MarkerReal]:
+        return self._markers
+
+    @markers.setter
+    def markers(self, value: NamedList[MarkerReal]):
+        if isinstance(value, list) and not isinstance(value, NamedList):
+            value = NamedList.from_list(value)
+        self._markers = value
+
+    @property
+    def contacts(self) -> NamedList[ContactReal]:
+        return self._contacts
+
+    @contacts.setter
+    def contacts(self, value: NamedList[ContactReal]):
+        if isinstance(value, list) and not isinstance(value, NamedList):
+            value = NamedList.from_list(value)
+        self._contacts = value
+
+    @property
+    def imus(self) -> NamedList[InertialMeasurementUnitReal]:
+        return self._imus
+
+    @imus.setter
+    def imus(self, value: NamedList[InertialMeasurementUnitReal]):
+        if isinstance(value, list) and not isinstance(value, NamedList):
+            value = NamedList.from_list(value)
+        self._imus = value
+
+    @property
+    def segment_coordinate_system(self) -> SegmentCoordinateSystemReal:
+        return self._segment_coordinate_system
+
+    @segment_coordinate_system.setter
+    def segment_coordinate_system(self, value: SegmentCoordinateSystemReal):
+        self._segment_coordinate_system = value
+
+    @property
+    def inertia_parameters(self) -> InertiaParametersReal:
+        return self._inertia_parameters
+
+    @inertia_parameters.setter
+    def inertia_parameters(self, value: InertiaParametersReal):
+        self._inertia_parameters = value
+
+    @property
+    def mesh(self) -> MeshReal:
+        return self._mesh
+
+    @mesh.setter
+    def mesh(self, value: MeshReal):
+        self._mesh = value
 
     def add_marker(self, marker: MarkerReal):
         self.markers.append(marker)

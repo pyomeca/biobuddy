@@ -19,10 +19,18 @@ class MeshReal:
         positions
             The 3d position of the all the mesh points
         """
+        self.positions = positions
 
-        self.positions = (
-            np.ndarray((3, 0)) if positions is None else points_to_array(name="positions", points=positions)
-        )
+    @property
+    def positions(self) -> np.ndarray:
+        return self._positions
+
+    @positions.setter
+    def positions(self, value: Points):
+        self._positions = points_to_array(name="positions", points=value)
+
+    def add_positions(self, value: Points):
+        self._positions = np.hstack((self._positions, points_to_array(name="positions", points=value)))
 
     @staticmethod
     def from_data(

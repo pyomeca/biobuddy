@@ -309,7 +309,7 @@ class OsimModelParser:
         # Add markers to their parent segments
         for marker in markers:
             parent_segment_name = marker.parent
-            if parent_segment_name in self.biomechanical_model_real.segments:
+            if parent_segment_name in [segment.name for segment in self.biomechanical_model_real.segments]:
                 # Convert position string to numpy array with proper float conversion
                 position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
 

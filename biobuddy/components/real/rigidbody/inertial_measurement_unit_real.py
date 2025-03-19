@@ -11,6 +11,8 @@ class InertialMeasurementUnitReal:
         name: str,
         parent_name: str,
         scs: np.ndarray = np.identity(4),
+        is_technical: bool = True,
+        is_anatomical: bool = False,
     ):
         """
         Parameters
@@ -26,15 +28,62 @@ class InertialMeasurementUnitReal:
             is in parent's local reference frame
         is_scs_local
             If the scs is already in local reference frame
+        is_technical
+            If the marker should be flagged as a technical imu
+        is_anatomical
+            If the marker should be flagged as an anatomical imu
+
         """
         self.name = name
         self.parent_name = parent_name
 
-        if scs.shape != (4, 4):
-            raise ValueError("The scs must be a 4x4 matrix")
         self.scs = scs
-        if len(self.scs.shape) == 2:
-            self.scs = self.scs[:, :, np.newaxis]
+        self.is_technical = is_technical
+        self.is_anatomical = is_anatomical
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str):
+        self._parent_name = value
+
+    @property
+    def scs(self) -> np.ndarray:
+        return self._scs
+
+    @scs.setter
+    def scs(self, value: np.ndarray):
+        if value.shape != (4, 4):
+            raise ValueError("The scs must be a 4x4 matrix")
+        self._scs = value
+        if len(self._scs.shape) == 2:
+            self._scs = self._scs[:, :, np.newaxis]
+
+    @property
+    def is_technical(self) -> bool:
+        return self._is_technical
+
+    @is_technical.setter
+    def is_technical(self, value: bool):
+        self._is_technical = value
+
+    @property
+    def is_anatomical(self) -> bool:
+        return self._is_anatomical
+
+    @is_anatomical.setter
+    def is_anatomical(self, value: bool):
+        self._is_anatomical = value
 
     def copy(self) -> Self:
         return InertialMeasurementUnitReal(name=self.name, parent_name=self.parent_name, scs=np.array(self.scs))
@@ -42,8 +91,6 @@ class InertialMeasurementUnitReal:
     @property
     def to_biomod(self):
         rt = self.scs
-        if self.is_in_global:
-            rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
         out_string = ""
         mean_rt = mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt

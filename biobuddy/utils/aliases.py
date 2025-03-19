@@ -20,6 +20,9 @@ def point_to_array(name: str, point: Point) -> np.ndarray:
     np.ndarray
         The point as a numpy array
     """
+    if point is None:
+        return np.ndarray((4, 0))
+
     if not isinstance(point, np.ndarray):
         point = np.array(point)
 
@@ -58,6 +61,9 @@ def points_to_array(name: str, points: Points) -> np.ndarray:
     np.ndarray
         The points as a numpy array
     """
+    if points is None:
+        return np.ndarray((4, 0))
+
     if isinstance(points, list):
         points = np.array(points)
 

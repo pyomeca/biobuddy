@@ -30,7 +30,7 @@ class C3dData:
             self.ezc3d_data["data"]["points"][:, self._indices_in_c3d(marker_names), self.first_frame : self.last_frame]
         )
 
-    def _to_meter(self, data: np.array) -> np.array:
+    def _to_meter(self, data: np.array) -> np.ndarray:
         units = self.ezc3d_data["parameters"]["POINT"]["UNITS"]["value"]
         factor = 1000 if len(units) > 0 and units[0] == "mm" else 1
 

@@ -26,12 +26,34 @@ class InertiaParametersReal:
             The inertia xx, yy and zz parameters of the segment
         """
         self.mass = mass
-        self.center_of_mass = (
-            None if center_of_mass is None else points_to_array(name="center of mass", points=center_of_mass)
-        )
-        self.inertia = None if inertia is None else points_to_array(name="inertia", points=inertia)
-        if self.inertia is not None and self.inertia.shape[1] not in [1, 3]:
-            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {inertia.shape}")
+        self.center_of_mass = center_of_mass
+        self.inertia = inertia
+
+    @property
+    def mass(self) -> float:
+        return self._mass
+
+    @mass.setter
+    def mass(self, value: float):
+        self._mass = value
+
+    @property
+    def center_of_mass(self) -> np.ndarray:
+        return self._center_of_mass
+
+    @center_of_mass.setter
+    def center_of_mass(self, value: Points):
+        self._center_of_mass = points_to_array(name="center of mass", points=value)
+
+    @property
+    def inertia(self) -> np.ndarray:
+        return self._inertia
+
+    @inertia.setter
+    def inertia(self, value: Points):
+        self._inertia = points_to_array(name="inertia", points=value)
+        if self.inertia.shape[1] not in [0, 1, 3]:
+            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
 
     @staticmethod
     def from_data(

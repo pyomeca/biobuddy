@@ -34,6 +34,46 @@ class MeshFileReal:
         self.mesh_rotation = mesh_rotation
         self.mesh_translation = mesh_translation
 
+    @property
+    def mesh_file_name(self) -> str:
+        return self._mesh_file_name
+
+    @mesh_file_name.setter
+    def mesh_file_name(self, value: str):
+        self._mesh_file_name = value
+
+    @property
+    def mesh_color(self) -> np.ndarray[float]:
+        return self._mesh_color
+
+    @mesh_color.setter
+    def mesh_color(self, value: np.ndarray[float]):
+        self._mesh_color = value
+
+    @property
+    def mesh_scale(self) -> np.ndarray[float]:
+        return self._mesh_scale
+
+    @mesh_scale.setter
+    def mesh_scale(self, value: np.ndarray[float]):
+        self._mesh_scale = value
+
+    @property
+    def mesh_rotation(self) -> np.ndarray[float]:
+        return self._mesh_rotation
+
+    @mesh_rotation.setter
+    def mesh_rotation(self, value: np.ndarray[float]):
+        self._mesh_rotation = value
+
+    @property
+    def mesh_translation(self) -> np.ndarray[float]:
+        return self._mesh_translation
+
+    @mesh_translation.setter
+    def mesh_translation(self, value: np.ndarray[float]):
+        self._mesh_translation = value
+
     @staticmethod
     def from_data(
         data: Data,
