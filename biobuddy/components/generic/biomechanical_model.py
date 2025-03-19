@@ -30,48 +30,46 @@ class BiomechanicalModel:
         gravity = None if gravity is None else point_to_array("gravity", gravity)
         model = BiomechanicalModelReal(gravity=gravity)
 
-        for name in self.segments:
-            s = self.segments[name]
-
+        for segment in self.segments:
             scs = SegmentCoordinateSystemReal()
-            if s.segment_coordinate_system is not None:
-                scs = s.segment_coordinate_system.to_scs(
+            if segment.segment_coordinate_system is not None:
+                scs = segment.segment_coordinate_system.to_scs(
                     data,
                     model,
-                    model.segments[s.parent_name].segment_coordinate_system if s.parent_name else None,
+                    model.segments[segment.parent_name].segment_coordinate_system if segment.parent_name else None,
                 )
 
             inertia_parameters = None
-            if s.inertia_parameters is not None:
-                inertia_parameters = s.inertia_parameters.to_real(data, model, scs)
+            if segment.inertia_parameters is not None:
+                inertia_parameters = segment.inertia_parameters.to_real(data, model, scs)
 
             mesh = None
-            if s.mesh is not None:
-                mesh = s.mesh.to_mesh(data, model, scs)
+            if segment.mesh is not None:
+                mesh = segment.mesh.to_mesh(data, model, scs)
 
             mesh_file = None
-            if s.mesh_file is not None:
-                mesh_file = s.mesh_file.to_mesh_file(data)
+            if segment.mesh_file is not None:
+                mesh_file = segment.mesh_file.to_mesh_file(data)
 
             model.segments.append(
                 SegmentReal(
-                    name=s.name,
-                    parent_name=s.parent_name,
+                    name=segment.name,
+                    parent_name=segment.parent_name,
                     segment_coordinate_system=scs,
-                    translations=s.translations,
-                    rotations=s.rotations,
-                    q_ranges=s.q_ranges,
-                    qdot_ranges=s.qdot_ranges,
+                    translations=segment.translations,
+                    rotations=segment.rotations,
+                    q_ranges=segment.q_ranges,
+                    qdot_ranges=segment.qdot_ranges,
                     inertia_parameters=inertia_parameters,
                     mesh=mesh,
                     mesh_file=mesh_file,
                 )
             )
 
-            for marker in s.markers:
+            for marker in segment.markers:
                 model.segments[name].add_marker(marker.to_marker(data, model, scs))
 
-            for contact in s.contacts:
+            for contact in segment.contacts:
                 model.segments[name].add_contact(contact.to_contact(data))
 
         for name in self.muscle_groups:

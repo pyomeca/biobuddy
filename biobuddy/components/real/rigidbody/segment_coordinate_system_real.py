@@ -163,7 +163,6 @@ class SegmentCoordinateSystemReal:
         """
         return mean_homogenous_matrix(self.scs)
 
-    @property
     def to_biomod(self):
         rt = self.scs
         if self.is_in_global:

@@ -94,7 +94,6 @@ class ContactReal:
         p = points_to_array(name=f"contact real function", points=function(data.values))
         return ContactReal(name, parent_name, p, axis)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"

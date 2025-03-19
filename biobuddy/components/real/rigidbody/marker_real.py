@@ -125,7 +125,6 @@ class MarkerReal:
         """
         return np.nanmean(self.position, axis=1)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"marker\t{self.name}\n"

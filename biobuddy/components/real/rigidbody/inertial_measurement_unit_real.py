@@ -88,7 +88,6 @@ class InertialMeasurementUnitReal:
     def copy(self) -> Self:
         return InertialMeasurementUnitReal(name=self.name, parent_name=self.parent_name, scs=np.array(self.scs))
 
-    @property
     def to_biomod(self):
         rt = self.scs
 

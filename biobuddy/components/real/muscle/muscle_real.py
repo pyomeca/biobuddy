@@ -142,7 +142,6 @@ class MuscleReal:
             maximal_excitation=maximal_excitation_function(data.values),
         )
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"muscle\t{self.name}\n"

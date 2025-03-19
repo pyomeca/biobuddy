@@ -96,7 +96,6 @@ class InertiaParametersReal:
 
         return InertiaParametersReal(mass, com, inertia)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         if self.mass is not None:

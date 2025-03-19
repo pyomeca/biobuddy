@@ -119,15 +119,15 @@ class BiomechanicalModelReal:
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
-        for name in self.segments:
-            out_string += self.segments[name].to_biomod(with_mesh)
+        for segment in self.segments:
+            out_string += segment.to_biomod(with_mesh=with_mesh)
             out_string += "\n\n\n"  # Give some space between segments
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// MUSCLE GROUPS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.muscle_groups:
-            out_string += self.muscle_groups[name].to_biomod
+            out_string += self.muscle_groups[name].to_biomod()
             out_string += "\n"
         out_string += "\n\n\n"  # Give some space after muscle groups
 
@@ -135,14 +135,14 @@ class BiomechanicalModelReal:
         out_string += "// MUSCLES\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.muscles:
-            out_string += self.muscles[name].to_biomod
+            out_string += self.muscles[name].to_biomod()
             out_string += "\n\n\n"  # Give some space between muscles
 
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// MUSCLES VIA POINTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for name in self.via_points:
-            out_string += self.via_points[name].to_biomod
+            out_string += self.via_points[name].to_biomod()
             out_string += "\n\n\n"  # Give some space between via points
 
         if self.warnings:

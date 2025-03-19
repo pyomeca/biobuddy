@@ -60,7 +60,9 @@ class SegmentReal:
         return self._translations
 
     @translations.setter
-    def translations(self, value: Translations):
+    def translations(self, value: Translations | str | None):
+        if value is None or isinstance(value, str):
+            value = Translations(value)
         self._translations = value
 
     @property
@@ -68,7 +70,9 @@ class SegmentReal:
         return self._rotations
 
     @rotations.setter
-    def rotations(self, value: Rotations):
+    def rotations(self, value: Rotations | str | None):
+        if value is None or isinstance(value, str):
+            value = Rotations(value)
         self._rotations = value
 
     @property
@@ -161,19 +165,19 @@ class SegmentReal:
         if self.parent_name:
             out_string += f"\tparent\t{self.parent_name}\n"
         if self.segment_coordinate_system:
-            out_string += f"{self.segment_coordinate_system.to_biomod}\n"
+            out_string += f"{self.segment_coordinate_system.to_biomod()}\n"
         if self.translations != Translations.NONE:
             out_string += f"\ttranslations\t{self.translations.value}\n"
         if self.rotations != Rotations.NONE:
             out_string += f"\trotations\t{self.rotations.value}\n"
         if self.q_ranges is not None:
-            out_string += self.q_ranges.to_biomod
+            out_string += self.q_ranges.to_biomod()
         if self.qdot_ranges is not None:
-            out_string += self.qdot_ranges.to_biomod
+            out_string += self.qdot_ranges.to_biomod()
         if self.inertia_parameters:
-            out_string += self.inertia_parameters.to_biomod
+            out_string += self.inertia_parameters.to_biomod()
         if self.mesh and with_mesh:
-            out_string += self.mesh.to_biomod
+            out_string += self.mesh.to_biomod()
         if self.mesh_file and with_mesh:
             out_string += self.mesh_file.to_biomod
         out_string += "endsegment\n"
@@ -182,12 +186,12 @@ class SegmentReal:
         if self.markers:
             for marker in self.markers:
                 marker.parent_name = marker.parent_name if marker.parent_name is not None else self.name
-                out_string += marker.to_biomod
+                out_string += marker.to_biomod()
 
         # Also print the contacts attached to the segment
         if self.contacts:
             for contact in self.contacts:
                 contact.parent_name = contact.parent_name
-                out_string += contact.to_biomod
+                out_string += contact.to_biomod()
 
         return out_string

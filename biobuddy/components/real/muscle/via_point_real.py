@@ -69,7 +69,6 @@ class ViaPointReal:
         position = points_to_array(name="viapoint function", points=position_function(data.values))
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"viapoint\t{self.name}\n"
