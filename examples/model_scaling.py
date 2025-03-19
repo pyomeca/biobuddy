@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        osim_path = osim_file_path,
+        filepath = osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned"

@@ -48,7 +48,7 @@ def _get_file_version(model: ElementTree) -> int:
 class OsimModelParser:
     def __init__(
         self,
-        osim_path: str,
+        filepath: str,
         muscle_type: MuscleType,
         muscle_state_type: MuscleStateType,
         mesh_dir: str,
@@ -62,7 +62,7 @@ class OsimModelParser:
 
         Parameters
         ----------
-        osim_path : str
+        filepath : str
             Path to the OpenSim .osim file to read
         muscle_type: MuscleType
             The type of muscle to assume when interpreting the osim model
@@ -79,7 +79,7 @@ class OsimModelParser:
             If file version is too old or units are not meters/newtons
         """
         # Initial attributes
-        self.osim_path = osim_path
+        self.filepath = filepath
         self.muscle_type = muscle_type
         self.muscle_state_type = muscle_state_type
         self.mesh_dir = mesh_dir
@@ -89,7 +89,7 @@ class OsimModelParser:
         self.ignore_muscle_applied_tag = ignore_muscle_applied_tag
 
         # Extended attributes
-        self.model = ElementTree.parse(osim_path)
+        self.model = ElementTree.parse(filepath)
         file_version = _get_file_version(self.model)
         if file_version < 40000:
             raise RuntimeError(
@@ -261,7 +261,7 @@ class OsimModelParser:
 
     def _set_header(self):
         out_string = ""
-        out_string += f"\n// File extracted from {self.osim_path} on the {strftime('%Y-%m-%d %H:%M')}\n"
+        out_string += f"\n// File extracted from {self.filepath} on the {strftime('%Y-%m-%d %H:%M')}\n"
         if self.publications:
             out_string += f"\n// Original file publication : {self.publications}\n"
         if self.credit:

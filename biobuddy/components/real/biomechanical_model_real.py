@@ -72,7 +72,7 @@ class BiomechanicalModelReal:
 
     @staticmethod
     def from_osim(
-        osim_path: str,
+        filepath: str,
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
@@ -82,7 +82,7 @@ class BiomechanicalModelReal:
 
         Parameters
         ----------
-        osim_path: str
+        filepath: str
             The path to the osim file to read from
         muscle_type: MuscleType
             The type of muscle to assume when interpreting the osim model
@@ -94,7 +94,7 @@ class BiomechanicalModelReal:
         from ...model_parser.opensim import OsimModelParser
 
         return OsimModelParser(
-            osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
+            filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
 
     def to_biomod(self, file_path: str, with_mesh: bool = True):

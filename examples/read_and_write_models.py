@@ -2,6 +2,7 @@
 This example shows how to read and write models.
 """
 
+import logging
 from pathlib import Path
 import biorbd
 
@@ -17,6 +18,18 @@ from biobuddy import (
 
 if __name__ == "__main__":
 
+    # Configure logging
+    logging.basicConfig(
+
+        level=logging.DEBUG
+        ,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            # logging.FileHandler("app.log"),  # Log to a file
+            logging.StreamHandler()  # Log to the console
+        ]
+    )
+
     # Paths
     current_path_file = Path(__file__).parent
     biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
@@ -31,7 +44,7 @@ if __name__ == "__main__":
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        osim_path = osim_file_path,
+        filepath = osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned"
