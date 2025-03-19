@@ -5,8 +5,8 @@ from .rotations import Rotations
 from .translations import Translations
 
 __all__ = [
-    Point.__name__,
-    Points.__name__,
+    "Point",
+    "Points",
     C3dData.__name__,
     Data.__name__,
     GenericDynamicModel.__name__,

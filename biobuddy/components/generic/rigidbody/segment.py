@@ -5,8 +5,8 @@ from .mesh import Mesh
 from .mesh_file import MeshFile
 from .range_of_motion import RangeOfMotion, Ranges
 from .segment_coordinate_system import SegmentCoordinateSystem
-from ...utils.rotations import Rotations
-from ...utils.translations import Translations
+from ....utils.rotations import Rotations
+from ....utils.translations import Translations
 
 
 class Segment:

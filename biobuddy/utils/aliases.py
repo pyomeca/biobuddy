@@ -2,7 +2,7 @@ from typing import TypeAlias, Iterable
 
 import numpy as np
 
-Point: TypeAlias = np.ndarray | Iterable[float, float, float]
+Point: TypeAlias = np.ndarray | Iterable[float]
 Points: TypeAlias = np.ndarray | Iterable[Point]
 
 
