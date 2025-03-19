@@ -149,11 +149,10 @@ class OsimModelParser:
         self.header = ""
         self.warnings = []
 
+        # Create the biomechanical model
+        self.biomechanical_model_real = BiomechanicalModelReal()
         self._read()
 
-    def to_real(self) -> BiomechanicalModelReal:
-        # TODO
-        pass
 
     def _get_body_mesh_list(self, body_set=None) -> list[str]:
         """returns the list of vtp files included in the model"""
