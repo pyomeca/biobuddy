@@ -2,7 +2,7 @@ from typing import Iterable
 import numpy as np
 
 from .mesh import Mesh
-from ..utils import norm2
+from ..utils.linear_algebra import norm2
 
 
 def read_vtp(filename: str) -> Mesh:

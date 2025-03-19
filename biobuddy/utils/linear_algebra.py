@@ -239,10 +239,3 @@ class OrthoMatrix:
     def has_no_transformation(self):
         return np.all(self.get_matrix() == np.eye(4))
 
-
-def out_product(rotomatrix_1, rotomatrix_2):
-    rotomatrix_prod = OrthoMatrix()
-    rotomatrix_prod.set_translation(rotomatrix_1.get_translation() + rotomatrix_2.get_translation())
-    rotomatrix_prod.set_rotation_matrix(rotomatrix_1.get_rotation_matrix().dot(rotomatrix_2.get_rotation_matrix()))
-    rotomatrix_prod.get_matrix()
-    return rotomatrix_prod
