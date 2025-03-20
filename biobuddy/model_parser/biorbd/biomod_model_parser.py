@@ -3,6 +3,7 @@ from typing import Callable
 
 import numpy as np
 
+from ... import MuscleGroup
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.segment_real import (
     SegmentReal,
@@ -10,7 +11,10 @@ from ...components.real.rigidbody.segment_real import (
     InertiaParametersReal,
     MeshReal,
     SegmentCoordinateSystemReal,
+    MarkerReal,
 )
+from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...utils.named_list import NamedList
 
 
@@ -24,6 +28,8 @@ class BiomodModelParser:
 
         # Prepare the internal structure to hold the model
         self.segments = NamedList[SegmentReal]()
+        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscles = NamedList[MuscleReal]()
 
         def next_token():
             nonlocal token_index
@@ -34,6 +40,7 @@ class BiomodModelParser:
 
         # Parse the model
         biorbd_version = None
+        gravity = None
         current_component = None
         token_index = -1
         try:
@@ -47,18 +54,27 @@ class BiomodModelParser:
                         biomod_version = _read_int(next_token=next_token)
                         # True for version 3 or less, False for version 4 or more
                         rt_in_matrix_default = biomod_version < 4
+                    elif token == "gravity":
+                        _check_if_version_defined(biomod_version)
+                        if gravity is not None:
+                            raise ValueError("Gravity already defined")
+                        gravity = _read_float_vector(next_token=next_token, length=3)
                     elif token == "segment":
-                        if biomod_version is None:
-                            raise ValueError("Version not defined")
+                        _check_if_version_defined(biomod_version)
                         current_component = SegmentReal(name=_read_str(next_token=next_token))
                         current_rt_in_matrix = rt_in_matrix_default
                     elif token == "imu":
-                        if biomod_version is None:
-                            raise ValueError("Version not defined")
+                        _check_if_version_defined(biomod_version)
                         current_component = InertialMeasurementUnitReal(
                             name=_read_str(next_token=next_token), parent_name=""
                         )
                         current_rt_in_matrix = rt_in_matrix_default
+                    elif token == "marker":
+                        _check_if_version_defined(biomod_version)
+                        current_component = MarkerReal(name=_read_str(next_token=next_token), parent_name="")
+                    elif token == "musclegroup":
+                        _check_if_version_defined(biomod_version)
+                        current_component = MuscleGroup(name=_read_str(next_token=next_token), origin_parent_name="", insertion_parent_name="")
                     else:
                         raise ValueError(f"Unknown component {token}")
 
@@ -122,6 +138,35 @@ class BiomodModelParser:
                     elif token == "anatomical":
                         current_component.is_anatomical = _read_bool(next_token=next_token)
 
+                elif isinstance(current_component, MarkerReal):
+                    if token == "endmarker":
+                        if not current_component.parent_name:
+                            raise ValueError(f"Parent name not found in marker {current_component.name}")
+                        self.segments[current_component.parent_name].markers.append(current_component)
+                        current_component = None
+                    elif token == "parent":
+                        current_component.parent_name = _read_str(next_token=next_token)
+                    elif token == "position":
+                        current_component.position = _read_float_vector(next_token=next_token, length=3)
+                    elif token == "technical":
+                        current_component.is_technical = _read_bool(next_token=next_token)
+                    elif token == "anatomical":
+                        current_component.is_anatomical = _read_bool(next_token=next_token)
+
+                elif isinstance(current_component, MuscleGroup):
+                    if token == "endmusclegroup":
+                        if not current_component.insertion_parent_name:
+                            raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")
+                        self.muscle_group[current_component.parent_name].markers.append(current_component)
+                        current_component = None
+                    elif token == "parent":
+                        current_component.parent_name = _read_str(next_token=next_token)
+                    elif token == "position":
+                        current_component.position = _read_float_vector(next_token=next_token, length=3)
+                    elif token == "technical":
+                        current_component.is_technical = _read_bool(next_token=next_token)
+                    elif token == "anatomical":
+                        current_component.is_anatomical = _read_bool(next_token=next_token)
                 else:
                     raise ValueError(f"Unknown component {type(current_component)}")
         except EndOfFileReached:
@@ -178,6 +223,10 @@ def _tokenize_biomod(filepath: str) -> list[str]:
 
     return tokens
 
+def _check_if_version_defined(biomod_version: int):
+    if biomod_version is None:
+        raise ValueError("Version not defined")
+    return
 
 def _read_str(next_token: Callable) -> str:
     return next_token()
