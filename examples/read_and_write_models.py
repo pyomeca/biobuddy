@@ -4,8 +4,6 @@ This example shows how to read and write models.
 
 import logging
 from pathlib import Path
-import biorbd
-import opensim as osim
 
 from biobuddy import (
     MuscleType,
@@ -15,19 +13,18 @@ from biobuddy import (
     BiomechanicalModelReal,
 )
 
+_logger = logging.getLogger(__name__)
 
-if __name__ == "__main__":
 
+def main():
     # Configure logging
     logging.basicConfig(
-
-        level=logging.DEBUG
-        ,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=[
             # logging.FileHandler("app.log"),  # Log to a file
             logging.StreamHandler()  # Log to the console
-        ]
+        ],
     )
     visualization_flag = False
 
@@ -46,22 +43,32 @@ if __name__ == "__main__":
     # --- Reading an .osim model and translating it to a .bioMod model --- #
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        filepath = osim_file_path,
+        filepath=osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir="Geometry_cleaned"
+        mesh_dir="Geometry_cleaned",
     )
 
     # And convert it to a .bioMod file
     model.to_biomod(biomod_file_path, with_mesh=visualization_flag)
 
     # Test that the model created is valid
-    biorbd.Model(biomod_file_path)
+    try:
+        import biorbd
+
+        biorbd.Model(biomod_file_path)
+    except ImportError:
+        _logger.warning("You must install biorbd to load the model with biorbd")
 
     if visualization_flag:
         # Compare the result visually
-        import pyorerun
         import numpy as np
+
+        try:
+            import pyorerun
+        except ImportError:
+
+            raise ImportError("You must install pyorerun to visualize the model (visualization_flag=True)")
 
         # Visualization
         t = np.linspace(0, 1, 10)
@@ -85,16 +92,23 @@ if __name__ == "__main__":
         # Animate
         viz.rerun_by_frame("Model output")
 
-
-
     # --- Reading an .bioMod model and translating it to a .osim model --- #
     # Read a .bioMod file
     model = BiomechanicalModelReal.from_biomod(
-        filepath = biomod_file_path,
+        filepath=biomod_file_path,
     )
 
     # And convert it to a .bioMod file
     model.to_osim(osim_file_path, with_mesh=visualization_flag)
 
     # Test that the model created is valid
-    osim.Model(osim_file_path)
+    try:
+        import opensim as osim
+
+        osim.Model(osim_file_path)
+    except ImportError:
+        _logger.warning("You must install opensim to load the model with opensim")
+
+
+if __name__ == "__main__":
+    main()

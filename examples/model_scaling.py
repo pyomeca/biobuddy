@@ -5,18 +5,10 @@ This example shows how to scale a model based on a generic model and a static tr
 from pathlib import Path
 import biorbd
 
-from biobuddy import (
-    BiomechanicalModelReal,
-    MuscleType,
-    MuscleStateType,
-    MeshParser,
-    MeshFormat,
-    OsimModelParser
-)
+from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat
 
 
-if __name__ == "__main__":
-
+def main():
     # Paths
     current_path_file = Path(__file__).parent
     geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
@@ -32,10 +24,10 @@ if __name__ == "__main__":
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        filepath = osim_file_path,
+        filepath=osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir="Geometry_cleaned"
+        mesh_dir="Geometry_cleaned",
     )
 
     # Setup the scaling configuration (which markers to use)
@@ -51,7 +43,10 @@ if __name__ == "__main__":
     biorbd.Model(scaled_biomod_file_path)
 
     # Compare the result visually
-    import pyorerun
+    try:
+        import pyorerun
+    except ImportError:
+        raise ImportError("You must install pyorerun to visualize the model")
     import numpy as np
 
     # Visualization
@@ -71,3 +66,6 @@ if __name__ == "__main__":
     # Animate
     viz.rerun_by_frame("Model output")
 
+
+if __name__ == "__main__":
+    main()

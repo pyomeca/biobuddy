@@ -165,6 +165,10 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
         os.remove(kinematic_model_file_path)
 
 
-if __name__ == "__main__":
+def main():
     # Create the model from user defined dimensions
-    model_creation_from_static_trial()
+    model_creation_from_static_trial(remove_temporary=False)
+
+
+if __name__ == "__main__":
+    main()

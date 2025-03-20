@@ -117,6 +117,10 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
         os.remove(kinematic_model_file_path)
 
 
-if __name__ == "__main__":
+def main():
     current_path_file = Path(__file__).parent
     complex_model_from_scratch(mesh_path=f"{current_path_file}/meshFiles/pendulum.STL")
+
+
+if __name__ == "__main__":
+    main()
