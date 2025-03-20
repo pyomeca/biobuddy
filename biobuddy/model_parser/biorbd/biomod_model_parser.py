@@ -15,6 +15,7 @@ from ...components.real.rigidbody.segment_real import (
 )
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
 
 
@@ -27,9 +28,12 @@ class BiomodModelParser:
         tokens = _tokenize_biomod(filepath=filepath)
 
         # Prepare the internal structure to hold the model
+        self.gravity = None
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroup]()
         self.muscles = NamedList[MuscleReal]()
+        self.via_points = NamedList[ViaPointReal]()
+        self.warnings = ""
 
         def next_token():
             nonlocal token_index
@@ -157,7 +161,7 @@ class BiomodModelParser:
                     if token == "endmusclegroup":
                         if not current_component.insertion_parent_name:
                             raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")
-                        self.muscle_group[current_component.parent_name].markers.append(current_component)
+                        self.muscle_groups[current_component.parent_name].markers.append(current_component)
                         current_component = None
                     elif token == "parent":
                         current_component.parent_name = _read_str(next_token=next_token)
