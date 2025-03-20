@@ -31,13 +31,38 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
-        if scs.shape != (4, 4):
-            raise ValueError("The scs must be a 4x4 matrix")
         self.scs = scs
-        if len(self.scs.shape) == 2:
-            self.scs = self.scs[:, :, np.newaxis]
         self.parent_scs = parent_scs
         self.is_in_global = not is_scs_local
+
+    @property
+    def scs(self) -> np.ndarray:
+        return self._scs
+
+    @scs.setter
+    def scs(self, value: np.ndarray):
+        if value.shape not in ((4, 4), (4, 4, 1)):
+            raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
+
+        if len(value.shape) == 2:
+            value = value[:, :, None]
+        self._scs = value
+
+    @property
+    def parent_scs(self) -> Self:
+        return self._parent_scs
+
+    @parent_scs.setter
+    def parent_scs(self, value: Self):
+        self._parent_scs = value
+
+    @property
+    def is_in_global(self) -> bool:
+        return self._is_in_global
+
+    @is_in_global.setter
+    def is_in_global(self, value: bool):
+        self._is_in_global = value
 
     @staticmethod
     def from_markers(
