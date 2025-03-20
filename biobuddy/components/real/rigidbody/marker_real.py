@@ -74,6 +74,10 @@ class MarkerReal:
     def is_anatomical(self) -> bool:
         return self._is_anatomical
 
+    @is_anatomical.setter
+    def is_anatomical(self, value: bool):
+        self._is_anatomical = value
+
     @staticmethod
     def from_data(
         data: Data,

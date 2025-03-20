@@ -66,10 +66,17 @@ class BiomechanicalModelReal:
         self.via_points.pop(via_point_name)
 
     @staticmethod
-    def from_biomod() -> Self:
+    def from_biomod(
+            filepath: str,
+    ) -> Self:
         """
         Create a biomechanical model from a biorbd model
         """
+        from ...model_parser.biorbd import BiomodModelParser
+
+        return BiomodModelParser(
+            filepath=filepath
+        ).to_real()
 
     @staticmethod
     def from_osim(
@@ -144,8 +151,8 @@ class BiomechanicalModelReal:
             out_string += "// --------------------------------------------------------------\n"
             out_string += "// MUSCLES VIA POINTS\n"
             out_string += "// --------------------------------------------------------------\n\n"
-            for name in self.via_points:
-                out_string += self.via_points[name].to_biomod()
+            for via_point in self.via_points:
+                out_string += via_point.to_biomod()
                 out_string += "\n\n\n"  # Give some space between via points
 
         if self.warnings:
@@ -154,9 +161,12 @@ class BiomechanicalModelReal:
                 out_string += "\n" + warning
             out_string += "*/\n"
 
+        # removing any character that is not ascii readable from the out_string before writing the model
+        cleaned_string = out_string.encode("ascii", "ignore").decode()
+
         # Write it to the .bioMod file
         with open(file_path, "w") as file:
-            file.write(out_string)
+            file.write(cleaned_string)
 
     def to_osim(self, save_path: str, header: str = "", print_warnings: bool = True):
         """
@@ -170,3 +180,10 @@ class BiomechanicalModelReal:
             If the function should print warnings or not in the osim output file if problems are encountered
         """
         raise NotImplementedError("meh")
+
+        # removing any character that is not ascii readable from the out_string before writing the model
+        cleaned_string = out_string.encode("ascii", "ignore").decode()
+
+        # Write it to the .osim file
+        with open(file_path, "w") as file:
+            file.write(cleaned_string)

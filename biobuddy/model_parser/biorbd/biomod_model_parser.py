@@ -139,7 +139,7 @@ class BiomodModelParser:
 
 def _tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
-    with open(filepath) as f:
+    with open(filepath, "r+") as f:
         content = f.read()
     lines = content.split("\n")
 

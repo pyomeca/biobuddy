@@ -179,7 +179,7 @@ class SegmentReal:
         if self.mesh and with_mesh:
             out_string += self.mesh.to_biomod()
         if self.mesh_file and with_mesh:
-            out_string += self.mesh_file.to_biomod
+            out_string += self.mesh_file.to_biomod()
         out_string += "endsegment\n"
 
         # Also print the markers attached to the segment
