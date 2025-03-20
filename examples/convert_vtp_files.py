@@ -7,8 +7,7 @@ from pathlib import Path
 from biobuddy import MeshParser, MeshFormat
 
 
-if __name__ == "__main__":
-
+def main():
     # Paths
     current_path_file = Path(__file__).parent
     geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
@@ -18,3 +17,7 @@ if __name__ == "__main__":
     mesh = MeshParser(geometry_folder=geometry_path)
     mesh.process_meshes()
     mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
+
+
+if __name__ == "__main__":
+    main()

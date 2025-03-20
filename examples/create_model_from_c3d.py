@@ -208,6 +208,10 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
         os.remove(c3d_file_path)
 
 
-if __name__ == "__main__":
+def main():
     # Create the model from a data file and markers as template
-    model_creation_from_measured_data()
+    model_creation_from_measured_data(remove_temporary=False)
+
+
+if __name__ == "__main__":
+    main()
