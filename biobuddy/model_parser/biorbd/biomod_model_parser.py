@@ -78,7 +78,9 @@ class BiomodModelParser:
                         current_component = MarkerReal(name=_read_str(next_token=next_token), parent_name="")
                     elif token == "musclegroup":
                         _check_if_version_defined(biomod_version)
-                        current_component = MuscleGroup(name=_read_str(next_token=next_token), origin_parent_name="", insertion_parent_name="")
+                        current_component = MuscleGroup(
+                            name=_read_str(next_token=next_token), origin_parent_name="", insertion_parent_name=""
+                        )
                     else:
                         raise ValueError(f"Unknown component {token}")
 
@@ -190,7 +192,7 @@ def _tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
     with open(filepath, "r") as f:
         content = f.read()
-    lines = content.split("\n")
+    lines = content.splitlines()
 
     # Do a first pass to remove every commented content
     is_block_commenting = False
@@ -227,10 +229,12 @@ def _tokenize_biomod(filepath: str) -> list[str]:
 
     return tokens
 
+
 def _check_if_version_defined(biomod_version: int):
     if biomod_version is None:
         raise ValueError("Version not defined")
     return
+
 
 def _read_str(next_token: Callable) -> str:
     return next_token()
