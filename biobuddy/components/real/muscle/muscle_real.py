@@ -35,7 +35,6 @@ class MuscleReal:
         tendon_slack_length: float,
         pennation_angle: float,
         maximal_excitation: float,
-        via_points: NamedList[ViaPointReal] = None,
     ):
         """
         Parameters
@@ -62,8 +61,6 @@ class MuscleReal:
             The pennation angle of the muscle
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
-        via_points
-            The via points of the muscle
         """
         self.name = name
         self.muscle_type = muscle_type
@@ -76,7 +73,6 @@ class MuscleReal:
         self.tendon_slack_length = tendon_slack_length
         self.pennation_angle = pennation_angle
         self.maximal_excitation = maximal_excitation
-        self.via_points = via_points
         # TODO: missing PCSA and  maxVelocity
 
     @property

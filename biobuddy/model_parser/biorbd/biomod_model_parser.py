@@ -3,7 +3,6 @@ from typing import Callable
 
 import numpy as np
 
-from ... import MuscleGroup
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.segment_real import (
     SegmentReal,
@@ -13,7 +12,7 @@ from ...components.real.rigidbody.segment_real import (
     SegmentCoordinateSystemReal,
     MarkerReal,
 )
-from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
@@ -80,6 +79,21 @@ class BiomodModelParser:
                         _check_if_version_defined(biomod_version)
                         current_component = MuscleGroup(
                             name=_read_str(next_token=next_token), origin_parent_name="", insertion_parent_name=""
+                        )
+                    elif token == "muscle":
+                        _check_if_version_defined(biomod_version)
+                        current_component = MuscleReal(
+                            name=_read_str(next_token=next_token),
+                            muscle_type = MuscleType.HILL_DE_GROOTE,
+                            state_type = MuscleStateType.DEGROOTE,
+                            muscle_group = "",
+                            origin_position = None,
+                            insertion_position = None,
+                            optimal_length = None,
+                            maximal_force = None,
+                            tendon_slack_length = None,
+                            pennation_angle = None,
+                            maximal_excitation = None,
                         )
                     else:
                         raise ValueError(f"Unknown component {token}")
@@ -163,16 +177,58 @@ class BiomodModelParser:
                     if token == "endmusclegroup":
                         if not current_component.insertion_parent_name:
                             raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")
-                        self.muscle_groups[current_component.parent_name].markers.append(current_component)
+                        if not current_component.origin_parent_name:
+                            raise ValueError(f"Origin parent name not found in musclegroup {current_component.name}")
+                        self.muscle_groups.append(current_component)
                         current_component = None
-                    elif token == "parent":
-                        current_component.parent_name = _read_str(next_token=next_token)
-                    elif token == "position":
-                        current_component.position = _read_float_vector(next_token=next_token, length=3)
-                    elif token == "technical":
-                        current_component.is_technical = _read_bool(next_token=next_token)
-                    elif token == "anatomical":
-                        current_component.is_anatomical = _read_bool(next_token=next_token)
+                    elif token == "insertionparent":
+                        current_component.insertion_parent_name = _read_str(next_token=next_token)
+                    elif token == "originparent":
+                        current_component.origin_parent_name = _read_str(next_token=next_token)
+
+                elif isinstance(current_component, MuscleReal):
+                    if token == "endmuscle":
+                        if not current_component.muscle_type:
+                            raise ValueError(f"Muscle type not found in muscle {current_component.name}")
+                        if not current_component.state_type:
+                            raise ValueError(f"Muscle state type not found in muscle {current_component.name}")
+                        if not current_component.muscle_group:
+                            raise ValueError(f"Muscle group not found in muscle {current_component.name}")
+                        if current_component.origin_position is None:
+                            raise ValueError(f"Origin position not found in muscle {current_component.name}")
+                        if current_component.insertion_position is None:
+                            raise ValueError(f"Insertion position not found in muscle {current_component.name}")
+                        if current_component.optimal_length is None:
+                            raise ValueError(f"Optimal length not found in muscle {current_component.name}")
+                        if current_component.maximal_force is None:
+                            raise ValueError(f"Maximal force not found in muscle {current_component.name}")
+                        if current_component.tendon_slack_length is None:
+                            raise ValueError(f"Tendon slack length not found in muscle {current_component.name}")
+                        if current_component.pennation_angle is None:
+                            raise ValueError(f"Pennation angle not found in muscle {current_component.name}")
+                        self.muscles.append(current_component)
+                        current_component = None
+                    elif token == "type":
+                        current_component.muscle_type = MuscleType(_read_str(next_token=next_token))
+                    elif token == "statetype":
+                        current_component.state_type = MuscleStateType(_read_str(next_token=next_token))
+                    elif token == "musclegroup":
+                        current_component.muscle_group = _read_str(next_token=next_token)
+                    elif token == "originposition":
+                        current_component.origin_position = _read_float_vector(next_token=next_token, length=3)
+                    elif token == "insertionposition":
+                        current_component.insertion_position = _read_float_vector(next_token=next_token, length=3)
+                    elif token == "optimallength":
+                        current_component.optimal_length = _read_float(next_token=next_token)
+                    elif token == "maximalforce":
+                        current_component.maximal_force = _read_float(next_token=next_token)
+                    elif token == "tendonslacklength":
+                        current_component.tendon_slack_length = _read_float(next_token=next_token)
+                    elif token == "pennationangle":
+                        current_component.pennation_angle = _read_float(next_token=next_token)
+                    elif token == "maximal_excitation":
+                        current_component.maximal_excitation = _read_float(next_token=next_token)
+
                 else:
                     raise ValueError(f"Unknown component {type(current_component)}")
         except EndOfFileReached:
