@@ -310,7 +310,7 @@ class OsimModelParser:
         # Add markers to their parent segments
         for marker in markers:
             parent_segment_name = marker.parent
-            if parent_segment_name in [segment.name for segment in self.biomechanical_model_real.segments]:
+            if parent_segment_name in self.biomechanical_model_real.segments.keys():
                 # Convert position string to numpy array with proper float conversion
                 position = np.array([float(v) for v in marker.position.split()] + [1.0])  # Add homogeneous coordinate
 
@@ -339,7 +339,7 @@ class OsimModelParser:
             try:
                 # Add muscle group if it does not exist already
                 muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
-                if muscle_group_name not in [group.name for group in self.biomechanical_model_real.muscle_groups]:
+                if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
                     self.biomechanical_model_real.muscle_groups.append(
                         MuscleGroup(
                             name=muscle_group_name,

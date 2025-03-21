@@ -82,7 +82,7 @@ class BiomechanicalModel:
             )
 
         for muscle in self.muscles:
-            if muscle.muscle_group not in [group.name for group in model.muscle_groups]:
+            if muscle.muscle_group not in model.muscle_groups.keys():
                 raise RuntimeError(
                     f"Please create the muscle group {muscle.muscle_group} before putting the muscle {muscle.name} in it."
                 )
@@ -90,12 +90,12 @@ class BiomechanicalModel:
             model.muscles.append(muscle.to_muscle(model, data))
 
         for via_point in self.via_points:
-            if via_point.muscle_name not in [muscle.name for muscle in model.muscles]:
+            if via_point.muscle_name not in model.muscles.keys():
                 raise RuntimeError(
                     f"Please create the muscle {via_point.muscle_name} before putting the via point {via_point.name} in it."
                 )
 
-            if via_point.muscle_group not in [group.name for group in model.muscle_groups]:
+            if via_point.muscle_group not in model.muscle_groups.keys():
                 raise RuntimeError(
                     f"Please create the muscle group {via_point.muscle_group} before putting the via point {via_point.name} in it."
                 )
