@@ -95,6 +95,15 @@ class BiomodModelParser:
                             pennation_angle = None,
                             maximal_excitation = None,
                         )
+                    elif token == "viapoint":
+                        _check_if_version_defined(biomod_version)
+                        current_component = ViaPointReal(
+                            name=_read_str(next_token=next_token),
+                            parent_name="",
+                            muscle_name="",
+                            muscle_group="",
+                            position = None,
+                        )
                     else:
                         raise ValueError(f"Unknown component {token}")
 
@@ -228,6 +237,25 @@ class BiomodModelParser:
                         current_component.pennation_angle = _read_float(next_token=next_token)
                     elif token == "maximal_excitation":
                         current_component.maximal_excitation = _read_float(next_token=next_token)
+
+                elif isinstance(current_component, ViaPointReal):
+                    if token == "endviapoint":
+                        if not current_component.parent_name:
+                            raise ValueError(f"Parent name not found in via point {current_component.name}")
+                        if not current_component.muscle_name:
+                            raise ValueError(f"Muscle name type not found in via point {current_component.name}")
+                        if not current_component.muscle_group:
+                            raise ValueError(f"Muscle group not found in muscle {current_component.name}")
+                        self.via_points.append(current_component)
+                        current_component = None
+                    elif token == "parent":
+                        current_component.parent_name = _read_str(next_token=next_token)
+                    elif token == "muscle":
+                        current_component.muscle_name = _read_str(next_token=next_token)
+                    elif token == "musclegroup":
+                        current_component.muscle_group = _read_str(next_token=next_token)
+                    elif token == "position":
+                        current_component.position = _read_float_vector(next_token=next_token, length=3)
 
                 else:
                     raise ValueError(f"Unknown component {type(current_component)}")
