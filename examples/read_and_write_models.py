@@ -98,16 +98,17 @@ def main():
         filepath=biomod_file_path,
     )
 
-    # And convert it to a .bioMod file
-    model.to_osim(osim_file_path, with_mesh=visualization_flag)
-
-    # Test that the model created is valid
-    try:
-        import opensim as osim
-
-        osim.Model(osim_file_path)
-    except ImportError:
-        _logger.warning("You must install opensim to load the model with opensim")
+    # TODO
+    # And convert it to an .osim file
+    # model.to_osim(osim_file_path, with_mesh=visualization_flag)
+    #
+    # # Test that the model created is valid
+    # try:
+    #     import opensim as osim
+    #
+    #     osim.Model(osim_file_path)
+    # except ImportError:
+    #     _logger.warning("You must install opensim to load the model with opensim")
 
 
 if __name__ == "__main__":
