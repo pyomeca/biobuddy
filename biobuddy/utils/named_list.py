@@ -1,4 +1,4 @@
-from typing import TypeVar, Generic
+from typing import TypeVar
 
 T = TypeVar("T")
 
@@ -28,3 +28,6 @@ class NamedList(list[T]):
                     return item
         else:
             raise TypeError("key must be int or str")
+
+    def keys(self) -> list[str]:
+        return [item.name for item in self]
