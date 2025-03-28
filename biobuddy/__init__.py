@@ -16,5 +16,8 @@ from .mesh_parser import *
 # Model parsers
 from .model_parser import *
 
+# Model modifiers
+from .model_modifiers import *
+
 
 __all__ = components.__all__ + utils.__all__ + characteristics.__all__ + mesh_parser.__all__

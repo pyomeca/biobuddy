@@ -5,7 +5,7 @@ This example shows how to scale a model based on a generic model and a static tr
 from pathlib import Path
 import biorbd
 
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat
+from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
 
 
 def main():
@@ -14,6 +14,7 @@ def main():
     geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
+    xml_filepath = f"{current_path_file}/models/wholebody.xml"
     scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
     static_file_path = f"{current_path_file}/models/static.c3d"
 
@@ -31,13 +32,13 @@ def main():
     )
 
     # Setup the scaling configuration (which markers to use)
-    # TODO
+    scale_tool = ScaleTool.from_xml(filepath=xml_filepath)
 
     # Scale the model
-    model.scale(static_file_path, scaling_configuration)
+    scaled_model = scale_tool.scale(original_model=model, static_trial=static_file_path, mass=mass)
 
     # Write the scaled model to a .bioMod file
-    model.to_biomod(scaled_biomod_file_path)
+    scaled_model.to_biomod(scaled_biomod_file_path)
 
     # Test that the model created is valid
     biorbd.Model(scaled_biomod_file_path)

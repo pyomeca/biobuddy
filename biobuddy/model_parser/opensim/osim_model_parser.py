@@ -4,6 +4,7 @@ from time import strftime
 import numpy as np
 from xml.etree import ElementTree
 
+from .utils import _is_element_empty
 from .body import Body
 from .joint import Joint
 from .marker import Marker
@@ -29,16 +30,6 @@ class ForceType(Enum):
 
 class Controller(Enum):
     NONE = None
-
-
-def _is_element_empty(element):
-    if element:
-        if not element[0].text:
-            return True
-        else:
-            return False
-    else:
-        return True
 
 
 def _get_file_version(model: ElementTree) -> int:
