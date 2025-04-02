@@ -15,3 +15,9 @@ def _is_element_empty(element):
             return False
     else:
         return True
+
+def match_tag(element, tag_name: str):
+    return element.tag.upper().strip() == tag_name.upper()
+
+def match_text(element, text: str):
+    return element.text.upper().strip() == text.upper()
