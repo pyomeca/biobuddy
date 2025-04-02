@@ -34,7 +34,9 @@ class SegmentReal:
         self.markers = NamedList[MarkerReal]()
         self.contacts = NamedList[ContactReal]()
         self.imus = NamedList[InertialMeasurementUnitReal]()
-        self.segment_coordinate_system = segment_coordinate_system
+        self.segment_coordinate_system = (
+            SegmentCoordinateSystemReal() if segment_coordinate_system is None else segment_coordinate_system
+        )
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh
         self.mesh_file = mesh_file
