@@ -2,7 +2,7 @@ from time import strftime
 
 from xml.etree import ElementTree
 
-from .utils import _is_element_empty, find_in_tree, match_tag, match_text
+from .utils import _is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...model_modifiers.scale_tool import ScaleTool
 from ...utils.translations import Translations
@@ -107,7 +107,7 @@ class OsimConfigurationParser:
                         raise RuntimeError(f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}")
 
                 elif match_tag(element, "preserve_mass_distribution"):  # TODO : implement all four OpenSim cases
-                    self.preserve_mass_distribution = bool(element.text)
+                    self.scale_tool.preserve_mass_distribution = str_to_bool(element.text)
 
                 elif match_tag(element, "scaling_order"):
                     if not match_text(element, "measurements"):
@@ -126,20 +126,54 @@ class OsimConfigurationParser:
                             marker_pair_set = self._get_marker_pair_set(obj)
                             body_scale_set = self._get_body_scale_set(obj)
                             self.set_scaling_segment(name, marker_pair_set, body_scale_set)
+                elif (match_tag(element, "ScaleSet") or
+                      match_tag(element, "marker_file") or
+                      match_tag(element, "time_range") or
+                      match_tag(element, "output_model_file") or
+                      match_tag(element, "output_scale_file")):
+                    continue
+                else:
+                    raise RuntimeError(f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
+                    f" in the github repository.")
 
         # Read marker placer
         if _is_element_empty(self.marker_placer):
             raise RuntimeError("The 'MarkerPlacer' tag must be specified in the xml file.")
         else:
             for element in self.marker_placer:
-                if element.tag.upper() == "apply".upper():
-                    self.scale_tool.preserve_mass_distribution
+
+                if match_tag(element, "apply"):
+                    if match_text(element, "False"):
+                        raise NotImplementedError("The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments.")
+
+                elif match_tag(element, "max_marker_movement"):
+                    self.scale_tool.max_marker_movement = float(element.text)
+
+                elif match_tag(element, "IKTaskSet"):
+                    for obj in element.find("objects"):
+                        if match_tag(obj, "IKMarkerTask"):
+                            marker_name = obj.attrib.get("name", "").split("/")[-1]
+                            apply = str_to_bool(find_in_tree(obj, "apply"))
+                            weight = float(find_in_tree(obj, "weight"))
+                            self.set_marker_weights(marker_name, apply, weight)
+
+                elif (match_tag(element, "marker_file") or
+                      match_tag(element, "coordinate_file") or
+                      match_tag(element, "time_range") or
+                      match_tag(element, "output_motion_file") or
+                      match_tag(element, "output_model_file") or
+                      match_tag(element, "output_marker_file")):
+                    continue
+
+                else:
+                    raise RuntimeError(f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
+                    f" in the github repository.")
 
     @staticmethod
     def _get_marker_pair_set(obj):
         marker_pair_set = obj.find("MarkerPairSet")
+        marker_pairs = []
         if marker_pair_set is not None:
-            marker_pairs = []
             marker_objects = marker_pair_set.find("objects")
             if marker_objects is not None:
                 for marker_pair in marker_objects:
@@ -147,7 +181,7 @@ class OsimConfigurationParser:
                     if markers_elem is not None:
                         markers = markers_elem.text.strip().split()
                         marker_pairs.append(markers)
-        return marker_pair_set
+        return marker_pairs
 
     @staticmethod
     def _get_body_scale_set(obj):
@@ -166,5 +200,9 @@ class OsimConfigurationParser:
 
     def set_scaling_segment(self, segment_name: str, marker_pair_set: list[list[str, str]], body_scale_set: Translations):
         self.scale_tool.scaling_segments.append(
-            SegmentScaling(segment_name=segment_name,
+            SegmentScaling(name=segment_name,
                             scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set)))
+
+    def set_marker_weights(self, marker_name: str, apply: bool = True, weight: float = 1):
+        if apply:
+            self.scale_tool.marker_weightings[marker_name] = weight

@@ -37,8 +37,8 @@ def main():
     # Scale the model
     scaled_model = scale_tool.scale(original_model=model,
                                     static_trial=static_file_path,
-                                    time_range=time_range,
-                                    mass=mass)
+                                    time_range=range(100, 200),
+                                    mass=80)
 
     # Write the scaled model to a .bioMod file
     scaled_model.to_biomod(scaled_biomod_file_path)

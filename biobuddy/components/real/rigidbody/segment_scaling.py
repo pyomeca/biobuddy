@@ -8,7 +8,7 @@ class MeanMarker:
     def __init__(self, marker_names: list[str]):
         self.marker_names = marker_names
 
-    def get_position(self, markers_list: list[MarkerReal]) -> np.ndarray[float, float, float]:
+    def get_position(self, markers_list: list[MarkerReal]) -> np.ndarray[float]:
         position_mean = np.zeros((3, 1))
         for i_marker in range(len(self.marker_names)):
             position_mean += markers_list[i_marker].position
@@ -99,7 +99,7 @@ ScalingType: TypeAlias = AxisWiseScaling | SegmentWiseScaling | BodyWiseScaling
 class SegmentScaling:
     def __init__(
         self,
-        segment_name: str,
+        name: str,
         scaling_type: ScalingType,
     ):
 
@@ -107,16 +107,16 @@ class SegmentScaling:
         if not isinstance(scaling_type, SegmentWiseScaling):
             raise NotImplementedError("Only the SegmentWiseScaling scaling is implemented yet.")
 
-        self.segment_name = segment_name
+        self.name = name
         self.scaling_type = scaling_type
 
     @property
-    def segment_name(self) -> str:
-        return self._segment_name
+    def name(self) -> str:
+        return self._name
 
-    @segment_name.setter
-    def segment_name(self, value: str):
-        self._segment_name = value
+    @name.setter
+    def name(self, value: str):
+        self._name = value
 
     @property
     def scaling_type(self) -> ScalingType:

@@ -17,7 +17,10 @@ def _is_element_empty(element):
         return True
 
 def match_tag(element, tag_name: str):
-    return element.tag.upper().strip() == tag_name.upper()
+    return element.tag.lower().strip() == tag_name.lower()
 
 def match_text(element, text: str):
-    return element.text.upper().strip() == text.upper()
+    return element.text.lower().strip() == text.lower()
+
+def str_to_bool(text: str):
+    return text.strip().lower() == "true"
