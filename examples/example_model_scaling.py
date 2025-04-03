@@ -16,12 +16,12 @@ def main():
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
     xml_filepath = f"{current_path_file}/models/wholebody.xml"
     scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
-    static_file_path = f"{current_path_file}/models/static.c3d"
+    static_file_path = f"{current_path_file}/data/static.c3d"
 
     # Convert the vtp files
-    mesh = MeshParser(geometry_folder=geometry_path)
-    mesh.process_meshes()
-    mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
+    # mesh = MeshParser(geometry_folder=geometry_path)
+    # mesh.process_meshes()
+    # mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
@@ -37,7 +37,7 @@ def main():
     # Scale the model
     scaled_model = scale_tool.scale(original_model=model,
                                     static_trial=static_file_path,
-                                    time_range=range(100, 200),
+                                    frame_range=range(100, 200),
                                     mass=80)
 
     # Write the scaled model to a .bioMod file

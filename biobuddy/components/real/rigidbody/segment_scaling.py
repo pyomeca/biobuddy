@@ -1,8 +1,11 @@
 import numpy as np
 from typing import TypeAlias
 
+import biorbd
+
 from .marker_real import MarkerReal
 from ....utils.translations import Translations
+
 
 class MeanMarker:
     def __init__(self, marker_names: list[str]):
@@ -53,6 +56,9 @@ class AxisWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
+    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+        raise NotImplementedError("AxisWiseScaling is not implemented yet.")
+
 
 class SegmentWiseScaling:
     def __init__(self, axis: Translations, marker_pairs: list[list[str, str]]):
@@ -79,6 +85,37 @@ class SegmentWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
+    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+
+        original_marker_names = [m.to_string() for m in original_model.markerNames()]
+        q_zeros = np.zeros((original_model.nbQ(), ))
+
+        scale_factor = []
+        for marker_pair in self.marker_pairs:
+
+            # Distance between the marker pairs in the static file
+            marker1_position_subject = marker_positions[:, marker_names.index(marker_pair[0]), :]
+            marker2_position_subject = marker_positions[:, marker_names.index(marker_pair[1]), :]
+            mean_distance_subject = np.nanmean(np.linalg.norm(marker2_position_subject - marker1_position_subject, axis=0))
+
+            # Distance between the marker pairs in the original model
+            marker1_position_original = original_model.markers(q_zeros)[original_marker_names.index(marker_pair[0])].to_array()
+            marker2_position_original = original_model.markers(q_zeros)[original_marker_names.index(marker_pair[1])].to_array()
+            distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
+
+            scale_factor += [mean_distance_subject / distance_original]
+
+        mean_scale_factor = np.mean(scale_factor)
+
+        scale_factor_per_axis = {}
+        for ax in ["x", "y", "z"]:
+            if ax in self.axis.value:
+                scale_factor_per_axis[ax] = mean_scale_factor
+            else:
+                scale_factor_per_axis[ax] = 1.0
+
+        return scale_factor_per_axis
+
 
 class BodyWiseScaling:
     def __init__(self, height: float):
@@ -92,6 +129,9 @@ class BodyWiseScaling:
             The height of the subject
         """
         self.height = height
+
+    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+        raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 
 
 ScalingType: TypeAlias = AxisWiseScaling | SegmentWiseScaling | BodyWiseScaling
@@ -125,6 +165,9 @@ class SegmentScaling:
     @scaling_type.setter
     def scaling_type(self, value: ScalingType):
         self._scaling_type = value
+
+    def compute_scaling_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model_biorbd: biorbd.Model) -> dict[str, float]:
+        return self.scaling_type.compute_scale_factors(marker_positions, marker_names, original_model_biorbd)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

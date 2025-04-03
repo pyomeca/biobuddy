@@ -1,4 +1,7 @@
+import os
 from typing import Self
+
+import biorbd
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
@@ -187,3 +190,23 @@ class BiomechanicalModelReal:
         # Write it to the .osim file
         with open(file_path, "w") as file:
             file.write(cleaned_string)
+
+
+    @property
+    def get_biorbd_model(self) -> biorbd.Model:
+
+        # TODO: generalize this step for other geometry paths
+        temporary_path = "models/temporary.bioMod"
+        try:
+            self.to_biomod(temporary_path)
+        except:
+            raise RuntimeError(f"The temporary file '{temporary_path}' could not be created. Please make sure that path {os.path} has the appropriate permissions.")
+
+        biorbd_model = biorbd.Model(temporary_path)
+
+        try:
+            os.remove(temporary_path)
+        except:
+            raise RuntimeError(f"The temporary file '{temporary_path}' could not be deleted. Please make sure that path {os.path} has the appropriate permissions.")
+
+        return biorbd_model

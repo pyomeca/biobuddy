@@ -147,7 +147,8 @@ class OsimConfigurationParser:
                         raise NotImplementedError("The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments.")
 
                 elif match_tag(element, "max_marker_movement"):
-                    self.scale_tool.max_marker_movement = float(element.text)
+                    max_marker_movement = float(element.text)
+                    self.scale_tool.max_marker_movement = float(element.text) if max_marker_movement > 0 else None
 
                 elif match_tag(element, "IKTaskSet"):
                     for obj in element.find("objects"):
