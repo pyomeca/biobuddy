@@ -41,20 +41,6 @@ class SegmentReal:
         self.mesh = mesh
         self.mesh_file = mesh_file
 
-    def copy(self):
-        return SegmentReal(
-            name=self.name,
-            parent_name=self.parent_name,
-            segment_coordinate_system=self.segment_coordinate_system,
-            translations=self.translations,
-            rotations=self.rotations,
-            q_ranges=self.q_ranges,
-            qdot_ranges=self.qdot_ranges,
-            inertia_parameters=self.inertia_parameters,
-            mesh=self.mesh,
-            mesh_file=self.mesh_file,
-        )
-
     @property
     def name(self) -> str:
         return self._name
