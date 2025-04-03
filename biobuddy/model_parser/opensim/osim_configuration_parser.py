@@ -49,6 +49,8 @@ class OsimConfigurationParser:
 
             if match_tag(element, "Mass"):
                 self.original_mass = float(element.text)  # in kg
+                if self.original_mass <= 0:
+                    raise NotImplementedError(f"The mass of the original model must be positive.")
 
             elif match_tag(element, "Height") or match_tag(element, "Age"):
                 # These tags are ignored by opensim too.
@@ -106,8 +108,8 @@ class OsimConfigurationParser:
                     if not match_text(element, "True"):
                         raise RuntimeError(f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}")
 
-                elif match_tag(element, "preserve_mass_distribution"):  # TODO : implement all four OpenSim cases
-                    self.scale_tool.preserve_mass_distribution = str_to_bool(element.text)
+                elif match_tag(element, "preserve_mass_distribution"):
+                    self.scale_tool.personalize_mass_distribution = str_to_bool(element.text)
 
                 elif match_tag(element, "scaling_order"):
                     if not match_text(element, "measurements"):
@@ -169,6 +171,7 @@ class OsimConfigurationParser:
                 else:
                     raise RuntimeError(f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
                     f" in the github repository.")
+
 
     @staticmethod
     def _get_marker_pair_set(obj):

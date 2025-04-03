@@ -29,5 +29,19 @@ class NamedList(list[T]):
         else:
             raise TypeError("key must be int or str")
 
+    def __setitem__(self, key: int | str, value):
+        if isinstance(key, int):
+            return super(NamedList, self).__setitem__(key, value)
+        elif isinstance(key, str):
+            found_key = False
+            for i, item in enumerate(self):
+                if item.name == key:
+                    self[i] = value
+                    return
+            if not found_key:
+                return self.append(value)
+        else:
+            raise TypeError("key must be int or str")
+
     def keys(self) -> list[str]:
         return [item.name for item in self]

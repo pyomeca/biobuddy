@@ -689,7 +689,7 @@
 							<groups />
 						</BodyScaleSet>
 					</Measurement>
-					<Measurement name="finger_r">
+					<Measurement name="fingers_r">
 						<!--Flag to turn on and off scaling for this measurement.-->
 						<apply>true</apply>
 						<!--Set of marker pairs used to determine the scale factors.-->
@@ -717,7 +717,7 @@
 							<groups />
 						</BodyScaleSet>
 					</Measurement>
-					<Measurement name="finger_l">
+					<Measurement name="fingers_l">
 						<!--Flag to turn on and off scaling for this measurement.-->
 						<apply>true</apply>
 						<!--Set of marker pairs used to determine the scale factors.-->

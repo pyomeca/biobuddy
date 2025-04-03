@@ -11,7 +11,7 @@ class MeanMarker:
     def __init__(self, marker_names: list[str]):
         self.marker_names = marker_names
 
-    def get_position(self, markers_list: list[MarkerReal]) -> np.ndarray[float]:
+    def get_position(self, markers_list: list[MarkerReal]) -> np.ndarray:
         position_mean = np.zeros((3, 1))
         for i_marker in range(len(self.marker_names)):
             position_mean += markers_list[i_marker].position
@@ -56,8 +56,9 @@ class AxisWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
-    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
+        # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
 
 
 class SegmentWiseScaling:
@@ -85,7 +86,7 @@ class SegmentWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
-    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
 
         original_marker_names = [m.to_string() for m in original_model.markerNames()]
         q_zeros = np.zeros((original_model.nbQ(), ))
@@ -114,6 +115,8 @@ class SegmentWiseScaling:
             else:
                 scale_factor_per_axis[ax] = 1.0
 
+        scale_factor_per_axis["mass"] = mean_scale_factor
+
         return scale_factor_per_axis
 
 
@@ -130,7 +133,7 @@ class BodyWiseScaling:
         """
         self.height = height
 
-    def compute_scale_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 
 
@@ -166,7 +169,7 @@ class SegmentScaling:
     def scaling_type(self, value: ScalingType):
         self._scaling_type = value
 
-    def compute_scaling_factors(self, marker_positions: np.ndarray[float], marker_names: list[str], original_model_biorbd: biorbd.Model) -> dict[str, float]:
+    def compute_scaling_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model) -> dict[str, float]:
         return self.scaling_type.compute_scale_factors(marker_positions, marker_names, original_model_biorbd)
 
     def to_biomod(self):
