@@ -20,9 +20,7 @@ class MeanMarker:
 
 
 class AxisWiseScaling:
-    def __init__(self,
-                 axis: list[Translations],
-                 marker_pairs: list[list[[str, str], ...]]):
+    def __init__(self, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
@@ -56,7 +54,9 @@ class AxisWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
-    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+    ) -> dict[str, float]:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
         # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
 
@@ -86,10 +86,12 @@ class SegmentWiseScaling:
         self.axis = axis
         self.marker_pairs = marker_pairs
 
-    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+    ) -> dict[str, float]:
 
         original_marker_names = [m.to_string() for m in original_model.markerNames()]
-        q_zeros = np.zeros((original_model.nbQ(), ))
+        q_zeros = np.zeros((original_model.nbQ(),))
 
         scale_factor = []
         for marker_pair in self.marker_pairs:
@@ -97,11 +99,17 @@ class SegmentWiseScaling:
             # Distance between the marker pairs in the static file
             marker1_position_subject = marker_positions[:, marker_names.index(marker_pair[0]), :]
             marker2_position_subject = marker_positions[:, marker_names.index(marker_pair[1]), :]
-            mean_distance_subject = np.nanmean(np.linalg.norm(marker2_position_subject - marker1_position_subject, axis=0))
+            mean_distance_subject = np.nanmean(
+                np.linalg.norm(marker2_position_subject - marker1_position_subject, axis=0)
+            )
 
             # Distance between the marker pairs in the original model
-            marker1_position_original = original_model.markers(q_zeros)[original_marker_names.index(marker_pair[0])].to_array()
-            marker2_position_original = original_model.markers(q_zeros)[original_marker_names.index(marker_pair[1])].to_array()
+            marker1_position_original = original_model.markers(q_zeros)[
+                original_marker_names.index(marker_pair[0])
+            ].to_array()
+            marker2_position_original = original_model.markers(q_zeros)[
+                original_marker_names.index(marker_pair[1])
+            ].to_array()
             distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
 
             scale_factor += [mean_distance_subject / distance_original]
@@ -133,11 +141,14 @@ class BodyWiseScaling:
         """
         self.height = height
 
-    def compute_scale_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model) -> dict[str, float]:
+    def compute_scale_factors(
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+    ) -> dict[str, float]:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 
 
 ScalingType: TypeAlias = AxisWiseScaling | SegmentWiseScaling | BodyWiseScaling
+
 
 class SegmentScaling:
     def __init__(
@@ -169,7 +180,9 @@ class SegmentScaling:
     def scaling_type(self, value: ScalingType):
         self._scaling_type = value
 
-    def compute_scaling_factors(self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model) -> dict[str, float]:
+    def compute_scaling_factors(
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
+    ) -> dict[str, float]:
         return self.scaling_type.compute_scale_factors(marker_positions, marker_names, original_model_biorbd)
 
     def to_biomod(self):

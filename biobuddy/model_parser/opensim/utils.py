@@ -7,6 +7,7 @@ def find_in_tree(element: ElementTree.Element, string: str):
     else:
         return None
 
+
 def _is_element_empty(element):
     if element:
         if not element[0].text:
@@ -16,11 +17,14 @@ def _is_element_empty(element):
     else:
         return True
 
+
 def match_tag(element, tag_name: str):
     return element.tag.lower().strip() == tag_name.lower()
 
+
 def match_text(element, text: str):
     return element.text.lower().strip() == text.lower()
+
 
 def str_to_bool(text: str):
     return text.strip().lower() == "true"

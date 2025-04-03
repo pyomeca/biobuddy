@@ -12,6 +12,7 @@ class Sex(Enum):
     MALE = "male"
     FEMALE = "female"
 
+
 class SegmentName(Enum):
     HEAD = "HEAD"
     TRUNK = "TRUNK"
@@ -21,6 +22,7 @@ class SegmentName(Enum):
     THIGH = "THIGH"
     SHANK = "SHANK"
     FOOT = "FOOT"
+
 
 class DeLevaTable:
     def __init__(self, total_mass: float, sex: Sex):

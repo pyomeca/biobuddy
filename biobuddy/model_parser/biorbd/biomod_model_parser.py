@@ -84,16 +84,16 @@ class BiomodModelParser:
                         _check_if_version_defined(biomod_version)
                         current_component = MuscleReal(
                             name=_read_str(next_token=next_token),
-                            muscle_type = MuscleType.HILL_DE_GROOTE,
-                            state_type = MuscleStateType.DEGROOTE,
-                            muscle_group = "",
-                            origin_position = None,
-                            insertion_position = None,
-                            optimal_length = None,
-                            maximal_force = None,
-                            tendon_slack_length = None,
-                            pennation_angle = None,
-                            maximal_excitation = None,
+                            muscle_type=MuscleType.HILL_DE_GROOTE,
+                            state_type=MuscleStateType.DEGROOTE,
+                            muscle_group="",
+                            origin_position=None,
+                            insertion_position=None,
+                            optimal_length=None,
+                            maximal_force=None,
+                            tendon_slack_length=None,
+                            pennation_angle=None,
+                            maximal_excitation=None,
                         )
                     elif token == "viapoint":
                         _check_if_version_defined(biomod_version)
@@ -102,7 +102,7 @@ class BiomodModelParser:
                             parent_name="",
                             muscle_name="",
                             muscle_group="",
-                            position = None,
+                            position=None,
                         )
                     else:
                         raise ValueError(f"Unknown component {token}")

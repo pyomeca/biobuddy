@@ -70,16 +70,14 @@ class BiomechanicalModelReal:
 
     @staticmethod
     def from_biomod(
-            filepath: str,
+        filepath: str,
     ) -> Self:
         """
         Create a biomechanical model from a biorbd model
         """
         from ...model_parser.biorbd import BiomodModelParser
 
-        return BiomodModelParser(
-            filepath=filepath
-        ).to_real()
+        return BiomodModelParser(filepath=filepath).to_real()
 
     @staticmethod
     def from_osim(
@@ -191,7 +189,6 @@ class BiomechanicalModelReal:
         with open(file_path, "w") as file:
             file.write(cleaned_string)
 
-
     @property
     def get_biorbd_model(self) -> biorbd.Model:
 
@@ -200,13 +197,17 @@ class BiomechanicalModelReal:
         try:
             self.to_biomod(temporary_path)
         except:
-            raise RuntimeError(f"The temporary file '{temporary_path}' could not be created. Please make sure that path {os.path} has the appropriate permissions.")
+            raise RuntimeError(
+                f"The temporary file '{temporary_path}' could not be created. Please make sure that path {os.path} has the appropriate permissions."
+            )
 
         biorbd_model = biorbd.Model(temporary_path)
 
         try:
             os.remove(temporary_path)
         except:
-            raise RuntimeError(f"The temporary file '{temporary_path}' could not be deleted. Please make sure that path {os.path} has the appropriate permissions.")
+            raise RuntimeError(
+                f"The temporary file '{temporary_path}' could not be deleted. Please make sure that path {os.path} has the appropriate permissions."
+            )
 
         return biorbd_model

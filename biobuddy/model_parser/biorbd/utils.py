@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np
 
+
 def _tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
     with open(filepath, "r") as f:

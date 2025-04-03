@@ -101,8 +101,8 @@ class Joint:
         parent_offset_rot = ["0", "0", "0"]
         child_offset_trans = ["0", "0", "0"]
         child_offset_rot = ["0", "0", "0"]
-        child_body = None,
-        parent_body = None,
+        child_body = (None,)
+        parent_body = (None,)
         for frame in element.find("frames").findall("PhysicalOffsetFrame"):
             if parent == frame.attrib["name"]:
                 parent_body = frame.find("socket_parent").text.split("/")[-1]

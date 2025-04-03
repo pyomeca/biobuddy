@@ -17,6 +17,7 @@ class OsimConfigurationParser:
     This xml parser assumes that the scaling configuration was created using OpenSim.
     This means that the
     """
+
     def __init__(
         self,
         filepath: str,
@@ -38,8 +39,11 @@ class OsimConfigurationParser:
         self.filepath = filepath
 
         # Attributes needed to read the xml configuration file
-        self.header = ("This scaling configuration was created by BioBuddy on " + strftime("%Y-%m-%d %H:%M:%S") +
-                       f"\nIt is based on the original file {filepath}.\n")
+        self.header = (
+            "This scaling configuration was created by BioBuddy on "
+            + strftime("%Y-%m-%d %H:%M:%S")
+            + f"\nIt is based on the original file {filepath}.\n"
+        )
         self.configuration = ElementTree.parse(filepath)
         self.model_scaler = None
         self.marker_placer = None
@@ -80,7 +84,6 @@ class OsimConfigurationParser:
         self.scale_tool = ScaleTool()
         self._read()
 
-
     def _read(self):
         """Parse the xml scaling configuration file and populate the output scale tool.
 
@@ -106,7 +109,9 @@ class OsimConfigurationParser:
 
                 if match_tag(element, "apply"):
                     if not match_text(element, "True"):
-                        raise RuntimeError(f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}")
+                        raise RuntimeError(
+                            f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}"
+                        )
 
                 elif match_tag(element, "preserve_mass_distribution"):
                     self.scale_tool.personalize_mass_distribution = str_to_bool(element.text)
@@ -128,15 +133,19 @@ class OsimConfigurationParser:
                             marker_pair_set = self._get_marker_pair_set(obj)
                             body_scale_set = self._get_body_scale_set(obj)
                             self.set_scaling_segment(name, marker_pair_set, body_scale_set)
-                elif (match_tag(element, "ScaleSet") or
-                      match_tag(element, "marker_file") or
-                      match_tag(element, "time_range") or
-                      match_tag(element, "output_model_file") or
-                      match_tag(element, "output_scale_file")):
+                elif (
+                    match_tag(element, "ScaleSet")
+                    or match_tag(element, "marker_file")
+                    or match_tag(element, "time_range")
+                    or match_tag(element, "output_model_file")
+                    or match_tag(element, "output_scale_file")
+                ):
                     continue
                 else:
-                    raise RuntimeError(f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
-                    f" in the github repository.")
+                    raise RuntimeError(
+                        f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
+                        f" in the github repository."
+                    )
 
         # Read marker placer
         if _is_element_empty(self.marker_placer):
@@ -146,7 +155,9 @@ class OsimConfigurationParser:
 
                 if match_tag(element, "apply"):
                     if match_text(element, "False"):
-                        raise NotImplementedError("The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments.")
+                        raise NotImplementedError(
+                            "The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments."
+                        )
 
                 elif match_tag(element, "max_marker_movement"):
                     max_marker_movement = float(element.text)
@@ -160,18 +171,21 @@ class OsimConfigurationParser:
                             weight = float(find_in_tree(obj, "weight"))
                             self.set_marker_weights(marker_name, apply, weight)
 
-                elif (match_tag(element, "marker_file") or
-                      match_tag(element, "coordinate_file") or
-                      match_tag(element, "time_range") or
-                      match_tag(element, "output_motion_file") or
-                      match_tag(element, "output_model_file") or
-                      match_tag(element, "output_marker_file")):
+                elif (
+                    match_tag(element, "marker_file")
+                    or match_tag(element, "coordinate_file")
+                    or match_tag(element, "time_range")
+                    or match_tag(element, "output_motion_file")
+                    or match_tag(element, "output_model_file")
+                    or match_tag(element, "output_marker_file")
+                ):
                     continue
 
                 else:
-                    raise RuntimeError(f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
-                    f" in the github repository.")
-
+                    raise RuntimeError(
+                        f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
+                        f" in the github repository."
+                    )
 
     @staticmethod
     def _get_marker_pair_set(obj):
@@ -202,10 +216,14 @@ class OsimConfigurationParser:
                         scaling_axis = Translations(scaling_elem.text.replace(" ", "").lower())
         return scaling_axis
 
-    def set_scaling_segment(self, segment_name: str, marker_pair_set: list[list[str, str]], body_scale_set: Translations):
+    def set_scaling_segment(
+        self, segment_name: str, marker_pair_set: list[list[str, str]], body_scale_set: Translations
+    ):
         self.scale_tool.scaling_segments.append(
-            SegmentScaling(name=segment_name,
-                            scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set)))
+            SegmentScaling(
+                name=segment_name, scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set)
+            )
+        )
 
     def set_marker_weights(self, marker_name: str, apply: bool = True, weight: float = 1):
         if apply:

@@ -73,6 +73,7 @@ class BiomodConfigurationParser:
 
         return model
 
+
 def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarray:
     if current_rt_in_matrix:
         scs = SegmentCoordinateSystemReal.from_rt_matrix(
