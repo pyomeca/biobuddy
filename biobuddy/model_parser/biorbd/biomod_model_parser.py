@@ -294,6 +294,9 @@ def _tokenize_biomod(filepath: str) -> list[str]:
         if is_block_commenting and "*/" in line:
             is_block_commenting = False
             line = line.split("*/")[1]
+        if is_block_commenting:
+            line = ""
+
         line = line.split("//")[0]
         line = line.strip()
         lines[line_index] = line
