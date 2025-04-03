@@ -8,6 +8,7 @@ from .mesh_real import MeshReal
 from .protocols import CoordinateSystemRealProtocol
 from .segment_real import SegmentReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
+from .segment_scaling import SegmentScaling, ScaleFactor
 
 
 __all__ = [
@@ -21,4 +22,6 @@ __all__ = [
     CoordinateSystemRealProtocol.__name__,
     SegmentReal.__name__,
     SegmentCoordinateSystemReal.__name__,
+    SegmentScaling.__name__,
+    ScaleFactor.__name__,
 ]

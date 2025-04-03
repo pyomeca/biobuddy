@@ -1,3 +1,4 @@
+import biorbd
 from enum import Enum
 
 import numpy as np
@@ -12,16 +13,13 @@ from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
 from ..components.real.rigidbody.mesh_file_real import MeshFileReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
+from ..components.real.muscle.muscle_real import MuscleReal
+from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.named_list import NamedList
 
 
-class MassDistributionType(Enum):
-    UNIFORM = "uniform"
-    PROPORTIONAL = "proportional"
-
-
 class InertialCharacteristics(Enum):
-    DE_LEVA = "de_leva"
+    DE_LEVA = "de_leva"  # TODO
 
 
 class ScaleTool:
@@ -136,10 +134,8 @@ class ScaleTool:
                     f"The segment {segment_name} has a scaling configuration, but does not exist in the original model."
                 )
 
-    def scale_model(self, marker_positions: np.ndarray, marker_names: list[str], mass: float) -> BiomechanicalModelReal:
-
-        original_model_biorbd = self.original_model.get_biorbd_model
-        original_mass = original_model_biorbd.mass()
+    def get_scaling_factors_and_masses(self, original_model_biorbd: biorbd.Model, marker_positions: np.ndarray, marker_names: list[str], mass: float, original_mass: float) -> \
+    tuple[dict[str, dict[str, float]], dict[str, float]]:
 
         scaling_factors = {}
         segment_masses = {}
@@ -152,7 +148,7 @@ class ScaleTool:
             # Get each segment's scaled mass
             if self.personalize_mass_distribution:
                 segment_masses[segment_name] = (
-                    self.original_model.segments[segment_name].inertia_parameters.mass * scaling_factors[segment_name]
+                    self.original_model.segments[segment_name].inertia_parameters.mass * scaling_factors[segment_name].to_vector()
                 )
             else:
                 segment_masses[segment_name] = (
@@ -163,17 +159,30 @@ class ScaleTool:
         for segment_name in self.scaling_segments.keys():
             segment_masses[segment_name] *= mass / total_scaled_mass
 
+        return scaling_factors, segment_masses
+
+    def scale_model(self, marker_positions: np.ndarray, marker_names: list[str], mass: float) -> BiomechanicalModelReal:
+
+        original_model_biorbd = self.original_model.get_biorbd_model
+        original_mass = original_model_biorbd.mass()
+
+        scaling_factors, segment_masses = self.get_scaling_factors_and_masses(original_model_biorbd, marker_positions, marker_names, mass, original_mass)
+
         scaled_model = BiomechanicalModelReal()
+        scaled_model.header = self.original_model.header + f"\nModel scaled using Biobuddy.\n"
+        scaled_model.gravity = self.original_model.gravity
 
         # Scale segments
         for segment_name in self.original_model.segments.keys():
-
-            if segment_name in self.scaling_segments.keys():
-                this_segment_scale_factor = np.array([scaling_factors[segment_name][ax] for ax in ["x", "y", "z"]])
+            if segment_name not in self.scaling_segments.keys():
+                # If the segment is not scaled, copy it to the scaled model
+                scaled_model.segments[segment_name] = self.original_model.segments[segment_name].copy()
+            else:
+                this_segment_scale_factor = scaling_factors[segment_name].to_vector()
 
                 parent_name = self.original_model.segments[segment_name].parent_name
                 if parent_name in self.scaling_segments.keys():
-                    parent_scale_factor = np.array([scaling_factors[parent_name][ax] for ax in ["x", "y", "z"]])
+                    parent_scale_factor = scaling_factors[parent_name].to_vector()
                 else:
                     parent_scale_factor = np.array([1.0, 1.0, 1.0])
 
@@ -197,8 +206,40 @@ class ScaleTool:
                 for imu in self.original_model.segments[segment_name].imus:
                     scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
+
+        # Set muscle groups
+        scaled_model.muscle_groups = self.original_model.muscle_groups.copy()
+
+        # Scale muscles
+        for muscle_name in self.original_model.muscles.keys():
+
+            muscle_group_name = self.original_model.muscles[muscle_name].muscle_group
+            origin_parent_name = self.original_model.muscle_groups[muscle_group_name].origin_parent_name
+            insertion_parent_name = self.original_model.muscle_groups[muscle_group_name].insertion_parent_name
+            origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+            insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+
+            if origin_parent_name not in self.scaling_segments.keys() and insertion_parent_name not in self.scaling_segments.keys():
+                # If the muscle is not attached to a segment that is scaled, do not scale the muscle
+                scaled_model.muscles.append(self.original_model.muscles[muscle_name])
             else:
-                scaled_model.segments[segment_name] = self.original_model.segments[segment_name].copy()
+                scaled_model.muscles.append(self.scale_muscle(self.original_model.muscles[muscle_name], origin_scale_factor, insertion_scale_factor))
+
+        # Scale via points
+        for via_point_name in self.original_model.via_points.keys():
+
+            parent_name = self.original_model.via_points[via_point_name].parent_name
+            parent_scale_factor = scaling_factors[parent_name].to_vector()
+
+            if parent_name not in self.scaling_segments.keys():
+                # If the via point is not attached to a segment that is scaled, do not scale the via point
+                scaled_model.via_points.append(self.original_model.via_points[via_point_name])
+            else:
+                scaled_model.via_points.append(self.scale_via_point(self.original_model.via_points[via_point_name], parent_scale_factor))
+
+        scaled_model.warnings = self.original_model.warnings
+
+        scaled_model = self.modify_muscle_parameters(scaled_model)
 
         return scaled_model
 
@@ -290,7 +331,7 @@ class ScaleTool:
         scaled_marker = MarkerReal(
             name=original_marker.name,
             parent_name=original_marker.parent_name,
-            position=original_marker.position * scale_factor,
+            position=original_marker.position.reshape(-1, )[:3] * scale_factor,
             is_technical=original_marker.is_technical,
             is_anatomical=original_marker.is_anatomical,
         )
@@ -300,7 +341,7 @@ class ScaleTool:
         scaled_contact = ContactReal(
             name=original_contact.name,
             parent_name=original_contact.parent_name,
-            position=original_contact.position * scale_factor,
+            position=original_contact.position.reshape(-1, )[:3] * scale_factor,
             axis=original_contact.axis,
         )
         return scaled_contact
@@ -316,6 +357,41 @@ class ScaleTool:
             is_anatomical=original_imu.is_anatomical,
         )
         return scaled_imu
+
+
+    def scale_muscle(self, original_muscle: MuscleReal, origin_scale_factor: np.ndarray, insertion_scale_factor: np.ndarray) -> MuscleReal:
+        scaled_muscle = MuscleReal(
+            name=original_muscle.name,
+            muscle_type=original_muscle.muscle_type,
+            state_type=original_muscle.state_type,
+            muscle_group=original_muscle.muscle_group,
+            origin_position=original_muscle.origin_position.reshape(-1, )[:3] * origin_scale_factor,
+            insertion_position=original_muscle.insertion_position.reshape(-1, )[:3] * insertion_scale_factor,
+            optimal_length=None,  # Will be set later
+            maximal_force=original_muscle.maximal_force,
+            tendon_slack_length=None,  # Will be set later
+            pennation_angle=None,  # Will be set later
+            maximal_excitation=original_muscle.maximal_excitation,
+        )
+        return scaled_muscle
+
+
+    def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
+        scaled_via_point = ViaPointReal(
+            name=original_via_point.name,
+            parent_name=original_via_point.parent_name,
+            muscle_name=original_via_point.muscle_name,
+            muscle_group=original_via_point.muscle_group,
+            position=original_via_point.position * parent_scale_factor,
+        )
+        return scaled_via_point
+
+    def modify_muscle_parameters(self):
+        """
+        Modify the optimal length, tendon slack length and pennation angle of the muscles.
+        """
+        print("TODO")
+
 
     @staticmethod
     def from_biomod(
