@@ -17,7 +17,15 @@ from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.rigidbody.segment_scaling import SegmentScaling
 from ...utils.named_list import NamedList
-from .utils import tokenize_biomod, check_if_version_defined, read_str, read_int, read_float, read_bool, read_float_vector
+from .utils import (
+    tokenize_biomod,
+    check_if_version_defined,
+    read_str,
+    read_int,
+    read_float,
+    read_bool,
+    read_float_vector,
+)
 
 
 class EndOfFileReached(Exception):
@@ -276,6 +284,7 @@ class BiomodModelParser:
             model.segments.append(deepcopy(segment))
 
         return model
+
 
 def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarray:
     if current_rt_in_matrix:

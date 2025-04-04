@@ -1,7 +1,12 @@
 from time import strftime
 
 from .utils import tokenize_biomod, read_str, read_str_list
-from ...components.real.rigidbody.segment_scaling import SegmentScaling, ScalingType, SegmentWiseScaling, AxisWiseScaling
+from ...components.real.rigidbody.segment_scaling import (
+    SegmentScaling,
+    ScalingType,
+    SegmentWiseScaling,
+    AxisWiseScaling,
+)
 from ...model_modifiers.scale_tool import ScaleTool
 from ...components.real.rigidbody.segment_real import (
     SegmentReal,
@@ -64,53 +69,69 @@ class BiomodConfigurationParser:
                         if scaling_type.lower() == "segmentwisescaling":
                             current_component.scaling_type = SegmentWiseScaling(axis=None, marker_pairs=[])
                         elif scaling_type.lower() == "axiswisescaling":
-                            current_component.scaling_type = AxisWiseScaling(axis=None, x_marker_pairs=[], y_marker_pairs=[], z_marker_pairs=[])
+                            current_component.scaling_type = AxisWiseScaling(
+                                axis=None, x_marker_pairs=[], y_marker_pairs=[], z_marker_pairs=[]
+                            )
                         else:
                             raise NotImplementedError(f"Scaling type {scaling_type} not implemented yet.")
 
                     elif token == "axis":
                         if current_component.scaling_type is None:
                             raise RuntimeError(
-                                f"The segments scaling type was not defined for scalingsegment {current_component.name}")
+                                f"The segments scaling type was not defined for scalingsegment {current_component.name}"
+                            )
                         current_component.axis = Translations(read_str(next_token=next_token))
 
                     elif token == "markerpair":
                         if current_component.scaling_type is None:
-                            raise RuntimeError(f"The segments scaling type was not defined for scalingsegment {current_component.name}")
+                            raise RuntimeError(
+                                f"The segments scaling type was not defined for scalingsegment {current_component.name}"
+                            )
                         elif not isinstance(current_component.scaling_type, SegmentWiseScaling):
-                            raise NotImplementedError(f"markerpairs can only be used for scalingtype SegmentWiseScaling")
+                            raise NotImplementedError(
+                                f"markerpairs can only be used for scalingtype SegmentWiseScaling"
+                            )
                         marker_pair = read_str_list(next_token=next_token)
                         if len(marker_pair) != 2:
-                            raise RuntimeError(f"There was a problem reading markerpair {read_str(next_token=next_token)}")
+                            raise RuntimeError(
+                                f"There was a problem reading markerpair {read_str(next_token=next_token)}"
+                            )
                         current_component.marker_pairs += [marker_pair]
 
                     elif token == "xmarkerpair":
                         marker_pair = read_str_list(next_token=next_token)
                         if len(marker_pair) != 2:
-                            raise RuntimeError(f"There was a problem reading xmarkerpair {read_str(next_token=next_token)}")
+                            raise RuntimeError(
+                                f"There was a problem reading xmarkerpair {read_str(next_token=next_token)}"
+                            )
                         current_component.x_marker_pairs += [marker_pair]
 
                     elif token == "ymarkerpair":
                         marker_pair = read_str_list(next_token=next_token)
                         if len(marker_pair) != 2:
-                            raise RuntimeError(f"There was a problem reading ymarkerpair {read_str(next_token=next_token)}")
+                            raise RuntimeError(
+                                f"There was a problem reading ymarkerpair {read_str(next_token=next_token)}"
+                            )
                         current_component.y_marker_pairs += [marker_pair]
 
                     elif token == "zmarkerpair":
                         marker_pair = read_str_list(next_token=next_token)
                         if len(marker_pair) != 2:
-                            raise RuntimeError(f"There was a problem reading zmarkerpair {read_str(next_token=next_token)}")
+                            raise RuntimeError(
+                                f"There was a problem reading zmarkerpair {read_str(next_token=next_token)}"
+                            )
                         current_component.z_marker_pairs += [marker_pair]
 
                     else:
                         raise ValueError(f"Unknown information type {token} in segmentscaling")
 
-                elif (isinstance(current_component, ViaPointReal) or
-                        isinstance(current_component, MuscleReal) or
-                        isinstance(current_component, MuscleGroup) or
-                        isinstance(current_component, MarkerReal) or
-                        isinstance(current_component, InertialMeasurementUnitReal) or
-                        isinstance(current_component, SegmentReal)
+                elif (
+                    isinstance(current_component, ViaPointReal)
+                    or isinstance(current_component, MuscleReal)
+                    or isinstance(current_component, MuscleGroup)
+                    or isinstance(current_component, MarkerReal)
+                    or isinstance(current_component, InertialMeasurementUnitReal)
+                    or isinstance(current_component, SegmentReal)
                 ):
                     # These components are read by biomod_model_parser
                     continue

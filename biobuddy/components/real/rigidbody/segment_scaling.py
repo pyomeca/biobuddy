@@ -38,9 +38,10 @@ class ScaleFactor:
         else:
             raise KeyError(f"Invalid key: {key}")
 
-
     def to_vector(self) -> np.ndarray:
-        return np.array([self.x, self.y, self.z]).reshape(3, )
+        return np.array([self.x, self.y, self.z]).reshape(
+            3,
+        )
 
 
 class AxisWiseScaling:
@@ -216,4 +217,3 @@ class SegmentScaling:
     def to_xml(self):
         # Define the print function, so it automatically formats things in the file properly
         raise NotImplementedError("TODO: implement SegmentScaling.to_xml()")
-
