@@ -8,7 +8,7 @@ def find_in_tree(element: ElementTree.Element, string: str):
         return None
 
 
-def _is_element_empty(element):
+def is_element_empty(element):
     if element:
         if not element[0].text:
             return True

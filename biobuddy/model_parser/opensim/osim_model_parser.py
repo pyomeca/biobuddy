@@ -4,7 +4,7 @@ from time import strftime
 import numpy as np
 from xml.etree import ElementTree
 
-from .utils import _is_element_empty
+from .utils import is_element_empty
 from .body import Body
 from .joint import Joint
 from .marker import Marker
@@ -164,7 +164,7 @@ class OsimModelParser:
         """returns the list of vtp files included in the model"""
         body_mesh_list = []
         body_set = body_set if body_set else self.bodyset_elt[0]
-        if _is_element_empty(body_set):
+        if is_element_empty(body_set):
             return None
         else:
             for element in body_set:
@@ -174,7 +174,7 @@ class OsimModelParser:
 
     def _get_marker_set(self):
         markers = []
-        if _is_element_empty(self.markerset_elt):
+        if is_element_empty(self.markerset_elt):
             return None
         else:
             original_marker_names = []
@@ -186,7 +186,7 @@ class OsimModelParser:
 
     def _get_joint_set(self):
         joints = []
-        if _is_element_empty(self.forceset_elt):
+        if is_element_empty(self.forceset_elt):
             return None
         else:
             for element in self.jointset_elt[0]:
@@ -200,7 +200,7 @@ class OsimModelParser:
             return joints
 
     def get_controller_set(self):
-        if _is_element_empty(self.controllerset_elt):
+        if is_element_empty(self.controllerset_elt):
             self.controller_set = None
         else:
             self.warnings.append(
@@ -209,7 +209,7 @@ class OsimModelParser:
             )
 
     def get_constraint_set(self):
-        if _is_element_empty(self.constraintset_elt):
+        if is_element_empty(self.constraintset_elt):
             self.constraintset_elt = None
         else:
             self.warnings.append(
@@ -218,7 +218,7 @@ class OsimModelParser:
             )
 
     def get_contact_geometry_set(self):
-        if _is_element_empty(self.contact_geometryset_elt):
+        if is_element_empty(self.contact_geometryset_elt):
             self.contact_geometryset_elt = None
         else:
             self.warnings.append(
@@ -227,7 +227,7 @@ class OsimModelParser:
             )
 
     def get_component_set(self):
-        if _is_element_empty(self.componentset_elt):
+        if is_element_empty(self.componentset_elt):
             self.componentset_elt = None
         else:
             self.warnings.append(
@@ -236,7 +236,7 @@ class OsimModelParser:
             )
 
     def get_probe_set(self):
-        if _is_element_empty(self.probeset_elt):
+        if is_element_empty(self.probeset_elt):
             self.probeset_elt = None
         else:
             self.warnings.append(
@@ -267,7 +267,7 @@ class OsimModelParser:
 
     def _set_ground(self):
         ground_set = self.ground_elt
-        if not _is_element_empty(ground_set):
+        if not is_element_empty(ground_set):
             dof = Joint
             dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
             self.write_dof(
@@ -761,7 +761,7 @@ class OsimModelParser:
     def _get_body_set(self, body_set: ElementTree = None) -> list[Body]:
         bodies = []
         body_set = body_set if body_set else self.bodyset_elt[0]
-        if _is_element_empty(body_set):
+        if is_element_empty(body_set):
             return None
         else:
             for element in body_set:
@@ -772,7 +772,7 @@ class OsimModelParser:
         forces = []
         wrap = []
         original_muscle_names = []
-        if _is_element_empty(self.forceset_elt):
+        if is_element_empty(self.forceset_elt):
             return None
         else:
             for element in self.forceset_elt[0]:

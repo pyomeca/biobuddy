@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 
 
-def _tokenize_biomod(filepath: str) -> list[str]:
+def tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
     with open(filepath, "r") as f:
         content = f.read()
@@ -48,27 +48,29 @@ def _tokenize_biomod(filepath: str) -> list[str]:
     return tokens
 
 
-def _check_if_version_defined(biomod_version: int):
+def check_if_version_defined(biomod_version: int):
     if biomod_version is None:
         raise ValueError("Version not defined")
     return
 
 
-def _read_str(next_token: Callable) -> str:
+def read_str(next_token: Callable) -> str:
     return next_token()
 
+def read_str_list(next_token: Callable) -> list[str]:
+    return next_token().replace("\t", " ").split(" ")
 
-def _read_int(next_token: Callable) -> int:
+def read_int(next_token: Callable) -> int:
     return int(next_token())
 
 
-def _read_float(next_token: Callable) -> float:
+def read_float(next_token: Callable) -> float:
     return float(next_token())
 
 
-def _read_bool(next_token: Callable) -> bool:
+def read_bool(next_token: Callable) -> bool:
     return next_token() == "1"
 
 
-def _read_float_vector(next_token: Callable, length: int) -> np.ndarray:
-    return np.array([_read_float(next_token=next_token) for _ in range(length)])
+def read_float_vector(next_token: Callable, length: int) -> np.ndarray:
+    return np.array([read_float(next_token=next_token) for _ in range(length)])

@@ -18,6 +18,7 @@ class MeanMarker:
         position_mean /= len(self.marker_names)
         return position_mean
 
+
 class ScaleFactor:
     def __init__(self, x: float = None, y: float = None, z: float = None, mass: float = None):
         self.x = x

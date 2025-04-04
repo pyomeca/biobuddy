@@ -2,7 +2,7 @@ from time import strftime
 
 from xml.etree import ElementTree
 
-from .utils import _is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
+from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...model_modifiers.scale_tool import ScaleTool
 from ...utils.translations import Translations
@@ -80,7 +80,7 @@ class OsimConfigurationParser:
                     f" in the github repository."
                 )
 
-        # Create the biomechanical model
+        # Initialize and fill the scaling configuration
         self.scale_tool = ScaleTool()
         self._read()
 
@@ -102,7 +102,7 @@ class OsimConfigurationParser:
         """
 
         # Read model scaler
-        if _is_element_empty(self.model_scaler):
+        if is_element_empty(self.model_scaler):
             raise RuntimeError("The 'ModelScaler' tag must be specified in the xml file.")
         else:
             for element in self.model_scaler:
@@ -148,7 +148,7 @@ class OsimConfigurationParser:
                     )
 
         # Read marker placer
-        if _is_element_empty(self.marker_placer):
+        if is_element_empty(self.marker_placer):
             raise RuntimeError("The 'MarkerPlacer' tag must be specified in the xml file.")
         else:
             for element in self.marker_placer:
