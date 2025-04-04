@@ -80,7 +80,7 @@ class AxisWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
     ) -> ScaleFactor:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
         # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
@@ -112,11 +112,11 @@ class SegmentWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
     ) -> ScaleFactor:
 
-        original_marker_names = [m.to_string() for m in original_model.markerNames()]
-        q_zeros = np.zeros((original_model.nbQ(),))
+        original_marker_names = [m.to_string() for m in original_model_biorbd.markerNames()]
+        q_zeros = np.zeros((original_model_biorbd.nbQ(),))
 
         scale_factor = []
         for marker_pair in self.marker_pairs:
@@ -129,10 +129,10 @@ class SegmentWiseScaling:
             )
 
             # Distance between the marker pairs in the original model
-            marker1_position_original = original_model.markers(q_zeros)[
+            marker1_position_original = original_model_biorbd.markers(q_zeros)[
                 original_marker_names.index(marker_pair[0])
             ].to_array()
-            marker2_position_original = original_model.markers(q_zeros)[
+            marker2_position_original = original_model_biorbd.markers(q_zeros)[
                 original_marker_names.index(marker_pair[1])
             ].to_array()
             distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
@@ -167,7 +167,7 @@ class BodyWiseScaling:
         self.height = height
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model: biorbd.Model
+        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
     ) -> ScaleFactor:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 

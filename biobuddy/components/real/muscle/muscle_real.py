@@ -251,9 +251,12 @@ class MuscleReal:
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
         out_string += f"\toriginposition\t{np.round(self.origin_position[0, 0], 4)}\t{np.round(self.origin_position[1, 0], 4)}\t{np.round(self.origin_position[2, 0], 4)}\n"
         out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0, 0], 4)}\t{np.round(self.insertion_position[1, 0], 4)}\t{np.round(self.insertion_position[2, 0], 4)}\n"
-        out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
+        if self.optimal_length is not None:
+            out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
         out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
-        out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
-        out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
+        if self.tendon_slack_length is not None:
+            out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
+        if self.pennation_angle is not None:
+            out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
         out_string += "endmuscle\n"
         return out_string

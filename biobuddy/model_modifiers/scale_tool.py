@@ -1,5 +1,6 @@
-import biorbd
+from copy import deepcopy
 from enum import Enum
+from scipy import optimize
 
 import numpy as np
 from ezc3d import c3d
@@ -26,7 +27,10 @@ class ScaleTool:
     def __init__(self, personalize_mass_distribution: bool = True, max_marker_movement: float = 0.1):
 
         self.original_model = BiomechanicalModelReal()
+        self.original_model_biorbd = None  # This original model is defined by self.scale
         self.scaled_model = BiomechanicalModelReal()
+        self.scaled_model_biorbd = None  # This scaled model is defined later when the segment shape is defined
+
         self.header = ""
         self.original_mass = None
         self.personalize_mass_distribution = personalize_mass_distribution
@@ -53,6 +57,7 @@ class ScaleTool:
 
         # Initialize the original and scaled models
         self.original_model = original_model
+        self.original_model_biorbd = self.original_model.get_biorbd_model
 
         # Check file format
         if not static_trial.endswith(".c3d"):
@@ -80,7 +85,10 @@ class ScaleTool:
         self.check_segments()
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
+        self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
+        q_static = self.place_model_in_static_pose(marker_positions, marker_names)
+        self.replace_markers_on_segments(q_static)
         self.modify_muscle_parameters()
 
     def check_units(self, c3d_file: c3d) -> float:
@@ -141,7 +149,6 @@ class ScaleTool:
 
     def get_scaling_factors_and_masses(
         self,
-        original_model_biorbd: biorbd.Model,
         marker_positions: np.ndarray,
         marker_names: list[str],
         mass: float,
@@ -154,7 +161,7 @@ class ScaleTool:
         for segment_name in self.scaling_segments.keys():
             # Compute the scale factors
             scaling_factors[segment_name] = self.scaling_segments[segment_name].compute_scaling_factors(
-                marker_positions, marker_names, original_model_biorbd
+                marker_positions, marker_names, self.original_model_biorbd
             )
             # Get each segment's scaled mass
             if self.personalize_mass_distribution:
@@ -175,11 +182,10 @@ class ScaleTool:
 
     def scale_model_geometrically(self, marker_positions: np.ndarray, marker_names: list[str], mass: float):
 
-        original_model_biorbd = self.original_model.get_biorbd_model
-        original_mass = original_model_biorbd.mass()
+        original_mass = self.original_model_biorbd.mass()
 
         scaling_factors, segment_masses = self.get_scaling_factors_and_masses(
-            original_model_biorbd, marker_positions, marker_names, mass, original_mass
+            marker_positions, marker_names, mass, original_mass
         )
 
         self.scaled_model.header = self.original_model.header + f"\nModel scaled using Biobuddy.\n"
@@ -189,7 +195,7 @@ class ScaleTool:
         for segment_name in self.original_model.segments.keys():
             if segment_name not in self.scaling_segments.keys():
                 # If the segment is not scaled, copy it to the scaled model
-                self.scaled_model.segments[segment_name] = self.original_model.segments[segment_name].copy()
+                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
             else:
                 this_segment_scale_factor = scaling_factors[segment_name].to_vector()
 
@@ -222,7 +228,7 @@ class ScaleTool:
                     self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
         # Set muscle groups
-        self.scaled_model.muscle_groups = self.original_model.muscle_groups.copy()
+        self.scaled_model.muscle_groups = deepcopy(self.original_model.muscle_groups)
 
         # Scale muscles
         for muscle_name in self.original_model.muscles.keys():
@@ -266,7 +272,7 @@ class ScaleTool:
 
     @staticmethod
     def scale_rt(rt: np.ndarray, scale_factor: np.ndarray) -> np.ndarray:
-        rt_matrix = rt.copy()
+        rt_matrix = deepcopy(rt)
         rt_matrix[:3, 3] *= scale_factor.reshape(
             3,
         )
@@ -418,6 +424,66 @@ class ScaleTool:
             position=original_via_point.position * parent_scale_factor,
         )
         return scaled_via_point
+
+
+    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
+
+        def marker_diff(q: np.ndarray, markers_real: np.ndarray) -> np.ndarray:
+            markers_model = np.array(self.scaled_model_biorbd.markers(q))
+            nb_marker = markers_real.shape[1]
+            vect_pos_markers = np.zeros(3 * nb_marker)
+            for m, value in enumerate(markers_model):
+                vect_pos_markers[m * 3: (m + 1) * 3] = value.to_array()
+            return vect_pos_markers - np.reshape(markers_real.T, (3 * nb_marker,))
+
+        def marker_jacobian(q: np.ndarray) -> np.ndarray:
+            nb_q = q.shape[0]
+            jacobian_matrix = np.array(self.scaled_model_biorbd.markersJacobian(q))
+            nb_marker = markers_real.shape[1]
+            vec_jacobian = np.zeros((3 * nb_marker, nb_q))
+            for m, value in enumerate(jacobian_matrix):
+                vec_jacobian[m * 3: (m + 1) * 3, :] = value.to_array()
+            return vec_jacobian
+
+        marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
+        markers_real = marker_positions[:, marker_indices, :]
+        nb_frames = marker_positions.shape[2]
+        nb_q = self.scaled_model_biorbd.nbQ()
+        min_bound = np.ones((nb_q, )) * -np.pi
+        max_bound = np.ones((nb_q, )) * np.pi
+        init = np.ones((nb_q, )) * 0.0001
+
+        optimal_q = np.zeros((nb_q, nb_frames))
+        for f in range(nb_frames):
+            sol = optimize.least_squares(
+                fun=lambda q, marker_real: marker_diff(q, marker_real),
+                args=markers_real,
+                bounds=(min_bound, max_bound),
+                jac=lambda q: marker_jacobian(q),
+                x0=init,
+                method="lm",
+                xtol=1e-6,
+                tr_options=dict(disp=False),
+            )
+            optimal_q[:, f] = sol.x
+
+        if np.std(optimal_q, axis=0) > 20 * 180 / np.pi:
+            raise RuntimeError("The inverse kinematics shows more than 20° variance over the frame range specified."
+                               "Please verify that the model and subject are not positioned close to singularities (gimbal lock).")
+
+        return np.median(optimal_q, axis=0)
+
+
+    def replace_markers_on_segments(self, q_static, marker_positions: np.ndarray, marker_names: list[str]):
+        jcs = self.scaled_model_biorbd.globalJCS(q_static)
+        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
+            for marker in self.scaled_model.segments.markers:
+                marker_name = marker.name
+                marker_index = marker_names.index(marker_name)
+                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=0)
+                segment_jcs = jcs[i_segment].to_array()
+                marker.position = segment_jcs @ this_marker_position
+
 
     def modify_muscle_parameters(self):
         """
