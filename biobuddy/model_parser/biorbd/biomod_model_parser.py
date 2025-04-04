@@ -114,6 +114,8 @@ class BiomodModelParser:
                             muscle_group="",
                             position=None,
                         )
+                    elif token in ["mass", "scalingsegment"]:
+                        continue
                     else:
                         raise ValueError(f"Unknown component {token}")
 

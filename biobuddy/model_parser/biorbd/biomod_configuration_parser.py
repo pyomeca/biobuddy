@@ -1,9 +1,8 @@
 from time import strftime
 
-from .utils import tokenize_biomod, read_str, read_str_list
+from .utils import tokenize_biomod, read_str, read_str_list, read_float
 from ...components.real.rigidbody.segment_scaling import (
     SegmentScaling,
-    ScalingType,
     SegmentWiseScaling,
     AxisWiseScaling,
 )
@@ -54,8 +53,18 @@ class BiomodConfigurationParser:
                 token = read_str(next_token=next_token).lower()
 
                 if current_component is None:
+
                     if token == "scalingsegment":
                         current_component = SegmentScaling(name=read_str(next_token=next_token), scaling_type=None)
+
+                    elif token == "mass":
+                        if self.scale_tool.mass is not None:
+                            raise ValueError("Mass already defined")
+                        self.scale_tool.mass = read_float(next_token=next_token)
+
+                    elif token in ["version", "gravity", "segment", "imu", "marker", "musclegroup", "muscle", "viapoint"]:
+                        continue
+
                     else:
                         raise ValueError(f"Unknown component {token}")
 
