@@ -39,7 +39,7 @@ class ScaleTool:
         self.marker_weightings = {}
         self.warnings = ""
 
-    def scale(self, original_model: BiomechanicalModelReal, static_trial: str, frame_range: range, mass: float):
+    def scale(self, original_model: BiomechanicalModelReal, static_trial: str, frame_range: range, mass: float) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
 
@@ -88,8 +88,10 @@ class ScaleTool:
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
         q_static = self.place_model_in_static_pose(marker_positions, marker_names)
-        self.replace_markers_on_segments(q_static)
+        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
         self.modify_muscle_parameters()
+
+        return self.scaled_model
 
     def check_units(self, c3d_file: c3d) -> float:
         unit = c3d_file["parameters"]["POINT"]["UNITS"]["value"][0]
@@ -203,7 +205,7 @@ class ScaleTool:
                 if parent_name in self.scaling_segments.keys():
                     parent_scale_factor = scaling_factors[parent_name].to_vector()
                 else:
-                    parent_scale_factor = np.array([1.0, 1.0, 1.0])
+                    parent_scale_factor = np.ones((4, 1))
 
                 self.scaled_model.segments.append(
                     self.scale_segment(
@@ -273,7 +275,7 @@ class ScaleTool:
     @staticmethod
     def scale_rt(rt: np.ndarray, scale_factor: np.ndarray) -> np.ndarray:
         rt_matrix = deepcopy(rt)
-        rt_matrix[:3, 3] *= scale_factor.reshape(
+        rt_matrix[:3, 3] *= scale_factor[:3].reshape(
             3,
         )
         return rt_matrix
@@ -314,151 +316,86 @@ class ScaleTool:
             inertia=scaled_inertia,
         )
 
-        mesh_file = (
-            None
-            if original_segment.mesh_file is None
-            else MeshFileReal(
-                mesh_file_name=original_segment.mesh_file.mesh_file_name,
-                mesh_color=(
-                    None if original_segment.mesh_file.mesh_color is None else original_segment.mesh_file.mesh_color
-                ),
-                mesh_scale=(
-                    None
-                    if original_segment.mesh_file.mesh_scale is None
-                    else original_segment.mesh_file.mesh_scale * scale_factor
-                ),
-                mesh_rotation=(
-                    None
-                    if original_segment.mesh_file.mesh_rotation is None
-                    else original_segment.mesh_file.mesh_rotation
-                ),
-                mesh_translation=(
-                    None
-                    if original_segment.mesh_file.mesh_translation is None
-                    else original_segment.mesh_file.mesh_translation * scale_factor
-                ),
-            )
-        )
+        mesh_file = deepcopy(original_segment.mesh_file)
+        mesh_file.mesh_scale *= scale_factor
+        mesh_file.mesh_translation *= scale_factor
 
-        scaled_segment = SegmentReal(
-            name=original_segment.name,
-            parent_name=original_segment.parent_name,
-            segment_coordinate_system=segment_coordinate_system,
-            translations=original_segment.translations,
-            rotations=original_segment.rotations,
-            q_ranges=original_segment.q_ranges,
-            qdot_ranges=original_segment.qdot_ranges,
-            inertia_parameters=inertia_parameters,
-            mesh_file=mesh_file,
-        )
+        scaled_segment = deepcopy(original_segment)
+        scaled_segment.segment_coordinate_system = segment_coordinate_system
+        scaled_segment.inertia_parameters = inertia_parameters
+        scaled_segment.mesh_file = mesh_file
 
         return scaled_segment
 
     def scale_marker(self, original_marker: MarkerReal, scale_factor: np.ndarray) -> MarkerReal:
-        scaled_marker = MarkerReal(
-            name=original_marker.name,
-            parent_name=original_marker.parent_name,
-            position=original_marker.position.reshape(
-                -1,
-            )[:3]
-            * scale_factor,
-            is_technical=original_marker.is_technical,
-            is_anatomical=original_marker.is_anatomical,
-        )
+        scaled_marker = deepcopy(original_marker)
+        scaled_marker.position *= scale_factor
         return scaled_marker
 
     def scale_contact(self, original_contact: ContactReal, scale_factor: np.ndarray) -> ContactReal:
-        scaled_contact = ContactReal(
-            name=original_contact.name,
-            parent_name=original_contact.parent_name,
-            position=original_contact.position.reshape(
-                -1,
-            )[:3]
-            * scale_factor,
-            axis=original_contact.axis,
-        )
+        scaled_contact = deepcopy(original_contact)
+        scaled_contact.position *= scale_factor
         return scaled_contact
 
     def scale_imu(
         self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
     ) -> InertialMeasurementUnitReal:
-        scaled_imu = InertialMeasurementUnitReal(
-            name=original_imu.name,
-            parent_name=original_imu.parent_name,
-            scs=self.scale_rt(original_imu.scs, scale_factor),
-            is_technical=original_imu.is_technical,
-            is_anatomical=original_imu.is_anatomical,
-        )
+        scaled_imu = deepcopy(original_imu)
+        scaled_imu.scs = self.scale_rt(original_imu.scs, scale_factor)
         return scaled_imu
 
     def scale_muscle(
         self, original_muscle: MuscleReal, origin_scale_factor: np.ndarray, insertion_scale_factor: np.ndarray
     ) -> MuscleReal:
-        scaled_muscle = MuscleReal(
-            name=original_muscle.name,
-            muscle_type=original_muscle.muscle_type,
-            state_type=original_muscle.state_type,
-            muscle_group=original_muscle.muscle_group,
-            origin_position=original_muscle.origin_position.reshape(
-                -1,
-            )[:3]
-            * origin_scale_factor,
-            insertion_position=original_muscle.insertion_position.reshape(
-                -1,
-            )[:3]
-            * insertion_scale_factor,
-            optimal_length=None,  # Will be set later
-            maximal_force=original_muscle.maximal_force,
-            tendon_slack_length=None,  # Will be set later
-            pennation_angle=None,  # Will be set later
-            maximal_excitation=original_muscle.maximal_excitation,
-        )
+        scaled_muscle = deepcopy(original_muscle)
+        scaled_muscle.origin_position *= origin_scale_factor
+        scaled_muscle.insertion_position *= insertion_scale_factor
+        scaled_muscle.optimal_length=None,  # Will be set later
+        scaled_muscle.tendon_slack_length=None,  # Will be set later
         return scaled_muscle
 
     def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
-        scaled_via_point = ViaPointReal(
-            name=original_via_point.name,
-            parent_name=original_via_point.parent_name,
-            muscle_name=original_via_point.muscle_name,
-            muscle_group=original_via_point.muscle_group,
-            position=original_via_point.position * parent_scale_factor,
-        )
+        scaled_via_point = deepcopy(original_via_point)
+        scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
 
     def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
-        def marker_diff(q: np.ndarray, markers_real: np.ndarray) -> np.ndarray:
+        def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
             markers_model = np.array(self.scaled_model_biorbd.markers(q))
-            nb_marker = markers_real.shape[1]
+            nb_marker = experimental_markers.shape[1]
             vect_pos_markers = np.zeros(3 * nb_marker)
             for m, value in enumerate(markers_model):
                 vect_pos_markers[m * 3: (m + 1) * 3] = value.to_array()
-            return vect_pos_markers - np.reshape(markers_real.T, (3 * nb_marker,))
+            # TODO: setup the IKTask to set the "q_ref" to something else than zero.
+            regularization_weight = 0.0001
+            out = np.hstack((
+                    vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)),
+                    regularization_weight * q))
+            return out
 
         def marker_jacobian(q: np.ndarray) -> np.ndarray:
             nb_q = q.shape[0]
             jacobian_matrix = np.array(self.scaled_model_biorbd.markersJacobian(q))
-            nb_marker = markers_real.shape[1]
-            vec_jacobian = np.zeros((3 * nb_marker, nb_q))
+            nb_marker = jacobian_matrix.shape[0]
+            vec_jacobian = np.zeros((3 * nb_marker + nb_q, nb_q))
             for m, value in enumerate(jacobian_matrix):
                 vec_jacobian[m * 3: (m + 1) * 3, :] = value.to_array()
+            for i_q in range(nb_q):
+                vec_jacobian[nb_marker*3 + i_q, i_q] = 1
             return vec_jacobian
 
         marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
         markers_real = marker_positions[:, marker_indices, :]
         nb_frames = marker_positions.shape[2]
         nb_q = self.scaled_model_biorbd.nbQ()
-        min_bound = np.ones((nb_q, )) * -np.pi
-        max_bound = np.ones((nb_q, )) * np.pi
         init = np.ones((nb_q, )) * 0.0001
 
         optimal_q = np.zeros((nb_q, nb_frames))
         for f in range(nb_frames):
             sol = optimize.least_squares(
-                fun=lambda q, marker_real: marker_diff(q, marker_real),
-                args=markers_real,
-                bounds=(min_bound, max_bound),
+                fun=lambda q: marker_diff(q, markers_real[:, :, f]),
                 jac=lambda q: marker_jacobian(q),
                 x0=init,
                 method="lm",
@@ -467,29 +404,37 @@ class ScaleTool:
             )
             optimal_q[:, f] = sol.x
 
-        if np.std(optimal_q, axis=0) > 20 * 180 / np.pi:
+        if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
             raise RuntimeError("The inverse kinematics shows more than 20° variance over the frame range specified."
                                "Please verify that the model and subject are not positioned close to singularities (gimbal lock).")
 
-        return np.median(optimal_q, axis=0)
+        return np.median(optimal_q, axis=1)
 
 
     def replace_markers_on_segments(self, q_static, marker_positions: np.ndarray, marker_names: list[str]):
-        jcs = self.scaled_model_biorbd.globalJCS(q_static)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
-            for marker in self.scaled_model.segments.markers:
+            for marker in self.scaled_model.segments[segment_name].markers:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)
-                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=0)
-                segment_jcs = jcs[i_segment].to_array()
-                marker.position = segment_jcs @ this_marker_position
+                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
+                segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment).to_array()
+                marker.position = segment_jcs @ np.hstack((this_marker_position, 1))
 
 
     def modify_muscle_parameters(self):
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
         """
-        print("TODO")
+        muscle_names = [m.to_string() for m in  self.original_model_biorbd.muscleNames()]
+        q_zeros = np.zeros((self.original_model_biorbd.nbQ(),))
+        for muscle_name in self.original_model.muscles.keys():
+            muscle_idx = muscle_names.index(muscle_name)
+            original_muscle_length = self.original_model_biorbd.muscle(muscle_idx).length(self.original_model_biorbd, q_zeros)
+            scaled_muscle_length = self.scaled_model_biorbd.muscle(muscle_idx).length(self.scaled_model_biorbd, q_zeros)
+            if self.original_model.muscles[muscle_name].optimal_length is None:
+                print("sss")
+            self.scaled_model.muscles[muscle_name].optimal_length = self.original_model.muscles[muscle_name].optimal_length * scaled_muscle_length / original_muscle_length
+            self.scaled_model.muscles[muscle_name].tendon_slack_length = self.original_model.muscles[muscle_name].tendon_slack_length * scaled_muscle_length / original_muscle_length
 
     @staticmethod
     def from_biomod(

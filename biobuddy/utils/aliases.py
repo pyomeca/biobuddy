@@ -20,6 +20,7 @@ def point_to_array(name: str, point: Point) -> np.ndarray:
     np.ndarray
         The point as a numpy array
     """
+    # TODO: move this to def initialize_point() and return None here instead
     if point is None:
         return np.ndarray((4, 0))
 

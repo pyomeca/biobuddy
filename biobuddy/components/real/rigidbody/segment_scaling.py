@@ -39,9 +39,7 @@ class ScaleFactor:
             raise KeyError(f"Invalid key: {key}")
 
     def to_vector(self) -> np.ndarray:
-        return np.array([self.x, self.y, self.z]).reshape(
-            3,
-        )
+        return np.hstack((np.array([self.x, self.y, self.z]), 1.0)).reshape(4, 1)
 
 
 class AxisWiseScaling:

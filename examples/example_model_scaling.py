@@ -11,9 +11,8 @@ from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshPa
 def main():
     # Paths
     current_path_file = Path(__file__).parent
-    geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
-    geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
+    biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
     xml_filepath = f"{current_path_file}/models/wholebody.xml"
     scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
     static_file_path = f"{current_path_file}/data/static.c3d"
@@ -30,6 +29,9 @@ def main():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+
+    # Translate into biomod
+    model.to_biomod(biomod_file_path)
 
     # Setup the scaling configuration (which markers to use)
     scale_tool = ScaleTool.from_xml(filepath=xml_filepath)
@@ -55,16 +57,22 @@ def main():
     # Visualization
     t = np.linspace(0, 1, 10)
     viz = pyorerun.PhaseRerun(t)
+    q = np.zeros((42, 10))
+
+    # Biorbd model translated from .osim
+    viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
+    viz_biomod_model.options.transparent_mesh = False
+    viz_biomod_model.options.show_gravity = True
+    viz.add_animated_model(viz_biomod_model, q)
 
     # Model output
-    model = pyorerun.BiorbdModel(scaled_biomod_file_path)
-    model.options.transparent_mesh = False
-    model.options.show_gravity = True
-    q = np.zeros((model.nb_q, 10))
-    viz.add_animated_model(model, q)
+    viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
+    viz_scaled_model.options.transparent_mesh = False
+    viz_scaled_model.options.show_gravity = True
+    viz.add_animated_model(viz_scaled_model, q)
 
-    # TODO: Add the osim model
-    #  but DO NOT SCALE IN OPENSIM as it is broken (aka, the main reason why we are implementing this)
+    # TODO: Add the osim models
+    #  but DO NOT SCALE IN OPENSIM Python-API as it is broken (aka, the main reason why we are implementing this)
 
     # Animate
     viz.rerun_by_frame("Model output")
