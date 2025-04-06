@@ -3,6 +3,7 @@ from typing import Callable
 import numpy as np
 
 from ....utils.protocols import Data
+from ....utils.aliases import point_to_array
 
 
 class MeshFileReal:
@@ -28,11 +29,63 @@ class MeshFileReal:
         mesh_translation
             The translation that must be applied to the mesh (XYZ)
         """
+        # TODO: create the def initialize_point(), to skip the if is None
         self.mesh_file_name = mesh_file_name
         self.mesh_color = mesh_color
-        self.mesh_scale = mesh_scale
-        self.mesh_rotation = mesh_rotation
-        self.mesh_translation = mesh_translation
+        self.mesh_scale = None if mesh_scale is None else point_to_array("mesh_scale", mesh_scale)
+        self.mesh_rotation = None if mesh_rotation is None else point_to_array("mesh_rotation", mesh_rotation)
+        self.mesh_translation = (
+            None if mesh_translation is None else point_to_array("mesh_translation", mesh_translation)
+        )
+
+    @property
+    def mesh_file_name(self) -> str:
+        return self._mesh_file_name
+
+    @mesh_file_name.setter
+    def mesh_file_name(self, value: str):
+        self._mesh_file_name = value
+
+    @property
+    def mesh_color(self) -> np.ndarray[float]:
+        return self._mesh_color
+
+    @mesh_color.setter
+    def mesh_color(self, value: np.ndarray[float]):
+        self._mesh_color = value
+
+    @property
+    def mesh_scale(self) -> np.ndarray:
+        if self._mesh_scale is None:
+            return np.ones((4, 1))
+        else:
+            return self._mesh_scale
+
+    @mesh_scale.setter
+    def mesh_scale(self, value: np.ndarray[float]):
+        self._mesh_scale = None if value is None else point_to_array("mesh_scale", value)
+
+    @property
+    def mesh_rotation(self) -> np.ndarray:
+        if self._mesh_rotation is None:
+            return np.zeros((4, 1))
+        else:
+            return self._mesh_rotation
+
+    @mesh_rotation.setter
+    def mesh_rotation(self, value: np.ndarray[float]):
+        self._mesh_rotation = None if value is None else point_to_array("mesh_rotation", value)
+
+    @property
+    def mesh_translation(self) -> np.ndarray:
+        if self._mesh_translation is None:
+            return np.zeros((4, 1))
+        else:
+            return self._mesh_translation
+
+    @mesh_translation.setter
+    def mesh_translation(self, value: np.ndarray[float]):
+        self._mesh_translation = None if value is None else point_to_array("mesh_translation", value)
 
     @staticmethod
     def from_data(
@@ -122,7 +175,6 @@ class MeshFileReal:
             mesh_translation=mesh_translation,
         )
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
@@ -130,9 +182,9 @@ class MeshFileReal:
         if self.mesh_color is not None:
             out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
         if self.mesh_scale is not None:
-            out_string += f"\tmeshscale\t{self.mesh_scale[0]}\t{self.mesh_scale[1]}\t{self.mesh_scale[2]}\n"
+            out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"
         if self.mesh_rotation is not None and self.mesh_translation is not None:
-            out_string += f"\tmeshrt\t{self.mesh_rotation[0]}\t{self.mesh_rotation[1]}\t{self.mesh_rotation[2]}\txyz\t{self.mesh_translation[0]}\t{self.mesh_translation[1]}\t{self.mesh_translation[2]}\n"
+            out_string += f"\tmeshrt\t{self.mesh_rotation[0, 0]}\t{self.mesh_rotation[1, 0]}\t{self.mesh_rotation[2, 0]}\txyz\t{self.mesh_translation[0, 0]}\t{self.mesh_translation[1, 0]}\t{self.mesh_translation[2, 0]}\n"
         elif self.mesh_rotation is not None or self.mesh_translation is not None:
             raise RuntimeError("The mesh_rotation and mesh_translation must be both defined or both undefined")
         return out_string

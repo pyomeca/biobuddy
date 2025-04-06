@@ -4,7 +4,8 @@ import numpy as np
 from enum import Enum
 
 from .via_point_real import ViaPointReal
-from ....utils.aliases import Points, points_to_array
+from ....utils.aliases import Points, point_to_array
+from ....utils.named_list import NamedList
 from ....utils.protocols import Data
 
 
@@ -34,7 +35,6 @@ class MuscleReal:
         tendon_slack_length: float,
         pennation_angle: float,
         maximal_excitation: float,
-        via_points: list[ViaPointReal] = None,
     ):
         """
         Parameters
@@ -61,22 +61,123 @@ class MuscleReal:
             The pennation angle of the muscle
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
-        via_points
-            The via points of the muscle
         """
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
         self.muscle_group = muscle_group
-        self.origin_position = points_to_array(name="origin position", points=origin_position)
-        self.insertion_position = points_to_array(name="insertion position", points=insertion_position)
+        self.origin_position = origin_position
+        self.insertion_position = insertion_position
         self.optimal_length = optimal_length
         self.maximal_force = maximal_force
         self.tendon_slack_length = tendon_slack_length
         self.pennation_angle = pennation_angle
         self.maximal_excitation = maximal_excitation
-        self.via_points = via_points
         # TODO: missing PCSA and  maxVelocity
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def muscle_type(self) -> MuscleType:
+        return self._muscle_type
+
+    @muscle_type.setter
+    def muscle_type(self, value: MuscleType | str):
+        if isinstance(value, str):
+            value = MuscleType(value)
+        self._muscle_type = value
+
+    @property
+    def state_type(self) -> MuscleStateType:
+        return self._state_type
+
+    @state_type.setter
+    def state_type(self, value: MuscleStateType | str):
+        if isinstance(value, str):
+            value = MuscleStateType(value)
+        self._state_type = value
+
+    @property
+    def muscle_group(self) -> str:
+        return self._muscle_group
+
+    @muscle_group.setter
+    def muscle_group(self, value: str):
+        self._muscle_group = value
+
+    @property
+    def origin_position(self) -> np.ndarray:
+        return self._origin_position
+
+    @origin_position.setter
+    def origin_position(self, value: Points):
+        self._origin_position = point_to_array(name="origin position", point=value)
+
+    @property
+    def insertion_position(self) -> np.ndarray:
+        return self._insertion_position
+
+    @insertion_position.setter
+    def insertion_position(self, value: Points):
+        self._insertion_position = point_to_array(name="insertion position", point=value)
+
+    @property
+    def optimal_length(self) -> float:
+        return self._optimal_length
+
+    @optimal_length.setter
+    def optimal_length(self, value: float):
+        self._optimal_length = value
+
+    @property
+    def maximal_force(self) -> float:
+        return self._maximal_force
+
+    @maximal_force.setter
+    def maximal_force(self, value: float):
+        self._maximal_force = value
+
+    @property
+    def tendon_slack_length(self) -> float:
+        return self._tendon_slack_length
+
+    @tendon_slack_length.setter
+    def tendon_slack_length(self, value: float):
+        self._tendon_slack_length = value
+
+    @property
+    def pennation_angle(self) -> float:
+        return self._pennation_angle
+
+    @pennation_angle.setter
+    def pennation_angle(self, value: float):
+        self._pennation_angle = value
+
+    @property
+    def maximal_excitation(self) -> float:
+        return self._maximal_excitation
+
+    @maximal_excitation.setter
+    def maximal_excitation(self, value: float):
+        self._maximal_excitation = value
+
+    @property
+    def via_points(self) -> NamedList[ViaPointReal]:
+        return self._via_points
+
+    @via_points.setter
+    def via_points(self, value: NamedList[ViaPointReal] | None):
+        if value is None:
+            value = NamedList[ViaPointReal]()
+        if isinstance(value, list) and not isinstance(value, NamedList):
+            value = NamedList.from_list(value)
+        self._via_points = value
 
     @staticmethod
     def from_data(
@@ -142,18 +243,20 @@ class MuscleReal:
             maximal_excitation=maximal_excitation_function(data.values),
         )
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"muscle\t{self.name}\n"
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
-        out_string += f"\toriginposition\t{np.round(self.origin_position[0], 4)}\t{np.round(self.origin_position[1], 4)}\t{np.round(self.origin_position[2], 4)}\n"
-        out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0], 4)}\t{np.round(self.insertion_position[1], 4)}\t{np.round(self.insertion_position[2], 4)}\n"
-        out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
+        out_string += f"\toriginposition\t{np.round(self.origin_position[0, 0], 4)}\t{np.round(self.origin_position[1, 0], 4)}\t{np.round(self.origin_position[2, 0], 4)}\n"
+        out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0, 0], 4)}\t{np.round(self.insertion_position[1, 0], 4)}\t{np.round(self.insertion_position[2, 0], 4)}\n"
+        if isinstance(self.optimal_length, (float, int)):
+            out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
         out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
-        out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
-        out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
+        if isinstance(self.optimal_length, (float, int)):
+            out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
+        if isinstance(self.optimal_length, (float, int)):
+            out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
         out_string += "endmuscle\n"
         return out_string

@@ -5,6 +5,7 @@ from .mesh import Mesh
 from .mesh_file import MeshFile
 from .range_of_motion import RangeOfMotion, Ranges
 from .segment_coordinate_system import SegmentCoordinateSystem
+from ....utils.named_list import NamedList
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 
@@ -56,8 +57,8 @@ class Segment:
         self.rotations = rotations
         self.q_ranges = q_ranges
         self.qdot_ranges = qdot_ranges
-        self.markers = []
-        self.contacts = []
+        self.markers = NamedList[Marker]()
+        self.contacts = NamedList[Contact]()
         self.segment_coordinate_system = segment_coordinate_system
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh

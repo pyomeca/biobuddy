@@ -29,8 +29,40 @@ class ContactReal:
         """
         self.name = name
         self.parent_name = parent_name
-        self.position = point_to_array(name="contact", point=position)
+        self.position = position
         self.axis = axis
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str):
+        self._parent_name = value
+
+    @property
+    def position(self) -> np.ndarray:
+        return self._position
+
+    @position.setter
+    def position(self, value: Point):
+        self._position = point_to_array(name="position", point=value)
+
+    @property
+    def axis(self) -> Translations:
+        return self._axis
+
+    @axis.setter
+    def axis(self, value: Translations):
+        self._axis = value
 
     @staticmethod
     def from_data(
@@ -62,7 +94,6 @@ class ContactReal:
         p = points_to_array(name=f"contact real function", points=function(data.values))
         return ContactReal(name, parent_name, p, axis)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"

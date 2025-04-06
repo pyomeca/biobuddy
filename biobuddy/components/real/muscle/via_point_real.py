@@ -34,7 +34,47 @@ class ViaPointReal:
         self.parent_name = parent_name
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
-        self.position = points_to_array(name="viapoint", points=position)
+        self.position = position
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str) -> None:
+        self._parent_name = value
+
+    @property
+    def muscle_name(self) -> str:
+        return self._muscle_name
+
+    @muscle_name.setter
+    def muscle_name(self, value: str) -> None:
+        self._muscle_name = value
+
+    @property
+    def muscle_group(self) -> str:
+        return self._muscle_group
+
+    @muscle_group.setter
+    def muscle_group(self, value: str) -> None:
+        self._muscle_group = value
+
+    @property
+    def position(self) -> np.ndarray:
+        return self._position
+
+    @position.setter
+    def position(self, value: Points) -> None:
+        self._position = points_to_array(name="viapoint", points=value)
 
     @staticmethod
     def from_data(
@@ -69,13 +109,12 @@ class ViaPointReal:
         position = points_to_array(name="viapoint function", points=position_function(data.values))
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
         out_string += f"\tmuscle\t{self.muscle_name}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
-        out_string += f"\tposition\t{np.round(self.position[0], 4)}\t{np.round(self.position[1], 4)}\t{np.round(self.position[2], 4)}\n"
+        out_string += f"\tposition\t{np.round(self.position[0, 0], 4)}\t{np.round(self.position[1, 0], 4)}\t{np.round(self.position[2, 0], 4)}\n"
         out_string += "endviapoint\n"
         return out_string

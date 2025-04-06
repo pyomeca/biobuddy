@@ -1,3 +1,4 @@
+from enum import Enum
 import numpy as np
 
 from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
@@ -7,8 +8,24 @@ def point_on_vector(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarr
     return start + coef * (end - start)
 
 
+class Sex(Enum):
+    MALE = "male"
+    FEMALE = "female"
+
+
+class SegmentName(Enum):
+    HEAD = "HEAD"
+    TRUNK = "TRUNK"
+    UPPER_ARM = "UPPER_ARM"
+    LOWER_ARM = "LOWER_ARM"
+    HAND = "HAND"
+    THIGH = "THIGH"
+    SHANK = "SHANK"
+    FOOT = "FOOT"
+
+
 class DeLevaTable:
-    def __init__(self, total_mass: float, sex: str):
+    def __init__(self, total_mass: float, sex: Sex):
         """
         Implementation of the DeLeva table
         Parameters
@@ -20,9 +37,9 @@ class DeLevaTable:
         """
 
         self.sex = sex
-        self.de_leva_table = {
-            "male": {
-                "HEAD": InertiaParameters(
+        self.inertial_table = {
+            Sex.MALE: {
+                SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0694 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.5002, start=m["TOP_HEAD"], end=m["SHOULDER"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -32,7 +49,7 @@ class DeLevaTable:
                         end=m["SHOULDER"],
                     ),
                 ),
-                "TRUNK": InertiaParameters(
+                SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4346 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.5138, start=m["SHOULDER"], end=m["PELVIS"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -42,7 +59,7 @@ class DeLevaTable:
                         end=m["PELVIS"],
                     ),
                 ),
-                "UPPER_ARM": InertiaParameters(
+                SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0271 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.5772, start=m["SHOULDER"], end=m["ELBOW"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -52,7 +69,7 @@ class DeLevaTable:
                         end=m["ELBOW"],
                     ),
                 ),
-                "LOWER_ARM": InertiaParameters(
+                SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0162 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4574, start=m["ELBOW"], end=m["WRIST"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -62,7 +79,7 @@ class DeLevaTable:
                         end=m["WRIST"],
                     ),
                 ),
-                "HAND": InertiaParameters(
+                SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0061 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.7900, start=m["WRIST"], end=m["FINGER"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -72,7 +89,7 @@ class DeLevaTable:
                         end=m["FINGER"],
                     ),
                 ),
-                "THIGH": InertiaParameters(
+                SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.1416 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4095, start=m["PELVIS"], end=m["KNEE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -82,7 +99,7 @@ class DeLevaTable:
                         end=m["KNEE"],
                     ),
                 ),
-                "SHANK": InertiaParameters(
+                SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0433 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4459, start=m["KNEE"], end=m["ANKLE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -92,7 +109,7 @@ class DeLevaTable:
                         end=m["ANKLE"],
                     ),
                 ),
-                "FOOT": InertiaParameters(
+                SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0137 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4415, start=m["ANKLE"], end=m["TOE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -103,8 +120,8 @@ class DeLevaTable:
                     ),
                 ),
             },
-            "female": {
-                "HEAD": InertiaParameters(
+            Sex.FEMALE: {
+                SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0669 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4841, start=m["TOP_HEAD"], end=m["SHOULDER"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -114,7 +131,7 @@ class DeLevaTable:
                         end=m["SHOULDER"],
                     ),
                 ),
-                "TRUNK": InertiaParameters(
+                SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4257 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4964, start=m["SHOULDER"], end=m["PELVIS"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -124,7 +141,7 @@ class DeLevaTable:
                         end=m["PELVIS"],
                     ),
                 ),
-                "UPPER_ARM": InertiaParameters(
+                SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0255 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.5754, start=m["SHOULDER"], end=m["ELBOW"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -134,7 +151,7 @@ class DeLevaTable:
                         end=m["ELBOW"],
                     ),
                 ),
-                "LOWER_ARM": InertiaParameters(
+                SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0138 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4559, start=m["ELBOW"], end=m["WRIST"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -144,7 +161,7 @@ class DeLevaTable:
                         end=m["WRIST"],
                     ),
                 ),
-                "HAND": InertiaParameters(
+                SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0056 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.7474, start=m["WRIST"], end=m["FINGER"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -154,7 +171,7 @@ class DeLevaTable:
                         end=m["FINGER"],
                     ),
                 ),
-                "THIGH": InertiaParameters(
+                SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.1478 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.3612, start=m["PELVIS"], end=m["KNEE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -164,7 +181,7 @@ class DeLevaTable:
                         end=m["KNEE"],
                     ),
                 ),
-                "SHANK": InertiaParameters(
+                SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0481 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4416, start=m["KNEE"], end=m["ANKLE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -174,7 +191,7 @@ class DeLevaTable:
                         end=m["ANKLE"],
                     ),
                 ),
-                "FOOT": InertiaParameters(
+                SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 2 * 0.0129 * total_mass,
                     center_of_mass=lambda m, bio: point_on_vector(0.4014, start=m["ANKLE"], end=m["TOE"]),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -187,12 +204,12 @@ class DeLevaTable:
             },
         }
 
-    def __getitem__(self, name: str):
+    def __getitem__(self, segment_name: str):
         """
         The inertia paremeters for a particular segment
         Parameters
         ----------
-        name
+        segment_name
             The name of the segment
         """
-        return self.de_leva_table[self.sex][name]
+        return self.inertial_table[self.sex][segment_name]

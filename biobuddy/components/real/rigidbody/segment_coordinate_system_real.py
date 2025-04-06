@@ -8,7 +8,6 @@ from ....utils.aliases import Point, Points
 from ....utils.linear_algebra import (
     euler_and_translation_to_matrix,
     mean_homogenous_matrix,
-    to_euler,
     transpose_homogenous_matrix,
     multiply_homogeneous_matrix,
 )
@@ -20,7 +19,6 @@ class SegmentCoordinateSystemReal:
         scs: np.ndarray = np.identity(4),
         parent_scs: Self = None,
         is_scs_local: bool = False,
-        rt_in_matrix: bool = None,
     ):
         """
         Parameters
@@ -33,14 +31,38 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
-        if scs.shape != (4, 4):
-            raise ValueError("The scs must be a 4x4 matrix")
         self.scs = scs
-        if len(self.scs.shape) == 2:
-            self.scs = self.scs[:, :, np.newaxis]
         self.parent_scs = parent_scs
         self.is_in_global = not is_scs_local
-        self.rt_in_matrix = rt_in_matrix
+
+    @property
+    def scs(self) -> np.ndarray:
+        return self._scs
+
+    @scs.setter
+    def scs(self, value: np.ndarray):
+        if value.shape not in ((4, 4), (4, 4, 1)):
+            raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
+
+        if len(value.shape) == 2:
+            value = value[:, :, None]
+        self._scs = value
+
+    @property
+    def parent_scs(self) -> Self:
+        return self._parent_scs
+
+    @parent_scs.setter
+    def parent_scs(self, value: Self):
+        self._parent_scs = value
+
+    @property
+    def is_in_global(self) -> bool:
+        return self._is_in_global
+
+    @is_in_global.setter
+    def is_in_global(self, value: bool):
+        self._is_in_global = value
 
     @staticmethod
     def from_markers(
@@ -49,7 +71,7 @@ class SegmentCoordinateSystemReal:
         second_axis: AxisReal,
         axis_to_keep: AxisReal.Name,
         parent_scs: Self = None,
-    ) -> Self:
+    ) -> "SegmentCoordinateSystemReal":
         """
         Parameters
         ----------
@@ -112,7 +134,7 @@ class SegmentCoordinateSystemReal:
     def from_rt_matrix(
         rt_matrix: np.ndarray,
         parent_scs: Self = None,
-    ) -> Self:
+    ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
 
@@ -124,7 +146,7 @@ class SegmentCoordinateSystemReal:
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
         """
-        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True, rt_in_matrix=True)
+        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
 
     @staticmethod
     def from_euler_and_translation(
@@ -132,7 +154,7 @@ class SegmentCoordinateSystemReal:
         angle_sequence: str,
         translations: Point,
         parent_scs: Self = None,
-    ) -> Self:
+    ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
 
@@ -150,7 +172,7 @@ class SegmentCoordinateSystemReal:
         """
 
         rt = euler_and_translation_to_matrix(angles=angles, angle_sequence=angle_sequence, translations=translations)
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True, rt_in_matrix=False)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True)
 
     def copy(self):
         return SegmentCoordinateSystemReal(scs=np.array(self.scs), parent_scs=self.parent_scs)
@@ -166,40 +188,23 @@ class SegmentCoordinateSystemReal:
         """
         return mean_homogenous_matrix(self.scs)
 
-    @property
     def to_biomod(self):
         rt = self.scs
         if self.is_in_global:
             rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
         out_string = ""
-        if self.rt_in_matrix:
-            mean_rt = mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
-            out_string += f"\tRTinMatrix	1\n"
-            out_string += f"\tRT\n"
-            out_string += (
-                f"\t\t{mean_rt[0, 0]:0.5f}\t{mean_rt[0, 1]:0.5f}\t{mean_rt[0, 2]:0.5f}\t{mean_rt[0, 3]:0.5f}\n"
-            )
-            out_string += (
-                f"\t\t{mean_rt[1, 0]:0.5f}\t{mean_rt[1, 1]:0.5f}\t{mean_rt[1, 2]:0.5f}\t{mean_rt[1, 3]:0.5f}\n"
-            )
-            out_string += (
-                f"\t\t{mean_rt[2, 0]:0.5f}\t{mean_rt[2, 1]:0.5f}\t{mean_rt[2, 2]:0.5f}\t{mean_rt[2, 3]:0.5f}\n"
-            )
-            out_string += (
-                f"\t\t{mean_rt[3, 0]:0.5f}\t{mean_rt[3, 1]:0.5f}\t{mean_rt[3, 2]:0.5f}\t{mean_rt[3, 3]:0.5f}\n"
-            )
-
-        else:
-            mean_rt = mean_homogenous_matrix(rt) if len(rt.shape) > 2 else rt
-            sequence = "xyz"
-            tx, ty, tz = mean_rt[0:3, 3]
-            rx, ry, rz = to_euler(mean_rt[:, :, np.newaxis], sequence)
-            out_string += f"\tRT\t{rx[0]:0.5f} {ry[0]:0.5f} {rz[0]:0.5f} {sequence} {tx:0.5f} {ty:0.5f} {tz:0.5f}"
+        mean_rt = mean_homogenous_matrix(rt) if rt.shape[2] > 1 else rt[:, :, 0]
+        out_string += f"\tRTinMatrix	1\n"
+        out_string += f"\tRT\n"
+        out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[1, 0]:0.6f}\t{mean_rt[1, 1]:0.6f}\t{mean_rt[1, 2]:0.6f}\t{mean_rt[1, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[2, 0]:0.6f}\t{mean_rt[2, 1]:0.6f}\t{mean_rt[2, 2]:0.6f}\t{mean_rt[2, 3]:0.6f}\n"
+        out_string += f"\t\t{mean_rt[3, 0]:0.6f}\t{mean_rt[3, 1]:0.6f}\t{mean_rt[3, 2]:0.6f}\t{mean_rt[3, 3]:0.6f}\n"
 
         return out_string
 
-    def __matmul__(self, other):
+    def __matmul__(self, other) -> np.ndarray:
         if isinstance(other, SegmentCoordinateSystemReal):
             other = other.scs
 
@@ -211,7 +216,7 @@ class SegmentCoordinateSystemReal:
         return multiply_homogeneous_matrix(self=self, other=other)
 
     @property
-    def transpose(self):
+    def transpose(self) -> Self:
         out = self.copy()
         out.scs = transpose_homogenous_matrix(out.scs)
         return out

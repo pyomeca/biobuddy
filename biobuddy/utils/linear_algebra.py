@@ -24,13 +24,13 @@ def euler_and_translation_to_matrix(
         is in parent's local reference frame
     """
 
-    angles = points_to_array(name="angles", points=angles)
-    translations = point_to_array(name="translations", point=translations)
+    angles = point_to_array(name="angles", point=angles).reshape((4,))
+    translations = point_to_array(name="translations", point=translations).reshape((4,))
 
     matrix = {
-        "x": lambda x: np.array(((1, 0, 0), (0, np.cos(x), -np.sin(x)), (0, np.sin(x), np.cos(x)))),
-        "y": lambda y: np.array(((np.cos(y), 0, np.sin(y)), (0, 1, 0), (-np.sin(y), 0, np.cos(y)))),
-        "z": lambda z: np.array(((np.cos(z), -np.sin(z), 0), (np.sin(z), np.cos(z), 0), (0, 0, 1))),
+        "x": lambda x: np.array([[1, 0, 0], [0, np.cos(x), -np.sin(x)], [0, np.sin(x), np.cos(x)]]),
+        "y": lambda y: np.array([[np.cos(y), 0, np.sin(y)], [0, 1, 0], [-np.sin(y), 0, np.cos(y)]]),
+        "z": lambda z: np.array([[np.cos(z), -np.sin(z), 0], [np.sin(z), np.cos(z), 0], [0, 0, 1]]),
     }
     rt = np.identity(4)
     for angle, axis in zip(angles, angle_sequence):
@@ -74,14 +74,14 @@ def to_euler(rt, sequence: str) -> np.ndarray:
     return np.array([rx, ry, rz])
 
 
-def transpose_homogenous_matrix(matrix: np.ndarray):
+def transpose_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     out = np.array(matrix).transpose((1, 0, 2))
     out[:3, 3, :] = np.einsum("ijk,jk->ik", -out[:3, :3, :], matrix[:3, 3, :])
     out[3, :3, :] = 0
     return out
 
 
-def multiply_homogeneous_matrix(self: np.ndarray, other: np.ndarray):
+def multiply_homogeneous_matrix(self: np.ndarray, other: np.ndarray) -> np.ndarray:
     if len(other.shape) == 3:  # If it is a RT @ RT
         return np.einsum("ijk,jlk->ilk", self.scs, other)
     elif len(other.shape) == 2:  # if it is a RT @ vector
@@ -90,12 +90,12 @@ def multiply_homogeneous_matrix(self: np.ndarray, other: np.ndarray):
         NotImplementedError("This multiplication is not implemented yet")
 
 
-def norm2(v):
+def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
 
 
-def compute_matrix_rotation(_rot_value):
+def compute_matrix_rotation(_rot_value) -> np.ndarray:
     rot_x = np.array(
         [
             [1, 0, 0],
@@ -123,14 +123,14 @@ def compute_matrix_rotation(_rot_value):
     return rot_matrix
 
 
-def rot2eul(rot):
+def rot2eul(rot) -> np.ndarray:
     beta = -np.arcsin(rot[2, 0])
     alpha = np.arctan2(rot[2, 1], rot[2, 2])
     gamma = np.arctan2(rot[1, 0], rot[0, 0])
     return np.array((alpha, beta, gamma))
 
 
-def coord_sys(axis):
+def coord_sys(axis) -> tuple[list[np.ndarray], str]:
     # define orthonormal coordinate system with given z-axis
     [a, b, c] = axis
     if a == 0:
@@ -162,7 +162,7 @@ def coord_sys(axis):
     return [x, y, z], ""
 
 
-def ortho_norm_basis(vector, idx):
+def ortho_norm_basis(vector, idx) -> np.ndarray:
     # build an orthogonal basis fom a vector
     basis = []
     v = np.random.random(3)
@@ -186,7 +186,7 @@ def ortho_norm_basis(vector, idx):
     return basis
 
 
-def is_ortho_basis(basis):
+def is_ortho_basis(basis) -> bool:
     return (
         False
         if np.dot(basis[0], basis[1]) != 0 or np.dot(basis[1], basis[2]) != 0 or np.dot(basis[0], basis[2]) != 0
@@ -238,11 +238,3 @@ class OrthoMatrix:
 
     def has_no_transformation(self):
         return np.all(self.get_matrix() == np.eye(4))
-
-
-def out_product(rotomatrix_1, rotomatrix_2):
-    rotomatrix_prod = OrthoMatrix()
-    rotomatrix_prod.set_translation(rotomatrix_1.get_translation() + rotomatrix_2.get_translation())
-    rotomatrix_prod.set_rotation_matrix(rotomatrix_1.get_rotation_matrix().dot(rotomatrix_2.get_rotation_matrix()))
-    rotomatrix_prod.get_matrix()
-    return rotomatrix_prod

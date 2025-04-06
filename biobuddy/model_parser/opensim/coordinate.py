@@ -6,7 +6,7 @@ from .utils import find_in_tree
 
 
 class Coordinate:
-    def __init__(self, name: str, type: str, default_value: float, range: list, clamped: bool, locked: bool):
+    def __init__(self, name: str, default_value: float, range: list, clamped: bool, locked: bool):
         self.name = name
         self.default_value = default_value
         self.range = range

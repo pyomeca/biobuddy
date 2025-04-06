@@ -1,7 +1,11 @@
+import os
 from typing import Self
+
+import biorbd
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
+from ...utils.named_list import NamedList
 
 
 class BiomechanicalModelReal:
@@ -12,11 +16,13 @@ class BiomechanicalModelReal:
         from .muscle.via_point_real import ViaPointReal
         from .rigidbody.segment_real import SegmentReal
 
+        self.header = ""
         self.gravity = None if gravity is None else point_to_array("gravity", gravity)
-        self.segments: dict[str, SegmentReal] = {}
-        self.muscle_groups: dict[str, MuscleGroup] = {}
-        self.muscles: dict[str, MuscleReal] = {}
-        self.via_points: dict[str, ViaPointReal] = {}
+        self.segments = NamedList[SegmentReal]()
+        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscles = NamedList[MuscleReal]()
+        self.via_points = NamedList[ViaPointReal]()
+        self.warnings = ""
 
     def remove_segment(self, segment_name: str):
         """
@@ -63,14 +69,19 @@ class BiomechanicalModelReal:
         self.via_points.pop(via_point_name)
 
     @staticmethod
-    def from_biomod() -> Self:
+    def from_biomod(
+        filepath: str,
+    ) -> Self:
         """
         Create a biomechanical model from a biorbd model
         """
+        from ...model_parser.biorbd import BiomodModelParser
+
+        return BiomodModelParser(filepath=filepath).to_real()
 
     @staticmethod
     def from_osim(
-        osim_path: str,
+        filepath: str,
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
@@ -80,7 +91,7 @@ class BiomechanicalModelReal:
 
         Parameters
         ----------
-        osim_path: str
+        filepath: str
             The path to the osim file to read from
         muscle_type: MuscleType
             The type of muscle to assume when interpreting the osim model
@@ -92,10 +103,10 @@ class BiomechanicalModelReal:
         from ...model_parser.opensim import OsimModelParser
 
         return OsimModelParser(
-            osim_path=osim_path, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
+            filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
 
-    def to_biomod(self, file_path: str):
+    def to_biomod(self, file_path: str, with_mesh: bool = True):
         """
         Write the bioMod file.
 
@@ -103,6 +114,8 @@ class BiomechanicalModelReal:
         ----------
         file_path
             The path to save the bioMod
+        with_mesh
+            If the mesh should be written to the bioMod file
         """
 
         # Collect the text to write
@@ -114,31 +127,34 @@ class BiomechanicalModelReal:
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
-        for name in self.segments:
-            out_string += self.segments[name].to_biomod
+        for segment in self.segments:
+            out_string += segment.to_biomod(with_mesh=with_mesh)
             out_string += "\n\n\n"  # Give some space between segments
 
-        out_string += "// --------------------------------------------------------------\n"
-        out_string += "// MUSCLE GROUPS\n"
-        out_string += "// --------------------------------------------------------------\n\n"
-        for name in self.muscle_groups:
-            out_string += self.muscle_groups[name].to_biomod
-            out_string += "\n"
-        out_string += "\n\n\n"  # Give some space after muscle groups
+        if self.muscle_groups:
+            out_string += "// --------------------------------------------------------------\n"
+            out_string += "// MUSCLE GROUPS\n"
+            out_string += "// --------------------------------------------------------------\n\n"
+            for muscle_group in self.muscle_groups:
+                out_string += muscle_group.to_biomod()
+                out_string += "\n"
+            out_string += "\n\n\n"  # Give some space after muscle groups
 
-        out_string += "// --------------------------------------------------------------\n"
-        out_string += "// MUSCLES\n"
-        out_string += "// --------------------------------------------------------------\n\n"
-        for name in self.muscles:
-            out_string += self.muscles[name].to_biomod
-            out_string += "\n\n\n"  # Give some space between muscles
+        if self.muscles:
+            out_string += "// --------------------------------------------------------------\n"
+            out_string += "// MUSCLES\n"
+            out_string += "// --------------------------------------------------------------\n\n"
+            for muscle in self.muscles:
+                out_string += muscle.to_biomod()
+                out_string += "\n\n\n"  # Give some space between muscles
 
-        out_string += "// --------------------------------------------------------------\n"
-        out_string += "// MUSCLES VIA POINTS\n"
-        out_string += "// --------------------------------------------------------------\n\n"
-        for name in self.via_points:
-            out_string += self.via_points[name].to_biomod
-            out_string += "\n\n\n"  # Give some space between via points
+        if self.via_points:
+            out_string += "// --------------------------------------------------------------\n"
+            out_string += "// MUSCLES VIA POINTS\n"
+            out_string += "// --------------------------------------------------------------\n\n"
+            for via_point in self.via_points:
+                out_string += via_point.to_biomod()
+                out_string += "\n\n\n"  # Give some space between via points
 
         if self.warnings:
             out_string += "\n/*-------------- WARNINGS---------------\n"
@@ -146,9 +162,12 @@ class BiomechanicalModelReal:
                 out_string += "\n" + warning
             out_string += "*/\n"
 
+        # removing any character that is not ascii readable from the out_string before writing the model
+        cleaned_string = out_string.encode("ascii", "ignore").decode()
+
         # Write it to the .bioMod file
         with open(file_path, "w") as file:
-            file.write(out_string)
+            file.write(cleaned_string)
 
     def to_osim(self, save_path: str, header: str = "", print_warnings: bool = True):
         """
@@ -162,3 +181,33 @@ class BiomechanicalModelReal:
             If the function should print warnings or not in the osim output file if problems are encountered
         """
         raise NotImplementedError("meh")
+
+        # removing any character that is not ascii readable from the out_string before writing the model
+        cleaned_string = out_string.encode("ascii", "ignore").decode()
+
+        # Write it to the .osim file
+        with open(file_path, "w") as file:
+            file.write(cleaned_string)
+
+    @property
+    def get_biorbd_model(self) -> biorbd.Model:
+
+        # TODO: generalize this step for other geometry paths
+        temporary_path = "models/temporary.bioMod"
+        try:
+            self.to_biomod(temporary_path)
+        except:
+            raise RuntimeError(
+                f"The temporary file '{temporary_path}' could not be created. Please make sure that path {os.path} has the appropriate permissions."
+            )
+
+        biorbd_model = biorbd.Model(temporary_path)
+
+        try:
+            os.remove(temporary_path)
+        except:
+            raise RuntimeError(
+                f"The temporary file '{temporary_path}' could not be deleted. Please make sure that path {os.path} has the appropriate permissions."
+            )
+
+        return biorbd_model

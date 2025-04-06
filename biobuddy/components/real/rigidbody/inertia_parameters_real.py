@@ -26,12 +26,38 @@ class InertiaParametersReal:
             The inertia xx, yy and zz parameters of the segment
         """
         self.mass = mass
-        self.center_of_mass = (
-            None if center_of_mass is None else points_to_array(name="center of mass", points=center_of_mass)
-        )
-        self.inertia = None if inertia is None else points_to_array(name="inertia", points=inertia)
-        if self.inertia is not None and self.inertia.shape[1] not in [1, 3]:
-            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {inertia.shape}")
+        self.center_of_mass = center_of_mass
+        self.inertia = inertia
+
+    @property
+    def mass(self) -> float:
+        return self._mass
+
+    @mass.setter
+    def mass(self, value: float):
+        self._mass = value
+
+    @property
+    def center_of_mass(self) -> np.ndarray:
+        return self._center_of_mass
+
+    @center_of_mass.setter
+    def center_of_mass(self, value: Points):
+        self._center_of_mass = points_to_array(name="center of mass", points=value)
+
+    @property
+    def inertia(self) -> np.ndarray:
+        return self._inertia
+
+    @inertia.setter
+    def inertia(self, value: Points):
+        self._inertia = points_to_array(name="inertia", points=value)
+        if self.inertia.shape[1] == 0:
+            return
+        if self.inertia.shape[1] == 1:
+            self._inertia = np.diag(self.inertia[:, 0])
+        elif self.inertia.shape[1] != 3:
+            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
 
     @staticmethod
     def from_data(
@@ -74,23 +100,19 @@ class InertiaParametersReal:
 
         return InertiaParametersReal(mass, com, inertia)
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         if self.mass is not None:
             out_string = f"\tmass\t{self.mass}\n"
 
-        if self.center_of_mass is not None:
+        if np.any(self.center_of_mass):
             com = np.nanmean(self.center_of_mass, axis=1)[:3]
-            out_string += f"\tCenterOfMass\t{com[0]:0.5f}\t{com[1]:0.5f}\t{com[2]:0.5f}\n"
+            out_string += f"\tCenterOfMass\t{com[0]:0.6f}\t{com[1]:0.6f}\t{com[2]:0.6f}\n"
 
-        if self.inertia is not None:
-            if self.inertia.shape[1] == 1:
-                out_string += f"\tinertia_xxyyzz\t{self.inertia[0]}\t{self.inertia[1]}\t{self.inertia[2]}\n"
-            elif self.inertia.shape[1] == 3:
-                out_string += f"\tinertia\n"
-                out_string += f"\t\t{self.inertia[0, 0]}\t{self.inertia[0, 1]}\t{self.inertia[0, 2]}\n"
-                out_string += f"\t\t{self.inertia[1, 0]}\t{self.inertia[1, 1]}\t{self.inertia[1, 2]}\n"
-                out_string += f"\t\t{self.inertia[2, 0]}\t{self.inertia[2, 1]}\t{self.inertia[2, 2]}\n"
+        if np.any(self.inertia):
+            out_string += f"\tinertia\n"
+            out_string += f"\t\t{self.inertia[0, 0]:0.6f}\t{self.inertia[0, 1]:0.6f}\t{self.inertia[0, 2]:0.6f}\n"
+            out_string += f"\t\t{self.inertia[1, 0]:0.6f}\t{self.inertia[1, 1]:0.6f}\t{self.inertia[1, 2]:0.6f}\n"
+            out_string += f"\t\t{self.inertia[2, 0]:0.6f}\t{self.inertia[2, 1]:0.6f}\t{self.inertia[2, 2]:0.6f}\n"
 
         return out_string

@@ -27,7 +27,6 @@ class MuscleGroup:
         self.origin_parent_name = origin_parent_name
         self.insertion_parent_name = insertion_parent_name
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"musclegroup\t{self.name}\n"

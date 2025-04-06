@@ -19,8 +19,18 @@ class MeshReal:
         positions
             The 3d position of the all the mesh points
         """
+        self.positions = positions
 
-        self.positions = points_to_array(name="positions", points=positions)
+    @property
+    def positions(self) -> np.ndarray:
+        return self._positions
+
+    @positions.setter
+    def positions(self, value: Points):
+        self._positions = points_to_array(name="positions", points=value)
+
+    def add_positions(self, value: Points):
+        self._positions = np.hstack((self._positions, points_to_array(name="positions", points=value)))
 
     @staticmethod
     def from_data(
@@ -58,12 +68,12 @@ class MeshReal:
 
         return MeshReal(tuple(all_p))
 
-    @property
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
+        # Do a sanity check
+        if np.any(np.isnan(self.positions)):
+            raise RuntimeError("The mesh contains nan values")
+
         out_string = ""
-        for position in self.positions:
-            # Do a sanity check
-            p = np.nanmean(position, axis=1)
-            out_string += f"\tmesh\t{p[0]:0.4f}\t{p[1]:0.4f}\t{p[2]:0.4f}\n"
+        for p in self.positions.T:
+            out_string += f"\tmesh\t{p[0]:0.6f}\t{p[1]:0.6f}\t{p[2]:0.6f}\n"
         return out_string

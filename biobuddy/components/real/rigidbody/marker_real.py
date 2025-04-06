@@ -33,10 +33,50 @@ class MarkerReal:
         """
         self.name = name
         self.parent_name = parent_name
-        self.position = points_to_array(name="marker", points=position)
+        self.position = position
 
         self.is_technical = is_technical
         self.is_anatomical = is_anatomical
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str):
+        self._parent_name = value
+
+    @property
+    def position(self) -> np.ndarray:
+        return self._position
+
+    @position.setter
+    def position(self, value: Points):
+        self._position = points_to_array(name="marker", points=value)
+
+    @property
+    def is_technical(self) -> bool:
+        return self._is_technical
+
+    @is_technical.setter
+    def is_technical(self, value: bool):
+        self._is_technical = value
+
+    @property
+    def is_anatomical(self) -> bool:
+        return self._is_anatomical
+
+    @is_anatomical.setter
+    def is_anatomical(self, value: bool):
+        self._is_anatomical = value
 
     @staticmethod
     def from_data(
@@ -87,9 +127,15 @@ class MarkerReal:
         """
         Get the mean value of the marker position
         """
-        return np.nanmean(self.position, axis=1)
+        if len(self.position.shape) == 1:
+            return self.position
+        elif len(self.position.shape) == 2 and self.position.shape[0] == 4:
+            return np.nanmean(self.position, axis=1)
+        else:
+            raise NotImplementedError(
+                f"marker_real.position is of shape {self.position.shape}, but only shapes (4, ) or (4, nb_frames) are implemented."
+            )
 
-    @property
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"marker\t{self.name}\n"
