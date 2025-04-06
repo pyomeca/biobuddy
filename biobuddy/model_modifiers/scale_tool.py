@@ -39,7 +39,9 @@ class ScaleTool:
         self.marker_weightings = {}
         self.warnings = ""
 
-    def scale(self, original_model: BiomechanicalModelReal, static_trial: str, frame_range: range, mass: float) -> BiomechanicalModelReal:
+    def scale(
+        self, original_model: BiomechanicalModelReal, static_trial: str, frame_range: range, mass: float
+    ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
 
@@ -350,15 +352,14 @@ class ScaleTool:
         scaled_muscle = deepcopy(original_muscle)
         scaled_muscle.origin_position *= origin_scale_factor
         scaled_muscle.insertion_position *= insertion_scale_factor
-        scaled_muscle.optimal_length=None,  # Will be set later
-        scaled_muscle.tendon_slack_length=None,  # Will be set later
+        scaled_muscle.optimal_length = (None,)  # Will be set later
+        scaled_muscle.tendon_slack_length = (None,)  # Will be set later
         return scaled_muscle
 
     def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
         scaled_via_point = deepcopy(original_via_point)
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
-
 
     def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
@@ -367,12 +368,12 @@ class ScaleTool:
             nb_marker = experimental_markers.shape[1]
             vect_pos_markers = np.zeros(3 * nb_marker)
             for m, value in enumerate(markers_model):
-                vect_pos_markers[m * 3: (m + 1) * 3] = value.to_array()
+                vect_pos_markers[m * 3 : (m + 1) * 3] = value.to_array()
             # TODO: setup the IKTask to set the "q_ref" to something else than zero.
             regularization_weight = 0.0001
-            out = np.hstack((
-                    vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)),
-                    regularization_weight * q))
+            out = np.hstack(
+                (vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)), regularization_weight * q)
+            )
             return out
 
         def marker_jacobian(q: np.ndarray) -> np.ndarray:
@@ -381,16 +382,16 @@ class ScaleTool:
             nb_marker = jacobian_matrix.shape[0]
             vec_jacobian = np.zeros((3 * nb_marker + nb_q, nb_q))
             for m, value in enumerate(jacobian_matrix):
-                vec_jacobian[m * 3: (m + 1) * 3, :] = value.to_array()
+                vec_jacobian[m * 3 : (m + 1) * 3, :] = value.to_array()
             for i_q in range(nb_q):
-                vec_jacobian[nb_marker*3 + i_q, i_q] = 1
+                vec_jacobian[nb_marker * 3 + i_q, i_q] = 1
             return vec_jacobian
 
         marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
         markers_real = marker_positions[:, marker_indices, :]
         nb_frames = marker_positions.shape[2]
         nb_q = self.scaled_model_biorbd.nbQ()
-        init = np.ones((nb_q, )) * 0.0001
+        init = np.ones((nb_q,)) * 0.0001
 
         optimal_q = np.zeros((nb_q, nb_frames))
         for f in range(nb_frames):
@@ -405,11 +406,12 @@ class ScaleTool:
             optimal_q[:, f] = sol.x
 
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
-            raise RuntimeError("The inverse kinematics shows more than 20° variance over the frame range specified."
-                               "Please verify that the model and subject are not positioned close to singularities (gimbal lock).")
+            raise RuntimeError(
+                "The inverse kinematics shows more than 20° variance over the frame range specified."
+                "Please verify that the model and subject are not positioned close to singularities (gimbal lock)."
+            )
 
         return np.median(optimal_q, axis=1)
-
 
     def replace_markers_on_segments(self, q_static, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
@@ -420,21 +422,28 @@ class ScaleTool:
                 segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment).to_array()
                 marker.position = segment_jcs @ np.hstack((this_marker_position, 1))
 
-
     def modify_muscle_parameters(self):
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
         """
-        muscle_names = [m.to_string() for m in  self.original_model_biorbd.muscleNames()]
+        muscle_names = [m.to_string() for m in self.original_model_biorbd.muscleNames()]
         q_zeros = np.zeros((self.original_model_biorbd.nbQ(),))
         for muscle_name in self.original_model.muscles.keys():
             muscle_idx = muscle_names.index(muscle_name)
-            original_muscle_length = self.original_model_biorbd.muscle(muscle_idx).length(self.original_model_biorbd, q_zeros)
+            original_muscle_length = self.original_model_biorbd.muscle(muscle_idx).length(
+                self.original_model_biorbd, q_zeros
+            )
             scaled_muscle_length = self.scaled_model_biorbd.muscle(muscle_idx).length(self.scaled_model_biorbd, q_zeros)
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
-            self.scaled_model.muscles[muscle_name].optimal_length = self.original_model.muscles[muscle_name].optimal_length * scaled_muscle_length / original_muscle_length
-            self.scaled_model.muscles[muscle_name].tendon_slack_length = self.original_model.muscles[muscle_name].tendon_slack_length * scaled_muscle_length / original_muscle_length
+            self.scaled_model.muscles[muscle_name].optimal_length = (
+                self.original_model.muscles[muscle_name].optimal_length * scaled_muscle_length / original_muscle_length
+            )
+            self.scaled_model.muscles[muscle_name].tendon_slack_length = (
+                self.original_model.muscles[muscle_name].tendon_slack_length
+                * scaled_muscle_length
+                / original_muscle_length
+            )
 
     @staticmethod
     def from_biomod(

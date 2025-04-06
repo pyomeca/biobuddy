@@ -34,7 +34,9 @@ class MeshFileReal:
         self.mesh_color = mesh_color
         self.mesh_scale = None if mesh_scale is None else point_to_array("mesh_scale", mesh_scale)
         self.mesh_rotation = None if mesh_rotation is None else point_to_array("mesh_rotation", mesh_rotation)
-        self.mesh_translation = None if mesh_translation is None else point_to_array("mesh_translation", mesh_translation)
+        self.mesh_translation = (
+            None if mesh_translation is None else point_to_array("mesh_translation", mesh_translation)
+        )
 
     @property
     def mesh_file_name(self) -> str:

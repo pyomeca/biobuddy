@@ -132,7 +132,9 @@ class MarkerReal:
         elif len(self.position.shape) == 2 and self.position.shape[0] == 4:
             return np.nanmean(self.position, axis=1)
         else:
-            raise NotImplementedError(f"marker_real.position is of shape {self.position.shape}, but only shapes (4, ) or (4, nb_frames) are implemented.")
+            raise NotImplementedError(
+                f"marker_real.position is of shape {self.position.shape}, but only shapes (4, ) or (4, nb_frames) are implemented."
+            )
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

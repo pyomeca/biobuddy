@@ -62,7 +62,16 @@ class BiomodConfigurationParser:
                             raise ValueError("Mass already defined")
                         self.scale_tool.mass = read_float(next_token=next_token)
 
-                    elif token in ["version", "gravity", "segment", "imu", "marker", "musclegroup", "muscle", "viapoint"]:
+                    elif token in [
+                        "version",
+                        "gravity",
+                        "segment",
+                        "imu",
+                        "marker",
+                        "musclegroup",
+                        "muscle",
+                        "viapoint",
+                    ]:
                         continue
 
                     else:
