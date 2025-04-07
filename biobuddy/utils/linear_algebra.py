@@ -219,22 +219,59 @@ class OrthoMatrix:
         self.trans = trans
 
     def get_matrix(self):
-        self.matrix = np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
-        return self.matrix
+        return np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
 
     def transpose(self):
         self.rotation_matrix = np.transpose(self.rotation_matrix)
         self.trans = -self.rotation_matrix.dot(self.trans)
-        self.matrix = np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
         return self.matrix
 
     def product(self, other):
         self.rotation_matrix = self.rotation_matrix.dot(other.get_rotation_matrix())
         self.trans = self.trans + other.get_translation()
-        self.matrix = np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
+        return self.matrix
 
     def get_axis(self):
         return coord_sys(self.axe_1)[1] + coord_sys(self.axe_2)[1] + coord_sys(self.axe_3)[1]
 
     def has_no_transformation(self):
         return np.all(self.get_matrix() == np.eye(4))
+
+
+class RotoTransMatrix:
+    def __init__(self):
+        self.rt_matrix = None
+
+    def from_rotation_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+        rt_matrix = np.zeros((4, 4))
+        rt_matrix[:3, :3] = rotation_matrix[:3, :3]
+        rt_matrix[:3, 3] = translation
+        rt_matrix[3, 3] = 1.0
+        self.rt_matrix = rt_matrix
+
+    def from_rt_matrix(self, rt_matrix: np.ndarray):
+        self.rt_matrix = rt_matrix
+
+    @property
+    def translation(self):
+        return self.rt_matrix[:3, 3]
+
+    @property
+    def rotation_matrix(self):
+        return self.rt_matrix[:3, :3]
+
+    @property
+    def transpose(self) -> np.ndarray:
+
+        inverse_rotation_matrix = np.transpose(self.rotation_matrix)
+        inverse_translation = -self.rotation_matrix.dot(self.translation)
+
+        rt_matrix = np.zeros((4, 4))
+        rt_matrix[:3, :3] = inverse_rotation_matrix
+        rt_matrix[:3, 3] = inverse_translation
+        rt_matrix[3, 3] = 1.0
+
+        return rt_matrix
+
+
+

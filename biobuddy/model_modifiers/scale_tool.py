@@ -16,6 +16,7 @@ from ..components.real.rigidbody.mesh_file_real import MeshFileReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ..components.real.muscle.muscle_real import MuscleReal
 from ..components.real.muscle.via_point_real import ViaPointReal
+from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 
 
@@ -89,8 +90,7 @@ class ScaleTool:
         self.scale_model_geometrically(marker_positions, marker_names, mass)
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
-        q_static = self.place_model_in_static_pose(marker_positions, marker_names)
-        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
+        self.place_model_in_static_pose(marker_positions, marker_names)
         self.modify_muscle_parameters()
 
         return self.scaled_model
@@ -361,7 +361,8 @@ class ScaleTool:
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
-    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
+
+    def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
         def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
             markers_model = np.array(self.scaled_model_biorbd.markers(q))
@@ -413,14 +414,32 @@ class ScaleTool:
 
         return np.median(optimal_q, axis=1)
 
-    def replace_markers_on_segments(self, q_static, marker_positions: np.ndarray, marker_names: list[str]):
+
+    def make_static_pose_the_zero(self, q_static: np.ndarray):
+        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
+            segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
+            self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=segment_jcs,
+                parent_scs=None,
+                is_scs_local=False,  # joint coordinate system is now expressed in the global
+            )
+
+    def replace_markers_on_segments(self, q_static: np.ndarray, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             for marker in self.scaled_model.segments[segment_name].markers:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment).to_array()
-                marker.position = segment_jcs @ np.hstack((this_marker_position, 1))
+                segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
+                rt_matrix = RotoTransMatrix()
+                rt_matrix.from_rt_matrix(segment_jcs)
+                marker.position = rt_matrix.transpose @ np.hstack((this_marker_position, 1))
+
+    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]):
+        q_static = self.find_static_pose(marker_positions, marker_names)
+        self.make_static_pose_the_zero(q_static)
+        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
+
 
     def modify_muscle_parameters(self):
         """
