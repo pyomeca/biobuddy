@@ -234,16 +234,19 @@ class ScaleTool:
                 self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
 
             for marker in deepcopy(self.original_model.segments[segment_name].markers):
+                self.scaled_model.segments[segment_name].remove_marker(marker.name)
                 self.scaled_model.segments[segment_name].add_marker(
                     self.scale_marker(marker, this_segment_scale_factor)
                 )
 
             for contact in deepcopy(self.original_model.segments[segment_name].contacts):
+                self.scaled_model.segments[segment_name].remove_contact(contact.name)
                 self.scaled_model.segments[segment_name].add_contact(
                     self.scale_contact(contact, this_segment_scale_factor)
                 )
 
             for imu in deepcopy(self.original_model.segments[segment_name].imus):
+                self.scaled_model.segments[segment_name].remove_imu(imu.name)
                 self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
         # Set muscle groups

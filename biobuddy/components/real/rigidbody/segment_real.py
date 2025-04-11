@@ -161,6 +161,14 @@ class SegmentReal:
     def remove_contact(self, contact: ContactReal):
         self.contacts.remove(contact)
 
+    def add_imu(self, imu: InertialMeasurementUnitReal):
+        if imu.parent_name is None:
+            raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
+        self.imus.append(imu)
+
+    def remove_imu(self, imu: InertialMeasurementUnitReal):
+        self.imus.remove(imu)
+
     def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"segment\t{self.name}\n"
