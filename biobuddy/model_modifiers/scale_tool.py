@@ -138,7 +138,7 @@ class ScaleTool:
 
         # Check that all segments that bear mass are scaled.
         for segment_name in self.original_model.segments.keys():
-            inertia = self.original_model.segments[segment_name].inertia_parameters
+            inertia = deepcopy(self.original_model.segments[segment_name].inertia_parameters)
             if inertia is not None and inertia.mass > 0.1 and segment_name not in self.scaling_segments.keys():
                 raise RuntimeError(
                     f"The segment {segment_name} has a positive mass of {self.original_model.segments[segment_name].inertia_parameters.mass}, but is not defined in the scaling configuration."
@@ -170,12 +170,12 @@ class ScaleTool:
             # Get each segment's scaled mass
             if self.personalize_mass_distribution:
                 segment_masses[segment_name] = (
-                    self.original_model.segments[segment_name].inertia_parameters.mass
+                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
                     * scaling_factors[segment_name].to_vector()
                 )
             else:
                 segment_masses[segment_name] = (
-                    self.original_model.segments[segment_name].inertia_parameters.mass * mass / original_mass
+                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
                 )
             total_scaled_mass += segment_masses[segment_name]
         # Renormalize segment's mass to make sure the total mass is the mass of the subject
@@ -192,8 +192,8 @@ class ScaleTool:
             marker_positions, marker_names, mass, original_mass
         )
 
-        self.scaled_model.header = self.original_model.header + f"\nModel scaled using Biobuddy.\n"
-        self.scaled_model.gravity = self.original_model.gravity
+        self.scaled_model.header = deepcopy(self.original_model.header) + f"\nModel scaled using Biobuddy.\n"
+        self.scaled_model.gravity = deepcopy(self.original_model.gravity)
 
         for segment_name in self.original_model.segments.keys():
 
@@ -255,9 +255,9 @@ class ScaleTool:
         # Scale muscles
         for muscle_name in self.original_model.muscles.keys():
 
-            muscle_group_name = self.original_model.muscles[muscle_name].muscle_group
-            origin_parent_name = self.original_model.muscle_groups[muscle_group_name].origin_parent_name
-            insertion_parent_name = self.original_model.muscle_groups[muscle_group_name].insertion_parent_name
+            muscle_group_name = deepcopy(self.original_model.muscles[muscle_name].muscle_group)
+            origin_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].origin_parent_name)
+            insertion_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].insertion_parent_name)
             origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
             insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
 
@@ -266,29 +266,29 @@ class ScaleTool:
                 and insertion_parent_name not in self.scaling_segments.keys()
             ):
                 # If the muscle is not attached to a segment that is scaled, do not scale the muscle
-                self.scaled_model.muscles.append(self.original_model.muscles[muscle_name])
+                self.scaled_model.muscles.append(deepcopy(self.original_model.muscles[muscle_name]))
             else:
                 self.scaled_model.muscles.append(
                     self.scale_muscle(
-                        self.original_model.muscles[muscle_name], origin_scale_factor, insertion_scale_factor
+                        deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
                     )
                 )
 
         # Scale via points
         for via_point_name in self.original_model.via_points.keys():
 
-            parent_name = self.original_model.via_points[via_point_name].parent_name
+            parent_name = deepcopy(self.original_model.via_points[via_point_name].parent_name)
             parent_scale_factor = scaling_factors[parent_name].to_vector()
 
             if parent_name not in self.scaling_segments.keys():
                 # If the via point is not attached to a segment that is scaled, do not scale the via point
-                self.scaled_model.via_points.append(self.original_model.via_points[via_point_name])
+                self.scaled_model.via_points.append(deepcopy(self.original_model.via_points[via_point_name]))
             else:
                 self.scaled_model.via_points.append(
-                    self.scale_via_point(self.original_model.via_points[via_point_name], parent_scale_factor)
+                    self.scale_via_point(deepcopy(self.original_model.via_points[via_point_name]), parent_scale_factor)
                 )
 
-        self.scaled_model.warnings = self.original_model.warnings
+        self.scaled_model.warnings = deepcopy(self.original_model.warnings)
 
         return
 
@@ -474,10 +474,10 @@ class ScaleTool:
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
             self.scaled_model.muscles[muscle_name].optimal_length = (
-                self.original_model.muscles[muscle_name].optimal_length * scaled_muscle_length / original_muscle_length
+                deepcopy(self.original_model.muscles[muscle_name].optimal_length) * scaled_muscle_length / original_muscle_length
             )
             self.scaled_model.muscles[muscle_name].tendon_slack_length = (
-                self.original_model.muscles[muscle_name].tendon_slack_length
+                deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)
                 * scaled_muscle_length
                 / original_muscle_length
             )
