@@ -195,41 +195,56 @@ class ScaleTool:
         self.scaled_model.header = self.original_model.header + f"\nModel scaled using Biobuddy.\n"
         self.scaled_model.gravity = self.original_model.gravity
 
-        # Scale segments
         for segment_name in self.original_model.segments.keys():
-            if segment_name not in self.scaling_segments.keys():
-                # If the segment is not scaled, copy it to the scaled model
-                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
-            else:
-                this_segment_scale_factor = scaling_factors[segment_name].to_vector()
 
-                parent_name = self.original_model.segments[segment_name].parent_name
-                if parent_name in self.scaling_segments.keys():
-                    parent_scale_factor = scaling_factors[parent_name].to_vector()
+            # Check if the segments has a ghost parent
+            if self.original_model.segments[segment_name].name + "_parent_offset" in self.original_model.segments.keys():
+                offset_parent = self.original_model.segments[segment_name + "_parent_offset"].parent_name
+                if offset_parent in self.scaling_segments.keys():
+                    # Apply scaling to the position of the offset parent segment instead of the current segment
+                    offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
+                    scs_scaled = SegmentCoordinateSystemReal(
+                        scs=self.scale_rt(deepcopy(self.original_model.segments[
+                                              segment_name + "_parent_offset"].segment_coordinate_system.scs).reshape(4, 4),
+                                          offset_parent_scale_factor),
+                        is_scs_local=True,
+                    )
+                    self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
+                    parent_scale_factor = np.ones((4, 1))
+            else:
+                # Apply scaling to the current segment
+                if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
+                    parent_scale_factor = scaling_factors[
+                        self.original_model.segments[segment_name].parent_name].to_vector()
                 else:
                     parent_scale_factor = np.ones((4, 1))
 
+            # Scale segments
+            if segment_name in self.scaling_segments.keys():
+                this_segment_scale_factor = scaling_factors[segment_name].to_vector()
                 self.scaled_model.segments.append(
                     self.scale_segment(
-                        self.original_model.segments[segment_name],
+                        deepcopy(self.original_model.segments[segment_name]),
                         parent_scale_factor,
                         this_segment_scale_factor,
                         segment_masses[segment_name],
                     )
                 )
+            else:
+                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
 
-                for marker in self.original_model.segments[segment_name].markers:
-                    self.scaled_model.segments[segment_name].add_marker(
-                        self.scale_marker(marker, this_segment_scale_factor)
-                    )
+            for marker in deepcopy(self.original_model.segments[segment_name].markers):
+                self.scaled_model.segments[segment_name].add_marker(
+                    self.scale_marker(marker, this_segment_scale_factor)
+                )
 
-                for contact in self.original_model.segments[segment_name].contacts:
-                    self.scaled_model.segments[segment_name].add_contact(
-                        self.scale_contact(contact, this_segment_scale_factor)
-                    )
+            for contact in deepcopy(self.original_model.segments[segment_name].contacts):
+                self.scaled_model.segments[segment_name].add_contact(
+                    self.scale_contact(contact, this_segment_scale_factor)
+                )
 
-                for imu in self.original_model.segments[segment_name].imus:
-                    self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
+            for imu in deepcopy(self.original_model.segments[segment_name].imus):
+                self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
         # Set muscle groups
         self.scaled_model.muscle_groups = deepcopy(self.original_model.muscle_groups)
