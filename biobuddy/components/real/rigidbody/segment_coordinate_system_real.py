@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Self
 
 import numpy as np
@@ -128,12 +129,13 @@ class SegmentCoordinateSystemReal:
         rt[:3, 3, :] = origin.position[:3, :]
         rt[3, 3, :] = 1
 
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=False)
 
     @staticmethod
     def from_rt_matrix(
         rt_matrix: np.ndarray,
         parent_scs: Self = None,
+        is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
@@ -145,8 +147,10 @@ class SegmentCoordinateSystemReal:
         parent_scs
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
+        is_scs_local
+            If the scs is already in local reference frame
         """
-        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
     @staticmethod
     def from_euler_and_translation(
@@ -154,6 +158,7 @@ class SegmentCoordinateSystemReal:
         angle_sequence: str,
         translations: Point,
         parent_scs: Self = None,
+        is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
@@ -169,13 +174,12 @@ class SegmentCoordinateSystemReal:
         parent_scs
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
+        is_scs_local
+            If the scs is already in local reference frame
         """
 
         rt = euler_and_translation_to_matrix(angles=angles, angle_sequence=angle_sequence, translations=translations)
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True)
-
-    def copy(self):
-        return SegmentCoordinateSystemReal(scs=np.array(self.scs), parent_scs=self.parent_scs)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
     @property
     def mean_scs(self) -> np.ndarray:
@@ -217,6 +221,6 @@ class SegmentCoordinateSystemReal:
 
     @property
     def transpose(self) -> Self:
-        out = self.copy()
+        out = deepcopy(self)
         out.scs = transpose_homogenous_matrix(out.scs)
         return out

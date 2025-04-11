@@ -291,13 +291,14 @@ class BiomodModelParser:
 def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarray:
     if current_rt_in_matrix:
         scs = SegmentCoordinateSystemReal.from_rt_matrix(
-            rt_matrix=read_float_vector(next_token=next_token, length=16).reshape((4, 4))
+            rt_matrix=read_float_vector(next_token=next_token, length=16).reshape((4, 4)),
+            is_scs_local=True,
         )
     else:
         angles = read_float_vector(next_token=next_token, length=3)
         angle_sequence = read_str(next_token=next_token)
         translations = read_float_vector(next_token=next_token, length=3)
         scs = SegmentCoordinateSystemReal.from_euler_and_translation(
-            angles=angles, angle_sequence=angle_sequence, translations=translations
+            angles=angles, angle_sequence=angle_sequence, translations=translations, is_scs_local=True
         )
     return scs.scs[:, :, 0]

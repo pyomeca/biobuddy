@@ -498,13 +498,14 @@ class OsimModelParser:
                 angles=frame_offset[1],
                 angle_sequence="xyz",
                 translations=frame_offset[0],
+                is_scs_local=True,
             )
         else:
             frame_offset = frame_offset if frame_offset else OrthoMatrix([0, 0, 0])
             translation_vector = frame_offset.get_translation().tolist()
             rotation_matrix = frame_offset.get_rotation_matrix()
             rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
-            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix)
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix, is_scs_local=True)
         return segment_coordinate_system
 
     def write_ortho_segment(
