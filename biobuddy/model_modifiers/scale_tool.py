@@ -91,7 +91,7 @@ class ScaleTool:
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
         self.place_model_in_static_pose(marker_positions, marker_names)
-        self.modify_muscle_parameters()
+        # self.modify_muscle_parameters()
 
         return self.scaled_model
 
@@ -205,7 +205,7 @@ class ScaleTool:
                     offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
                     scs_scaled = SegmentCoordinateSystemReal(
                         scs=self.scale_rt(deepcopy(self.original_model.segments[
-                                              segment_name + "_parent_offset"].segment_coordinate_system.scs).reshape(4, 4),
+                                              segment_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0]),
                                           offset_parent_scale_factor),
                         is_scs_local=True,
                     )
@@ -318,7 +318,7 @@ class ScaleTool:
             )
 
         segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=self.scale_rt(original_segment.segment_coordinate_system.scs.reshape(4, 4), parent_scale_factor),
+            scs=self.scale_rt(original_segment.segment_coordinate_system.scs[:, :, 0], parent_scale_factor),
             is_scs_local=True,
         )
 
@@ -361,7 +361,7 @@ class ScaleTool:
         self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
     ) -> InertialMeasurementUnitReal:
         scaled_imu = deepcopy(original_imu)
-        scaled_imu.scs = self.scale_rt(original_imu.scs, scale_factor)
+        scaled_imu.scs = self.scale_rt(original_imu.scs[:, :, 0], scale_factor)
         return scaled_imu
 
     def scale_muscle(
@@ -439,7 +439,7 @@ class ScaleTool:
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=segment_jcs,
                 parent_scs=None,
-                is_scs_local=False,  # joint coordinate system is now expressed in the global
+                is_scs_local= (segment_name == "base"),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
     def replace_markers_on_segments(self, q_static: np.ndarray, marker_positions: np.ndarray, marker_names: list[str]):
@@ -451,12 +451,12 @@ class ScaleTool:
                 segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
                 rt_matrix = RotoTransMatrix()
                 rt_matrix.from_rt_matrix(segment_jcs)
-                marker.position = rt_matrix.transpose @ np.hstack((this_marker_position, 1))
+                marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]):
         q_static = self.find_static_pose(marker_positions, marker_names)
         self.make_static_pose_the_zero(q_static)
-        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
+        # self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
 
     def modify_muscle_parameters(self):

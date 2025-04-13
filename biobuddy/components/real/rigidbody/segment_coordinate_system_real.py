@@ -17,7 +17,7 @@ from ....utils.linear_algebra import (
 class SegmentCoordinateSystemReal:
     def __init__(
         self,
-        scs: np.ndarray = np.identity(4),
+        scs: np.ndarray = np.identity(4),  # TODO: Should be a RotoTransMatrix ?
         parent_scs: Self = None,
         is_scs_local: bool = False,
     ):
@@ -46,7 +46,7 @@ class SegmentCoordinateSystemReal:
             raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
 
         if len(value.shape) == 2:
-            value = value[:, :, None]
+            value = value[:, :, np.newaxis]
         self._scs = value
 
     @property
@@ -64,6 +64,14 @@ class SegmentCoordinateSystemReal:
     @is_in_global.setter
     def is_in_global(self, value: bool):
         self._is_in_global = value
+
+    @property
+    def is_in_local(self) -> bool:
+        return not self._is_in_global
+
+    @is_in_local.setter
+    def is_in_local(self, value: bool):
+        self._is_in_global = not value
 
     @staticmethod
     def from_markers(
@@ -193,12 +201,9 @@ class SegmentCoordinateSystemReal:
         return mean_homogenous_matrix(self.scs)
 
     def to_biomod(self):
-        rt = self.scs
-        if self.is_in_global:
-            rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
         out_string = ""
-        mean_rt = mean_homogenous_matrix(rt) if rt.shape[2] > 1 else rt[:, :, 0]
+        mean_rt = mean_homogenous_matrix(self.scs) if self.scs.shape[2] > 1 else self.scs[:, :, 0]
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
         out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
