@@ -70,6 +70,14 @@ class BiomechanicalModelReal:
         """
         self.via_points.pop(via_point_name)
 
+    @property
+    def marker_names(self):
+        list_marker_names = []
+        for segment in self.segments:
+            for marker in segment.markers:
+                list_marker_names += [marker.name]
+        return list_marker_names
+
     @staticmethod
     def from_biomod(
         filepath: str,

@@ -12,7 +12,6 @@ from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
 from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
-from ..components.real.rigidbody.mesh_file_real import MeshFileReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ..components.real.muscle.muscle_real import MuscleReal
 from ..components.real.muscle.via_point_real import ViaPointReal
@@ -31,6 +30,7 @@ class ScaleTool:
         self.original_model_biorbd = None  # This original model is defined by self.scale
         self.scaled_model = BiomechanicalModelReal()
         self.scaled_model_biorbd = None  # This scaled model is defined later when the segment shape is defined
+        self.mean_experimental_markers = None  # This field will be set when .scale is run
 
         self.header = ""
         self.original_mass = None
@@ -86,6 +86,7 @@ class ScaleTool:
 
         self.check_that_makers_do_not_move(marker_positions, marker_names)
         self.check_segments()
+        self.define_mean_experimental_markers(marker_positions, marker_names)
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
@@ -150,6 +151,15 @@ class ScaleTool:
                 raise RuntimeError(
                     f"The segment {segment_name} has a scaling configuration, but does not exist in the original model."
                 )
+
+    def define_mean_experimental_markers(self, marker_positions, marker_names):
+        model_marker_names = [m.to_string() for m in self.original_model_biorbd.markerNames()]
+        self.mean_experimental_markers = np.zeros((3, len(model_marker_names)))
+        for i_marker, name in enumerate(model_marker_names):
+            marker_index = marker_names.index(name)
+            this_marker_position = marker_positions[:, marker_index, :]
+            self.mean_experimental_markers[:, i_marker] = np.nanmean(this_marker_position, axis=1)
+
 
     def get_scaling_factors_and_masses(
         self,
@@ -456,7 +466,7 @@ class ScaleTool:
     def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]):
         q_static = self.find_static_pose(marker_positions, marker_names)
         self.make_static_pose_the_zero(q_static)
-        # self.replace_markers_on_segments(q_static, marker_positions, marker_names)
+        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
 
     def modify_muscle_parameters(self):

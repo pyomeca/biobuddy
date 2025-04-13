@@ -2,9 +2,11 @@
 This example shows how to scale a model based on a generic model and a static trial.
 """
 
+import numpy as np
 from pathlib import Path
 import biorbd
 
+from pyomeca import Markers
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
 
 
@@ -65,11 +67,15 @@ def main():
     viz_biomod_model.options.show_gravity = True
     viz.add_animated_model(viz_biomod_model, q)
 
+    # Add the experimental markers from the static trial
+    fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
+    pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
+
     # Model output
     viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
     viz_scaled_model.options.transparent_mesh = False
     viz_scaled_model.options.show_gravity = True
-    viz.add_animated_model(viz_scaled_model, q)
+    viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
 
     # TODO: Add the osim models
     #  but DO NOT SCALE IN OPENSIM Python-API as it is broken (aka, the main reason why we are implementing this)
