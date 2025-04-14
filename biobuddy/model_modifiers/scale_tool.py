@@ -91,8 +91,8 @@ class ScaleTool:
         self.scale_model_geometrically(marker_positions, marker_names, mass)
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
+        self.modify_muscle_parameters()
         self.place_model_in_static_pose(marker_positions, marker_names)
-        # self.modify_muscle_parameters()
 
         return self.scaled_model
 
@@ -392,6 +392,8 @@ class ScaleTool:
 
     def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
+        regularization_weight = 0.0001
+
         def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
             markers_model = np.array(self.scaled_model_biorbd.markers(q))
             nb_marker = experimental_markers.shape[1]
@@ -399,7 +401,6 @@ class ScaleTool:
             for m, value in enumerate(markers_model):
                 vect_pos_markers[m * 3 : (m + 1) * 3] = value.to_array()
             # TODO: setup the IKTask to set the "q_ref" to something else than zero.
-            regularization_weight = 0.0001
             out = np.hstack(
                 (vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)), regularization_weight * q)
             )
@@ -413,7 +414,7 @@ class ScaleTool:
             for m, value in enumerate(jacobian_matrix):
                 vec_jacobian[m * 3 : (m + 1) * 3, :] = value.to_array()
             for i_q in range(nb_q):
-                vec_jacobian[nb_marker * 3 + i_q, i_q] = 1
+                vec_jacobian[nb_marker * 3 + i_q, i_q] = regularization_weight
             return vec_jacobian
 
         marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
