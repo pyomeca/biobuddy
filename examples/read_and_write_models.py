@@ -26,7 +26,7 @@ def main():
             logging.StreamHandler()  # Log to the console
         ],
     )
-    visualization_flag = False
+    visualization_flag = True
 
     # Paths
     current_path_file = Path(__file__).parent
@@ -37,7 +37,7 @@ def main():
 
     # Convert the vtp files
     mesh = MeshParser(geometry_folder=geometry_path)
-    mesh.process_meshes()
+    mesh.process_meshes(fail_on_error=False)
     mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # --- Reading an .osim model and translating it to a .bioMod model --- #
