@@ -29,8 +29,11 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - name: Checkout code
+      - name: Checkout code with submodule
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
