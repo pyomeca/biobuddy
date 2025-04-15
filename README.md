@@ -8,9 +8,9 @@ Currently, the only way to install `BioBuddy` is from source. But it will be ava
 
 If you are a user, you can setup your environement however you'd like since we do not have any mandatory dependency.
 
-However, if you are a developper and wuant to contribute, you will need to setup your environment using the following command:
+However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
+Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
-conda install -c conda-forge python>=3.10 pip 
 conda install -c opensim-org opensim
 conda install -c conda-forge biorbd pyorerun
 pip install numpy matplotlib lxml pytest black scipy ezc3d

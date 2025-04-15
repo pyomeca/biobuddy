@@ -18,7 +18,7 @@ class SegmentCoordinateSystemReal:
     def __init__(
         self,
         scs: np.ndarray = np.identity(4),  # TODO: Should be a RotoTransMatrix ?
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ):
         """
@@ -54,7 +54,7 @@ class SegmentCoordinateSystemReal:
         return self._parent_scs
 
     @parent_scs.setter
-    def parent_scs(self, value: Self):
+    def parent_scs(self, value: "Self"):
         self._parent_scs = value
 
     @property
@@ -79,7 +79,7 @@ class SegmentCoordinateSystemReal:
         first_axis: AxisReal,
         second_axis: AxisReal,
         axis_to_keep: AxisReal.Name,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
     ) -> "SegmentCoordinateSystemReal":
         """
         Parameters
@@ -142,7 +142,7 @@ class SegmentCoordinateSystemReal:
     @staticmethod
     def from_rt_matrix(
         rt_matrix: np.ndarray,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
@@ -165,7 +165,7 @@ class SegmentCoordinateSystemReal:
         angles: Points,
         angle_sequence: str,
         translations: Point,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
