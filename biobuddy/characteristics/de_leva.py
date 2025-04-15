@@ -204,7 +204,7 @@ class DeLevaTable:
             },
         }
 
-    def __getitem__(self, segment_name: str):
+    def __getitem__(self, segment_name: SegmentName) -> InertiaParameters:
         """
         The inertia paremeters for a particular segment
         Parameters

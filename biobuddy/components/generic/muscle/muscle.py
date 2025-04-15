@@ -17,7 +17,7 @@ class Muscle:
         maximal_force_function: Callable[[dict[str, float]], float],
         tendon_slack_length_function: Callable[[dict[str, float]], float],
         pennation_angle_function: Callable[[dict[str, float]], float],
-        maximal_excitation: Callable[[dict[str, float]], float] = None,
+        maximal_excitation: float = None,
     ):
         """
         Parameters
@@ -37,7 +37,7 @@ class Muscle:
         self.maximal_force_function = maximal_force_function
         self.tendon_slack_length_function = tendon_slack_length_function
         self.pennation_angle_function = pennation_angle_function
-        self.maximal_excitation = (lambda _: 1.0) if maximal_excitation is None else maximal_excitation
+        self.maximal_excitation = 1.0 if maximal_excitation is None else maximal_excitation
 
     def to_muscle(self, model, data: Data) -> MuscleReal:
         return MuscleReal.from_data(

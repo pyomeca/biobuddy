@@ -14,7 +14,7 @@ class Segment:
     def __init__(
         self,
         name,
-        parent_name: str = "",
+        parent_name: str = "base",
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
         q_ranges: RangeOfMotion = None,

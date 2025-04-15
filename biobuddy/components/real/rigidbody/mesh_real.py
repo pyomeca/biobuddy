@@ -35,8 +35,8 @@ class MeshReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: BiomechanicalModelReal,
         functions: tuple[Callable[[dict[str, np.ndarray], BiomechanicalModelReal], Point], ...],
-        kinematic_chain: BiomechanicalModelReal,
         parent_scs: CoordinateSystemRealProtocol = None,
     ):
         """
@@ -47,26 +47,26 @@ class MeshReal:
         ----------
         data
             The data to pick the data from
-        functions
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the mesh points
-        kinematic_chain
+        model
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
+        functions
+            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the mesh points
         parent_scs
             The segment coordinate system of the parent to transform the marker from global to local
         """
 
         # Get the position of the all the mesh points and do some sanity checks
-        all_p = []
+        all_p = points_to_array("mesh_real", points=None)
         for f in functions:
-            p = point_to_array(name="mesh function", point=f(data.values, kinematic_chain))
+            p = point_to_array(name="mesh function", point=f(data.values, model))
             p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
             projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
             if np.isnan(projected_p).all():
                 raise RuntimeError(f"All the values for {f} returned nan which is not permitted")
-            all_p.append(projected_p)
+            all_p = np.hstack((all_p, projected_p))
 
-        return MeshReal(tuple(all_p))
+        return MeshReal(all_p)
 
     def to_biomod(self):
         # Do a sanity check

@@ -30,6 +30,8 @@ from biobuddy import (
     MuscleType,
     MuscleStateType,
     ViaPoint,
+    Sex,
+    SegmentName,
 )
 
 
@@ -47,9 +49,13 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments.append(
         SegmentReal(
             name="TRUNK",
+            parent_name="base",
+            segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0]),
+            ),
             translations=Translations.YZ,
             rotations=Rotations.X,
-            mesh=MeshReal(((0, 0, 0), (0, 0, 0.53))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, 0.53])]),
         )
     )
     bio_model.segments["TRUNK"].add_marker(MarkerReal(name="PELVIS", parent_name="TRUNK", position=np.array([0, 0, 0])))
@@ -62,7 +68,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
                 np.array([0, 0, 0]), "xyz", np.array([0, 0, 0.53]), is_scs_local=True
             ),
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, 0.24]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, 0.24])]),
         )
     )
     bio_model.segments["HEAD"].add_marker(
@@ -90,7 +96,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
                 is_scs_local=True,
             ),
             rotations=Rotations.X,
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.28]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, -0.28])]),
         )
     )
     bio_model.segments["UPPER_ARM"].add_marker(
@@ -110,7 +116,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
                 np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.28]), is_scs_local=True
             ),
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.27]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, -0.27])]),
         )
     )
     bio_model.segments["LOWER_ARM"].add_marker(
@@ -130,7 +136,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
                 np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.27]), is_scs_local=True
             ),
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.19]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, -0.19])]),
         )
     )
     bio_model.segments["HAND"].add_marker(MarkerReal(name="WRIST", parent_name="HAND", position=np.array([0, 0, 0])))
@@ -145,8 +151,11 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         SegmentReal(
             name="THIGH",
             parent_name="TRUNK",
+            segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0]), is_scs_local=True
+            ),
             rotations=Rotations.X,
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.42]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, -0.42])]),
         )
     )
     bio_model.segments["THIGH"].add_marker(
@@ -168,7 +177,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
                 np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.42]), is_scs_local=True
             ),
             rotations=Rotations.X,
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.43]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, -0.43])]),
         )
     )
     bio_model.segments["SHANK"].add_marker(MarkerReal(name="KNEE", parent_name="SHANK", position=np.array([0, 0, 0])))
@@ -186,7 +195,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
                 np.array([-np.pi / 2, 0, 0]), "xyz", np.array([0, 0, -0.43]), is_scs_local=True
             ),
             rotations=Rotations.X,
-            mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, 0.25]))),
+            mesh=MeshReal([np.array([0, 0, 0]), np.array([0, 0, 0.25])]),
         )
     )
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE", parent_name="FOOT", position=np.array([0, 0, 0])))
@@ -237,14 +246,25 @@ def test_model_creation_from_data(remove_temporary: bool = True):
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
-    de_leva = DeLevaTable(total_mass=100, sex="female")
+    de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
 
-    model.segments["TRUNK"].append(
+    model.segments.append(
         Segment(
             name="TRUNK",
+            parent_name="base",
+            segment_coordinate_system=SegmentCoordinateSystem(
+                lambda m, k: np.array([0, 0, 0]),
+                first_axis=Axis(name=Axis.Name.Z,
+                                start= lambda m, model: np.array([0, 0, 0]),
+                                end= lambda m, model: np.array([0, 0, 1])),
+                second_axis=Axis(name=Axis.Name.X,
+                                start= lambda m, model: np.array([0, 0, 0]),
+                                end= lambda m, model: np.array([1, 0, 0])),
+                axis_to_keep=Axis.Name.Z,
+            ),
             translations=Translations.YZ,
             rotations=Rotations.X,
-            inertia_parameters=de_leva["TRUNK"],
+            inertia_parameters=de_leva[SegmentName.TRUNK],
         )
     )
     model.segments["TRUNK"].add_marker(Marker("PELVIS"))
@@ -260,7 +280,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 axis_to_keep=Axis.Name.Z,
             ),
             mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD")),
-            inertia_parameters=de_leva["HEAD"],
+            inertia_parameters=de_leva[SegmentName.HEAD],
         )
     )
     model.segments["HEAD"].add_marker(Marker("BOTTOM_HEAD"))
@@ -279,7 +299,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Y, start="SHOULDER", end="SHOULDER_XY"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva["UPPER_ARM"],
+            inertia_parameters=de_leva[SegmentName.UPPER_ARM],
         )
     )
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER"))
@@ -296,7 +316,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.X, start="ELBOW", end="ELBOW_XY"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva["LOWER_ARM"],
+            inertia_parameters=de_leva[SegmentName.LOWER_ARM],
         )
     )
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW"))
@@ -313,7 +333,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Z, start="WRIST", end="HAND_YZ"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva["HAND"],
+            inertia_parameters=de_leva[SegmentName.HAND],
         )
     )
     model.segments["HAND"].add_marker(Marker("WRIST"))
@@ -332,7 +352,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Y, start="THIGH_ORIGIN", end="THIGH_Y"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva["THIGH"],
+            inertia_parameters=de_leva[SegmentName.THIGH],
         )
     )
     model.segments["THIGH"].add_marker(Marker("THIGH_ORIGIN"))
@@ -350,14 +370,14 @@ def test_model_creation_from_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.X, start="KNEE", end="KNEE_XZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            inertia_parameters=de_leva["SHANK"],
+            inertia_parameters=de_leva[SegmentName.SHANK],
         )
     )
     model.segments["SHANK"].add_marker(Marker("KNEE"))
     model.segments["SHANK"].add_marker(Marker("KNEE_Z"))
     model.segments["SHANK"].add_marker(Marker("KNEE_XZ"))
 
-    model.segments["FOOT"] = Segment(
+    model.segments.append(Segment(
         name="FOOT",
         parent_name="SHANK",
         rotations=Rotations.X,
@@ -367,18 +387,18 @@ def test_model_creation_from_data(remove_temporary: bool = True):
             second_axis=Axis(name=Axis.Name.Y, start="ANKLE", end="ANKLE_YZ"),
             axis_to_keep=Axis.Name.Z,
         ),
-        inertia_parameters=de_leva["FOOT"],
-    )
+        inertia_parameters=de_leva[SegmentName.FOOT],
+    ))
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
     model.segments["FOOT"].add_marker(Marker("TOE"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together
-    model.personalize_model(C3dData(c3d_file_path))
+    real_model = model.to_real(C3dData(c3d_file_path))
 
     # print it to a bioMod file
-    model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_file_path)
 
     model = Model(kinematic_model_file_path)
     assert model.nbQ() == 7
@@ -395,9 +415,8 @@ def test_model_creation_from_data(remove_temporary: bool = True):
 def test_complex_model(remove_temporary: bool = True):
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
-    mesh_path = f"{current_path_folder}/../examples/models/meshes/pendulum.STL"
-
-    kinematic_model_file_path = "temporary_complex.bioMod"
+    kinematic_model_file_path = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
+    mesh_path = f"meshes/pendulum.STL"
 
     # Create a model holder
     bio_model = BiomechanicalModel()
@@ -414,6 +433,16 @@ def test_complex_model(remove_temporary: bool = True):
             q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-1, -1, -1, -np.pi], max_bound=[1, 1, 1, np.pi]),
             qdot_ranges=RangeOfMotion(
                 range_type=Ranges.Qdot, min_bound=[-10, -10, -10, -np.pi * 10], max_bound=[10, 10, 10, np.pi * 10]
+            ),
+            segment_coordinate_system=SegmentCoordinateSystem(
+                lambda m, k: np.array([0, 0, 0]),
+                first_axis=Axis(name=Axis.Name.Z,
+                                start= lambda m, model: np.array([0, 0, 0]),
+                                end= lambda m, model: np.array([0, 0, 1])),
+                second_axis=Axis(name=Axis.Name.X,
+                                start= lambda m, model: np.array([0, 0, 0]),
+                                end= lambda m, model: np.array([1, 0, 0])),
+                axis_to_keep=Axis.Name.Z,
             ),
             mesh_file=MeshFile(
                 mesh_file_name=mesh_path,
@@ -446,19 +475,19 @@ def test_complex_model(remove_temporary: bool = True):
             muscle_type=MuscleType.HILL_THELEN,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="PENDULUM_MUSCLE_GROUP",
-            origin_position_function=lambda m: np.array([0, 0, 0]),
-            insertion_position_function=lambda m: np.array([0, 0, 1]),
-            optimal_length_function=lambda model, m: 0.1,
-            maximal_force_function=lambda m: 100.0,
-            tendon_slack_length_function=lambda model, m: 0.05,
-            pennation_angle_function=lambda model, m: 0.05,
+            origin_position_function=lambda m, model: np.array([0, 0, 0]),
+            insertion_position_function=lambda m, model: np.array([0, 0, 1]),
+            optimal_length_function=lambda m, model: 0.1,
+            maximal_force_function=lambda m, model: 100.0,
+            tendon_slack_length_function=lambda m, model: 0.05,
+            pennation_angle_function=lambda m, model: 0.05,
             maximal_excitation=1,
         )
     )
     bio_model.via_points.append(
         ViaPoint(
             "PENDULUM_MUSCLE",
-            position_function=lambda m: np.array([0, 0, 0.5]),
+            position_function=lambda m, model: np.array([0, 0, 0.5]),
             parent_name="PENDULUM",
             muscle_name="PENDULUM_MUSCLE",
             muscle_group="PENDULUM_MUSCLE_GROUP",
@@ -466,10 +495,10 @@ def test_complex_model(remove_temporary: bool = True):
     )
 
     # Put the model together
-    bio_model.personalize_model({})
+    real_model = bio_model.to_real({})
 
     # Print it to a bioMod file
-    bio_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_file_path)
 
     model = Model(kinematic_model_file_path)
     assert model.nbQ() == 4

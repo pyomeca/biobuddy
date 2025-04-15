@@ -62,10 +62,10 @@ class InertiaParametersReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: BiomechanicalModelReal,
         relative_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], float],
         center_of_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
         inertia: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
-        kinematic_chain: BiomechanicalModelReal,
         parent_scs: CoordinateSystemRealProtocol = None,
     ):
         """
@@ -75,6 +75,9 @@ class InertiaParametersReal:
         ----------
         data
             The data to pick the data from
+        model
+            The model as it is constructed at that particular time. It is useful if some values must be obtained from
+            previously computed values
         relative_mass
             The callback function that returns the relative mass of the segment with respect to the full body
         center_of_mass
@@ -82,21 +85,18 @@ class InertiaParametersReal:
             from the segment coordinate system on the main axis
         inertia
             The callback function that returns the inertia xx, yy and zz parameters of the segment
-        kinematic_chain
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
         parent_scs
             The segment coordinate system of the parent to transform the marker from global to local
         """
 
-        mass = relative_mass(data.values, kinematic_chain)
+        mass = relative_mass(data.values, model)
 
-        p = points_to_array(name=f"center_of_mass function", points=center_of_mass(data.values, kinematic_chain))
+        p = points_to_array(name=f"center_of_mass function", points=center_of_mass(data.values, model))
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
         com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
-        inertia = points_to_array(name="inertia parameter function", points=inertia(data.values, kinematic_chain))
+        inertia = points_to_array(name="inertia parameter function", points=inertia(data.values, model))
 
         return InertiaParametersReal(mass, com, inertia)
 
