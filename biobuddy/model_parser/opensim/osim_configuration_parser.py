@@ -51,7 +51,11 @@ class OsimConfigurationParser:
 
         for element in self.configuration.getroot()[0]:
 
-            if match_tag(element, "Mass"):
+            if isinstance(element, etree._Comment):
+                # Skip comments
+                continue
+
+            elif match_tag(element, "Mass"):
                 self.original_mass = float(element.text)  # in kg
                 if self.original_mass <= 0:
                     raise NotImplementedError(f"The mass of the original model must be positive.")
@@ -107,7 +111,11 @@ class OsimConfigurationParser:
         else:
             for element in self.model_scaler:
 
-                if match_tag(element, "apply"):
+                if isinstance(element, etree._Comment):
+                    # Skipping comments
+                    continue
+
+                elif match_tag(element, "apply"):
                     if not match_text(element, "True"):
                         raise RuntimeError(
                             f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}"
@@ -153,7 +161,11 @@ class OsimConfigurationParser:
         else:
             for element in self.marker_placer:
 
-                if match_tag(element, "apply"):
+                if isinstance(element, etree._Comment):
+                    # Skipping comments
+                    continue
+
+                elif match_tag(element, "apply"):
                     if match_text(element, "False"):
                         raise NotImplementedError(
                             "The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments."
