@@ -1,5 +1,6 @@
 import os
 from copy import deepcopy
+
 # from typing import Self
 
 import biorbd
@@ -81,7 +82,7 @@ class BiomechanicalModelReal:
     @staticmethod
     def from_biomod(
         filepath: str,
-    )  -> "Self":
+    ) -> "Self":
         """
         Create a biomechanical model from a biorbd model
         """
@@ -95,7 +96,7 @@ class BiomechanicalModelReal:
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
-    )  -> "Self":
+    ) -> "Self":
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
 

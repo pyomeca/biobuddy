@@ -1,4 +1,5 @@
 from copy import deepcopy
+
 # from typing import Self
 
 import numpy as np
@@ -105,7 +106,7 @@ class InertialMeasurementUnitReal:
         return out_string
 
     @property
-    def transpose(self)  -> "Self":
+    def transpose(self) -> "Self":
         out = deepcopy(self)
         out.scs = transpose_homogenous_matrix(out.scs)
         return out

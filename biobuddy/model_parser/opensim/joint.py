@@ -67,7 +67,7 @@ class Joint:
         self.function = function
 
     @staticmethod
-    def from_element(element: ElementTree.Element, ignore_fixed: bool, ignore_clamped: bool)  -> "Self":
+    def from_element(element: ElementTree.Element, ignore_fixed: bool, ignore_clamped: bool) -> "Self":
         tag = element.tag
         if tag not in [e.value for e in JointType]:
             raise RuntimeError(

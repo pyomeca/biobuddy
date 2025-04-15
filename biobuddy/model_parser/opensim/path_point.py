@@ -14,7 +14,7 @@ class PathPoint:
         self.position = position
 
     @staticmethod
-    def from_element(element: ElementTree.Element)  -> "Self":
+    def from_element(element: ElementTree.Element) -> "Self":
         return PathPoint(
             name=element.attrib["name"],
             muscle=None,

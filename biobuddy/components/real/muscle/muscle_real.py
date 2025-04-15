@@ -229,7 +229,9 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
-        origin_position = points_to_array(name="muscle origin function", points=origin_position_function(data.values, model))
+        origin_position = points_to_array(
+            name="muscle origin function", points=origin_position_function(data.values, model)
+        )
         insertion_position = points_to_array(
             name="muscle insertion function", points=insertion_position_function(data.values, model)
         )

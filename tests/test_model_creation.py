@@ -51,7 +51,9 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="TRUNK",
             parent_name="base",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0]),
+                np.array([0, 0, 0]),
+                "xyz",
+                np.array([0, 0, 0]),
             ),
             translations=Translations.YZ,
             rotations=Rotations.X,
@@ -254,12 +256,16 @@ def test_model_creation_from_data(remove_temporary: bool = True):
             parent_name="base",
             segment_coordinate_system=SegmentCoordinateSystem(
                 lambda m, k: np.array([0, 0, 0]),
-                first_axis=Axis(name=Axis.Name.Z,
-                                start= lambda m, model: np.array([0, 0, 0]),
-                                end= lambda m, model: np.array([0, 0, 1])),
-                second_axis=Axis(name=Axis.Name.X,
-                                start= lambda m, model: np.array([0, 0, 0]),
-                                end= lambda m, model: np.array([1, 0, 0])),
+                first_axis=Axis(
+                    name=Axis.Name.Z,
+                    start=lambda m, model: np.array([0, 0, 0]),
+                    end=lambda m, model: np.array([0, 0, 1]),
+                ),
+                second_axis=Axis(
+                    name=Axis.Name.X,
+                    start=lambda m, model: np.array([0, 0, 0]),
+                    end=lambda m, model: np.array([1, 0, 0]),
+                ),
                 axis_to_keep=Axis.Name.Z,
             ),
             translations=Translations.YZ,
@@ -377,18 +383,20 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     model.segments["SHANK"].add_marker(Marker("KNEE_Z"))
     model.segments["SHANK"].add_marker(Marker("KNEE_XZ"))
 
-    model.segments.append(Segment(
-        name="FOOT",
-        parent_name="SHANK",
-        rotations=Rotations.X,
-        segment_coordinate_system=SegmentCoordinateSystem(
-            origin="ANKLE",
-            first_axis=Axis(name=Axis.Name.Z, start="ANKLE", end="ANKLE_Z"),
-            second_axis=Axis(name=Axis.Name.Y, start="ANKLE", end="ANKLE_YZ"),
-            axis_to_keep=Axis.Name.Z,
-        ),
-        inertia_parameters=de_leva[SegmentName.FOOT],
-    ))
+    model.segments.append(
+        Segment(
+            name="FOOT",
+            parent_name="SHANK",
+            rotations=Rotations.X,
+            segment_coordinate_system=SegmentCoordinateSystem(
+                origin="ANKLE",
+                first_axis=Axis(name=Axis.Name.Z, start="ANKLE", end="ANKLE_Z"),
+                second_axis=Axis(name=Axis.Name.Y, start="ANKLE", end="ANKLE_YZ"),
+                axis_to_keep=Axis.Name.Z,
+            ),
+            inertia_parameters=de_leva[SegmentName.FOOT],
+        )
+    )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
     model.segments["FOOT"].add_marker(Marker("TOE"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
@@ -436,12 +444,16 @@ def test_complex_model(remove_temporary: bool = True):
             ),
             segment_coordinate_system=SegmentCoordinateSystem(
                 lambda m, k: np.array([0, 0, 0]),
-                first_axis=Axis(name=Axis.Name.Z,
-                                start= lambda m, model: np.array([0, 0, 0]),
-                                end= lambda m, model: np.array([0, 0, 1])),
-                second_axis=Axis(name=Axis.Name.X,
-                                start= lambda m, model: np.array([0, 0, 0]),
-                                end= lambda m, model: np.array([1, 0, 0])),
+                first_axis=Axis(
+                    name=Axis.Name.Z,
+                    start=lambda m, model: np.array([0, 0, 0]),
+                    end=lambda m, model: np.array([0, 0, 1]),
+                ),
+                second_axis=Axis(
+                    name=Axis.Name.X,
+                    start=lambda m, model: np.array([0, 0, 0]),
+                    end=lambda m, model: np.array([1, 0, 0]),
+                ),
                 axis_to_keep=Axis.Name.Z,
             ),
             mesh_file=MeshFile(
