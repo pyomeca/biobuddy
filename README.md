@@ -21,7 +21,7 @@ Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using 
 ```bash
 conda install -c opensim-org opensim
 conda install -c conda-forge biorbd pyorerun
-pip install numpy matplotlib lxml pytest black scipy ezc3d
+pip install numpy matplotlib lxml pytest black scipy ezc3d pyomeca
 ```
 
 # How to cite
