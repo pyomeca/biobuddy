@@ -17,9 +17,7 @@ def read_vtp(filename: str) -> Mesh:
     for line in content:
         if "<Piece" in line:
             num_points = _extract_number_from_line(line, 'NumberOfPoints="')
-            mesh = Mesh(
-                polygons=np.zeros((0, 3)), nodes=np.zeros((num_points, 3)), normals=np.zeros((num_points, 3))
-            )
+            mesh = Mesh(polygons=np.zeros((0, 3)), nodes=np.zeros((num_points, 3)), normals=np.zeros((num_points, 3)))
             break
     if mesh is None:
         raise ValueError("The file is not a valid vtp file.")
@@ -42,8 +40,8 @@ def read_vtp(filename: str) -> Mesh:
 
         elif "<" not in line and line_type is not None:
             i += 1
-            list_line = line.replace('\t', ' ').replace('\n', ' ').split(" ")
-            tmp = [float(item) for item in list_line if item != '']
+            list_line = line.replace("\t", " ").replace("\n", " ").split(" ")
+            tmp = [float(item) for item in list_line if item != ""]
 
             if line_type == "polygons":
                 polygons += tmp
@@ -69,14 +67,14 @@ def read_vtp(filename: str) -> Mesh:
         raise RuntimeError("The 'offset' field must be declared in the vtp file.")
 
     # Fill the mesh with the right polygons
-    for i in range(len(offsets)-1):
+    for i in range(len(offsets) - 1):
 
         # Identify the index of the points in the polygon
         range_start = int(offsets[i])
         range_end = int(offsets[i + 1])
 
         # Transform the polygons
-        polygon = polygons[range_start: range_end]
+        polygon = polygons[range_start:range_end]
         polygon_apex_idx = _handle_polygons_shape(polygon_apex_idx=polygon)
         for poly in polygon_apex_idx:
             mesh.polygons = np.vstack((mesh.polygons, np.array(poly)))
@@ -160,14 +158,13 @@ def _handle_polygons_shape(polygon_apex_idx: list) -> list[list[float]]:
         polygon_apex_list = []
 
         # Append with triangles starting at the first point
-        for i in range(len(polygon_apex_idx)-2):
-            polygon_apex_list += [[polygon_apex_idx[0], polygon_apex_idx[i+1], polygon_apex_idx[i+2]]]
+        for i in range(len(polygon_apex_idx) - 2):
+            polygon_apex_list += [[polygon_apex_idx[0], polygon_apex_idx[i + 1], polygon_apex_idx[i + 2]]]
 
         return polygon_apex_list
 
-    elif len(polygon_apex_idx) == 3: # Already a triangle
+    elif len(polygon_apex_idx) == 3:  # Already a triangle
         return [polygon_apex_idx]
 
     else:
         raise RuntimeError("Something went wrong: a polygon formed of two apex was detected.")
-

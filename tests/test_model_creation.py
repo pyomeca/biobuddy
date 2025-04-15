@@ -60,8 +60,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="HEAD",
             parent_name="TRUNK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0.53]),
-                is_scs_local=True
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0.53]), is_scs_local=True
             ),
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, 0.24]))),
         )
@@ -85,8 +84,10 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="UPPER_ARM",
             parent_name="TRUNK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, 0.53])
-                is_scs_local = True,
+                np.array([0, 0, 0]),
+                "xyz",
+                np.array([0, 0, 0.53]),
+                is_scs_local=True,
             ),
             rotations=Rotations.X,
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.28]))),
@@ -107,8 +108,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.28]),
-                is_scs_local=True
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.28]), is_scs_local=True
             ),
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.27]))),
         )
@@ -128,8 +128,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="HAND",
             parent_name="LOWER_ARM",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.27]),
-                is_scs_local=True
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.27]), is_scs_local=True
             ),
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.19]))),
         )
@@ -166,8 +165,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="SHANK",
             parent_name="THIGH",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.42]),
-                is_scs_local=True
+                np.array([0, 0, 0]), "xyz", np.array([0, 0, -0.42]), is_scs_local=True
             ),
             rotations=Rotations.X,
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, -0.43]))),
@@ -185,8 +183,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
             name="FOOT",
             parent_name="SHANK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                np.array([-np.pi / 2, 0, 0]), "xyz", np.array([0, 0, -0.43]),
-                is_scs_local=True
+                np.array([-np.pi / 2, 0, 0]), "xyz", np.array([0, 0, -0.43]), is_scs_local=True
             ),
             rotations=Rotations.X,
             mesh=MeshReal((np.array([0, 0, 0]), np.array([0, 0, 0.25]))),

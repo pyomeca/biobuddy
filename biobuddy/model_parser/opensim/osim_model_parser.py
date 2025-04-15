@@ -505,7 +505,9 @@ class OsimModelParser:
             translation_vector = frame_offset.get_translation().tolist()
             rotation_matrix = frame_offset.get_rotation_matrix()
             rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
-            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix, is_scs_local=True)
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
+                rt_matrix=rt_matrix, is_scs_local=True
+            )
         return segment_coordinate_system
 
     def write_ortho_segment(

@@ -140,9 +140,10 @@ class BiomechanicalModelReal:
         for segment in self.segments:
             # Make sure the scs are in the local reference frame before printing
             from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
             segment.segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs = deepcopy(segment_coordinate_system_in_local(self, segment.name)),
-                is_scs_local = True,
+                scs=deepcopy(segment_coordinate_system_in_local(self, segment.name)),
+                is_scs_local=True,
             )
             out_string += segment.to_biomod(with_mesh=with_mesh)
             out_string += "\n\n\n"  # Give some space between segments

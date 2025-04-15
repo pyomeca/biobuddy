@@ -160,7 +160,6 @@ class ScaleTool:
             this_marker_position = marker_positions[:, marker_index, :]
             self.mean_experimental_markers[:, i_marker] = np.nanmean(this_marker_position, axis=1)
 
-
     def get_scaling_factors_and_masses(
         self,
         marker_positions: np.ndarray,
@@ -208,15 +207,23 @@ class ScaleTool:
         for segment_name in self.original_model.segments.keys():
 
             # Check if the segments has a ghost parent
-            if self.original_model.segments[segment_name].name + "_parent_offset" in self.original_model.segments.keys():
+            if (
+                self.original_model.segments[segment_name].name + "_parent_offset"
+                in self.original_model.segments.keys()
+            ):
                 offset_parent = self.original_model.segments[segment_name + "_parent_offset"].parent_name
                 if offset_parent in self.scaling_segments.keys():
                     # Apply scaling to the position of the offset parent segment instead of the current segment
                     offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
                     scs_scaled = SegmentCoordinateSystemReal(
-                        scs=self.scale_rt(deepcopy(self.original_model.segments[
-                                              segment_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0]),
-                                          offset_parent_scale_factor),
+                        scs=self.scale_rt(
+                            deepcopy(
+                                self.original_model.segments[
+                                    segment_name + "_parent_offset"
+                                ].segment_coordinate_system.scs[:, :, 0]
+                            ),
+                            offset_parent_scale_factor,
+                        ),
                         is_scs_local=True,
                     )
                     self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
@@ -225,7 +232,8 @@ class ScaleTool:
                 # Apply scaling to the current segment
                 if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
                     parent_scale_factor = scaling_factors[
-                        self.original_model.segments[segment_name].parent_name].to_vector()
+                        self.original_model.segments[segment_name].parent_name
+                    ].to_vector()
                 else:
                     parent_scale_factor = np.ones((4, 1))
 
@@ -389,7 +397,6 @@ class ScaleTool:
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
-
     def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
         regularization_weight = 0.0001
@@ -443,14 +450,15 @@ class ScaleTool:
 
         return np.median(optimal_q, axis=1)
 
-
     def make_static_pose_the_zero(self, q_static: np.ndarray):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=segment_jcs,
                 parent_scs=None,
-                is_scs_local= (segment_name == "base"),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
+                is_scs_local=(
+                    segment_name == "base"
+                ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
     def replace_markers_on_segments(self, q_static: np.ndarray, marker_positions: np.ndarray, marker_names: list[str]):
@@ -469,7 +477,6 @@ class ScaleTool:
         self.make_static_pose_the_zero(q_static)
         self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
-
     def modify_muscle_parameters(self):
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
@@ -485,7 +492,9 @@ class ScaleTool:
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
             self.scaled_model.muscles[muscle_name].optimal_length = (
-                deepcopy(self.original_model.muscles[muscle_name].optimal_length) * scaled_muscle_length / original_muscle_length
+                deepcopy(self.original_model.muscles[muscle_name].optimal_length)
+                * scaled_muscle_length
+                / original_muscle_length
             )
             self.scaled_model.muscles[muscle_name].tendon_slack_length = (
                 deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)

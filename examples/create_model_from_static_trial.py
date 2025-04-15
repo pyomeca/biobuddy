@@ -47,8 +47,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="HEAD",
             parent_name="TRUNK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (0, 0, 0), "xyz", (0, 0, 0.53),
-                is_scs_local=True
+                (0, 0, 0), "xyz", (0, 0, 0.53), is_scs_local=True
             ),
             mesh=MeshReal(((0, 0, 0), (0, 0, 0.24))),
         )
@@ -64,8 +63,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="UPPER_ARM",
             parent_name="TRUNK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (0, 0, 0), "xyz", (0, 0, 0.53),
-                is_scs_local=True
+                (0, 0, 0), "xyz", (0, 0, 0.53), is_scs_local=True
             ),
             rotations=Rotations.X,
             mesh=MeshReal(((0, 0, 0), (0, 0, -0.28))),
@@ -84,8 +82,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (0, 0, 0), "xyz", (0, 0, -0.28),
-                is_scs_local=True
+                (0, 0, 0), "xyz", (0, 0, -0.28), is_scs_local=True
             ),
             mesh=MeshReal(((0, 0, 0), (0, 0, -0.27))),
         )
@@ -99,8 +96,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="HAND",
             parent_name="LOWER_ARM",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (0, 0, 0), "xyz", (0, 0, -0.27),
-                is_scs_local=True
+                (0, 0, 0), "xyz", (0, 0, -0.27), is_scs_local=True
             ),
             mesh=MeshReal(((0, 0, 0), (0, 0, -0.19))),
         )
@@ -129,8 +125,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="SHANK",
             parent_name="THIGH",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (0, 0, 0), "xyz", (0, 0, -0.42),
-                is_scs_local=True
+                (0, 0, 0), "xyz", (0, 0, -0.42), is_scs_local=True
             ),
             rotations=Rotations.X,
             mesh=MeshReal(((0, 0, 0), (0, 0, -0.43))),
@@ -146,8 +141,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
             name="FOOT",
             parent_name="SHANK",
             segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                (-np.pi / 2, 0, 0), "xyz", (0, 0, -0.43),
-                is_scs_local=True
+                (-np.pi / 2, 0, 0), "xyz", (0, 0, -0.43), is_scs_local=True
             ),
             rotations=Rotations.X,
             mesh=MeshReal(((0, 0, 0), (0, 0, 0.25))),

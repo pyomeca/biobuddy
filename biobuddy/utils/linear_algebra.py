@@ -129,11 +129,12 @@ def rot2eul(rot) -> np.ndarray:
     gamma = np.arctan2(rot[1, 0], rot[0, 0])
     return np.array((alpha, beta, gamma))
 
+
 def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     """
     Projects a rotation matrix to the closest rotation matrix using Singular Value Decomposition (SVD).
     """
-    if np.abs(np.sum(rt_matrix[:3, :3]**2) - 3.0) < 1e-6:
+    if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) < 1e-6:
         return rt_matrix
 
     else:
@@ -150,6 +151,7 @@ def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
 
         output_rt[:3, :3] = projected_rot_matrix
         return output_rt
+
 
 def coord_sys(axis) -> tuple[list[np.ndarray], str]:
     # define orthonormal coordinate system with given z-axis
@@ -289,10 +291,9 @@ class RotoTransMatrix:
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = inverse_rotation_matrix.reshape(3, 3)
-        rt_matrix[:3, 3] = inverse_translation.reshape(3, )
+        rt_matrix[:3, 3] = inverse_translation.reshape(
+            3,
+        )
         rt_matrix[3, 3] = 1.0
 
         return rt_matrix
-
-
-

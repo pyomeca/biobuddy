@@ -32,6 +32,7 @@ def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_
         scs_in_local = inv_parent_scs @ model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
         return get_closest_rotation_matrix(scs_in_local)[:, :, np.newaxis]
 
+
 def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
     """
     Transforms a SegmentCoordinateSystemReal expressed in the local reference frame into a SegmentCoordinateSystemReal expressed in the global reference frame.
@@ -59,7 +60,9 @@ def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment
         rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
         while current_segment.segment_coordinate_system.is_in_local:
             current_parent_name = current_segment.parent_name
-            if current_parent_name == "base" or current_parent_name is None:  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
+            if (
+                current_parent_name == "base" or current_parent_name is None
+            ):  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
                 break
             current_segment = model.segments[current_parent_name]
             rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
