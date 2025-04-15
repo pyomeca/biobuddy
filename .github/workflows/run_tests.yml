@@ -44,10 +44,13 @@ jobs:
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          conda install -c opensim-org opensim
+          pip install scipy numpy matplotlib lxml
 
       - name: Install test dependencies
-        run: pip install pytest pytest-cov codecov
+        run: |
+          pip install pytest pytest-cov codecov ezc3d
+          conda install -c opensim-org opensim=4.5.1
+          conda install -c conda-forge biorbd
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests

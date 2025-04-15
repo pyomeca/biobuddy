@@ -13,7 +13,7 @@ However, if you are a developper and wuant to contribute, you will need to setup
 conda install -c conda-forge python>=3.10 pip 
 conda install -c opensim-org opensim
 conda install -c conda-forge biorbd pyorerun
-pip install pytest pytest-cov codecov black scipy
+pip install numpy matplotlib lxml pytest black scipy ezc3d
 ```
 
 # How to cite
