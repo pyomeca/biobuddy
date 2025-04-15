@@ -50,7 +50,7 @@ jobs:
         run: |
           pip install pytest pytest-cov codecov ezc3d
           conda install -c opensim-org opensim=4.5.1
-          conda install -c conda-forge biorbd=1.11.0
+          conda install -c conda-forge biorbd=1.11.2
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests
