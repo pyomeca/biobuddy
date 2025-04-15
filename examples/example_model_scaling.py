@@ -90,9 +90,6 @@ def main():
     viz_scaled_model.options.show_gravity = True
     viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
 
-    # TODO: Add the osim models
-    #  but DO NOT SCALE IN OPENSIM Python-API as it is broken (aka, the main reason why we are implementing this)
-
     # Animate
     viz.rerun_by_frame("Model output")
 
