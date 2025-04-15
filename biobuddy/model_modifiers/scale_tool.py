@@ -399,7 +399,7 @@ class ScaleTool:
 
     def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
-        regularization_weight = 0.0001
+        regularization_weight = 0.001
 
         def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
             markers_model = np.array(self.scaled_model_biorbd.markers(q))

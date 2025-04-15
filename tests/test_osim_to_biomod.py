@@ -399,14 +399,6 @@ def test_translation_osim_to_biomod():
 
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # geometry_path = parent_path + "/external/opensim-models/Geometry"
-    # cleaned_geometry_path = parent_path + "/models/geometry_cleaned"
-    # cleaned_relative_path = "geometry_cleaned"
-    #
-    # # Convert the vtp mesh files
-    # mesh_parser = MeshParser(geometry_path)
-    # mesh_parser.process_meshes(fail_on_error=False)
-    # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
 
     successful_models = ["Arm26/arm26.osim", "Gait2354_Simbody/subject01_simbody.osim"]
     pin_joint_error_models = [
