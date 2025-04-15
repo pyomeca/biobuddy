@@ -162,7 +162,9 @@ class ModelEvaluation:
                 if not self.osim_model.getJointSet().get(i).get_coordinates(j).get_locked():
 
                     try:
-                        motion_type = MotionType(self.osim_model.getJointSet().get(i).get_coordinates(j).getMotionType())
+                        motion_type = MotionType(
+                            self.osim_model.getJointSet().get(i).get_coordinates(j).getMotionType()
+                        )
                     except:
                         raise RuntimeError("Unknown motionType.")
 
@@ -407,39 +409,44 @@ def test_translation_osim_to_biomod():
     # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
 
     successful_models = ["Arm26/arm26.osim", "Gait2354_Simbody/subject01_simbody.osim"]
-    pin_joint_error_models = ["Pendulum/double_pendulum.osim",
-                              "DoublePendulum/double_pendulum.osim",
-                              "Rajagopal/RajagopalLaiUhlrich2023.osim",
-                              "Rajagopal/Rajagopal2016.osim",
-                              "Gait10dof18musc/subject01_metabolics_spring.osim",
-                              "Gait10dof18musc/subject01.osim",
-                              "Gait10dof18musc/gait10dof18musc.osim",
-                              "Gait10dof18musc/subject01_metabolics_path_spring.osim",
-                              "Gait10dof18musc/subject01_metabolics.osim",
-                              "Gait10dof18musc/subject01_metabolics_path_actuator.osim"]
-    slider_joint_error_models = ["Tug_of_War/Tug_of_War.osim",
-                                 "Tug_of_War/Tug_of_War_Millard.osim"]
-    lxml_synthax_error = ["ToyLanding/ToyLandingModel_activeAFO.osim",
-                          "ToyLanding/ToyLandingModel_AFO.osim",
-                          "ToyLanding/ToyLandingModel.osim",
-                          "SoccerKick/SoccerKickingModel.osim",
-                          "Jumper/DynamicJumperModel.osim",
-                          "BouncingBlock/bouncing_block.osim",
-                          "BouncingBlock/bouncing_block_weak_spring.osim",
-                          "WalkerModel/WalkerModel.osim",
-                          "Converting WalkerModel/WalkerModelTerrain.osim",
-                          "WalkerModel/WalkerModelTerrain.osim"]  # HuntCrossleyForce::ContactParametersSet
-    translation_and_rotation_dofs = ["Leg6Dof9Musc/leg6dof9musc.osim",
-                                     "Gait2392_Simbody/gait2392_thelen2003muscle.osim",
-                                     "Gait2392_Simbody/subject01_adjusted.osim",
-                                     "Gait2392_Simbody/subject01.osim",
-                                     "Gait2392_Simbody/subject01_simbody_adjusted.osim",
-                                     "Gait2392_Simbody/gait2392_millard2012muscle.osim",
-                                     "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
-                                     "Leg39/leg39.osim",
-                                     "Gait2354_Simbody/gait2354_simbody.osim",
-                                     "Gait2354_Simbody/subject01_simbody.osim",
-                                     "Hamner/FullBodyModel_Hamner2010_v2_0.osim"]
+    pin_joint_error_models = [
+        "Pendulum/double_pendulum.osim",
+        "DoublePendulum/double_pendulum.osim",
+        "Rajagopal/RajagopalLaiUhlrich2023.osim",
+        "Rajagopal/Rajagopal2016.osim",
+        "Gait10dof18musc/subject01_metabolics_spring.osim",
+        "Gait10dof18musc/subject01.osim",
+        "Gait10dof18musc/gait10dof18musc.osim",
+        "Gait10dof18musc/subject01_metabolics_path_spring.osim",
+        "Gait10dof18musc/subject01_metabolics.osim",
+        "Gait10dof18musc/subject01_metabolics_path_actuator.osim",
+    ]
+    slider_joint_error_models = ["Tug_of_War/Tug_of_War.osim", "Tug_of_War/Tug_of_War_Millard.osim"]
+    lxml_synthax_error = [
+        "ToyLanding/ToyLandingModel_activeAFO.osim",
+        "ToyLanding/ToyLandingModel_AFO.osim",
+        "ToyLanding/ToyLandingModel.osim",
+        "SoccerKick/SoccerKickingModel.osim",
+        "Jumper/DynamicJumperModel.osim",
+        "BouncingBlock/bouncing_block.osim",
+        "BouncingBlock/bouncing_block_weak_spring.osim",
+        "WalkerModel/WalkerModel.osim",
+        "Converting WalkerModel/WalkerModelTerrain.osim",
+        "WalkerModel/WalkerModelTerrain.osim",
+    ]  # HuntCrossleyForce::ContactParametersSet
+    translation_and_rotation_dofs = [
+        "Leg6Dof9Musc/leg6dof9musc.osim",
+        "Gait2392_Simbody/gait2392_thelen2003muscle.osim",
+        "Gait2392_Simbody/subject01_adjusted.osim",
+        "Gait2392_Simbody/subject01.osim",
+        "Gait2392_Simbody/subject01_simbody_adjusted.osim",
+        "Gait2392_Simbody/gait2392_millard2012muscle.osim",
+        "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
+        "Leg39/leg39.osim",
+        "Gait2354_Simbody/gait2354_simbody.osim",
+        "Gait2354_Simbody/subject01_simbody.osim",
+        "Hamner/FullBodyModel_Hamner2010_v2_0.osim",
+    ]
     skipped = ["WristModel/wrist.osim"]  # To be verified
 
     # Test all OpenSim models
@@ -448,7 +455,7 @@ def test_translation_osim_to_biomod():
     for root, dirs, files in os.walk(osim_root_path):
         for name in files:
             if name.endswith(".osim"):
-                folder = root.split('/')[-1]
+                folder = root.split("/")[-1]
                 osim_file_path = os.path.join(root, name)
                 biomod_file_path = os.path.join(biomod_root_path, name.replace(".osim", ".bioMod"))
 
@@ -482,12 +489,17 @@ def test_translation_osim_to_biomod():
                         # Test the moment arm error
                         if nb_muscles > 0:
                             muscle_test = MomentArmTest(biomod=biomod_file_path, osim_model=osim_file_path)
-                            muscle_error = muscle_test.from_markers(markers=np.random.rand(3, nb_markers, 1), plot=False)
+                            muscle_error = muscle_test.from_markers(
+                                markers=np.random.rand(3, nb_markers, 1), plot=False
+                            )
                             np.testing.assert_array_less(np.max(muscle_error), 0.015)
                             np.testing.assert_array_less(np.median(muscle_error), 0.0025)
 
                 elif os.path.join(folder, name) in pin_joint_error_models:
-                    with pytest.raises(RuntimeError, match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground "):
+                    with pytest.raises(
+                        RuntimeError,
+                        match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
+                    ):
                         model = BiomechanicalModelReal.from_osim(
                             filepath=osim_file_path,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
@@ -495,7 +507,10 @@ def test_translation_osim_to_biomod():
                         )
 
                 elif os.path.join(folder, name) in slider_joint_error_models:
-                    with pytest.raises(RuntimeError, match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground "):
+                    with pytest.raises(
+                        RuntimeError,
+                        match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
+                    ):
                         model = BiomechanicalModelReal.from_osim(
                             filepath=osim_file_path,
                             muscle_type=MuscleType.HILL_DE_GROOTE,

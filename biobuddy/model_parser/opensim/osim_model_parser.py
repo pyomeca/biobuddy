@@ -19,7 +19,13 @@ from ...components.real.rigidbody.inertia_parameters_real import InertiaParamete
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
 from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ...utils.linear_algebra import OrthoMatrix, compute_matrix_rotation, is_ortho_basis, ortho_norm_basis, get_closest_rotation_matrix
+from ...utils.linear_algebra import (
+    OrthoMatrix,
+    compute_matrix_rotation,
+    is_ortho_basis,
+    ortho_norm_basis,
+    get_closest_rotation_matrix,
+)
 from ...utils.rotations import Rotations
 from ...utils.translations import Translations
 
@@ -34,6 +40,7 @@ class Controller(Enum):
 
 def _get_file_version(model: etree.ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
+
 
 class OsimModelParser:
     def __init__(
@@ -295,7 +302,7 @@ class OsimModelParser:
                             )
                         )
             except:
-                print('ici')
+                print("ici")
 
     def _set_segments(self):
         for dof in self.joints:
