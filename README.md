@@ -3,10 +3,18 @@
 
 `BioBuddy` is an open-source tool for translating and personalizing musculoskeletal models across different formats (e.g., .osim, .bioMod). By enabling reliable interoperability between modeling environments, BioBuddy allows researchers to focus on scientific questions rather than technical constraints.
 
+<!---
+[![Actions Status](https://github.com/pyomeca/biobuddy/workflows/CI/badge.svg)](https://github.com/pyomeca/biobuddy/actions)
+[![PyPI](https://anaconda.org/conda-forge/biobuddy/badges/latest_release_date.svg)](https://pypi.org/project/biobuddy/)
+--->
+
+[![codecov](https://codecov.io/gh/pyomeca/biobuddy/main/main/graph/badge.svg)](https://codecov.io/gh/pyomeca/biobuddy)
+[![Discord](https://img.shields.io/discord/1340640457327247460.svg?label=chat&logo=discord&color=7289DA)](https://discord.gg/Ux7BkdjQFW)
+
 # How to install 
 Currently, the only way to install `BioBuddy` is from source. But it will be available on conda-forge and pip in the near future.
 
-If you are a user, you can setup your environement however you'd like since we do not have any mandatory dependency.
+If you are a user, you can set up your environement however you'd like since we do not have any mandatory dependency.
 
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.

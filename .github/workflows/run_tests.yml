@@ -44,7 +44,7 @@ jobs:
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          pip install scipy=1.15.1 numpy=1.25.2 matplotlib lxml
+          pip install scipy==1.15.1 numpy==1.25.2 matplotlib lxml
 
       - name: Install test dependencies
         run: |
