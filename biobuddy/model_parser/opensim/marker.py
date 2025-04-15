@@ -1,4 +1,4 @@
-from typing import Self
+# from typing import Self
 
 from xml.etree import ElementTree
 
@@ -13,7 +13,7 @@ class Marker:
         self.fixed = fixed
 
     @staticmethod
-    def from_element(element: ElementTree.Element) -> Self:
+    def from_element(element: ElementTree.Element)  -> "Self":
         return Marker(
             name=(element.attrib["name"]).split("/")[-1],
             parent=find_in_tree(element, "socket_parent_frame").split("/")[-1],

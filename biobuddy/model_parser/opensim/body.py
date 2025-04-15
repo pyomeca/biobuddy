@@ -1,4 +1,4 @@
-from typing import Self
+# from typing import Self
 
 from xml.etree import ElementTree
 import numpy as np
@@ -56,7 +56,7 @@ class Body:
         self.virtual_body = virtual_body
 
     @staticmethod
-    def from_element(element: ElementTree.Element) -> Self:
+    def from_element(element: ElementTree.Element)  -> "Self":
         name = (element.attrib["name"]).split("/")[-1]
         mass = find_in_tree(element, "mass")
         inertia = find_in_tree(element, "inertia")

@@ -1,4 +1,4 @@
-from typing import Self
+# # from typing import Self
 
 from xml.etree import ElementTree
 
@@ -15,7 +15,7 @@ class SpatialTransform:
         self.function = function
 
     @staticmethod
-    def from_element(element: ElementTree.Element) -> Self:
+    def from_element(element: ElementTree.Element) -> "Self":
         function = False
         for elt in element[0]:
             if "Function" in elt.tag and len(elt.text) != 0:

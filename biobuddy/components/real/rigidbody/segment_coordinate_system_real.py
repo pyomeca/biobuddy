@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Self
+# from typing import Self
 
 import numpy as np
 
@@ -50,7 +50,7 @@ class SegmentCoordinateSystemReal:
         self._scs = value
 
     @property
-    def parent_scs(self) -> Self:
+    def parent_scs(self)  -> "Self":
         return self._parent_scs
 
     @parent_scs.setter
@@ -225,7 +225,7 @@ class SegmentCoordinateSystemReal:
         return multiply_homogeneous_matrix(self=self, other=other)
 
     @property
-    def transpose(self) -> Self:
+    def transpose(self)  -> "Self":
         out = deepcopy(self)
         out.scs = transpose_homogenous_matrix(out.scs)
         return out
