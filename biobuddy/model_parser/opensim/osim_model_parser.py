@@ -291,18 +291,15 @@ class OsimModelParser:
                 skip_virtual=True,
                 parent="base",
             )
-            try:
-                for marker in self.markers:
-                    if marker.parent == "ground":
-                        self.biomechanical_model_real.segments["ground"].add_marker(
-                            MarkerReal(
-                                name=marker.name,
-                                parent_name="ground",
-                                position=marker.position,
-                            )
+            for marker in self.markers:
+                if marker.parent == "ground":
+                    self.biomechanical_model_real.segments["ground"].add_marker(
+                        MarkerReal(
+                            name=marker.name,
+                            parent_name="ground",
+                            position=marker.position,
                         )
-            except:
-                print("ici")
+                    )
 
     def _set_segments(self):
         for dof in self.joints:

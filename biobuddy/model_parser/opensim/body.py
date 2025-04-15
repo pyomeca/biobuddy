@@ -11,7 +11,7 @@ def _extend_mesh_list_with_extra_components(mesh_list, element: etree.ElementTre
     """Convert mesh_list from list[str] to list[tuple(str, OrthoMatrix)] to include offset in some meshes"""
     mesh_list_and_offset = [(mesh, OrthoMatrix()) for mesh in mesh_list]
 
-    if element.find("components"):
+    if element.find("components") is not None:
         frames = element.find("components").findall("PhysicalOffsetFrame")
         for frame in frames:
             if frame.find("attached_geometry") is not None:
@@ -63,7 +63,7 @@ class Body:
         mass_center = find_in_tree(element, "mass_center")
         geometry = element.find("FrameGeometry")
         socket_frame = name
-        if geometry:
+        if geometry is not None:
             socket_frame = geometry.find("socket_frame").text.split("/")[-1]
             if socket_frame == "..":
                 socket_frame = name
