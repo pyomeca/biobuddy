@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Self
+
+# from typing import Self
 
 import numpy as np
 
@@ -15,7 +16,7 @@ class Mesh:
     normals: np.ndarray
 
     @staticmethod
-    def from_vtp(filepath: str) -> Self:
+    def from_vtp(filepath: str) -> "Self":
         from .vtp_utils import read_vtp
 
         return read_vtp(filepath)

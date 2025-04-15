@@ -1,13 +1,13 @@
-from typing import Self
+# from typing import Self
 
-from xml.etree import ElementTree
+from lxml import etree
 import numpy as np
 
 from .utils import find_in_tree
 from ...utils.linear_algebra import OrthoMatrix
 
 
-def _extend_mesh_list_with_extra_components(mesh_list, element: ElementTree.Element) -> list[tuple[str, OrthoMatrix]]:
+def _extend_mesh_list_with_extra_components(mesh_list, element: etree.ElementTree) -> list[tuple[str, OrthoMatrix]]:
     """Convert mesh_list from list[str] to list[tuple(str, OrthoMatrix)] to include offset in some meshes"""
     mesh_list_and_offset = [(mesh, OrthoMatrix()) for mesh in mesh_list]
 
@@ -56,7 +56,7 @@ class Body:
         self.virtual_body = virtual_body
 
     @staticmethod
-    def from_element(element: ElementTree.Element) -> Self:
+    def from_element(element: etree.ElementTree) -> "Self":
         name = (element.attrib["name"]).split("/")[-1]
         mass = find_in_tree(element, "mass")
         inertia = find_in_tree(element, "inertia")
@@ -89,7 +89,10 @@ class Body:
                 if mesh_tp[0].find("Appearance") is not None:
                     mesh_color_tp = mesh_tp[0].find("Appearance").find("color")
                     mesh_color.append(mesh_color_tp.text if mesh_color_tp is not None else None)
+                else:
+                    mesh_color.append(None)
                 mesh_offset.append(mesh_tp[1])
+
         return Body(
             name=name,
             mass=mass,

@@ -23,11 +23,11 @@ class Mesh:
         self.functions = tuple((lambda m, bio, name=f: m[name]) if isinstance(f, str) else f for f in functions)
 
     def to_mesh(
-        self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
     ) -> MeshReal:
         return MeshReal.from_data(
             data,
+            model,
             self.functions,
-            kinematic_chain,
             parent_scs,
         )

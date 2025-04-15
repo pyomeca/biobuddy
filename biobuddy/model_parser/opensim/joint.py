@@ -1,7 +1,7 @@
-from typing import Self
+# from typing import Self
 from enum import Enum
 
-from xml.etree import ElementTree
+from lxml import etree
 import numpy as np
 
 from .coordinate import Coordinate
@@ -67,11 +67,14 @@ class Joint:
         self.function = function
 
     @staticmethod
-    def from_element(element: ElementTree.Element, ignore_fixed: bool, ignore_clamped: bool) -> Self:
+    def from_element(element: etree.ElementTree, ignore_fixed: bool, ignore_clamped: bool) -> "Self":
         tag = element.tag
         if tag not in [e.value for e in JointType]:
+            joint_types_str = ""
+            for e in JointType:
+                joint_types_str += e.value + " "
             raise RuntimeError(
-                f"Joint type {tag} is not implemented yet." f"Allowed joint type are: {[e.value for e in JointType]}"
+                f"Joint type {tag} is not implemented yet. " f"Allowed joint type are: {joint_types_str}"
             )
         name = (element.attrib["name"]).split("/")[-1]
         parent = find_in_tree(element, "socket_parent_frame").split("/")[-1]

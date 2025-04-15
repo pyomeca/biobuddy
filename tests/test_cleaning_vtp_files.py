@@ -23,11 +23,11 @@ def test_process_vtp_files():
     mesh_parser = MeshParser(geometry_path)
     with pytest.raises(RuntimeError, match="The meshes have not been processed yet. Please run process_meshes first."):
         mesh_parser.write(target_path, MeshFormat.VTP)
-    mesh_parser.process_meshes()
+    mesh_parser.process_meshes(fail_on_error=False)
     mesh_parser.write(target_path, MeshFormat.VTP)
 
     assert len(mesh_parser.meshes) == 317
-    assert len(os.listdir(target_path)) == 317
+    assert len(os.listdir(target_path)) == 313  # There are four .vtp files containing lines instead of polygons
 
     # Clean the files
     shutil.rmtree(target_path)

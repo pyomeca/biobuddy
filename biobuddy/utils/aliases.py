@@ -67,6 +67,13 @@ def points_to_array(name: str, points: Points) -> np.ndarray:
 
     if isinstance(points, list):
         points = np.array(points)
+        if points.shape[0] != 3 and points.shape[0] != 4:
+            if points.shape[1] == 3 or points.shape[1] == 4:
+                points = points.T
+            else:
+                raise RuntimeError(
+                    f"The {name} must be a list of np.ndarray of shape (3,) or (4,), but received: {points.shape}"
+                )
 
     if isinstance(points, np.ndarray):
         if len(points.shape) == 1:

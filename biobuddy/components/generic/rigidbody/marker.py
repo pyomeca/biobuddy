@@ -34,20 +34,20 @@ class Marker:
         """
         self.name = name
         function = function if function is not None else self.name
-        self.function = (lambda m, bio: m[function]) if isinstance(function, str) else function
+        self.function = (lambda m, model: m[function]) if isinstance(function, str) else function
         self.parent_name = parent_name
         self.is_technical = is_technical
         self.is_anatomical = is_anatomical
 
     def to_marker(
-        self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
     ) -> MarkerReal:
         return MarkerReal.from_data(
             data,
+            model,
             self.name,
             self.function,
             self.parent_name,
-            kinematic_chain,
             parent_scs,
             is_technical=self.is_technical,
             is_anatomical=self.is_anatomical,

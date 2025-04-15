@@ -4,14 +4,14 @@ import numpy as np
 from enum import Enum
 
 from .via_point_real import ViaPointReal
-from ....utils.aliases import Points, point_to_array
+from ....utils.aliases import Points, point_to_array, points_to_array
 from ....utils.named_list import NamedList
 from ....utils.protocols import Data
 
 
 class MuscleType(Enum):
     HILL = "hill"
-    HILL_THELEN = "hillethelen"
+    HILL_THELEN = "hillthelen"
     HILL_DE_GROOTE = "hilldegroote"
 
 
@@ -182,17 +182,18 @@ class MuscleReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: "BiomechanicalModel",
         name: str,
         muscle_type: MuscleType,
         state_type: MuscleStateType,
         muscle_group: str,
-        origin_position_function: Callable[[dict[str, np.ndarray]], Points],
-        insertion_position_function: Callable[[dict[str, np.ndarray]], Points],
-        optimal_length_function: Callable[[dict[str, np.ndarray]], float],
-        maximal_force_function: Callable[[dict[str, np.ndarray]], float],
-        tendon_slack_length_function: Callable[[dict[str, np.ndarray]], float],
-        pennation_angle_function: Callable[[dict[str, np.ndarray]], float],
-        maximal_excitation_function: Callable[[dict[str, np.ndarray]], float],
+        origin_position_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        insertion_position_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        optimal_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        maximal_force_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        tendon_slack_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        pennation_angle_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        maximal_excitation: float,
     ):
         """
         This is a constructor for the Muscle class. It evaluates the function that defines the muscle to get an
@@ -202,6 +203,9 @@ class MuscleReal:
         ----------
         data
             The data to pick the data from
+        model
+            The model as it is constructed at that particular time. It is useful if some values must be obtained from
+            previously computed values
         name
             The name of the muscle
         muscle_type
@@ -222,12 +226,14 @@ class MuscleReal:
             The function (f(m) -> float, where m is a dict of markers) that defines the tendon slack length of the muscle
         pennation_angle_function
             The function (f(m) -> float, where m is a dict of markers) that defines the pennation angle of the muscle
-        maximal_excitation_function
-            The function that returns the maximal excitation of the muscle (usually 1.0, since it is normalized)
+        maximal_excitation
+            The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
-        origin_position = points_to_array(name="muscle origin function", points=origin_position_function(data.values))
+        origin_position = points_to_array(
+            name="muscle origin function", points=origin_position_function(data.values, model)
+        )
         insertion_position = points_to_array(
-            name="muscle insertion function", points=insertion_position_function(data.values)
+            name="muscle insertion function", points=insertion_position_function(data.values, model)
         )
         return MuscleReal(
             name,
@@ -236,11 +242,11 @@ class MuscleReal:
             muscle_group,
             origin_position,
             insertion_position,
-            optimal_length=optimal_length_function(data.values),
-            maximal_force=maximal_force_function(data.values),
-            tendon_slack_length=tendon_slack_length_function(data.values),
-            pennation_angle=pennation_angle_function(data.values),
-            maximal_excitation=maximal_excitation_function(data.values),
+            optimal_length=optimal_length_function(data.values, model),
+            maximal_force=maximal_force_function(data.values, model),
+            tendon_slack_length=tendon_slack_length_function(data.values, model),
+            pennation_angle=pennation_angle_function(data.values, model),
+            maximal_excitation=maximal_excitation,
         )
 
     def to_biomod(self):

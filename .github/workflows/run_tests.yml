@@ -29,8 +29,11 @@ jobs:
       run:
         shell: bash -l {0}
     steps:
-      - name: Checkout code
+      - name: Checkout code with submodule
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
 
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
@@ -39,15 +42,18 @@ jobs:
       
       - name: Set up Python
         run: |
-          conda install -cconda-forge python>=3.10 pip 
+          conda install -cconda-forge python=3.11.11 pip 
 
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          conda install -c opensim-org opensim
+          pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 
       - name: Install test dependencies
-        run: pip install pytest pytest-cov codecov
+        run: |
+          pip install pytest pytest-cov codecov
+          conda install -c opensim-org opensim=4.5.1
+          conda install -c conda-forge biorbd=1.11.2
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests

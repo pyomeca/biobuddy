@@ -1,11 +1,14 @@
 import os
-from typing import Self
+from copy import deepcopy
+
+# from typing import Self
 
 import biorbd
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
+from .biomechanical_model_real_utils import segment_coordinate_system_in_local
 
 
 class BiomechanicalModelReal:
@@ -68,10 +71,18 @@ class BiomechanicalModelReal:
         """
         self.via_points.pop(via_point_name)
 
+    @property
+    def marker_names(self):
+        list_marker_names = []
+        for segment in self.segments:
+            for marker in segment.markers:
+                list_marker_names += [marker.name]
+        return list_marker_names
+
     @staticmethod
     def from_biomod(
         filepath: str,
-    ) -> Self:
+    ) -> "Self":
         """
         Create a biomechanical model from a biorbd model
         """
@@ -85,7 +96,7 @@ class BiomechanicalModelReal:
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
-    ) -> Self:
+    ) -> "Self":
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
 
@@ -128,6 +139,13 @@ class BiomechanicalModelReal:
         out_string += "// SEGMENTS\n"
         out_string += "// --------------------------------------------------------------\n\n"
         for segment in self.segments:
+            # Make sure the scs are in the local reference frame before printing
+            from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
+            segment.segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=deepcopy(segment_coordinate_system_in_local(self, segment.name)),
+                is_scs_local=True,
+            )
             out_string += segment.to_biomod(with_mesh=with_mesh)
             out_string += "\n\n\n"  # Give some space between segments
 

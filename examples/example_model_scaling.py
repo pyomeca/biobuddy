@@ -2,25 +2,40 @@
 This example shows how to scale a model based on a generic model and a static trial.
 """
 
+import logging
 from pathlib import Path
 import biorbd
 
+from pyomeca import Markers
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
 
 
 def main():
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            # logging.FileHandler("app.log"),  # Log to a file
+            logging.StreamHandler()  # Log to the console
+        ],
+    )
+
     # Paths
     current_path_file = Path(__file__).parent
     osim_file_path = f"{current_path_file}/models/wholebody.osim"
     biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
+    geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
+    geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     xml_filepath = f"{current_path_file}/models/wholebody.xml"
     scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
     static_file_path = f"{current_path_file}/data/static.c3d"
 
     # Convert the vtp files
-    # mesh = MeshParser(geometry_folder=geometry_path)
-    # mesh.process_meshes()
-    # mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
+    mesh = MeshParser(geometry_folder=geometry_path)
+    mesh.process_meshes(fail_on_error=False)
+    mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
@@ -65,11 +80,15 @@ def main():
     viz_biomod_model.options.show_gravity = True
     viz.add_animated_model(viz_biomod_model, q)
 
+    # Add the experimental markers from the static trial
+    fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
+    pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
+
     # Model output
     viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
     viz_scaled_model.options.transparent_mesh = False
     viz_scaled_model.options.show_gravity = True
-    viz.add_animated_model(viz_scaled_model, q)
+    viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
 
     # TODO: Add the osim models
     #  but DO NOT SCALE IN OPENSIM Python-API as it is broken (aka, the main reason why we are implementing this)

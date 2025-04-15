@@ -14,6 +14,7 @@ description = "A generic interface to generate a virtual buddy"
 dynamic = ["version"]
 authors = [
     {name = "Pariterre", email = "pariterre@hotmail.com"},
+    {name = "EveCharbie", email = "eve.charbonneau.1@umontreal.ca"},
 ]
 readme = "README.md"
 classifiers = [
@@ -25,11 +26,16 @@ dependencies = [
     "numpy",
     "ezc3d",
     "lxml",
+    "scipy"
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest",
+    "black",
+    "opensim",
+    "biorbd",
+    "pyorerun"
 ]
 
 [project.urls]

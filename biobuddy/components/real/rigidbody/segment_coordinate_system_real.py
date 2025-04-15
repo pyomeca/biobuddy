@@ -1,4 +1,6 @@
-from typing import Self
+from copy import deepcopy
+
+# from typing import Self
 
 import numpy as np
 
@@ -16,8 +18,8 @@ from ....utils.linear_algebra import (
 class SegmentCoordinateSystemReal:
     def __init__(
         self,
-        scs: np.ndarray = np.identity(4),
-        parent_scs: Self = None,
+        scs: np.ndarray = np.identity(4),  # TODO: Should be a RotoTransMatrix ?
+        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ):
         """
@@ -45,15 +47,15 @@ class SegmentCoordinateSystemReal:
             raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
 
         if len(value.shape) == 2:
-            value = value[:, :, None]
+            value = value[:, :, np.newaxis]
         self._scs = value
 
     @property
-    def parent_scs(self) -> Self:
+    def parent_scs(self) -> "Self":
         return self._parent_scs
 
     @parent_scs.setter
-    def parent_scs(self, value: Self):
+    def parent_scs(self, value: "Self"):
         self._parent_scs = value
 
     @property
@@ -64,13 +66,21 @@ class SegmentCoordinateSystemReal:
     def is_in_global(self, value: bool):
         self._is_in_global = value
 
+    @property
+    def is_in_local(self) -> bool:
+        return not self._is_in_global
+
+    @is_in_local.setter
+    def is_in_local(self, value: bool):
+        self._is_in_global = not value
+
     @staticmethod
     def from_markers(
         origin: MarkerReal,
         first_axis: AxisReal,
         second_axis: AxisReal,
         axis_to_keep: AxisReal.Name,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
     ) -> "SegmentCoordinateSystemReal":
         """
         Parameters
@@ -128,12 +138,13 @@ class SegmentCoordinateSystemReal:
         rt[:3, 3, :] = origin.position[:3, :]
         rt[3, 3, :] = 1
 
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=False)
 
     @staticmethod
     def from_rt_matrix(
         rt_matrix: np.ndarray,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
+        is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
@@ -145,15 +156,18 @@ class SegmentCoordinateSystemReal:
         parent_scs
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
+        is_scs_local
+            If the scs is already in local reference frame
         """
-        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
     @staticmethod
     def from_euler_and_translation(
         angles: Points,
         angle_sequence: str,
         translations: Point,
-        parent_scs: Self = None,
+        parent_scs: "Self" = None,
+        is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
         Construct a SegmentCoordinateSystemReal from angles and translations
@@ -169,13 +183,12 @@ class SegmentCoordinateSystemReal:
         parent_scs
             The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
             is in parent's local reference frame
+        is_scs_local
+            If the scs is already in local reference frame
         """
 
         rt = euler_and_translation_to_matrix(angles=angles, angle_sequence=angle_sequence, translations=translations)
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=True)
-
-    def copy(self):
-        return SegmentCoordinateSystemReal(scs=np.array(self.scs), parent_scs=self.parent_scs)
+        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
     @property
     def mean_scs(self) -> np.ndarray:
@@ -189,12 +202,9 @@ class SegmentCoordinateSystemReal:
         return mean_homogenous_matrix(self.scs)
 
     def to_biomod(self):
-        rt = self.scs
-        if self.is_in_global:
-            rt = self.parent_scs.transpose @ self.scs if self.parent_scs else np.identity(4)[:, :, np.newaxis]
 
         out_string = ""
-        mean_rt = mean_homogenous_matrix(rt) if rt.shape[2] > 1 else rt[:, :, 0]
+        mean_rt = mean_homogenous_matrix(self.scs) if self.scs.shape[2] > 1 else self.scs[:, :, 0]
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
         out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
@@ -216,7 +226,7 @@ class SegmentCoordinateSystemReal:
         return multiply_homogeneous_matrix(self=self, other=other)
 
     @property
-    def transpose(self) -> Self:
-        out = self.copy()
+    def transpose(self) -> "Self":
+        out = deepcopy(self)
         out.scs = transpose_homogenous_matrix(out.scs)
         return out

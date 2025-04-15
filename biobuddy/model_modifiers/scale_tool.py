@@ -12,10 +12,10 @@ from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
 from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
-from ..components.real.rigidbody.mesh_file_real import MeshFileReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ..components.real.muscle.muscle_real import MuscleReal
 from ..components.real.muscle.via_point_real import ViaPointReal
+from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 
 
@@ -30,6 +30,7 @@ class ScaleTool:
         self.original_model_biorbd = None  # This original model is defined by self.scale
         self.scaled_model = BiomechanicalModelReal()
         self.scaled_model_biorbd = None  # This scaled model is defined later when the segment shape is defined
+        self.mean_experimental_markers = None  # This field will be set when .scale is run
 
         self.header = ""
         self.original_mass = None
@@ -85,13 +86,13 @@ class ScaleTool:
 
         self.check_that_makers_do_not_move(marker_positions, marker_names)
         self.check_segments()
+        self.define_mean_experimental_markers(marker_positions, marker_names)
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
-        q_static = self.place_model_in_static_pose(marker_positions, marker_names)
-        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
         self.modify_muscle_parameters()
+        self.place_model_in_static_pose(marker_positions, marker_names)
 
         return self.scaled_model
 
@@ -138,7 +139,7 @@ class ScaleTool:
 
         # Check that all segments that bear mass are scaled.
         for segment_name in self.original_model.segments.keys():
-            inertia = self.original_model.segments[segment_name].inertia_parameters
+            inertia = deepcopy(self.original_model.segments[segment_name].inertia_parameters)
             if inertia is not None and inertia.mass > 0.1 and segment_name not in self.scaling_segments.keys():
                 raise RuntimeError(
                     f"The segment {segment_name} has a positive mass of {self.original_model.segments[segment_name].inertia_parameters.mass}, but is not defined in the scaling configuration."
@@ -150,6 +151,14 @@ class ScaleTool:
                 raise RuntimeError(
                     f"The segment {segment_name} has a scaling configuration, but does not exist in the original model."
                 )
+
+    def define_mean_experimental_markers(self, marker_positions, marker_names):
+        model_marker_names = [m.to_string() for m in self.original_model_biorbd.markerNames()]
+        self.mean_experimental_markers = np.zeros((3, len(model_marker_names)))
+        for i_marker, name in enumerate(model_marker_names):
+            marker_index = marker_names.index(name)
+            this_marker_position = marker_positions[:, marker_index, :]
+            self.mean_experimental_markers[:, i_marker] = np.nanmean(this_marker_position, axis=1)
 
     def get_scaling_factors_and_masses(
         self,
@@ -170,12 +179,12 @@ class ScaleTool:
             # Get each segment's scaled mass
             if self.personalize_mass_distribution:
                 segment_masses[segment_name] = (
-                    self.original_model.segments[segment_name].inertia_parameters.mass
+                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
                     * scaling_factors[segment_name].to_vector()
                 )
             else:
                 segment_masses[segment_name] = (
-                    self.original_model.segments[segment_name].inertia_parameters.mass * mass / original_mass
+                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
                 )
             total_scaled_mass += segment_masses[segment_name]
         # Renormalize segment's mass to make sure the total mass is the mass of the subject
@@ -192,44 +201,71 @@ class ScaleTool:
             marker_positions, marker_names, mass, original_mass
         )
 
-        self.scaled_model.header = self.original_model.header + f"\nModel scaled using Biobuddy.\n"
-        self.scaled_model.gravity = self.original_model.gravity
+        self.scaled_model.header = deepcopy(self.original_model.header) + f"\nModel scaled using Biobuddy.\n"
+        self.scaled_model.gravity = deepcopy(self.original_model.gravity)
 
-        # Scale segments
         for segment_name in self.original_model.segments.keys():
-            if segment_name not in self.scaling_segments.keys():
-                # If the segment is not scaled, copy it to the scaled model
-                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
-            else:
-                this_segment_scale_factor = scaling_factors[segment_name].to_vector()
 
-                parent_name = self.original_model.segments[segment_name].parent_name
-                if parent_name in self.scaling_segments.keys():
-                    parent_scale_factor = scaling_factors[parent_name].to_vector()
+            # Check if the segments has a ghost parent
+            if (
+                self.original_model.segments[segment_name].name + "_parent_offset"
+                in self.original_model.segments.keys()
+            ):
+                offset_parent = self.original_model.segments[segment_name + "_parent_offset"].parent_name
+                if offset_parent in self.scaling_segments.keys():
+                    # Apply scaling to the position of the offset parent segment instead of the current segment
+                    offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
+                    scs_scaled = SegmentCoordinateSystemReal(
+                        scs=self.scale_rt(
+                            deepcopy(
+                                self.original_model.segments[
+                                    segment_name + "_parent_offset"
+                                ].segment_coordinate_system.scs[:, :, 0]
+                            ),
+                            offset_parent_scale_factor,
+                        ),
+                        is_scs_local=True,
+                    )
+                    self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
+                    parent_scale_factor = np.ones((4, 1))
+            else:
+                # Apply scaling to the current segment
+                if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
+                    parent_scale_factor = scaling_factors[
+                        self.original_model.segments[segment_name].parent_name
+                    ].to_vector()
                 else:
                     parent_scale_factor = np.ones((4, 1))
 
+            # Scale segments
+            if segment_name in self.scaling_segments.keys():
+                this_segment_scale_factor = scaling_factors[segment_name].to_vector()
                 self.scaled_model.segments.append(
                     self.scale_segment(
-                        self.original_model.segments[segment_name],
+                        deepcopy(self.original_model.segments[segment_name]),
                         parent_scale_factor,
                         this_segment_scale_factor,
                         segment_masses[segment_name],
                     )
                 )
+            else:
+                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
 
-                for marker in self.original_model.segments[segment_name].markers:
-                    self.scaled_model.segments[segment_name].add_marker(
-                        self.scale_marker(marker, this_segment_scale_factor)
-                    )
+            for marker in deepcopy(self.original_model.segments[segment_name].markers):
+                self.scaled_model.segments[segment_name].remove_marker(marker.name)
+                self.scaled_model.segments[segment_name].add_marker(
+                    self.scale_marker(marker, this_segment_scale_factor)
+                )
 
-                for contact in self.original_model.segments[segment_name].contacts:
-                    self.scaled_model.segments[segment_name].add_contact(
-                        self.scale_contact(contact, this_segment_scale_factor)
-                    )
+            for contact in deepcopy(self.original_model.segments[segment_name].contacts):
+                self.scaled_model.segments[segment_name].remove_contact(contact.name)
+                self.scaled_model.segments[segment_name].add_contact(
+                    self.scale_contact(contact, this_segment_scale_factor)
+                )
 
-                for imu in self.original_model.segments[segment_name].imus:
-                    self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
+            for imu in deepcopy(self.original_model.segments[segment_name].imus):
+                self.scaled_model.segments[segment_name].remove_imu(imu.name)
+                self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
         # Set muscle groups
         self.scaled_model.muscle_groups = deepcopy(self.original_model.muscle_groups)
@@ -237,9 +273,9 @@ class ScaleTool:
         # Scale muscles
         for muscle_name in self.original_model.muscles.keys():
 
-            muscle_group_name = self.original_model.muscles[muscle_name].muscle_group
-            origin_parent_name = self.original_model.muscle_groups[muscle_group_name].origin_parent_name
-            insertion_parent_name = self.original_model.muscle_groups[muscle_group_name].insertion_parent_name
+            muscle_group_name = deepcopy(self.original_model.muscles[muscle_name].muscle_group)
+            origin_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].origin_parent_name)
+            insertion_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].insertion_parent_name)
             origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
             insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
 
@@ -248,29 +284,29 @@ class ScaleTool:
                 and insertion_parent_name not in self.scaling_segments.keys()
             ):
                 # If the muscle is not attached to a segment that is scaled, do not scale the muscle
-                self.scaled_model.muscles.append(self.original_model.muscles[muscle_name])
+                self.scaled_model.muscles.append(deepcopy(self.original_model.muscles[muscle_name]))
             else:
                 self.scaled_model.muscles.append(
                     self.scale_muscle(
-                        self.original_model.muscles[muscle_name], origin_scale_factor, insertion_scale_factor
+                        deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
                     )
                 )
 
         # Scale via points
         for via_point_name in self.original_model.via_points.keys():
 
-            parent_name = self.original_model.via_points[via_point_name].parent_name
+            parent_name = deepcopy(self.original_model.via_points[via_point_name].parent_name)
             parent_scale_factor = scaling_factors[parent_name].to_vector()
 
             if parent_name not in self.scaling_segments.keys():
                 # If the via point is not attached to a segment that is scaled, do not scale the via point
-                self.scaled_model.via_points.append(self.original_model.via_points[via_point_name])
+                self.scaled_model.via_points.append(deepcopy(self.original_model.via_points[via_point_name]))
             else:
                 self.scaled_model.via_points.append(
-                    self.scale_via_point(self.original_model.via_points[via_point_name], parent_scale_factor)
+                    self.scale_via_point(deepcopy(self.original_model.via_points[via_point_name]), parent_scale_factor)
                 )
 
-        self.scaled_model.warnings = self.original_model.warnings
+        self.scaled_model.warnings = deepcopy(self.original_model.warnings)
 
         return
 
@@ -300,7 +336,7 @@ class ScaleTool:
             )
 
         segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=self.scale_rt(original_segment.segment_coordinate_system.scs.reshape(4, 4), parent_scale_factor),
+            scs=self.scale_rt(original_segment.segment_coordinate_system.scs[:, :, 0], parent_scale_factor),
             is_scs_local=True,
         )
 
@@ -343,7 +379,7 @@ class ScaleTool:
         self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
     ) -> InertialMeasurementUnitReal:
         scaled_imu = deepcopy(original_imu)
-        scaled_imu.scs = self.scale_rt(original_imu.scs, scale_factor)
+        scaled_imu.scs = self.scale_rt(original_imu.scs[:, :, 0], scale_factor)
         return scaled_imu
 
     def scale_muscle(
@@ -361,7 +397,9 @@ class ScaleTool:
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
-    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
+    def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
+
+        regularization_weight = 0.0001
 
         def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
             markers_model = np.array(self.scaled_model_biorbd.markers(q))
@@ -370,7 +408,6 @@ class ScaleTool:
             for m, value in enumerate(markers_model):
                 vect_pos_markers[m * 3 : (m + 1) * 3] = value.to_array()
             # TODO: setup the IKTask to set the "q_ref" to something else than zero.
-            regularization_weight = 0.0001
             out = np.hstack(
                 (vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)), regularization_weight * q)
             )
@@ -384,7 +421,7 @@ class ScaleTool:
             for m, value in enumerate(jacobian_matrix):
                 vec_jacobian[m * 3 : (m + 1) * 3, :] = value.to_array()
             for i_q in range(nb_q):
-                vec_jacobian[nb_marker * 3 + i_q, i_q] = 1
+                vec_jacobian[nb_marker * 3 + i_q, i_q] = regularization_weight
             return vec_jacobian
 
         marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
@@ -413,14 +450,32 @@ class ScaleTool:
 
         return np.median(optimal_q, axis=1)
 
-    def replace_markers_on_segments(self, q_static, marker_positions: np.ndarray, marker_names: list[str]):
+    def make_static_pose_the_zero(self, q_static: np.ndarray):
+        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
+            segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
+            self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=segment_jcs,
+                parent_scs=None,
+                is_scs_local=(
+                    segment_name == "base"
+                ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
+            )
+
+    def replace_markers_on_segments(self, q_static: np.ndarray, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             for marker in self.scaled_model.segments[segment_name].markers:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment).to_array()
-                marker.position = segment_jcs @ np.hstack((this_marker_position, 1))
+                segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
+                rt_matrix = RotoTransMatrix()
+                rt_matrix.from_rt_matrix(segment_jcs)
+                marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
+
+    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]):
+        q_static = self.find_static_pose(marker_positions, marker_names)
+        self.make_static_pose_the_zero(q_static)
+        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
     def modify_muscle_parameters(self):
         """
@@ -437,10 +492,12 @@ class ScaleTool:
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
             self.scaled_model.muscles[muscle_name].optimal_length = (
-                self.original_model.muscles[muscle_name].optimal_length * scaled_muscle_length / original_muscle_length
+                deepcopy(self.original_model.muscles[muscle_name].optimal_length)
+                * scaled_muscle_length
+                / original_muscle_length
             )
             self.scaled_model.muscles[muscle_name].tendon_slack_length = (
-                self.original_model.muscles[muscle_name].tendon_slack_length
+                deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)
                 * scaled_muscle_length
                 / original_muscle_length
             )

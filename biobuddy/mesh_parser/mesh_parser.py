@@ -44,7 +44,7 @@ class MeshParser:
         _logger.info("Cleaning vtp file into triangles: ")
 
         for filepath in self._geometry_filepaths:
-            _logger.info(f"\t{filepath}")
+            _logger.info(f"Reading - \t{filepath}")
 
             with open(filepath, "r") as f:
                 try:
@@ -56,8 +56,9 @@ class MeshParser:
                 except Exception as e:
                     if fail_on_error:
                         raise e
-
-                    _logger.info(f"\tError while processing {filepath.name}. Skipping")
+                    else:
+                        self._meshes.append(None)
+                        _logger.info(f"\tError while processing {filepath.name}. Skipping")
 
         self._is_processed = True
 
@@ -68,7 +69,9 @@ class MeshParser:
         if not os.path.exists(folder):
             os.makedirs(folder)
         for filepath, mesh in zip(self._geometry_filepaths, self._meshes):
-            if format is MeshFormat.VTP:
-                mesh.to_vtp(filepath=Path(folder) / filepath.name)
-            else:
-                raise ValueError(f"Unsupported format {format}")
+            if mesh is not None:
+                _logger.info(f"Writing - \t{filepath.name}.")
+                if format is MeshFormat.VTP:
+                    mesh.to_vtp(filepath=Path(folder) / filepath.name)
+                else:
+                    raise ValueError(f"Unsupported format {format}")

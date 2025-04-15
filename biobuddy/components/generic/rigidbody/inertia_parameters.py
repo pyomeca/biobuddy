@@ -34,14 +34,14 @@ class InertiaParameters:
         self.inertia = inertia
 
     def to_real(
-        self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
     ) -> InertiaParametersReal:
         return InertiaParametersReal.from_data(
             data,
+            model,
             self.relative_mass,
             self.center_of_mass,
             self.inertia,
-            kinematic_chain,
             parent_scs,
         )
 

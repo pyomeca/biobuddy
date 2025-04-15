@@ -36,9 +36,10 @@ class ViaPoint:
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
 
-    def to_via_point(self, data: Data) -> ViaPointReal:
+    def to_via_point(self, data: Data, model: "BiomechanicalModelReal") -> ViaPointReal:
         return ViaPointReal.from_data(
             data,
+            model,
             self.name,
             self.parent_name,
             self.muscle_name,

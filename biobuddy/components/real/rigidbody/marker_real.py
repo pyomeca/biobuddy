@@ -81,10 +81,10 @@ class MarkerReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: BiomechanicalModelReal,
         name: str,
         function: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], Points],
         parent_name: str,
-        kinematic_chain: BiomechanicalModelReal,
         parent_scs: CoordinateSystemRealProtocol = None,
         is_technical: bool = True,
         is_anatomical: bool = False,
@@ -97,15 +97,15 @@ class MarkerReal:
         ----------
         data
             The data to pick the data from
+        model
+            The model as it is constructed at that particular time. It is useful if some values must be obtained from
+            previously computed values
         name
             The name of the new marker
         function
             The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the marker
         parent_name
             The name of the parent the marker is attached to
-        kinematic_chain
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
         parent_scs
             The segment coordinate system of the parent to transform the marker from global to local
         is_technical
@@ -115,7 +115,7 @@ class MarkerReal:
         """
 
         # Get the position of the markers and do some sanity checks
-        p = points_to_array(name=f"marker function", points=function(data.values, kinematic_chain))
+        p = points_to_array(name=f"marker function", points=function(data.values, model))
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
         projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
         if np.isnan(projected_p).all():

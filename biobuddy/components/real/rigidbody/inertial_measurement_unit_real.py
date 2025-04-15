@@ -1,4 +1,6 @@
-from typing import Self
+from copy import deepcopy
+
+# from typing import Self
 
 import numpy as np
 
@@ -85,9 +87,6 @@ class InertialMeasurementUnitReal:
     def is_anatomical(self, value: bool):
         self._is_anatomical = value
 
-    def copy(self) -> Self:
-        return InertialMeasurementUnitReal(name=self.name, parent_name=self.parent_name, scs=np.array(self.scs))
-
     def to_biomod(self):
         out_string = f"imu\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
@@ -107,7 +106,7 @@ class InertialMeasurementUnitReal:
         return out_string
 
     @property
-    def transpose(self) -> Self:
-        out = self.copy()
+    def transpose(self) -> "Self":
+        out = deepcopy(self)
         out.scs = transpose_homogenous_matrix(out.scs)
         return out

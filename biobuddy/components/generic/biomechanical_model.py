@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from .muscle.muscle_group import MuscleGroup
 from .muscle.muscle import Muscle
 from .muscle.via_point import ViaPoint
@@ -33,10 +35,13 @@ class BiomechanicalModel:
         for segment in self.segments:
             scs = SegmentCoordinateSystemReal()
             if segment.segment_coordinate_system is not None:
+                parent_scs = None
+                if segment.parent_name is not None and segment.parent_name not in ["base"]:
+                    parent_scs = deepcopy(model.segments[segment.parent_name].segment_coordinate_system)
                 scs = segment.segment_coordinate_system.to_scs(
                     data,
                     model,
-                    model.segments[segment.parent_name].segment_coordinate_system if segment.parent_name else None,
+                    parent_scs,
                 )
 
             inertia_parameters = None
@@ -100,6 +105,6 @@ class BiomechanicalModel:
                     f"Please create the muscle group {via_point.muscle_group} before putting the via point {via_point.name} in it."
                 )
 
-            model.via_points.append(via_point.to_via_point(data))
+            model.via_points.append(via_point.to_via_point(data, model))
 
         return model

@@ -1,6 +1,6 @@
-from typing import Self
+# from typing import Self
 
-from xml.etree import ElementTree
+from lxml import etree
 
 from .utils import find_in_tree
 
@@ -14,7 +14,7 @@ class Coordinate:
         self.locked = locked
 
     @staticmethod
-    def from_element(element: ElementTree.Element, ignore_fixed: bool = False, ignore_clamped: bool = False) -> Self:
+    def from_element(element: etree.ElementTree, ignore_fixed: bool = False, ignore_clamped: bool = False) -> "Self":
 
         if ignore_fixed:
             locked = False

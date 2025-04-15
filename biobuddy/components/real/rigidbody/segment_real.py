@@ -15,7 +15,7 @@ class SegmentReal:
     def __init__(
         self,
         name: str,
-        parent_name: str = "",
+        parent_name: str = "base",
         segment_coordinate_system: SegmentCoordinateSystemReal = None,
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
@@ -27,6 +27,7 @@ class SegmentReal:
     ):
         self.name = name
         self.parent_name = parent_name
+        self.segment_coordinate_system = segment_coordinate_system
         self.translations = translations
         self.rotations = rotations
         self.q_ranges = q_ranges
@@ -34,9 +35,6 @@ class SegmentReal:
         self.markers = NamedList[MarkerReal]()
         self.contacts = NamedList[ContactReal]()
         self.imus = NamedList[InertialMeasurementUnitReal]()
-        self.segment_coordinate_system = (
-            SegmentCoordinateSystemReal() if segment_coordinate_system is None else segment_coordinate_system
-        )
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh
         self.mesh_file = mesh_file
@@ -160,6 +158,14 @@ class SegmentReal:
 
     def remove_contact(self, contact: ContactReal):
         self.contacts.remove(contact)
+
+    def add_imu(self, imu: InertialMeasurementUnitReal):
+        if imu.parent_name is None:
+            raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
+        self.imus.append(imu)
+
+    def remove_imu(self, imu: InertialMeasurementUnitReal):
+        self.imus.remove(imu)
 
     def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly

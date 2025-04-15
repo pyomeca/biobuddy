@@ -1,6 +1,6 @@
-from typing import Self
+# from typing import Self
 
-from xml.etree import ElementTree
+from lxml import etree
 
 from .utils import find_in_tree
 
@@ -14,7 +14,7 @@ class PathPoint:
         self.position = position
 
     @staticmethod
-    def from_element(element: ElementTree.Element) -> Self:
+    def from_element(element: etree.ElementTree) -> "Self":
         return PathPoint(
             name=element.attrib["name"],
             muscle=None,

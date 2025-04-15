@@ -80,19 +80,19 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             muscle_type=MuscleType.HILL_THELEN,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="PENDULUM_MUSCLE_GROUP",
-            origin_position_function=lambda m: np.array([0, 0, 0]),
-            insertion_position_function=lambda m: np.array([0, 0, 1]),
-            optimal_length_function=lambda model, m: 0.1,
-            maximal_force_function=lambda m: 100.0,
-            tendon_slack_length_function=lambda model, m: 0.05,
-            pennation_angle_function=lambda model, m: 0.05,
+            origin_position_function=lambda m, model: np.array([0, 0, 0]),
+            insertion_position_function=lambda m, model: np.array([0, 0, 1]),
+            optimal_length_function=lambda m, model: 0.1,
+            maximal_force_function=lambda m, model: 100.0,
+            tendon_slack_length_function=lambda m, model: 0.05,
+            pennation_angle_function=lambda m, model: 0.05,
             maximal_excitation=1,
         )
     )
     bio_model.via_points.append(
         ViaPoint(
             "PENDULUM_MUSCLE",
-            position_function=lambda m: np.array([0, 0, 0.5]),
+            position_function=lambda m, model: np.array([0, 0, 0.5]),
             parent_name="PENDULUM",
             muscle_name="PENDULUM_MUSCLE",
             muscle_group="PENDULUM_MUSCLE_GROUP",
@@ -100,10 +100,10 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     )
 
     # Put the model together
-    bio_model.personalize_model({})
+    real_model = bio_model.to_real({})
 
     # Pprint it to a bioMod file
-    bio_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_file_path)
 
     model = biorbd.Model(kinematic_model_file_path)
     assert model.nbQ() == 4

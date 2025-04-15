@@ -98,7 +98,7 @@ class ContactReal:
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
-        out_string += f"\tposition\t{np.round(self.position[0], 4)}\t{np.round(self.position[1], 4)}\t{np.round(self.position[2], 4)}\n"
+        out_string += f"\tposition\t{np.round(self.position[0, 0], 4)}\t{np.round(self.position[1, 0], 4)}\t{np.round(self.position[2, 0], 4)}\n"
         out_string += f"\taxis\t{self.axis.value}\n"
         out_string += "endcontact\n"
         return out_string

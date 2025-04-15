@@ -19,6 +19,12 @@ class NamedList(list[T]):
             raise AttributeError("The appended item must have a name attribute")
         return super().append(item)
 
+    def remove(self, name: str) -> None:
+        if name not in self.keys():
+            raise AttributeError(f"The item named {name} cannot be removed because it it not in the list.")
+        element_index = self.keys().index(name)
+        return self.pop(element_index)
+
     def __getitem__(self, key: int | str) -> T:
         if isinstance(key, int):
             return super(NamedList, self).__getitem__(key)
