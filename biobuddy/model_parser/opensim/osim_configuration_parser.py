@@ -1,6 +1,6 @@
 from time import strftime
 
-from xml.etree import ElementTree
+from lxml import etree
 
 from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
@@ -8,7 +8,7 @@ from ...model_modifiers.scale_tool import ScaleTool
 from ...utils.translations import Translations
 
 
-def _get_file_version(model: ElementTree) -> int:
+def _get_file_version(model: etree.ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
 
 
@@ -44,7 +44,7 @@ class OsimConfigurationParser:
             + strftime("%Y-%m-%d %H:%M:%S")
             + f"\nIt is based on the original file {filepath}.\n"
         )
-        self.configuration = ElementTree.parse(filepath)
+        self.configuration = etree.parse(filepath)
         self.model_scaler = None
         self.marker_placer = None
         self.warnings = ""

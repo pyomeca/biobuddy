@@ -2,9 +2,9 @@ from enum import Enum
 from time import strftime
 
 import numpy as np
-from xml.etree import ElementTree
+from lxml import etree
 
-from .utils import is_element_empty
+from .utils import is_element_empty, match_tag
 from .body import Body
 from .joint import Joint
 from .marker import Marker
@@ -19,7 +19,7 @@ from ...components.real.rigidbody.inertia_parameters_real import InertiaParamete
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
 from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ...utils.linear_algebra import OrthoMatrix, compute_matrix_rotation, is_ortho_basis, ortho_norm_basis
+from ...utils.linear_algebra import OrthoMatrix, compute_matrix_rotation, is_ortho_basis, ortho_norm_basis, get_closest_rotation_matrix
 from ...utils.rotations import Rotations
 from ...utils.translations import Translations
 
@@ -32,9 +32,8 @@ class Controller(Enum):
     NONE = None
 
 
-def _get_file_version(model: ElementTree) -> int:
+def _get_file_version(model: etree.ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
-
 
 class OsimModelParser:
     def __init__(
@@ -80,7 +79,7 @@ class OsimModelParser:
         self.ignore_muscle_applied_tag = ignore_muscle_applied_tag
 
         # Extended attributes
-        self.model = ElementTree.parse(filepath)
+        self.model = etree.parse(filepath)
         file_version = _get_file_version(self.model)
         if file_version < 40000:
             raise RuntimeError(
@@ -91,53 +90,12 @@ class OsimModelParser:
 
         self.gravity = np.array([0.0, 0.0, -9.81])
         self.ground_elt, self.default_elt, self.credit, self.publications = None, None, None, None
-        self.bodyset_elt, self.jointset_elt, self.forceset_elt, self.markerset_elm = None, None, None, None
+        self.bodyset_elt, self.jointset_elt, self.forceset_elt, self.markerset_elt = None, None, None, None
         self.controllerset_elt, self.constraintset_elt, self.contact_geometryset_elt = None, None, None
         self.componentset_elt, self.probeset_elt = None, None
         self.length_units, self.force_units = "meters", "newtons"
 
-        for element in self.model.getroot()[0]:
-            if element.tag == "gravity":
-                self.gravity = np.array([float(i) for i in element.text.split(" ")])
-            elif element.tag == "Ground":
-                self.ground_elt = element
-            elif element.tag == "defaults":
-                self.default_elt = element
-            elif element.tag == "BodySet":
-                self.bodyset_elt = element
-            elif element.tag == "JointSet":
-                self.jointset_elt = element
-            elif element.tag == "ControllerSet":
-                self.controllerset_elt = element
-            elif element.tag == "ConstraintSet":
-                self.constraintset_elt = element
-            elif element.tag == "ForceSet":
-                self.forceset_elt = element
-            elif element.tag == "MarkerSet":
-                self.markerset_elt = element
-            elif element.tag == "ContactGeometrySet":
-                self.contact_geometryset_elt = element
-            elif element.tag == "ComponentSet":
-                self.componentset_elt = element
-            elif element.tag == "ProbeSet":
-                self.probeset_elt = element
-            elif element.tag == "credits":
-                self.credit = element.text
-            elif element.tag == "publications":
-                self.publications = element.text
-            elif element.tag == "length_units":
-                self.length_units = element.text
-                if self.length_units != "meters":
-                    raise RuntimeError("Lengths units must be in meters.")
-            elif element.tag == "force_units":
-                self.force_units = element.text
-                if self.force_units != "N":
-                    raise RuntimeError("Force units must be in newtons.")
-            else:
-                raise RuntimeError(
-                    f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
-                    f" in the github repository."
-                )
+        self.parse_tags(self.model.getroot())
 
         # TODO Add the type hints for all and/or use NamedList
         self.bodies: list[Body] = []
@@ -157,6 +115,55 @@ class OsimModelParser:
         self.biomechanical_model_real = BiomechanicalModelReal()
         self._read()
 
+    def parse_tags(self, root):
+        for element in root:
+            if isinstance(element, etree._Comment):
+                pass  # This line is a comment
+            elif match_tag(element, "gravity"):
+                self.gravity = np.array([float(i) for i in element.text.split(" ")])
+            elif match_tag(element, "ground"):
+                self.ground_elt = element
+            elif match_tag(element, "defaults"):
+                self.default_elt = element
+            elif match_tag(element, "BodySet"):
+                self.bodyset_elt = element
+            elif match_tag(element, "JointSet"):
+                self.jointset_elt = element
+            elif match_tag(element, "ControllerSet"):
+                self.controllerset_elt = element
+            elif match_tag(element, "ConstraintSet"):
+                self.constraintset_elt = element
+            elif match_tag(element, "ForceSet"):
+                self.forceset_elt = element
+            elif match_tag(element, "MarkerSet"):
+                self.markerset_elt = element
+            elif match_tag(element, "ContactGeometrySet"):
+                self.contact_geometryset_elt = element
+            elif match_tag(element, "ComponentSet"):
+                self.componentset_elt = element
+            elif match_tag(element, "ProbeSet"):
+                self.probeset_elt = element
+            elif match_tag(element, "credits"):
+                self.credit = element.text
+            elif match_tag(element, "publications"):
+                self.publications = element.text
+            elif match_tag(element, "length_units"):
+                self.length_units = element.text
+                if self.length_units != "meters":
+                    raise RuntimeError("Lengths units must be in meters.")
+            elif match_tag(element, "force_units"):
+                self.force_units = element.text
+                if self.force_units != "N":
+                    raise RuntimeError("Force units must be in newtons.")
+            elif match_tag(element, "Model"):
+                # Everything is encapsulated in the Model tag, so we recall the function with the interior
+                self.parse_tags(element)
+            else:
+                raise RuntimeError(
+                    f"Element {element.tag} not recognize. Please verify your xml file or send an issue"
+                    f" in the github repository."
+                )
+
     def to_real(self) -> BiomechanicalModelReal:
         return self.biomechanical_model_real
 
@@ -175,7 +182,7 @@ class OsimModelParser:
     def _get_marker_set(self):
         markers = []
         if is_element_empty(self.markerset_elt):
-            return None
+            return []
         else:
             original_marker_names = []
             for element in self.markerset_elt[0]:
@@ -187,7 +194,7 @@ class OsimModelParser:
     def _get_joint_set(self):
         joints = []
         if is_element_empty(self.forceset_elt):
-            return None
+            return []
         else:
             for element in self.jointset_elt[0]:
                 joint = Joint.from_element(element, self.ignore_fixed_dof_tag, self.ignore_clamped_dof_tag)
@@ -277,15 +284,18 @@ class OsimModelParser:
                 skip_virtual=True,
                 parent="base",
             )
-            for marker in self.markers:
-                if marker.parent == "ground":
-                    self.biomechanical_model_real.segments["ground"].add_marker(
-                        MarkerReal(
-                            name=marker.name,
-                            parent_name="ground",
-                            position=marker.position,
+            try:
+                for marker in self.markers:
+                    if marker.parent == "ground":
+                        self.biomechanical_model_real.segments["ground"].add_marker(
+                            MarkerReal(
+                                name=marker.name,
+                                parent_name="ground",
+                                position=marker.position,
+                            )
                         )
-                    )
+            except:
+                print('ici')
 
     def _set_segments(self):
         for dof in self.joints:
@@ -506,7 +516,7 @@ class OsimModelParser:
             rotation_matrix = frame_offset.get_rotation_matrix()
             rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
             segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
-                rt_matrix=rt_matrix, is_scs_local=True
+                rt_matrix=get_closest_rotation_matrix(rt_matrix), is_scs_local=True
             )
         return segment_coordinate_system
 
@@ -761,7 +771,7 @@ class OsimModelParser:
         # Warnings
         self._set_warnings()
 
-    def _get_body_set(self, body_set: ElementTree = None) -> list[Body]:
+    def _get_body_set(self, body_set: etree.ElementTree = None) -> list[Body]:
         bodies = []
         body_set = body_set if body_set else self.bodyset_elt[0]
         if is_element_empty(body_set):

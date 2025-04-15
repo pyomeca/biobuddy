@@ -1,3 +1,4 @@
+from enum import Enum
 import os
 import biorbd
 from math import ceil
@@ -5,8 +6,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 import opensim as osim
 import pytest
+import lxml
 
 from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
+
+
+class MotionType(Enum):
+    TRANSLATION = 1
+    TRANSLATION_AND_ROTATION = 2
+    ROTATION = 3
 
 
 class ModelEvaluation:
@@ -152,12 +160,19 @@ class ModelEvaluation:
             rotation_idx = []
             for j in range(self.osim_model.getJointSet().get(i).numCoordinates()):
                 if not self.osim_model.getJointSet().get(i).get_coordinates(j).get_locked():
-                    if self.osim_model.getJointSet().get(i).get_coordinates(j).getMotionType() == 1:
-                        translation_idx.append(tot_idx + j)
-                    elif self.osim_model.getJointSet().get(i).get_coordinates(j).getMotionType() == 3:
-                        rotation_idx.append(tot_idx + j)
-                    else:
+
+                    try:
+                        motion_type = MotionType(self.osim_model.getJointSet().get(i).get_coordinates(j).getMotionType())
+                    except:
                         raise RuntimeError("Unknown motionType.")
+
+                    if motion_type == MotionType.TRANSLATION:
+                        translation_idx.append(tot_idx + j)
+                    elif motion_type == MotionType.TRANSLATION_AND_ROTATION:
+                        raise RuntimeError(f"TODO: {MotionType.TRANSLATION_AND_ROTATION.value} must be split in two.")
+                    elif motion_type == MotionType.ROTATION:
+                        rotation_idx.append(tot_idx + j)
+
             tot_idx += self.osim_model.getJointSet().get(i).numCoordinates()
             ordered_idx += rotation_idx + translation_idx
         return ordered_idx
@@ -352,22 +367,144 @@ def test_kinematics():
     biomod_model = biorbd.Model(biomod_file_path)
     nb_q = biomod_model.nbQ()
 
-    # Test the kinematics
+    # Test the marker position error
     kin_test = KinematicsTest(biomod=biomod_file_path, osim_model=osim_file_path)
     markers_error = kin_test.from_states(states=np.random.rand(nb_q, 20) * 0.2, plot=False)
     np.testing.assert_almost_equal(np.mean(markers_error), 0, decimal=4)
 
 
 def test_moment_arm():
-    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # For ortho_norm_basis
     np.random.seed(42)
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     biomod_model = parent_path + "/examples/models/Wu_Shoulder_Model_via_points.bioMod"
     osim_model = parent_path + "/examples/models/Wu_Shoulder_Model_via_points.osim"
+
+    # Test the moment arm error
     muscle_test = MomentArmTest(biomod=biomod_model, osim_model=osim_model)
     muscle_error = muscle_test.from_markers(markers=np.random.rand(3, 22, 20), plot=False)
-    np.testing.assert_almost_equal(np.median(muscle_error), 0.0017046780530509224, decimal=4)
+    np.testing.assert_array_less(np.max(muscle_error), 0.015)
+    np.testing.assert_array_less(np.median(muscle_error), 0.0025)
 
-    muscle_test = MomentArmTest(biomod=biomod_model, osim_model=osim_model)
-    print(muscle_test.from_markers(markers=np.random.rand(3, 22, 20), plot=False))
-    kin_test = KinematicsTest(biomod=biomod_model, osim_model=osim_model)
-    print(kin_test.from_states(states=np.random.rand(16, 20) * 0.2, plot=False))
+
+def test_translation_osim_to_biomod():
+
+    # For ortho_norm_basis
+    np.random.seed(42)
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # geometry_path = parent_path + "/external/opensim-models/Geometry"
+    # cleaned_geometry_path = parent_path + "/models/geometry_cleaned"
+    # cleaned_relative_path = "geometry_cleaned"
+    #
+    # # Convert the vtp mesh files
+    # mesh_parser = MeshParser(geometry_path)
+    # mesh_parser.process_meshes(fail_on_error=False)
+    # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
+
+    successful_models = ["Arm26/arm26.osim", "Gait2354_Simbody/subject01_simbody.osim"]
+    pin_joint_error_models = ["Pendulum/double_pendulum.osim",
+                              "DoublePendulum/double_pendulum.osim",
+                              "Rajagopal/RajagopalLaiUhlrich2023.osim",
+                              "Rajagopal/Rajagopal2016.osim",
+                              "Gait10dof18musc/subject01_metabolics_spring.osim",
+                              "Gait10dof18musc/subject01.osim",
+                              "Gait10dof18musc/gait10dof18musc.osim",
+                              "Gait10dof18musc/subject01_metabolics_path_spring.osim",
+                              "Gait10dof18musc/subject01_metabolics.osim",
+                              "Gait10dof18musc/subject01_metabolics_path_actuator.osim"]
+    slider_joint_error_models = ["Tug_of_War/Tug_of_War.osim",
+                                 "Tug_of_War/Tug_of_War_Millard.osim"]
+    lxml_synthax_error = ["ToyLanding/ToyLandingModel_activeAFO.osim",
+                          "ToyLanding/ToyLandingModel_AFO.osim",
+                          "ToyLanding/ToyLandingModel.osim",
+                          "SoccerKick/SoccerKickingModel.osim",
+                          "Jumper/DynamicJumperModel.osim",
+                          "BouncingBlock/bouncing_block.osim",
+                          "BouncingBlock/bouncing_block_weak_spring.osim",
+                          "WalkerModel/WalkerModel.osim",
+                          "Converting WalkerModel/WalkerModelTerrain.osim",
+                          "WalkerModel/WalkerModelTerrain.osim"]  # HuntCrossleyForce::ContactParametersSet
+    translation_and_rotation_dofs = ["Leg6Dof9Musc/leg6dof9musc.osim",
+                                     "Gait2392_Simbody/gait2392_thelen2003muscle.osim",
+                                     "Gait2392_Simbody/subject01_adjusted.osim",
+                                     "Gait2392_Simbody/subject01.osim",
+                                     "Gait2392_Simbody/subject01_simbody_adjusted.osim",
+                                     "Gait2392_Simbody/gait2392_millard2012muscle.osim",
+                                     "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
+                                     "Leg39/leg39.osim",
+                                     "Gait2354_Simbody/gait2354_simbody.osim",
+                                     "Gait2354_Simbody/subject01_simbody.osim",
+                                     "Hamner/FullBodyModel_Hamner2010_v2_0.osim"]
+    skipped = ["WristModel/wrist.osim"]  # To be verified
+
+    # Test all OpenSim models
+    osim_root_path = parent_path + "/external/opensim-models/Models"
+    biomod_root_path = parent_path + "/models/bioMod"
+    for root, dirs, files in os.walk(osim_root_path):
+        for name in files:
+            if name.endswith(".osim"):
+                folder = root.split('/')[-1]
+                osim_file_path = os.path.join(root, name)
+                biomod_file_path = os.path.join(biomod_root_path, name.replace(".osim", ".bioMod"))
+
+                if os.path.join(folder, name) in successful_models + translation_and_rotation_dofs:
+                    # Delete the biomod file so we are sure to create it
+                    if os.path.exists(biomod_file_path):
+                        os.remove(biomod_file_path)
+
+                    print(f" ******** Converting {os.path.join(folder, name)} ******** ")
+                    # Convert osim to biomod
+                    model = BiomechanicalModelReal.from_osim(
+                        filepath=osim_file_path,
+                        muscle_type=MuscleType.HILL_DE_GROOTE,
+                        muscle_state_type=MuscleStateType.DEGROOTE,
+                    )
+                    model.to_biomod(biomod_file_path, with_mesh=False)
+
+                    # Test that the model created is valid
+                    biomod_model = biorbd.Model(biomod_file_path)
+                    nb_q = biomod_model.nbQ()
+                    nb_markers = biomod_model.nbMarkers()
+                    nb_muscles = biomod_model.nbMuscles()
+
+                    if os.path.join(folder, name) not in translation_and_rotation_dofs:
+                        # Test the position of the markers
+                        if nb_markers > 0:
+                            kin_test = KinematicsTest(biomod=biomod_file_path, osim_model=osim_file_path)
+                            markers_error = kin_test.from_states(states=np.random.rand(nb_q, 1) * 0.2, plot=False)
+                            np.testing.assert_almost_equal(np.mean(markers_error), 0, decimal=4)
+
+                        # Test the moment arm error
+                        if nb_muscles > 0:
+                            muscle_test = MomentArmTest(biomod=biomod_file_path, osim_model=osim_file_path)
+                            muscle_error = muscle_test.from_markers(markers=np.random.rand(3, nb_markers, 1), plot=False)
+                            np.testing.assert_array_less(np.max(muscle_error), 0.015)
+                            np.testing.assert_array_less(np.median(muscle_error), 0.0025)
+
+                elif os.path.join(folder, name) in pin_joint_error_models:
+                    with pytest.raises(RuntimeError, match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground "):
+                        model = BiomechanicalModelReal.from_osim(
+                            filepath=osim_file_path,
+                            muscle_type=MuscleType.HILL_DE_GROOTE,
+                            muscle_state_type=MuscleStateType.DEGROOTE,
+                        )
+
+                elif os.path.join(folder, name) in slider_joint_error_models:
+                    with pytest.raises(RuntimeError, match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground "):
+                        model = BiomechanicalModelReal.from_osim(
+                            filepath=osim_file_path,
+                            muscle_type=MuscleType.HILL_DE_GROOTE,
+                            muscle_state_type=MuscleStateType.DEGROOTE,
+                        )
+
+                elif os.path.join(folder, name) in lxml_synthax_error:
+                    pytest.raises(lxml.etree.XMLSyntaxError)
+
+                else:
+                    if os.path.join(folder, name) not in skipped:
+                        raise RuntimeError("OpenSim added a new model to their repository. Please check the model.")

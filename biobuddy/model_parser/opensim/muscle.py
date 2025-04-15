@@ -1,6 +1,6 @@
 # from typing import Self
 
-from xml.etree import ElementTree
+from lxml import etree
 
 from .utils import find_in_tree
 from .path_point import PathPoint
@@ -36,7 +36,7 @@ class Muscle:
         self.group = group
 
     @staticmethod
-    def from_element(element: ElementTree.Element, ignore_applied: bool) -> "Self":
+    def from_element(element: etree.ElementTree, ignore_applied: bool) -> "Self":
         name = (element.attrib["name"]).split("/")[-1]
         maximal_force = find_in_tree(element, "max_isometric_force")
         optimal_length = find_in_tree(element, "optimal_fiber_length")

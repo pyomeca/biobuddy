@@ -1,7 +1,7 @@
-from xml.etree import ElementTree
+from lxml import etree
 
 
-def find_in_tree(element: ElementTree.Element, string: str):
+def find_in_tree(element: etree.ElementTree, string: str):
     if element.find(string) is not None:
         return element.find(string).text
     else:
