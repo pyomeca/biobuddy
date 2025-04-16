@@ -1,3 +1,8 @@
+"""
+TODO: remove biorbd dependency !!!
+TODO: Test the muscles and inertial values.
+"""
+
 import os
 import pytest
 

@@ -8,7 +8,7 @@
 [![PyPI](https://anaconda.org/conda-forge/biobuddy/badges/latest_release_date.svg)](https://pypi.org/project/biobuddy/)
 --->
 
-[![codecov](https://codecov.io/gh/pyomeca/biobuddy/main/main/graph/badge.svg)](https://codecov.io/gh/pyomeca/biobuddy)
+[![codecov](https://codecov.io/gh/pyomeca/biobuddy/branch/main/graph/badge.svg)](https://codecov.io/gh/pyomeca/biobuddy)
 [![Discord](https://img.shields.io/discord/1340640457327247460.svg?label=chat&logo=discord&color=7289DA)](https://discord.gg/Ux7BkdjQFW)
 
 # How to install 

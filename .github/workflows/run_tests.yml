@@ -61,12 +61,18 @@ jobs:
       - name: Send Codecov report
         uses: codecov/codecov-action@v5
         with:
+          path: .covergage
           files: ./coverage.xml
+          if-no-files-found: error
           flags: unittests
           fail_ci_if_error: true
           verbose: true
         if: matrix.os == 'ubuntu-latest'
 
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
           
       - name: Test installed version of python
         run: | 
