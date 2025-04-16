@@ -1,22 +1,22 @@
 from copy import deepcopy
 from enum import Enum
-from scipy import optimize
 
 import numpy as np
-from ezc3d import c3d
 
-from .. import SegmentCoordinateSystemReal
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
+from ..components.real.biomechanical_model_real_utils import inverse_kinematics
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
 from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
+from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..components.real.muscle.muscle_real import MuscleReal
 from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
+from ..utils.c3d_data import C3dData
 
 
 class InertialCharacteristics(Enum):
@@ -24,50 +24,66 @@ class InertialCharacteristics(Enum):
 
 
 class ScaleTool:
-    def __init__(self, personalize_mass_distribution: bool = True, max_marker_movement: float = 0.1):
+    def __init__(self, original_model: BiomechanicalModelReal, personalize_mass_distribution: bool = True, max_marker_movement: float = 0.1):
+        """
+        Initialize the scale tool.
 
-        self.original_model = BiomechanicalModelReal()
-        self.original_model_biorbd = None  # This original model is defined by self.scale
+        Parameters
+        ----------
+        original_model
+            The original model to scale
+        personalize_mass_distribution
+            If True, the mass distribution of the mass across segments will be personalized based on the marker positions. Otherwise, the mass distribution across segments will be the same as the original model.
+        max_marker_movement
+            The maximum acceptable marker movement in the static trial to consider it "static".
+        """
+
+        # Original attributes
+        self.original_model = original_model
+        self.original_model_biorbd = self.original_model.get_biorbd_model  # TODO: remove
+        self.personalize_mass_distribution = personalize_mass_distribution
+        self.max_marker_movement = max_marker_movement
+
+        # Extended attributes to be filled
         self.scaled_model = BiomechanicalModelReal()
         self.scaled_model_biorbd = None  # This scaled model is defined later when the segment shape is defined
         self.mean_experimental_markers = None  # This field will be set when .scale is run
 
         self.header = ""
         self.original_mass = None
-        self.personalize_mass_distribution = personalize_mass_distribution
-        self.max_marker_movement = max_marker_movement
         self.scaling_segments = NamedList[SegmentScaling]()
         self.marker_weightings = {}
         self.warnings = ""
 
     def scale(
-        self, original_model: BiomechanicalModelReal, static_trial: str, frame_range: range, mass: float
+        self, file_path: str, first_frame: int, last_frame: int, mass: float
     ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
 
         Parameters
         ----------
-        original_model
-            The original model to scale to the subjects anthropometry
-        static_trial
+        file_path
             The .c3d or .trc file of the static trial to use for the scaling
-        frame_range
-            The range of frames to consider for the scaling
+        first_frame
+            The index of the first frame to use in the .c3d file.
+        last_frame
+            The index of the last frame to use in the .c3d file.
         mass
             The mass of the subject
         """
 
-        # Initialize the original and scaled models
-        self.original_model = original_model
-        self.original_model_biorbd = self.original_model.get_biorbd_model
-
         # Check file format
-        if not static_trial.endswith(".c3d"):
-            if static_trial.endswith(".trc"):
+        if file_path.endswith(".c3d"):
+            # Load the c3d file
+            c3d_data = C3dData(file_path, first_frame, last_frame)
+            marker_names = c3d_data.marker_names
+            marker_positions = c3d_data.all_marker_positions()[:3, :, :]
+        else:
+            if file_path.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
-                raise RuntimeError("The static_trial must be a .c3d file in a static posture.")
+                raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
 
         # Check the weights
         for marker in self.marker_weightings:
@@ -78,11 +94,11 @@ class ScaleTool:
         if mass <= 0:
             raise RuntimeError(f"The mass of the subject must be positive. The value given is {mass} kg.")
 
-        # Load the c3d file
-        c3d_file = c3d(static_trial)
-        unit_multiplier = self.check_units(c3d_file)
-        marker_names = c3d_file["parameters"]["POINT"]["LABELS"]["value"]
-        marker_positions = c3d_file["data"]["points"][:3, :, frame_range] * unit_multiplier
+        # Check that a scaling configuration was set
+        if len(self.scaling_segments) == 0:
+            raise RuntimeError(
+                "No scaling configuration was set. Please set a scaling configuration using ScaleTool.from_xml(filepath=filepath) or ScaleTool.from_biomod(filepath=filepath)."
+            )
 
         self.check_that_makers_do_not_move(marker_positions, marker_names)
         self.check_segments()
@@ -96,15 +112,6 @@ class ScaleTool:
 
         return self.scaled_model
 
-    def check_units(self, c3d_file: c3d) -> float:
-        unit = c3d_file["parameters"]["POINT"]["UNITS"]["value"][0]
-        if unit == "mm":
-            unit_multiplier = 0.001
-        else:
-            raise NotImplementedError(
-                f"This unit of the marker position in your .c3d static file is {unit}, which is not implemented yet."
-            )
-        return unit_multiplier
 
     def check_that_makers_do_not_move(self, marker_positions, marker_names):
         """
@@ -166,7 +173,7 @@ class ScaleTool:
         marker_names: list[str],
         mass: float,
         original_mass: float,
-    ) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    ) -> tuple[dict[str, "ScaleFactor"], dict[str, np.ndarray]]:
 
         scaling_factors = {}
         segment_masses = {}
@@ -187,6 +194,7 @@ class ScaleTool:
                     deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
                 )
             total_scaled_mass += segment_masses[segment_name]
+
         # Renormalize segment's mass to make sure the total mass is the mass of the subject
         for segment_name in self.scaling_segments.keys():
             segment_masses[segment_name] *= mass / total_scaled_mass
@@ -399,48 +407,13 @@ class ScaleTool:
 
     def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
 
-        regularization_weight = 0.001
-
-        def marker_diff(q: np.ndarray, experimental_markers: np.ndarray) -> np.ndarray:
-            markers_model = np.array(self.scaled_model_biorbd.markers(q))
-            nb_marker = experimental_markers.shape[1]
-            vect_pos_markers = np.zeros(3 * nb_marker)
-            for m, value in enumerate(markers_model):
-                vect_pos_markers[m * 3 : (m + 1) * 3] = value.to_array()
-            # TODO: setup the IKTask to set the "q_ref" to something else than zero.
-            out = np.hstack(
-                (vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)), regularization_weight * q)
-            )
-            return out
-
-        def marker_jacobian(q: np.ndarray) -> np.ndarray:
-            nb_q = q.shape[0]
-            jacobian_matrix = np.array(self.scaled_model_biorbd.markersJacobian(q))
-            nb_marker = jacobian_matrix.shape[0]
-            vec_jacobian = np.zeros((3 * nb_marker + nb_q, nb_q))
-            for m, value in enumerate(jacobian_matrix):
-                vec_jacobian[m * 3 : (m + 1) * 3, :] = value.to_array()
-            for i_q in range(nb_q):
-                vec_jacobian[nb_marker * 3 + i_q, i_q] = regularization_weight
-            return vec_jacobian
-
-        marker_indices = [marker_names.index(m.to_string()) for m in self.scaled_model_biorbd.markerNames()]
-        markers_real = marker_positions[:, marker_indices, :]
-        nb_frames = marker_positions.shape[2]
         nb_q = self.scaled_model_biorbd.nbQ()
-        init = np.ones((nb_q,)) * 0.0001
-
-        optimal_q = np.zeros((nb_q, nb_frames))
-        for f in range(nb_frames):
-            sol = optimize.least_squares(
-                fun=lambda q: marker_diff(q, markers_real[:, :, f]),
-                jac=lambda q: marker_jacobian(q),
-                x0=init,
-                method="lm",
-                xtol=1e-6,
-                tr_options=dict(disp=False),
-            )
-            optimal_q[:, f] = sol.x
+        optimal_q = inverse_kinematics(
+                self.scaled_model_biorbd,
+                marker_positions=marker_positions,
+                marker_names=marker_names,
+                q_regularization_weight=0.001,
+                q_target=np.zeros((nb_q, )))
 
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
             raise RuntimeError(
@@ -449,6 +422,7 @@ class ScaleTool:
             )
 
         return np.median(optimal_q, axis=1)
+
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):

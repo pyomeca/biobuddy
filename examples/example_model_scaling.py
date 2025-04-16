@@ -49,11 +49,10 @@ def main():
     model.to_biomod(biomod_file_path)
 
     # Setup the scaling configuration (which markers to use)
-    scale_tool = ScaleTool.from_xml(filepath=xml_filepath)
+    scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
 
     # Scale the model
-    scaled_model = scale_tool.scale(
-        original_model=model, static_trial=static_file_path, frame_range=range(100, 200), mass=80
+    scaled_model = scale_tool.scale(file_path=static_file_path, frame_range=range(100, 200), mass=80
     )
 
     # Write the scaled model to a .bioMod file

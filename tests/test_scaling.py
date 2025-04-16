@@ -1,6 +1,7 @@
 """
 TODO: remove biorbd dependency !!!
 TODO: Test the muscles and inertial values.
+TODO: Add the biomod sclaing configuration + test it
 """
 
 import os
@@ -87,9 +88,8 @@ def test_scaling_wholebody():
     )
 
     # Scale the model in BioBuddy
-    scale_tool = ScaleTool.from_xml(filepath=xml_filepath)
-    scaled_model = scale_tool.scale(
-        original_model=model, static_trial=static_file_path, frame_range=range(100, 200), mass=80
+    scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
+    scaled_model = scale_tool.scale(file_path=static_file_path, frame_range=range(100, 200), mass=80
     )
     scaled_model.to_biomod(scaled_biomod_file_path)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_file_path)
