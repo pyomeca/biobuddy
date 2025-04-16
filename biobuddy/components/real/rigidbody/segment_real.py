@@ -92,6 +92,10 @@ class SegmentReal:
         self._qdot_ranges = value
 
     @property
+    def nb_q(self):
+        return len(self.translations.value) + len(self.rotations.value)
+
+    @property
     def markers(self) -> NamedList[MarkerReal]:
         return self._markers
 
@@ -100,6 +104,10 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._markers = value
+
+    @property
+    def nb_markers(self):
+        return len(self.markers)
 
     @property
     def contacts(self) -> NamedList[ContactReal]:
@@ -112,6 +120,10 @@ class SegmentReal:
         self._contacts = value
 
     @property
+    def nb_contacts(self):
+        return len(self.contacts)
+
+    @property
     def imus(self) -> NamedList[InertialMeasurementUnitReal]:
         return self._imus
 
@@ -120,6 +132,10 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._imus = value
+
+    @property
+    def nb_imus(self):
+        return len(self.imus)
 
     @property
     def segment_coordinate_system(self) -> SegmentCoordinateSystemReal:

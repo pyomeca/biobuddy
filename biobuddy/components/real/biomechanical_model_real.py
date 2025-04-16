@@ -79,6 +79,14 @@ class BiomechanicalModelReal:
                 list_marker_names += [marker.name]
         return list_marker_names
 
+    @property
+    def nb_markers(self):
+        return sum(segment.nb_markers for segment in self.segments)
+
+    @property
+    def nb_q(self):
+        return sum(segment.nb_q for segment in self.segments)
+
     @staticmethod
     def from_biomod(
         filepath: str,
