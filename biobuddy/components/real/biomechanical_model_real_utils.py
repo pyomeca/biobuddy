@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 from scipy import optimize
 
@@ -74,16 +75,25 @@ def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment
 
 
 def _marker_residual(
-    model: "BiomechanicalModelReal",
+    model: "BiomechanicalModelReal" or "biorbd.Model",
     q_regularization_weight: float,
     q_target: np.ndarray,
     q: np.ndarray,
     experimental_markers: np.ndarray,
+    with_biorbd: bool,
 ) -> np.ndarray:
-    markers_model = np.array(markers_in_global(model, q))
-    nb_marker = experimental_markers.shape[1]
-    vect_pos_markers = np.zeros(3 * nb_marker)
-    for i_marker in range(nb_marker):
+
+    nb_markers = experimental_markers.shape[1]
+    vect_pos_markers = np.zeros(3 * nb_markers)
+
+    if with_biorbd:
+        markers_model = np.zeros((3, nb_markers, 1))
+        for i_marker in range(nb_markers):
+            markers_model[:, i_marker, 0] = model.marker(q, i_marker, True).to_array()
+    else:
+        markers_model = np.array(markers_in_global(model, q))
+
+    for i_marker in range(nb_markers):
         vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
             markers_model[:3, i_marker, 0] - experimental_markers[:, i_marker]
         )
@@ -103,12 +113,17 @@ def _marker_residual(
     return out
 
 
-def _marker_jacobian(model: "BiomechanicalModelReal", q_regularization_weight: float, q: np.ndarray) -> np.ndarray:
-    nb_q = model.nb_q
-    nb_markers = model.nb_markers
-
-    jacobian_matrix = np.array(markers_jacobian(model, q))
+def _marker_jacobian(model: "BiomechanicalModelReal" or "biorbd.Model", q_regularization_weight: float, q: np.ndarray, with_biorbd: bool) -> np.ndarray:
+    nb_q = q.shape[0]
+    nb_markers = model.nbMarkers() if with_biorbd else model.nb_markers
     vec_jacobian = np.zeros((3 * nb_markers + nb_q, nb_q))
+
+    if with_biorbd:
+        jacobian_matrix = np.zeros((3, nb_markers, nb_q))
+        for i_marker in range(nb_markers):
+            jacobian_matrix[:, i_marker, :] = model.markersJacobian(q)[i_marker].to_array()
+    else:
+        jacobian_matrix = np.array(markers_jacobian(model, q))
 
     for i_marker in range(nb_markers):
         vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
@@ -146,6 +161,17 @@ def inverse_kinematics(
         The target posture to match. If None, the target posture is set to zero.
     """
 
+    try:
+        # biorbd (in c++) is quicker than this custom Python code, which makes a large difference here
+        import biorbd
+        model.to_biomod("temporary.bioMod", with_mesh=False)
+        with_biorbd = True
+        model_to_use = biorbd.Model("temporary.bioMod")
+    except:
+        with_biorbd = False
+        model_to_use = deepcopy(model)
+
+
     marker_indices = [marker_names.index(m) for m in model.marker_names]
     markers_real = marker_positions[:, marker_indices, :]
 
@@ -164,8 +190,8 @@ def inverse_kinematics(
     optimal_q = np.zeros((model.nb_q, nb_frames))
     for f in range(nb_frames):
         sol = optimize.least_squares(
-            fun=lambda q: _marker_residual(model, q_regularization_weight, q_target, q, markers_real[:, :, f]),
-            jac=lambda q: _marker_jacobian(model, q_regularization_weight, q),
+            fun=lambda q: _marker_residual(model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, f], with_biorbd),
+            jac=lambda q: _marker_jacobian(model_to_use, q_regularization_weight, q, with_biorbd),
             x0=init,
             method="lm",
             xtol=1e-6,
