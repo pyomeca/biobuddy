@@ -216,6 +216,34 @@ def is_ortho_basis(basis) -> bool:
         else True
     )
 
+def rotation_matrix_from_euler(axis: str, angle: float) -> np.ndarray:
+    if axis.upper() == "X":
+        return np.array(
+            [
+                [1, 0, 0],
+                [0, np.cos(angle), -np.sin(angle)],
+                [0, np.sin(angle), np.cos(angle)],
+            ]
+        )
+    elif axis.upper() == "Y":
+        return np.array(
+            [
+                [np.cos(angle), 0, np.sin(angle)],
+                [0, 1, 0],
+                [-np.sin(angle), 0, np.cos(angle)],
+            ]
+        )
+    elif axis.upper() == "Z":
+        return np.array(
+            [
+                [np.cos(angle), -np.sin(angle), 0],
+                [np.sin(angle), np.cos(angle), 0],
+                [0, 0, 1],
+            ]
+        )
+    else:
+        raise RuntimeError(f"Axis {axis} not recognized. Please use X, Y, or Z.")
+
 
 class OrthoMatrix:
     def __init__(self, translation=(0, 0, 0), rotation_1=(0, 0, 0), rotation_2=(0, 0, 0), rotation_3=(0, 0, 0)):
@@ -270,18 +298,31 @@ class RotoTransMatrix:
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
         rt_matrix[:3, 3] = translation
         rt_matrix[3, 3] = 1.0
-        self.rt_matrix = rt_matrix
-
-    def from_rt_matrix(self, rt_matrix: np.ndarray):
-        self.rt_matrix = rt_matrix
+        self._rt_matrix = rt_matrix
 
     @property
-    def translation(self):
-        return self.rt_matrix[:3, 3]
+    def rt_matrix(self) -> np.ndarray:
+        return self._rt_matrix
+
+    @rt_matrix.setter
+    def rt_matrix(self, value: np.ndarray):
+        self._rt_matrix = value
 
     @property
-    def rotation_matrix(self):
+    def translation(self) -> np.ndarray:
+        return self._rt_matrix[:3, 3]
+
+    @translation.setter
+    def translation(self, value: np.ndarray):
+        self._rt_matrix[:3, 3] = value
+
+    @property
+    def rotation_matrix(self) -> np.ndarray:
         return self.rt_matrix[:3, :3]
+
+    @rotation_matrix.setter
+    def rotation_matrix(self, value: np.ndarray):
+        self.rt_matrix[:3, :3] = value
 
     @property
     def inverse(self) -> np.ndarray:

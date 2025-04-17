@@ -3,9 +3,9 @@ from copy import deepcopy
 
 # from typing import Self
 
-import biorbd
-
 from .muscle.muscle_real import MuscleType, MuscleStateType
+from ...utils.translations import Translations
+from ...utils.rotations import Rotations
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ...utils.c3d_data import C3dData
@@ -87,6 +87,28 @@ class BiomechanicalModelReal:
     @property
     def nb_q(self):
         return sum(segment.nb_q for segment in self.segments)
+
+    def dof_indices(self, segment_name):
+        """
+        Get the indices of the degrees of freedom of a segment
+
+        Parameters
+        ----------
+        segment_name
+            The name of the segment to get the indices for
+        """
+        nb_dof = 0
+        for segment in self.segments:
+            if segment != segment_name:
+                if segment.translations != Translations.NONE:
+                    nb_dof += len(segment.translations.value)
+                if segment.rotations != Rotations.NONE:
+                    nb_dof += len(segment.rotations.value)
+            else:
+                nb_translations = len(segment.translations.value) if segment.translations != Translations.NONE else 0
+                nb_rotations = len(segment.rotations.value) if segment.rotations != Rotations.NONE else 0
+                return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
+
 
     @staticmethod
     def from_biomod(
@@ -215,26 +237,3 @@ class BiomechanicalModelReal:
         # Write it to the .osim file
         with open(file_path, "w") as file:
             file.write(cleaned_string)
-
-    @property
-    def get_biorbd_model(self) -> biorbd.Model:
-
-        # TODO: generalize this step for other geometry paths
-        temporary_path = "models/temporary.bioMod"
-        try:
-            self.to_biomod(temporary_path)
-        except:
-            raise RuntimeError(
-                f"The temporary file '{temporary_path}' could not be created. Please make sure that path {os.path} has the appropriate permissions."
-            )
-
-        biorbd_model = biorbd.Model(temporary_path)
-
-        try:
-            os.remove(temporary_path)
-        except:
-            raise RuntimeError(
-                f"The temporary file '{temporary_path}' could not be deleted. Please make sure that path {os.path} has the appropriate permissions."
-            )
-
-        return biorbd_model
