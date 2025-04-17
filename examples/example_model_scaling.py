@@ -11,14 +11,7 @@ from pyomeca import Markers
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
 
 
-def main():
-
-    try:
-        import pyorerun
-
-        visualization = True
-    except:
-        visualization = False
+def main(visualization):
 
     # Configure logging
     logging.basicConfig(
@@ -102,4 +95,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        import pyorerun
+
+        visualization = True
+    except:
+        visualization = False
+
+    main(visualization)

@@ -60,9 +60,7 @@ def test_scaling_wholebody():
 
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    geometry_path = parent_path + "/external/opensim-models/Geometry"
-    cleaned_geometry_path = parent_path + "/models/geometry_cleaned"
-    cleaned_relative_path = "geometry_cleaned"
+    cleaned_relative_path = "Geometry_cleaned"
 
     osim_file_path = parent_path + "/examples/models/wholebody.osim"
     xml_filepath = parent_path + "/examples/models/wholebody.xml"
@@ -71,10 +69,12 @@ def test_scaling_wholebody():
     scaled_osim_file_path = parent_path + "/examples/models/wholebody_scaled.osim"
     static_file_path = parent_path + "/examples/data/static.c3d"
 
-    # Convert the vtp mesh files
-    mesh_parser = MeshParser(geometry_path)
-    mesh_parser.process_meshes(fail_on_error=False)
-    mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
+    # # Convert the vtp mesh files
+    # geometry_path = parent_path + "/external/opensim-models/Geometry"
+    # cleaned_geometry_path = parent_path + "/models/Geometry_cleaned"
+    # mesh_parser = MeshParser(geometry_path)
+    # mesh_parser.process_meshes(fail_on_error=False)
+    # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
 
     # Read the .osim file
     model = BiomechanicalModelReal.from_osim(
