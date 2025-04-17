@@ -56,7 +56,14 @@ class ScaleTool:
         self.warnings = ""
 
     def scale(
-        self, file_path: str, first_frame: int, last_frame: int, mass: float, visualize_optimal_static_pose: bool = False
+            self,
+            file_path: str,
+            first_frame: int,
+            last_frame: int,
+            mass: float,
+            q_regularization_weight: float = None,
+            initial_static_pose: np.ndarray = None,
+            visualize_optimal_static_pose: bool = False
     ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
@@ -71,6 +78,11 @@ class ScaleTool:
             The index of the last frame to use in the .c3d file.
         mass
             The mass of the subject
+        q_regularization_weight
+            The weight of the regularization term in the inverse kinematics. If None, no regularization is applied.
+        initial_static_pose
+            The approximate posture (q) in which the subject will be during the static trial.
+            Ideally, this should be zero so that the posture of the original model would be in the same posture as the subject during the static trial.
         """
 
         # Check file format
@@ -108,7 +120,7 @@ class ScaleTool:
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
         self.modify_muscle_parameters()
-        self.place_model_in_static_pose(marker_positions, marker_names, visualize_optimal_static_pose)
+        self.place_model_in_static_pose(marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose)
 
         return self.scaled_model
 
@@ -405,15 +417,22 @@ class ScaleTool:
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
-    def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str], visualize_optimal_static_pose: bool) -> np.ndarray:
+    def find_static_pose(
+            self,
+            marker_positions: np.ndarray,
+            marker_names: list[str],
+            q_regularization_weight: float | None,
+            initial_static_pose: np.ndarray | None,
+            visualize_optimal_static_pose: bool
+    ) -> np.ndarray:
 
-        nb_q = self.scaled_model_biorbd.nbQ()
         optimal_q = inverse_kinematics(
                 self.scaled_model_biorbd,
                 marker_positions=marker_positions,
                 marker_names=marker_names,
-                q_regularization_weight=0.001,
-                q_target=np.zeros((nb_q, )))
+                q_regularization_weight=q_regularization_weight,
+                q_target=initial_static_pose,
+        )
 
         if visualize_optimal_static_pose:
             # Show the animation for debugging
@@ -472,8 +491,14 @@ class ScaleTool:
                 rt_matrix.from_rt_matrix(segment_jcs)
                 marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
 
-    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str], visualize_optimal_static_pose: bool):
-        q_static = self.find_static_pose(marker_positions, marker_names, visualize_optimal_static_pose)
+    def place_model_in_static_pose(
+            self,
+            marker_positions: np.ndarray,
+            marker_names: list[str],
+            q_regularization_weight: float | None,
+            initial_static_pose: np.ndarray | None,
+            visualize_optimal_static_pose: bool):
+        q_static = self.find_static_pose(marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose)
         self.make_static_pose_the_zero(q_static)
         self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 

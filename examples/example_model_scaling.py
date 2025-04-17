@@ -63,6 +63,7 @@ def main():
                                     first_frame=100,
                                     last_frame=200,
                                     mass=80,
+                                    q_regularization_weight=0.01,
                                     visualize_optimal_static_pose=visualization,
     )
 
