@@ -113,7 +113,9 @@ def _marker_residual(
     return out
 
 
-def _marker_jacobian(model: "BiomechanicalModelReal" or "biorbd.Model", q_regularization_weight: float, q: np.ndarray, with_biorbd: bool) -> np.ndarray:
+def _marker_jacobian(
+    model: "BiomechanicalModelReal" or "biorbd.Model", q_regularization_weight: float, q: np.ndarray, with_biorbd: bool
+) -> np.ndarray:
     nb_q = q.shape[0]
     nb_markers = model.nbMarkers() if with_biorbd else model.nb_markers
     vec_jacobian = np.zeros((3 * nb_markers + nb_q, nb_q))
@@ -164,13 +166,13 @@ def inverse_kinematics(
     try:
         # biorbd (in c++) is quicker than this custom Python code, which makes a large difference here
         import biorbd
+
         model.to_biomod("temporary.bioMod", with_mesh=False)
         with_biorbd = True
         model_to_use = biorbd.Model("temporary.bioMod")
     except:
         with_biorbd = False
         model_to_use = deepcopy(model)
-
 
     marker_indices = [marker_names.index(m) for m in model.marker_names]
     markers_real = marker_positions[:, marker_indices, :]
@@ -190,7 +192,9 @@ def inverse_kinematics(
     optimal_q = np.zeros((model.nb_q, nb_frames))
     for f in range(nb_frames):
         sol = optimize.least_squares(
-            fun=lambda q: _marker_residual(model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, f], with_biorbd),
+            fun=lambda q: _marker_residual(
+                model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, f], with_biorbd
+            ),
             jac=lambda q: _marker_jacobian(model_to_use, q_regularization_weight, q, with_biorbd),
             x0=init,
             method="lm",
