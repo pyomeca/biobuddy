@@ -8,6 +8,7 @@ import biorbd
 from .muscle.muscle_real import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
+from ...utils.c3d_data import C3dData
 from .biomechanical_model_real_utils import segment_coordinate_system_in_local
 
 
