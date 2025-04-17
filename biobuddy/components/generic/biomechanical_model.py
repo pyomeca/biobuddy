@@ -19,7 +19,6 @@ class BiomechanicalModel:
         self.muscles = NamedList[Muscle]()
         self.via_points = NamedList[ViaPoint]()
 
-
     def add_segment(self, segment: "SegmentReal"):
         """
         Add a segment to the model

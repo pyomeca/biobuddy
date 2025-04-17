@@ -73,21 +73,35 @@ def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment
         return get_closest_rotation_matrix(rt_to_global)[:, :, np.newaxis]
 
 
-def _marker_residual(model: "BiomechanicalModelReal",
-                    q_regularization_weight: float,
-                    q_target: np.ndarray,
-                    q: np.ndarray,
-                    experimental_markers: np.ndarray) -> np.ndarray:
+def _marker_residual(
+    model: "BiomechanicalModelReal",
+    q_regularization_weight: float,
+    q_target: np.ndarray,
+    q: np.ndarray,
+    experimental_markers: np.ndarray,
+) -> np.ndarray:
     markers_model = np.array(markers_in_global(model, q))
     nb_marker = experimental_markers.shape[1]
     vect_pos_markers = np.zeros(3 * nb_marker)
     for i_marker in range(nb_marker):
-        vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = markers_model[:3, i_marker, 0] - experimental_markers[:, i_marker]
+        vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
+            markers_model[:3, i_marker, 0] - experimental_markers[:, i_marker]
+        )
     # TODO: setup the IKTask to set the "q_ref" to something else than zero.
     out = np.hstack(
-        (vect_pos_markers, q_regularization_weight * (q - q_target.reshape(-1, )))
+        (
+            vect_pos_markers,
+            q_regularization_weight
+            * (
+                q
+                - q_target.reshape(
+                    -1,
+                )
+            ),
+        )
     )
     return out
+
 
 def _marker_jacobian(model: "BiomechanicalModelReal", q_regularization_weight: float, q: np.ndarray) -> np.ndarray:
     nb_q = model.nb_q
@@ -106,11 +120,12 @@ def _marker_jacobian(model: "BiomechanicalModelReal", q_regularization_weight: f
 
 
 def inverse_kinematics(
-        model: "BiomechanicalModelReal",
-        marker_positions: np.ndarray,
-       marker_names: list[str],
-       q_regularization_weight: float = None,
-       q_target: np.ndarray = None) -> np.ndarray:
+    model: "BiomechanicalModelReal",
+    marker_positions: np.ndarray,
+    marker_names: list[str],
+    q_regularization_weight: float = None,
+    q_target: np.ndarray = None,
+) -> np.ndarray:
     """
     Solve the inverse kinematics problem using least squares optimization.
     The objective is to match the experimental marker positions with the model marker positions.
@@ -160,6 +175,7 @@ def inverse_kinematics(
 
     return optimal_q
 
+
 def find_children(model: "BiomechanicalModelReal", parent_name: str):
     children = []
     for segment_name in model.segments:
@@ -167,15 +183,18 @@ def find_children(model: "BiomechanicalModelReal", parent_name: str):
             children.append(segment_name)
     return children
 
+
 def point_from_global_to_local(point_in_global, jcs_in_global):
     rt_matrix = RotoTransMatrix()
     rt_matrix.rt_matrix = jcs_in_global
     return rt_matrix.inverse @ point_to_array(point=point_in_global)
 
+
 def point_from_local_to_global(point_in_local, jcs_in_global):
     rt_matrix = RotoTransMatrix()
     rt_matrix.rt_matrix = jcs_in_global
     return rt_matrix.rt_matrix @ point_to_array(point=point_in_local)
+
 
 def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) -> dict[str, np.ndarray]:
     """
@@ -186,7 +205,9 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
     for segment_name in model.segments.keys():
 
         if not model.segments[segment_name].segment_coordinate_system.is_in_local:
-            raise NotImplementedError("The function forward_kinematics is not implemented yet for global rt. They should be converted to local.")
+            raise NotImplementedError(
+                "The function forward_kinematics is not implemented yet for global rt. They should be converted to local."
+            )
 
         segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
         if model.segments[segment_name].parent_name == "base":
@@ -221,7 +242,9 @@ def markers_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> 
         i_marker = 0
         for i_segment, segment in enumerate(model.segments):
             for marker in segment.markers:
-                marker_in_global = point_from_local_to_global(point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name])
+                marker_in_global = point_from_local_to_global(
+                    point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name]
+                )
                 marker_positions[:, i_marker] = marker_in_global
                 i_marker += 1
 
@@ -240,7 +263,9 @@ def contacts_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
         i_contact = 0
         for i_segment, segment in enumerate(model.segments):
             for contact in segment.contacts:
-                contact_in_global = point_from_local_to_global(point_in_local=contact.position, jcs_in_global=jcs_in_global[segment])
+                contact_in_global = point_from_local_to_global(
+                    point_in_local=contact.position, jcs_in_global=jcs_in_global[segment]
+                )
                 contact_positions[:, i_contact] = contact_in_global
                 i_contact += 1
 

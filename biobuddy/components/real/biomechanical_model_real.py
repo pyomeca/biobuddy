@@ -36,8 +36,10 @@ class BiomechanicalModelReal:
             The segment to add
         """
         if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
-            raise ValueError(f"Parent segment should be declared before the child segments. "
-                             f"Please declare the parent {segment.parent_name} before declaring the child segment {segment.name}.")
+            raise ValueError(
+                f"Parent segment should be declared before the child segments. "
+                f"Please declare the parent {segment.parent_name} before declaring the child segment {segment.name}."
+            )
         self.segments.append(segment)
 
     def remove_segment(self, segment_name: str) -> None:
@@ -61,11 +63,15 @@ class BiomechanicalModelReal:
             The muscle group to add
         """
         if muscle_group.origin_parent_name not in self.segment_names:
-            raise ValueError(f"The origin segment of a muscle group must be declared before the muscle group."
-                             f"Please declare the segment {muscle_group.origin_parent_name} before declaring the muscle group {muscle_group.name}.")
+            raise ValueError(
+                f"The origin segment of a muscle group must be declared before the muscle group."
+                f"Please declare the segment {muscle_group.origin_parent_name} before declaring the muscle group {muscle_group.name}."
+            )
         if muscle_group.insertion_parent_name not in self.segment_names:
-            raise ValueError(f"The insertion segment of a muscle group must be declared before the muscle group."
-                             f"Please declare the segment {muscle_group.insertion_parent_name} before declaring the muscle group {muscle_group.name}.")
+            raise ValueError(
+                f"The insertion segment of a muscle group must be declared before the muscle group."
+                f"Please declare the segment {muscle_group.insertion_parent_name} before declaring the muscle group {muscle_group.name}."
+            )
         self.muscle_groups.append(muscle_group)
 
     def remove_muscle_group(self, muscle_group_name: str) -> None:
@@ -89,8 +95,10 @@ class BiomechanicalModelReal:
             The muscle to add
         """
         if muscle.muscle_group not in self.muscle_group_names:
-            raise ValueError(f"The muscle group must be declared before the muscle."
-                             f"Please declare the muscle_group  {muscle.muscle_group} before declaring the muscle {muscle.name}.")
+            raise ValueError(
+                f"The muscle group must be declared before the muscle."
+                f"Please declare the muscle_group  {muscle.muscle_group} before declaring the muscle {muscle.name}."
+            )
         self.muscles.append(muscle)
 
     def remove_muscle(self, muscle_name: str) -> None:
@@ -114,14 +122,20 @@ class BiomechanicalModelReal:
             The via point to add
         """
         if via_point.parent_name not in self.segment_names:
-            raise ValueError(f"The parent segment of a via point must be declared before the via point."
-                             f"Please declare the segment {via_point.parent_name} before declaring the via point {via_point.name}.")
+            raise ValueError(
+                f"The parent segment of a via point must be declared before the via point."
+                f"Please declare the segment {via_point.parent_name} before declaring the via point {via_point.name}."
+            )
         elif via_point.muscle_group not in self.muscle_group_names:
-            raise ValueError(f"The muscle group of a via point must be declared before the via point."
-                             f"Please declare the muscle group {via_point.muscle_group} before declaring the via point {via_point.name}.")
+            raise ValueError(
+                f"The muscle group of a via point must be declared before the via point."
+                f"Please declare the muscle group {via_point.muscle_group} before declaring the via point {via_point.name}."
+            )
         elif via_point.muscle_name not in self.muscle_names:
-            raise ValueError(f"The muscle of a via point must be declared before the via point."
-                             f"Please declare the muscle {via_point.muscle_name} before declaring the via point {via_point.name}.")
+            raise ValueError(
+                f"The muscle of a via point must be declared before the via point."
+                f"Please declare the muscle {via_point.muscle_name} before declaring the via point {via_point.name}."
+            )
 
         self.via_points.append(via_point)
 

@@ -30,9 +30,7 @@ def convert_c3d_to_trc(c3d_file_path):
     with open(trc_file_path, "w") as f:
         trc_file_name = os.path.basename(trc_file_path)
         f.write(f"PathFileType\t4\t(X/Y/Z)\t{trc_file_name}\n")
-        f.write(
-            "DataRate\tCameraRate\tNumFrames\tNumMarkers\tUnits\tOrigDataRate\tOrigDataStartFrame\tOrigNumFrames\n"
-        )
+        f.write("DataRate\tCameraRate\tNumFrames\tNumMarkers\tUnits\tOrigDataRate\tOrigDataStartFrame\tOrigNumFrames\n")
         f.write(
             "{:.2f}\t{:.2f}\t{}\t{}\tm\t{:.2f}\t{}\t{}\n".format(
                 frame_rate,
@@ -53,7 +51,6 @@ def convert_c3d_to_trc(c3d_file_path):
                 pos = marker_data[:, marker_idx, frame]
                 frame_data.extend([f"{pos[0]:.5f}", f"{pos[1]:.5f}", f"{pos[2]:.5f}"])
             f.write("\t".join(frame_data) + "\n")
-
 
 
 def test_scaling_wholebody():
@@ -89,11 +86,12 @@ def test_scaling_wholebody():
 
     # Scale the model in BioBuddy
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
-    scaled_model = scale_tool.scale(file_path=static_file_path,
-                                    first_frame=100,
-                                    last_frame=200,
-                                    mass=80,
-                                    q_regularization_weight=0.01,
+    scaled_model = scale_tool.scale(
+        file_path=static_file_path,
+        first_frame=100,
+        last_frame=200,
+        mass=80,
+        q_regularization_weight=0.01,
     )
     scaled_model.to_biomod(scaled_biomod_file_path)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_file_path)
@@ -123,5 +121,3 @@ def test_scaling_wholebody():
     # Make sure the muscle properties are the same
 
     # Make sure the inertial properties are the same
-
-

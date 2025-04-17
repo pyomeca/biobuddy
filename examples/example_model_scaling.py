@@ -15,6 +15,7 @@ def main():
 
     try:
         import pyorerun
+
         visualization = True
     except:
         visualization = False
@@ -59,12 +60,13 @@ def main():
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
 
     # Scale the model
-    scaled_model = scale_tool.scale(file_path=static_file_path,
-                                    first_frame=100,
-                                    last_frame=200,
-                                    mass=80,
-                                    q_regularization_weight=0.01,
-                                    visualize_optimal_static_pose=visualization,
+    scaled_model = scale_tool.scale(
+        file_path=static_file_path,
+        first_frame=100,
+        last_frame=200,
+        mass=80,
+        q_regularization_weight=0.01,
+        visualize_optimal_static_pose=visualization,
     )
 
     # Write the scaled model to a .bioMod file

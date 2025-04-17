@@ -19,11 +19,7 @@ class OsimConfigurationParser:
     This means that the
     """
 
-    def __init__(
-        self,
-        filepath: str,
-        original_model: "BiomechanicalModelReal"
-    ):
+    def __init__(self, filepath: str, original_model: "BiomechanicalModelReal"):
         """
         Reads and converts OpenSim configuration files (.xml) to a generic configuration.
 

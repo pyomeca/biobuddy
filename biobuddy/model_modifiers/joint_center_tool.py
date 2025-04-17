@@ -16,15 +16,18 @@ from ..utils.c3d_data import C3dData
 
 _logger = logging.getLogger(__name__)
 
+
 class Score:
-    def __init__(self,
-                 file_path: str,
-                 parent_name: str,
-                 child_name: str,
-                 parent_marker_names: list[str],
-                 child_marker_names: list[str],
-                 first_frame: int,
-                 last_frame: int):
+    def __init__(
+        self,
+        file_path: str,
+        parent_name: str,
+        child_name: str,
+        parent_marker_names: list[str],
+        child_marker_names: list[str],
+        first_frame: int,
+        last_frame: int,
+    ):
         """
         Initializes the Score class which will find the position of the joint center using functional movements.
         The SCoRE algorithm considers that both segments are rigid bodies and that the joint center is located at the
@@ -68,9 +71,8 @@ class Score:
     def _rt_from_trial(self, original_model) -> tuple[np.ndarray, np.ndarray]:
 
         optimal_q = inverse_kinematics(
-            original_model,
-            marker_positions=self.c3d_data.all_marker_positions,
-            marker_names=self.c3d_data.marker_names)
+            original_model, marker_positions=self.c3d_data.all_marker_positions, marker_names=self.c3d_data.marker_names
+        )
         jcs_in_global = forward_kinematics(original_model, optimal_q)
 
         nb_frames = self.c3d_data.all_marker_positions.shape[2]
@@ -82,30 +84,29 @@ class Score:
 
         return rt_parent, rt_child
 
-
-    def _score_algorithm(self,
-                         parent_markers: np.ndarray,
-                         child_markers: np.ndarray,
-                         rt_parent: np.ndarray,
-                         rt_child: np.ndarray,
-                         ):
+    def _score_algorithm(
+        self,
+        parent_markers: np.ndarray,
+        child_markers: np.ndarray,
+        rt_parent: np.ndarray,
+        rt_child: np.ndarray,
+    ):
 
         def apply_transform(rt, cor_part):
             homog_cor = np.append(cor_part, 1)
-            return np.einsum('ijk,k->ij', rt, homog_cor)
+            return np.einsum("ijk,k->ij", rt, homog_cor)
 
         nb_frames = parent_markers.shape[2]
         a_matrix = np.full((3 * nb_frames, 6), np.nan)
         b_vector = np.full((3 * nb_frames, 1), np.nan)
 
         for i_frame in range(nb_frames):
-            a_matrix[i_frame * 3:i_frame * 3 + 3, :] = np.hstack((
-                rt_child[:3, :3, i_frame],
-                -rt_parent[:3, :3, i_frame]
-            ))
-            b_vector[i_frame * 3:i_frame * 3 + 3, :] = (
-                    rt_parent[:3, 3, i_frame].reshape(3, 1) - rt_child[:3, 3, i_frame].reshape(3, 1)
+            a_matrix[i_frame * 3 : i_frame * 3 + 3, :] = np.hstack(
+                (rt_child[:3, :3, i_frame], -rt_parent[:3, :3, i_frame])
             )
+            b_vector[i_frame * 3 : i_frame * 3 + 3, :] = rt_parent[:3, 3, i_frame].reshape(3, 1) - rt_child[
+                :3, 3, i_frame
+            ].reshape(3, 1)
 
         valid_rows = ~np.isnan(a_matrix[:, 0])
         U, S, Vt = np.linalg.svd(a_matrix[valid_rows, :], full_matrices=False)
@@ -122,22 +123,26 @@ class Score:
 
         # Compute distances of markers to the center of rotation
         diff_parent_markers = parent_markers - cor_in_global[:3].reshape(3, 1, -1)
-        cor_parent_markers_distance = np.sqrt(np.sum(diff_parent_markers ** 2, axis=0)).T
+        cor_parent_markers_distance = np.sqrt(np.sum(diff_parent_markers**2, axis=0)).T
 
         diff_child_markers = child_markers - cor_in_global[:3].reshape(3, 1, -1)
-        cor_child_markers_distance = np.sqrt(np.sum(diff_child_markers ** 2, axis=0)).T
+        cor_child_markers_distance = np.sqrt(np.sum(diff_child_markers**2, axis=0)).T
 
         _logger.info(f"The std of markers position is {cor_parent_markers_distance, cor_child_markers_distance}")
         if residual > 0.25:
             raise RuntimeError(
-                f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments.")
+                f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments."
+            )
 
-        _logger.info(f"\nThere is a residual distance between the parent's and the child's CoR position of : {residual}")
+        _logger.info(
+            f"\nThere is a residual distance between the parent's and the child's CoR position of : {residual}"
+        )
         if residual > 0.25:
-            raise RuntimeError(f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments.")
+            raise RuntimeError(
+                f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments."
+            )
 
         return cor_in_global
-
 
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
@@ -147,10 +152,9 @@ class Score:
         # Apply the algo to identify the joint center
         parent_markers = self.c3d_data.get_position(self.parent_marker_names)
         child_markers = self.c3d_data.get_position(self.child_marker_names)
-        cor_in_global = self._score_algorithm(parent_markers=parent_markers,
-                              child_markers=child_markers,
-                              rt_parent=rt_parent,
-                              rt_child=rt_child)
+        cor_in_global = self._score_algorithm(
+            parent_markers=parent_markers, child_markers=child_markers, rt_parent=rt_parent, rt_child=rt_child
+        )
 
         # Replace the model components in the new local reference frame
         parent_cor_position_in_global = segment_coordinate_system_in_global(new_model, self.parent_name)[:3, 3, 0]
@@ -165,11 +169,15 @@ class Score:
         # Markers
         marker_positions = markers_in_global(original_model)
         for i_marker, marker_name in new_model.segments[self.child_name].markers:
-            new_model.segments[self.child_name].markers[marker_name].position = point_from_global_to_local(marker_positions[i_marker], cor_in_global)
+            new_model.segments[self.child_name].markers[marker_name].position = point_from_global_to_local(
+                marker_positions[i_marker], cor_in_global
+            )
         # Contacts
         contact_positions = contacts_in_global(original_model)
         for i_contact, contact_name in new_model.segments[self.child_name].contacts:
-            new_model.segments[self.child_name].contacts[contact_name].position = point_from_global_to_local(contact_positions[i_contact], cor_in_global)
+            new_model.segments[self.child_name].contacts[contact_name].position = point_from_global_to_local(
+                contact_positions[i_contact], cor_in_global
+            )
         # IMUs
         # Muscles origin, insertion, via points
 
@@ -249,7 +257,6 @@ class JointCenterTool:
             raise RuntimeError(
                 f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}."
             )
-
 
     def replace_joint_centers(self) -> BiomechanicalModelReal:
 

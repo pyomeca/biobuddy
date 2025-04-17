@@ -24,7 +24,12 @@ class InertialCharacteristics(Enum):
 
 
 class ScaleTool:
-    def __init__(self, original_model: BiomechanicalModelReal, personalize_mass_distribution: bool = True, max_marker_movement: float = 0.1):
+    def __init__(
+        self,
+        original_model: BiomechanicalModelReal,
+        personalize_mass_distribution: bool = True,
+        max_marker_movement: float = 0.1,
+    ):
         """
         Initialize the scale tool.
 
@@ -54,14 +59,14 @@ class ScaleTool:
         self.warnings = ""
 
     def scale(
-            self,
-            file_path: str,
-            first_frame: int,
-            last_frame: int,
-            mass: float,
-            q_regularization_weight: float = None,
-            initial_static_pose: np.ndarray = None,
-            visualize_optimal_static_pose: bool = False
+        self,
+        file_path: str,
+        first_frame: int,
+        last_frame: int,
+        mass: float,
+        q_regularization_weight: float = None,
+        initial_static_pose: np.ndarray = None,
+        visualize_optimal_static_pose: bool = False,
     ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
@@ -117,7 +122,9 @@ class ScaleTool:
         self.scale_model_geometrically(marker_positions, marker_names, mass)
 
         # self.modify_muscle_parameters()
-        self.place_model_in_static_pose(marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose)
+        self.place_model_in_static_pose(
+            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
+        )
 
         return self.scaled_model
 
@@ -439,20 +446,20 @@ class ScaleTool:
         return scaled_via_point
 
     def find_static_pose(
-            self,
-            marker_positions: np.ndarray,
-            experimental_marker_names: list[str],
-            q_regularization_weight: float | None,
-            initial_static_pose: np.ndarray | None,
-            visualize_optimal_static_pose: bool
+        self,
+        marker_positions: np.ndarray,
+        experimental_marker_names: list[str],
+        q_regularization_weight: float | None,
+        initial_static_pose: np.ndarray | None,
+        visualize_optimal_static_pose: bool,
     ) -> np.ndarray:
 
         optimal_q = inverse_kinematics(
-                self.scaled_model,
-                marker_positions=marker_positions,
-                marker_names=experimental_marker_names,
-                q_regularization_weight=q_regularization_weight,
-                q_target=initial_static_pose,
+            self.scaled_model,
+            marker_positions=marker_positions,
+            marker_names=experimental_marker_names,
+            q_regularization_weight=q_regularization_weight,
+            q_target=initial_static_pose,
         )
 
         if visualize_optimal_static_pose:
@@ -467,7 +474,9 @@ class ScaleTool:
             viz = pyorerun.PhaseRerun(t)
 
             # TODO: REMOVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            debugging_model_path = "/home/charbie/Documents/Programmation/biobuddy/examples/models/temporary_model.bioMod"
+            debugging_model_path = (
+                "/home/charbie/Documents/Programmation/biobuddy/examples/models/temporary_model.bioMod"
+            )
             self.scaled_model.to_biomod(debugging_model_path)
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
             viz_biomod_model.options.transparent_mesh = False
@@ -489,7 +498,6 @@ class ScaleTool:
             )
 
         return np.median(optimal_q, axis=1)
-
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
@@ -514,13 +522,16 @@ class ScaleTool:
                 marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(
-            self,
-            marker_positions: np.ndarray,
-            marker_names: list[str],
-            q_regularization_weight: float | None,
-            initial_static_pose: np.ndarray | None,
-            visualize_optimal_static_pose: bool):
-        q_static = self.find_static_pose(marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose)
+        self,
+        marker_positions: np.ndarray,
+        marker_names: list[str],
+        q_regularization_weight: float | None,
+        initial_static_pose: np.ndarray | None,
+        visualize_optimal_static_pose: bool,
+    ):
+        q_static = self.find_static_pose(
+            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
+        )
         self.make_static_pose_the_zero(q_static)
         self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
@@ -530,7 +541,7 @@ class ScaleTool:
         # TODO: compute muscle length !
         """
         muscle_names = self.original_model.muscle_names
-        q_zeros = np.zeros((self.original_model.nb_q, ))
+        q_zeros = np.zeros((self.original_model.nb_q,))
         for muscle_name in self.original_model.muscles.keys():
             original_muscle_length = muscle_length(self.original_model, muscle_name, q_zeros)
             scaled_muscle_length = muscle_length(self.scaled_model, muscle_name, q_zeros)
@@ -559,8 +570,8 @@ class ScaleTool:
         return BiomodConfigurationParser(filepath=filepath)
 
     def from_xml(
-            self,
-            filepath: str,
+        self,
+        filepath: str,
     ):
         """
         Read an xml file from OpenSim and extract the scaling configuration.

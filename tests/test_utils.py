@@ -1,4 +1,3 @@
-
 from biobuddy import BiomechanicalModelReal
 
 

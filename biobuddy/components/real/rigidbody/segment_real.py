@@ -207,7 +207,9 @@ class SegmentReal:
     def rt_from_local_q(self, local_q: np.ndarray) -> np.ndarray:
 
         if local_q.shape[0] != self.nb_q:
-            raise RuntimeError(f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs.")
+            raise RuntimeError(
+                f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
+            )
 
         rt = RotoTransMatrix()
         rt.rt_matrix = np.eye(4)
@@ -215,7 +217,7 @@ class SegmentReal:
         # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
         # TODO: make the order trans, rot dynamic
         if self.translations != Translations.NONE:
-            translations = np.zeros((3, ))
+            translations = np.zeros((3,))
             q_counter = 0
             for i_trans, trans in enumerate(["X", "Y", "Z"]):
                 if trans in self.translations.value:
@@ -227,11 +229,10 @@ class SegmentReal:
             rotation = np.eye(3)
             for i_rot in range(len(self.rotations.value)):
                 rot = self.rotations.value[-i_rot]
-                rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot+1)]) @ rotation
+                rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot + 1)]) @ rotation
             rt.rotation = rotation
 
         return rt.rt_matrix
-
 
     def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly

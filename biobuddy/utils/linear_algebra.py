@@ -216,6 +216,7 @@ def is_ortho_basis(basis) -> bool:
         else True
     )
 
+
 def rotation_matrix_from_euler(axis: str, angle: float) -> np.ndarray:
     if axis.upper() == "X":
         return np.array(

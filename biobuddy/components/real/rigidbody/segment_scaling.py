@@ -77,10 +77,10 @@ class AxisWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-            self,
-            original_model: "BiomechanicalModelReal",
-            marker_positions: np.ndarray,
-            marker_names: list[str],
+        self,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
         # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
@@ -112,10 +112,10 @@ class SegmentWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-            self,
-            original_model: "BiomechanicalModelReal",
-            marker_positions: np.ndarray,
-            marker_names: list[str],
+        self,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
 
         original_marker_names = original_model.marker_names
@@ -167,10 +167,10 @@ class BodyWiseScaling:
         self.height = height
 
     def compute_scale_factors(
-            self,
-            original_model: "BiomechanicalModelReal",
-            marker_positions: np.ndarray,
-            marker_names: list[str],
+        self,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 

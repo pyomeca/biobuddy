@@ -278,7 +278,6 @@ class BiomodModelParser:
         except EndOfFileReached:
             pass
 
-
     def to_real(self) -> BiomechanicalModelReal:
         model = BiomechanicalModelReal(gravity=self.gravity)
 
