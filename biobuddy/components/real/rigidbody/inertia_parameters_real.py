@@ -43,7 +43,7 @@ class InertiaParametersReal:
 
     @center_of_mass.setter
     def center_of_mass(self, value: Points):
-        self._center_of_mass = points_to_array(name="center of mass", points=value)
+        self._center_of_mass = points_to_array(points=value, name="center of mass")
 
     @property
     def inertia(self) -> np.ndarray:
@@ -51,7 +51,7 @@ class InertiaParametersReal:
 
     @inertia.setter
     def inertia(self, value: Points):
-        self._inertia = points_to_array(name="inertia", points=value)
+        self._inertia = points_to_array(points=value, name="inertia")
         if self.inertia.shape[1] == 0:
             return
         if self.inertia.shape[1] == 1:
@@ -91,12 +91,12 @@ class InertiaParametersReal:
 
         mass = relative_mass(data.values, model)
 
-        p = points_to_array(name=f"center_of_mass function", points=center_of_mass(data.values, model))
+        p = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
         com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
-        inertia = points_to_array(name="inertia parameter function", points=inertia(data.values, model))
+        inertia = points_to_array(points=inertia(data.values, model), name="inertia parameter function")
 
         return InertiaParametersReal(mass, com, inertia)
 

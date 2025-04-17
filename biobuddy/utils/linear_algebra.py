@@ -1,4 +1,4 @@
-from .aliases import Point, Points, point_to_array, points_to_array
+from .aliases import Point, Points, point_to_array
 
 import numpy as np
 
@@ -24,8 +24,8 @@ def euler_and_translation_to_matrix(
         is in parent's local reference frame
     """
 
-    angles = point_to_array(name="angles", point=angles).reshape((4,))
-    translations = point_to_array(name="translations", point=translations).reshape((4,))
+    angles = point_to_array(point=angles, name="angles").reshape((4,))
+    translations = point_to_array(point=translations, name="translations").reshape((4,))
 
     matrix = {
         "x": lambda x: np.array([[1, 0, 0], [0, np.cos(x), -np.sin(x)], [0, np.sin(x), np.cos(x)]]),

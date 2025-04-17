@@ -4,7 +4,7 @@ from enum import Enum
 import numpy as np
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
-from ..components.real.biomechanical_model_real_utils import inverse_kinematics
+from ..components.real.biomechanical_model_real_utils import inverse_kinematics, muscle_length
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
@@ -40,13 +40,11 @@ class ScaleTool:
 
         # Original attributes
         self.original_model = original_model
-        self.original_model_biorbd = self.original_model.get_biorbd_model  # TODO: remove
         self.personalize_mass_distribution = personalize_mass_distribution
         self.max_marker_movement = max_marker_movement
 
         # Extended attributes to be filled
         self.scaled_model = BiomechanicalModelReal()
-        self.scaled_model_biorbd = None  # This scaled model is defined later when the segment shape is defined
         self.mean_experimental_markers = None  # This field will be set when .scale is run
 
         self.header = ""
@@ -117,9 +115,8 @@ class ScaleTool:
         self.define_mean_experimental_markers(marker_positions, marker_names)
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
-        self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
-        self.modify_muscle_parameters()
+        # self.modify_muscle_parameters()
         self.place_model_in_static_pose(marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose)
 
         return self.scaled_model
@@ -196,7 +193,7 @@ class ScaleTool:
                 )
 
     def define_mean_experimental_markers(self, marker_positions, marker_names):
-        model_marker_names = [m.to_string() for m in self.original_model_biorbd.markerNames()]
+        model_marker_names = self.original_model.marker_names
         self.mean_experimental_markers = np.zeros((3, len(model_marker_names)))
         for i_marker, name in enumerate(model_marker_names):
             marker_index = marker_names.index(name)
@@ -217,7 +214,7 @@ class ScaleTool:
         for segment_name in self.scaling_segments.keys():
             # Compute the scale factors
             scaling_factors[segment_name] = self.scaling_segments[segment_name].compute_scaling_factors(
-                marker_positions, marker_names, self.original_model_biorbd
+                self.original_model, marker_positions, marker_names
             )
             # Get each segment's scaled mass
             if self.personalize_mass_distribution:
@@ -239,7 +236,7 @@ class ScaleTool:
 
     def scale_model_geometrically(self, marker_positions: np.ndarray, marker_names: list[str], mass: float):
 
-        original_mass = self.original_model_biorbd.mass()
+        original_mass = self.original_model.mass
 
         scaling_factors, segment_masses = self.get_scaling_factors_and_masses(
             marker_positions, marker_names, mass, original_mass
@@ -330,7 +327,7 @@ class ScaleTool:
                 # If the muscle is not attached to a segment that is scaled, do not scale the muscle
                 self.scaled_model.add_muscle(deepcopy(self.original_model.muscles[muscle_name]))
             else:
-                self.scaled_model.add_muscles(
+                self.scaled_model.add_muscle(
                     self.scale_muscle(
                         deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
                     )
@@ -444,16 +441,16 @@ class ScaleTool:
     def find_static_pose(
             self,
             marker_positions: np.ndarray,
-            marker_names: list[str],
+            experimental_marker_names: list[str],
             q_regularization_weight: float | None,
             initial_static_pose: np.ndarray | None,
             visualize_optimal_static_pose: bool
     ) -> np.ndarray:
 
         optimal_q = inverse_kinematics(
-                self.scaled_model_biorbd,
+                self.scaled_model,
                 marker_positions=marker_positions,
-                marker_names=marker_names,
+                marker_names=experimental_marker_names,
                 q_regularization_weight=q_regularization_weight,
                 q_target=initial_static_pose,
         )
@@ -469,17 +466,18 @@ class ScaleTool:
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
 
-            # Biorbd model translated from .osim
-            model_biorbd = self.original_model.get_biorbd_model
-            viz_biomod_model = pyorerun.BiorbdModel.from_biorbd_object(model_biorbd)
+            # TODO: REMOVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            debugging_model_path = "/home/charbie/Documents/Programmation/biobuddy/examples/models/temporary_model.bioMod"
+            self.scaled_model.to_biomod(debugging_model_path)
+            viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
             viz.add_animated_model(viz_biomod_model, optimal_q)
 
-            biorbd_marker_names = [m.to_string() for m in model_biorbd.markerNames()]
-            marker_indices = [marker_names.index(m) for m in biorbd_marker_names]
-            pyomarkers = Markers(data=marker_positions[:, marker_indices, :], channels=biorbd_marker_names)
-            viz.add_xp_markers(name=marker_names, markers=pyomarkers)
+            model_marker_names = self.scaled_model.marker_names
+            marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
+            pyomarkers = Markers(data=marker_positions[:, marker_indices, :], channels=model_marker_names)
+            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers)
             # tracked_markers=pyomarkers
             viz.rerun_by_frame("Model output")
 
@@ -529,15 +527,13 @@ class ScaleTool:
     def modify_muscle_parameters(self):
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
+        # TODO: compute muscle length !
         """
-        muscle_names = [m.to_string() for m in self.original_model_biorbd.muscleNames()]
-        q_zeros = np.zeros((self.original_model_biorbd.nbQ(),))
+        muscle_names = self.original_model.muscle_names
+        q_zeros = np.zeros((self.original_model.nb_q, ))
         for muscle_name in self.original_model.muscles.keys():
-            muscle_idx = muscle_names.index(muscle_name)
-            original_muscle_length = self.original_model_biorbd.muscle(muscle_idx).length(
-                self.original_model_biorbd, q_zeros
-            )
-            scaled_muscle_length = self.scaled_model_biorbd.muscle(muscle_idx).length(self.scaled_model_biorbd, q_zeros)
+            original_muscle_length = muscle_length(self.original_model, muscle_name, q_zeros)
+            scaled_muscle_length = muscle_length(self.scaled_model, muscle_name, q_zeros)
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
             self.scaled_model.muscles[muscle_name].optimal_length = (

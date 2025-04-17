@@ -73,7 +73,7 @@ class ViaPointReal:
 
     @position.setter
     def position(self, value: Points) -> None:
-        self._position = points_to_array(name="viapoint", points=value)
+        self._position = points_to_array(points=value, name="viapoint")
 
     @staticmethod
     def from_data(
@@ -109,7 +109,7 @@ class ViaPointReal:
         """
 
         # Get the position of the contact points and do some sanity checks
-        position = points_to_array(name="viapoint function", points=position_function(data.values, model))
+        position = points_to_array(points=position_function(data.values, model), name="viapoint function")
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
     def to_biomod(self):

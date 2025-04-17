@@ -118,7 +118,7 @@ class BiomechanicalModel:
         data
             The data to collapse the model from
         """
-        gravity = None if gravity is None else point_to_array("gravity", gravity)
+        gravity = None if gravity is None else point_to_array(gravity, "gravity")
         model = BiomechanicalModelReal(gravity=gravity)
 
         for segment in self.segments:

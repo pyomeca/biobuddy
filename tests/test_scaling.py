@@ -89,7 +89,11 @@ def test_scaling_wholebody():
 
     # Scale the model in BioBuddy
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
-    scaled_model = scale_tool.scale(file_path=static_file_path, frame_range=range(100, 200), mass=80
+    scaled_model = scale_tool.scale(file_path=static_file_path,
+                                    first_frame=100,
+                                    last_frame=200,
+                                    mass=80,
+                                    q_regularization_weight=0.01,
     )
     scaled_model.to_biomod(scaled_biomod_file_path)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_file_path)

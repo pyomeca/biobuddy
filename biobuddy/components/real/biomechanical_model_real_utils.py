@@ -1,11 +1,11 @@
 import numpy as np
 from scipy import optimize
 
-from ...utils.rotations import Rotations
-from ...utils.translations import Translations
+from ...utils.aliases import point_to_array
 from ...utils.linear_algebra import RotoTransMatrix, get_closest_rotation_matrix
 
 
+# TODO: The two following functions should be handled differently
 def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
     """
     Transforms a SegmentCoordinateSystemReal expressed in the global reference frame into a SegmentCoordinateSystemReal expressed in the local reference frame.
@@ -72,39 +72,6 @@ def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment
 
         return get_closest_rotation_matrix(rt_to_global)[:, :, np.newaxis]
 
-# def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str, q: np.ndarray) -> np.ndarray:
-#     """
-#     Computes the global coordinate system of a segment from local rt and generalized coordinates.
-#
-#     Parameters
-#     ----------
-#     model : BiomechanicalModelReal
-#         The model to use.
-#     segment_name : str
-#         Name of the segment.
-#     q : np.ndarray
-#         Generalized coordinates (nb_q, ).
-#
-#     Returns
-#     -------
-#     np.ndarray
-#         Global 4x4 transformation matrix.
-#     """
-#     segment = model.segments[segment_name]
-#
-#     # Find which dofs are associated with this segment
-#     segment_q_idx = model.dof_indices(segment_name)
-#     local_q = q[segment_q_idx]
-#
-#     # Compute the segment's local transform for the given q
-#     rt_local = segment.rt_from_local_q(local_q)  # <- Must return a 4x4 np.array
-#
-#     if segment.parent_name is None or segment.parent_name == "base":
-#         return rt_local
-#     else:
-#         parent_rt = segment_coordinate_system_in_global(model, segment.parent_name, q)
-#         return parent_rt @ rt_local
-
 
 def _marker_residual(model: "BiomechanicalModelReal",
                     q_regularization_weight: float,
@@ -114,23 +81,27 @@ def _marker_residual(model: "BiomechanicalModelReal",
     markers_model = np.array(markers_in_global(model, q))
     nb_marker = experimental_markers.shape[1]
     vect_pos_markers = np.zeros(3 * nb_marker)
-    for m, value in enumerate(markers_model):
-        vect_pos_markers[m * 3 : (m + 1) * 3] = value
+    for i_marker in range(nb_marker):
+        vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = markers_model[:3, i_marker, 0] - experimental_markers[:, i_marker]
     # TODO: setup the IKTask to set the "q_ref" to something else than zero.
     out = np.hstack(
-        (vect_pos_markers - np.reshape(experimental_markers.T, (3 * nb_marker,)), q_regularization_weight * (q - q_target))
+        (vect_pos_markers, q_regularization_weight * (q - q_target.reshape(-1, )))
     )
     return out
 
 def _marker_jacobian(model: "BiomechanicalModelReal", q_regularization_weight: float, q: np.ndarray) -> np.ndarray:
-    nb_q = q.shape[0]
+    nb_q = model.nb_q
+    nb_markers = model.nb_markers
+
     jacobian_matrix = np.array(markers_jacobian(model, q))
-    nb_marker = jacobian_matrix.shape[0]
-    vec_jacobian = np.zeros((3 * nb_marker + nb_q, nb_q))
-    for m, value in enumerate(jacobian_matrix):
-        vec_jacobian[m * 3 : (m + 1) * 3, :] = value
+    vec_jacobian = np.zeros((3 * nb_markers + nb_q, nb_q))
+
+    for i_marker in range(nb_markers):
+        vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+
     for i_q in range(nb_q):
-        vec_jacobian[nb_marker * 3 + i_q, i_q] = q_regularization_weight
+        vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
+
     return vec_jacobian
 
 
@@ -148,27 +119,29 @@ def inverse_kinematics(
 
     Parameters
     ----------
-    model_biorbd
-        The biorbd model to use for the inverse kinematic reconstruction.
+    model
+        The model to use for the inverse kinematic reconstruction.
     marker_positions
         The experimental marker positions
     marker_names
-        The names of the experimental markers (the names must match the marker names in the biorbd_model).
+        The names of the experimental markers (the names must match the marker names in the model).
     q_regularization_weight
         The weight of the regularization term. If None, no regularization is applied.
     q_target
         The target posture to match. If None, the target posture is set to zero.
     """
 
-    marker_indices = [marker_names.index(m.to_string()) for m in model_biorbd.markerNames()]
+    marker_indices = [marker_names.index(m) for m in model.marker_names]
     markers_real = marker_positions[:, marker_indices, :]
+
+    nb_q = model.nb_q
     nb_frames = marker_positions.shape[2]
 
     init = np.ones((nb_q,)) * 0.0001
     if q_target is not None:
         init[:] = q_target
     else:
-        q_target = np.zeros((model.nb_q,))
+        q_target = np.zeros((model.nb_q, 1))
 
     if q_regularization_weight is None:
         q_regularization_weight = 0.0
@@ -197,74 +170,115 @@ def find_children(model: "BiomechanicalModelReal", parent_name: str):
 def point_from_global_to_local(point_in_global, jcs_in_global):
     rt_matrix = RotoTransMatrix()
     rt_matrix.rt_matrix = jcs_in_global
-    return rt_matrix.inverse @ np.hstack((point_in_global, 1))
+    return rt_matrix.inverse @ point_to_array(point=point_in_global)
 
 def point_from_local_to_global(point_in_local, jcs_in_global):
     rt_matrix = RotoTransMatrix()
     rt_matrix.rt_matrix = jcs_in_global
-    return rt_matrix @ np.hstack((point_in_local, 1))
+    return rt_matrix.rt_matrix @ point_to_array(point=point_in_local)
 
-def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
+def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) -> dict[str, np.ndarray]:
     """
     Applied the generalized coordinates to move find the position and orientation of the model's segments.
     Here, we assume that the parent is always defined before the child in the model.
     """
     segment_rt_in_global = {}
-    for segment_name in model.segments:
+    for segment_name in model.segments.keys():
 
         if not model.segments[segment_name].segment_coordinate_system.is_in_local:
             raise NotImplementedError("The function forward_kinematics is not implemented yet for global rt. They should be converted to local.")
 
-        rt_to_global = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+        segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+        if model.segments[segment_name].parent_name == "base":
+            parent_rt = np.eye(4)
+        else:
+            parent_name = model.segments[segment_name].parent_name
+            parent_rt = segment_rt_in_global[parent_name]
+
         if model.segments[segment_name].nb_q == 0:
-            segment_rt_in_global[segment_name] = rt_to_global
+            segment_rt_in_global[segment_name] = parent_rt @ segment_rt
+        else:
+            local_q = q[model.dof_indices(segment_name)]
+            rt_caused_by_q = model.segments[segment_name].rt_from_local_q(local_q)
+            segment_rt_in_global[segment_name] = parent_rt @ rt_caused_by_q @ segment_rt
+
+    return segment_rt_in_global
+
 
 def markers_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
 
     q = np.zeros((model.nb_q, 1)) if q is None else q
-    nb_frames = q.shape[2]
+    if len(q.shape) == 1:
+        q = q[:, np.newaxis]
+    elif len(q.shape) > 2:
+        raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+    nb_frames = q.shape[1]
 
     marker_positions = np.ones((4, model.nb_markers, nb_frames))
     for i_frame in range(nb_frames):
+        jcs_in_global = forward_kinematics(model, q[:, i_frame])
         i_marker = 0
         for i_segment, segment in enumerate(model.segments):
-            jcs_in_global = segment_coordinate_system_in_global(model=model, segment_name=segment.name)
             for marker in segment.markers:
-                marker_in_local = point_from_local_to_global(point_in_local=marker.position, jcs_in_global=jcs_in_global)
-                marker_positions[:, i_marker] = marker_in_local
+                marker_in_global = point_from_local_to_global(point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name])
+                marker_positions[:, i_marker] = marker_in_global
                 i_marker += 1
 
     return marker_positions
 
-def markers_jacobian(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
-
-    if q is not None:
-        # nb_frames = q.shape[2]
-        raise NotImplementedError("The function markers_in_global is not implemented yet for q, please implement it ;)")
-
-    i_marker = 0
-    marker_positions = np.ones((4, model.nb_markers))
-    for i_segment, segment in enumerate(model.segments):
-        jcs_in_global = segment_coordinate_system_in_global(model=model, segment_name=segment.name)
-        for marker in segment.markers:
-            marker_in_local = point_from_local_to_global(point_in_local=marker.position, jcs_in_global=jcs_in_global)
-            marker_positions[:, i_marker] = marker_in_local
-            i_marker += 1
-
-    return marker_positions
 
 def contacts_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
-    if q is not None:
-        # nb_frames = q.shape[2]
-        raise NotImplementedError("The function contacts_in_global is not implemented yet for q, please implement it ;)")
 
-    i_contact = 0
-    contact_positions = np.ones((4, model.nb_contacts))
-    for i_segment, segment in enumerate(model.segments):
-        jcs_in_global = segment_coordinate_system_in_global(model=model, segment_name=segment.name)
-        for contact in segment.contacts:
-            contact_in_local = point_from_local_to_global(point_in_local=contact.position, jcs_in_global=jcs_in_global)
-            contact_positions[:, i_contact] = contact_in_local
-            i_contact += 1
+    q = np.zeros((model.nb_q, 1)) if q is None else q
+    nb_frames = q.shape[2]
+
+    jcs_in_global = forward_kinematics(model, q)
+
+    contact_positions = np.ones((4, model.nb_contacts, nb_frames))
+    for i_frame in range(nb_frames):
+        i_contact = 0
+        for i_segment, segment in enumerate(model.segments):
+            for contact in segment.contacts:
+                contact_in_global = point_from_local_to_global(point_in_local=contact.position, jcs_in_global=jcs_in_global[segment])
+                contact_positions[:, i_contact] = contact_in_global
+                i_contact += 1
 
     return contact_positions
+
+
+def markers_jacobian(model, q: np.ndarray, epsilon: float = 0.0001) -> np.ndarray:
+    """
+    Numerically compute the Jacobian of marker position with respect to q.
+
+    Parameters
+    ----------
+    model : BiomechanicalModelReal
+        The model used.
+    q : np.ndarray
+        Generalized coordinates (nb_q, 1).
+    epsilon : float
+        Perturbation size for finite difference.
+
+    Returns
+    -------
+    np.ndarray
+        Jacobian of shape (3, nb_q)
+    """
+    nb_q = model.nb_q
+    nb_markers = model.nb_markers
+    jac = np.zeros((3, nb_markers, nb_q))
+    f0 = markers_in_global(model, q)[:3, :, 0]
+
+    for i_q in range(nb_q):
+        dq = np.zeros_like(q)
+        dq[i_q] = epsilon
+        f1 = markers_in_global(model, q + dq)[:3, :, 0]
+        for i_marker in range(nb_markers):
+            jac[:, i_marker, i_q] = (f1[:, i_marker] - f0[:, i_marker]) / epsilon
+
+    return jac
+
+
+def muscle_length(original_model: "BiomechanicalModelReal", muscle_name: str, q_zeros: np.ndarray) -> np.ndarray:
+    raise NotImplementedError("Please implement the muscle_length function.")

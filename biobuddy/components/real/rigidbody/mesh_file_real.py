@@ -32,10 +32,10 @@ class MeshFileReal:
         # TODO: create the def initialize_point(), to skip the if is None
         self.mesh_file_name = mesh_file_name
         self.mesh_color = mesh_color
-        self.mesh_scale = None if mesh_scale is None else point_to_array("mesh_scale", mesh_scale)
-        self.mesh_rotation = None if mesh_rotation is None else point_to_array("mesh_rotation", mesh_rotation)
+        self.mesh_scale = None if mesh_scale is None else point_to_array(mesh_scale, "mesh_scale")
+        self.mesh_rotation = None if mesh_rotation is None else point_to_array(mesh_rotation, "mesh_rotation")
         self.mesh_translation = (
-            None if mesh_translation is None else point_to_array("mesh_translation", mesh_translation)
+            None if mesh_translation is None else point_to_array(mesh_translation, "mesh_translation")
         )
 
     @property
@@ -63,7 +63,7 @@ class MeshFileReal:
 
     @mesh_scale.setter
     def mesh_scale(self, value: np.ndarray[float]):
-        self._mesh_scale = None if value is None else point_to_array("mesh_scale", value)
+        self._mesh_scale = None if value is None else point_to_array(value, "mesh_scale")
 
     @property
     def mesh_rotation(self) -> np.ndarray:
@@ -74,7 +74,7 @@ class MeshFileReal:
 
     @mesh_rotation.setter
     def mesh_rotation(self, value: np.ndarray[float]):
-        self._mesh_rotation = None if value is None else point_to_array("mesh_rotation", value)
+        self._mesh_rotation = None if value is None else point_to_array(value, "mesh_rotation")
 
     @property
     def mesh_translation(self) -> np.ndarray:
@@ -85,7 +85,7 @@ class MeshFileReal:
 
     @mesh_translation.setter
     def mesh_translation(self, value: np.ndarray[float]):
-        self._mesh_translation = None if value is None else point_to_array("mesh_translation", value)
+        self._mesh_translation = None if value is None else point_to_array(value, "mesh_translation")
 
     @staticmethod
     def from_data(

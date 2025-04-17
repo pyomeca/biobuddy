@@ -2,8 +2,6 @@ from copy import deepcopy
 import logging
 import numpy as np
 
-import biorbd
-
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.biomechanical_model_real_utils import (
     inverse_kinematics,
@@ -11,6 +9,7 @@ from ..components.real.biomechanical_model_real_utils import (
     markers_in_global,
     contacts_in_global,
     point_from_global_to_local,
+    forward_kinematics,
 )
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
@@ -66,22 +65,20 @@ class Score:
             else:
                 raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
 
-    def _rt_from_trial(self, original_model_biorbd: biorbd.Model) -> tuple[np.ndarray, np.ndarray]:
+    def _rt_from_trial(self, original_model) -> tuple[np.ndarray, np.ndarray]:
 
         optimal_q = inverse_kinematics(
-            original_model_biorbd,
+            original_model,
             marker_positions=self.c3d_data.all_marker_positions,
             marker_names=self.c3d_data.marker_names)
+        jcs_in_global = forward_kinematics(original_model, optimal_q)
 
-        segment_names = [s.name.to_string() for s in original_model_biorbd.segments()]
         nb_frames = self.c3d_data.all_marker_positions.shape[2]
         rt_parent = np.zeros((4, 4, nb_frames))
         rt_child = np.zeros((4, 4, nb_frames))
-        parent_idx = segment_names.index(self.parent_name)
-        child_idx = segment_names.index(self.child_name)
         for i_frame in range(nb_frames):
-            rt_parent[:, :, i_frame] = original_model_biorbd.globalJCS(optimal_q[:, i_frame], parent_idx, True).to_array()
-            rt_child[:, :, i_frame] = original_model_biorbd.globalJCS(optimal_q[:, i_frame], child_idx, True).to_array()
+            rt_parent[:, :, i_frame] = jcs_in_global[self.parent_name]
+            rt_child[:, :, i_frame] = jcs_in_global[self.child_name]
 
         return rt_parent, rt_child
 
@@ -142,10 +139,10 @@ class Score:
         return cor_in_global
 
 
-    def perform_task(self, original_model_biorbd: biorbd.Model, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
+    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial using the current model to identify the orientation of the segments
-        rt_parent, rt_child = self._rt_from_trial(original_model_biorbd)
+        rt_parent, rt_child = self._rt_from_trial(original_model)
 
         # Apply the algo to identify the joint center
         parent_markers = self.c3d_data.get_position(self.parent_marker_names)
@@ -224,7 +221,6 @@ class JointCenterTool:
 
         # Original attributes
         self.original_model = original_model
-        self.original_model_biorbd = self.original_model.get_biorbd_model  # TODO: remove
 
         # Extended attributes to be filled
         self.joint_center_tasks = []  # Not a NamedList because nothing in BioBuddy refer to joints (only segments)
@@ -258,6 +254,6 @@ class JointCenterTool:
     def replace_joint_centers(self) -> BiomechanicalModelReal:
 
         for task in self.joint_center_tasks:
-            task.perfrom_task(self.original_model_biorbd, self.new_model)
+            task.perform_task(self.original_model, self.new_model)
 
         return self.new_model

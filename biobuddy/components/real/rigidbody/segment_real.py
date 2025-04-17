@@ -214,19 +214,21 @@ class SegmentReal:
 
         # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
         # TODO: make the order trans, rot dynamic
-        translations = np.zeros((3, ))
-        q_counter = 0
-        for i_trans, trans in ["X", "Y", "Z"]:
-            if trans in self.translations.value:
-                translations[i_trans] = local_q[q_counter]
-                q_counter += 1
-        rt.translation = translations
+        if self.translations != Translations.NONE:
+            translations = np.zeros((3, ))
+            q_counter = 0
+            for i_trans, trans in enumerate(["X", "Y", "Z"]):
+                if trans in self.translations.value:
+                    translations[i_trans] = local_q[q_counter]
+                    q_counter += 1
+            rt.translation = translations
 
-        rotation = np.eye(3)
-        for i_rot in range(len(self.rotations.value)):
-            rot = self.rotations.value[-i_rot]
-            rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot+1)]) @ rotation
-        rt.rotation = rotation
+        if self.rotations != Rotations.NONE:
+            rotation = np.eye(3)
+            for i_rot in range(len(self.rotations.value)):
+                rot = self.rotations.value[-i_rot]
+                rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot+1)]) @ rotation
+            rt.rotation = rotation
 
         return rt.rt_matrix
 

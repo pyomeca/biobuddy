@@ -19,7 +19,7 @@ class BiomechanicalModelReal:
         from .rigidbody.segment_real import SegmentReal
 
         self.header = ""
-        self.gravity = None if gravity is None else point_to_array("gravity", gravity)
+        self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroup]()
         self.muscles = NamedList[MuscleReal]()
@@ -231,7 +231,7 @@ class BiomechanicalModelReal:
         """
         nb_dof = 0
         for segment in self.segments:
-            if segment != segment_name:
+            if segment.name != segment_name:
                 if segment.translations != Translations.NONE:
                     nb_dof += len(segment.translations.value)
                 if segment.rotations != Rotations.NONE:
@@ -242,6 +242,16 @@ class BiomechanicalModelReal:
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
         raise ValueError(f"Segment {segment_name} not found in the model")
 
+    @property
+    def mass(self) -> float:
+        """
+        Get the mass of the model
+        """
+        total_mass = 0.0
+        for segment in self.segments:
+            if segment.inertia_parameters is not None:
+                total_mass += segment.inertia_parameters.mass
+        return total_mass
 
     @staticmethod
     def from_biomod(
