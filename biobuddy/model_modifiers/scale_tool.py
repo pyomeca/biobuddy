@@ -56,7 +56,7 @@ class ScaleTool:
         self.warnings = ""
 
     def scale(
-        self, file_path: str, first_frame: int, last_frame: int, mass: float
+        self, file_path: str, first_frame: int, last_frame: int, mass: float, visualize_optimal_static_pose: bool = False
     ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
@@ -78,7 +78,7 @@ class ScaleTool:
             # Load the c3d file
             c3d_data = C3dData(file_path, first_frame, last_frame)
             marker_names = c3d_data.marker_names
-            marker_positions = c3d_data.all_marker_positions()[:3, :, :]
+            marker_positions = c3d_data.all_marker_positions[:3, :, :]
         else:
             if file_path.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
@@ -108,7 +108,7 @@ class ScaleTool:
         self.scaled_model_biorbd = self.scaled_model.get_biorbd_model
 
         self.modify_muscle_parameters()
-        self.place_model_in_static_pose(marker_positions, marker_names)
+        self.place_model_in_static_pose(marker_positions, marker_names, visualize_optimal_static_pose)
 
         return self.scaled_model
 
@@ -405,7 +405,7 @@ class ScaleTool:
         scaled_via_point.position *= parent_scale_factor
         return scaled_via_point
 
-    def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]) -> np.ndarray:
+    def find_static_pose(self, marker_positions: np.ndarray, marker_names: list[str], visualize_optimal_static_pose: bool) -> np.ndarray:
 
         nb_q = self.scaled_model_biorbd.nbQ()
         optimal_q = inverse_kinematics(
@@ -415,10 +415,36 @@ class ScaleTool:
                 q_regularization_weight=0.001,
                 q_target=np.zeros((nb_q, )))
 
+        if visualize_optimal_static_pose:
+            # Show the animation for debugging
+            try:
+                import pyorerun
+                from pyomeca import Markers
+            except ImportError:
+                raise ImportError("You must install pyorerun and pyomeca to visualize the model")
+
+            t = np.linspace(0, 1, marker_positions.shape[2])
+            viz = pyorerun.PhaseRerun(t)
+
+            # Biorbd model translated from .osim
+            model_biorbd = self.original_model.get_biorbd_model
+            viz_biomod_model = pyorerun.BiorbdModel.from_biorbd_object(model_biorbd)
+            viz_biomod_model.options.transparent_mesh = False
+            viz_biomod_model.options.show_gravity = True
+            viz.add_animated_model(viz_biomod_model, optimal_q)
+
+            biorbd_marker_names = [m.to_string() for m in model_biorbd.markerNames()]
+            marker_indices = [marker_names.index(m) for m in biorbd_marker_names]
+            pyomarkers = Markers(data=marker_positions[:, marker_indices, :], channels=biorbd_marker_names)
+            viz.add_xp_markers(name=marker_names, markers=pyomarkers)
+            # tracked_markers=pyomarkers
+            viz.rerun_by_frame("Model output")
+
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
             raise RuntimeError(
                 "The inverse kinematics shows more than 20° variance over the frame range specified."
-                "Please verify that the model and subject are not positioned close to singularities (gimbal lock)."
+                "Please see the animation provided to verify that the subject does not move during the static trial."
+                "If not, please make sure the model and subject are not positioned close to singularities (gimbal lock)."
             )
 
         return np.median(optimal_q, axis=1)
@@ -446,8 +472,8 @@ class ScaleTool:
                 rt_matrix.from_rt_matrix(segment_jcs)
                 marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
 
-    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str]):
-        q_static = self.find_static_pose(marker_positions, marker_names)
+    def place_model_in_static_pose(self, marker_positions: np.ndarray, marker_names: list[str], visualize_optimal_static_pose: bool):
+        q_static = self.find_static_pose(marker_positions, marker_names, visualize_optimal_static_pose)
         self.make_static_pose_the_zero(q_static)
         self.replace_markers_on_segments(q_static, marker_positions, marker_names)
 
@@ -487,9 +513,9 @@ class ScaleTool:
 
         return BiomodConfigurationParser(filepath=filepath)
 
-    @staticmethod
     def from_xml(
-        filepath: str,
+            self,
+            filepath: str,
     ):
         """
         Read an xml file from OpenSim and extract the scaling configuration.
@@ -501,5 +527,5 @@ class ScaleTool:
         """
         from ..model_parser.opensim import OsimConfigurationParser
 
-        configuration = OsimConfigurationParser(filepath=filepath)
+        configuration = OsimConfigurationParser(filepath=filepath, original_model=self.original_model)
         return configuration.scale_tool
