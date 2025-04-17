@@ -4,6 +4,7 @@ This example shows how to scale a model based on a generic model and a static tr
 
 import logging
 from pathlib import Path
+import numpy as np
 import biorbd
 
 from pyomeca import Markers
@@ -11,6 +12,12 @@ from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshPa
 
 
 def main():
+
+    try:
+        import pyorerun
+        visualization = True
+    except:
+        visualization = False
 
     # Configure logging
     logging.basicConfig(
@@ -52,7 +59,12 @@ def main():
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
 
     # Scale the model
-    scaled_model = scale_tool.scale(file_path=static_file_path, frame_range=range(100, 200), mass=80
+    scaled_model = scale_tool.scale(file_path=static_file_path,
+                                    first_frame=100,
+                                    last_frame=200,
+                                    mass=80,
+                                    q_regularization_weight=0.01,
+                                    visualize_optimal_static_pose=visualization,
     )
 
     # Write the scaled model to a .bioMod file
@@ -61,36 +73,30 @@ def main():
     # Test that the model created is valid
     biorbd.Model(scaled_biomod_file_path)
 
-    # Compare the result visually
-    try:
-        import pyorerun
-    except ImportError:
-        raise ImportError("You must install pyorerun to visualize the model")
-    import numpy as np
+    if visualization:
+        # Compare the result visually
+        t = np.linspace(0, 1, 10)
+        viz = pyorerun.PhaseRerun(t)
+        q = np.zeros((42, 10))
 
-    # Visualization
-    t = np.linspace(0, 1, 10)
-    viz = pyorerun.PhaseRerun(t)
-    q = np.zeros((42, 10))
+        # Biorbd model translated from .osim
+        viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
+        viz_biomod_model.options.transparent_mesh = False
+        viz_biomod_model.options.show_gravity = True
+        viz.add_animated_model(viz_biomod_model, q)
 
-    # Biorbd model translated from .osim
-    viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
-    viz_biomod_model.options.transparent_mesh = False
-    viz_biomod_model.options.show_gravity = True
-    viz.add_animated_model(viz_biomod_model, q)
+        # Add the experimental markers from the static trial
+        fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
+        pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
 
-    # Add the experimental markers from the static trial
-    fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
-    pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
+        # Model output
+        viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
+        viz_scaled_model.options.transparent_mesh = False
+        viz_scaled_model.options.show_gravity = True
+        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
 
-    # Model output
-    viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
-    viz_scaled_model.options.transparent_mesh = False
-    viz_scaled_model.options.show_gravity = True
-    viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
-
-    # Animate
-    viz.rerun_by_frame("Model output")
+        # Animate
+        viz.rerun_by_frame("Model output")
 
 
 if __name__ == "__main__":

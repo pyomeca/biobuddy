@@ -2,6 +2,7 @@ from time import strftime
 
 from lxml import etree
 
+from biobuddy import BiomechanicalModelReal
 from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...model_modifiers.scale_tool import ScaleTool
@@ -21,6 +22,7 @@ class OsimConfigurationParser:
     def __init__(
         self,
         filepath: str,
+        original_model: "BiomechanicalModelReal"
     ):
         """
         Reads and converts OpenSim configuration files (.xml) to a generic configuration.
@@ -85,7 +87,7 @@ class OsimConfigurationParser:
                 )
 
         # Initialize and fill the scaling configuration
-        self.scale_tool = ScaleTool()
+        self.scale_tool = ScaleTool(original_model)  # TODO: this is weird !
         self._read()
 
     def _read(self):
