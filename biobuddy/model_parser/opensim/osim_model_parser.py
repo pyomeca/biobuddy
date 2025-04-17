@@ -345,7 +345,7 @@ class OsimModelParser:
                 # Add muscle group if it does not exist already
                 muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
                 if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
-                    self.biomechanical_model_real.muscle_groups.append(
+                    self.biomechanical_model_real.add_muscle_group(
                         MuscleGroup(
                             name=muscle_group_name,
                             origin_parent_name=muscle.group[0],
@@ -377,9 +377,9 @@ class OsimModelParser:
                         muscle_group=muscle_real.muscle_group,
                         position=np.array([float(v) for v in via_point.position.split()]),
                     )
-                    self.biomechanical_model_real.via_points.append(via_real)
+                    self.biomechanical_model_real.add_via_point(via_real)
 
-                self.biomechanical_model_real.muscles.append(muscle_real)
+                self.biomechanical_model_real.add_muscle(muscle_real)
 
             except Exception as e:
                 self.warnings.append(f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped.")
@@ -629,7 +629,7 @@ class OsimModelParser:
                     ]
                 ),
             )
-        self.biomechanical_model_real.segments.append(
+        self.biomechanical_model_real.add_segment(
             SegmentReal(
                 name=name,
                 parent_name=parent_name,
@@ -666,7 +666,7 @@ class OsimModelParser:
         translations = getattr(Translations, trans_dof.upper(), Translations.NONE)
         rotations = getattr(Rotations, rot_dof.upper(), Rotations.NONE)
 
-        self.biomechanical_model_real.segments.append(
+        self.biomechanical_model_real.add_segment(
             SegmentReal(
                 name=name,
                 parent_name=parent_name,

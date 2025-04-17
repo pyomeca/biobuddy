@@ -1,4 +1,3 @@
-import os
 from copy import deepcopy
 
 # from typing import Self
@@ -8,7 +7,6 @@ from ...utils.translations import Translations
 from ...utils.rotations import Rotations
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
-from ...utils.c3d_data import C3dData
 from .biomechanical_model_real_utils import segment_coordinate_system_in_local
 
 
@@ -28,7 +26,21 @@ class BiomechanicalModelReal:
         self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
-    def remove_segment(self, segment_name: str):
+    def add_segment(self, segment: "SegmentReal") -> None:
+        """
+        Add a segment to the model
+
+        Parameters
+        ----------
+        segment
+            The segment to add
+        """
+        if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
+            raise ValueError(f"Parent segment should be declared before the child segments. "
+                             f"Please declare the parent {segment.parent_name} before declaring the child segment {segment.name}.")
+        self.segments.append(segment)
+
+    def remove_segment(self, segment_name: str) -> None:
         """
         Remove a segment from the model
 
@@ -37,9 +49,26 @@ class BiomechanicalModelReal:
         segment_name
             The name of the segment to remove
         """
-        self.segments.pop(segment_name)
+        self.segments.remove(segment_name)
 
-    def remove_muscle_group(self, muscle_group_name: str):
+    def add_muscle_group(self, muscle_group: "MuscleGroup") -> None:
+        """
+        Add a muscle group to the model
+
+        Parameters
+        ----------
+        muscle_group
+            The muscle group to add
+        """
+        if muscle_group.origin_parent_name not in self.segment_names:
+            raise ValueError(f"The origin segment of a muscle group must be declared before the muscle group."
+                             f"Please declare the segment {muscle_group.origin_parent_name} before declaring the muscle group {muscle_group.name}.")
+        if muscle_group.insertion_parent_name not in self.segment_names:
+            raise ValueError(f"The insertion segment of a muscle group must be declared before the muscle group."
+                             f"Please declare the segment {muscle_group.insertion_parent_name} before declaring the muscle group {muscle_group.name}.")
+        self.muscle_groups.append(muscle_group)
+
+    def remove_muscle_group(self, muscle_group_name: str) -> None:
         """
         Remove a muscle group from the model
 
@@ -48,9 +77,23 @@ class BiomechanicalModelReal:
         muscle_group_name
             The name of the muscle group to remove
         """
-        self.muscle_groups.pop(muscle_group_name)
+        self.muscle_groups.remove(muscle_group_name)
 
-    def remove_muscle(self, muscle_name: str):
+    def add_muscle(self, muscle: "MuscleReal") -> None:
+        """
+        Add a muscle to the model
+
+        Parameters
+        ----------
+        muscle
+            The muscle to add
+        """
+        if muscle.muscle_group not in self.muscle_group_names:
+            raise ValueError(f"The muscle group must be declared before the muscle."
+                             f"Please declare the muscle_group  {muscle.muscle_group} before declaring the muscle {muscle.name}.")
+        self.muscles.append(muscle)
+
+    def remove_muscle(self, muscle_name: str) -> None:
         """
         Remove a muscle from the model
 
@@ -59,9 +102,30 @@ class BiomechanicalModelReal:
         muscle_name
             The name of the muscle to remove
         """
-        self.muscles.pop(muscle_name)
+        self.muscles.remove(muscle_name)
 
-    def remove_via_point(self, via_point_name: str):
+    def add_via_point(self, via_point: "ViaPointReal") -> None:
+        """
+        Add a via point to the model
+
+        Parameters
+        ----------
+        via_point
+            The via point to add
+        """
+        if via_point.parent_name not in self.segment_names:
+            raise ValueError(f"The parent segment of a via point must be declared before the via point."
+                             f"Please declare the segment {via_point.parent_name} before declaring the via point {via_point.name}.")
+        elif via_point.muscle_group not in self.muscle_group_names:
+            raise ValueError(f"The muscle group of a via point must be declared before the via point."
+                             f"Please declare the muscle group {via_point.muscle_group} before declaring the via point {via_point.name}.")
+        elif via_point.muscle_name not in self.muscle_names:
+            raise ValueError(f"The muscle of a via point must be declared before the via point."
+                             f"Please declare the muscle {via_point.muscle_name} before declaring the via point {via_point.name}.")
+
+        self.via_points.append(via_point)
+
+    def remove_via_point(self, via_point_name: str) -> None:
         """
         Remove a via point from the model
 
@@ -70,10 +134,17 @@ class BiomechanicalModelReal:
         via_point_name
             The name of the via point to remove
         """
-        self.via_points.pop(via_point_name)
+        self.via_points.remove(via_point_name)
 
     @property
-    def marker_names(self):
+    def segment_names(self) -> list[str]:
+        """
+        Get the names of the segments in the model
+        """
+        return list(self.segments.keys())
+
+    @property
+    def marker_names(self) -> list[str]:
         list_marker_names = []
         for segment in self.segments:
             for marker in segment.markers:
@@ -81,14 +152,75 @@ class BiomechanicalModelReal:
         return list_marker_names
 
     @property
-    def nb_markers(self):
+    def contact_names(self) -> list[str]:
+        list_contact_names = []
+        for segment in self.segments:
+            for contact in segment.contacts:
+                list_contact_names += [contact.name]
+        return list_contact_names
+
+    @property
+    def imu_names(self) -> list[str]:
+        list_imu_names = []
+        for segment in self.segments:
+            for imu in segment.imus:
+                list_imu_names += [imu.name]
+        return list_imu_names
+
+    @property
+    def muscle_group_names(self) -> list[str]:
+        """
+        Get the names of the muscle groups in the model
+        """
+        return list(self.muscle_groups.keys())
+
+    @property
+    def muscle_names(self) -> list[str]:
+        """
+        Get the names of the muscles in the model
+        """
+        return list(self.muscles.keys())
+
+    @property
+    def via_point_names(self) -> list[str]:
+        """
+        Get the names of the via points in the model
+        """
+        return list(self.via_points.keys())
+
+    @property
+    def nb_segments(self) -> int:
+        return len(self.segments)
+
+    @property
+    def nb_markers(self) -> int:
         return sum(segment.nb_markers for segment in self.segments)
 
     @property
-    def nb_q(self):
+    def nb_contacts(self) -> int:
+        return sum(segment.nb_contacts for segment in self.segments)
+
+    @property
+    def nb_imus(self) -> int:
+        return sum(segment.nb_imus for segment in self.segments)
+
+    @property
+    def nb_muscle_groups(self) -> int:
+        return len(self.muscle_groups)
+
+    @property
+    def nb_muscles(self) -> int:
+        return len(self.muscles)
+
+    @property
+    def nb_via_points(self) -> int:
+        return len(self.via_points)
+
+    @property
+    def nb_q(self) -> int:
         return sum(segment.nb_q for segment in self.segments)
 
-    def dof_indices(self, segment_name):
+    def dof_indices(self, segment_name) -> list[int]:
         """
         Get the indices of the degrees of freedom of a segment
 
@@ -108,6 +240,7 @@ class BiomechanicalModelReal:
                 nb_translations = len(segment.translations.value) if segment.translations != Translations.NONE else 0
                 nb_rotations = len(segment.rotations.value) if segment.rotations != Rotations.NONE else 0
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
+        raise ValueError(f"Segment {segment_name} not found in the model")
 
 
     @staticmethod

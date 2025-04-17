@@ -30,80 +30,80 @@ def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_
 
         parent_name = model.segments[segment_name].parent_name
         parent_scs = RotoTransMatrix()
-        parent_scs.from_rt_matrix(segment_coordinate_system_in_global(model=model, segment_name=parent_name))
+        parent_scs.rt_matrix = segment_coordinate_system_in_global(model=model, segment_name=parent_name)
         inv_parent_scs = parent_scs.inverse
         scs_in_local = inv_parent_scs @ model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
         return get_closest_rotation_matrix(scs_in_local)[:, :, np.newaxis]
 
 
-# def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
-#     """
-#     Transforms a SegmentCoordinateSystemReal expressed in the local reference frame into a SegmentCoordinateSystemReal expressed in the global reference frame.
-#
-#     Parameters
-#     ----------
-#     model
-#         The model to use
-#     segment_name
-#         The name of the segment whose SegmentCoordinateSystemReal should be expressed in the global
-#
-#     Returns
-#     -------
-#     The SegmentCoordinateSystemReal in global reference frame
-#     """
-#
-#     if segment_name == "base":
-#         return np.eye(4)
-#     elif model.segments[segment_name].segment_coordinate_system.is_in_global:
-#         return model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-#
-#     else:
-#
-#         current_segment = model.segments[segment_name]
-#         rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
-#         while current_segment.segment_coordinate_system.is_in_local:
-#             current_parent_name = current_segment.parent_name
-#             if (
-#                 current_parent_name == "base" or current_parent_name is None
-#             ):  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
-#                 break
-#             current_segment = model.segments[current_parent_name]
-#             rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
-#
-#         return get_closest_rotation_matrix(rt_to_global)[:, :, np.newaxis]
-
-def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str, q: np.ndarray) -> np.ndarray:
+def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
     """
-    Computes the global coordinate system of a segment from local rt and generalized coordinates.
+    Transforms a SegmentCoordinateSystemReal expressed in the local reference frame into a SegmentCoordinateSystemReal expressed in the global reference frame.
 
     Parameters
     ----------
-    model : BiomechanicalModelReal
-        The model to use.
-    segment_name : str
-        Name of the segment.
-    q : np.ndarray
-        Generalized coordinates (nb_q, ).
+    model
+        The model to use
+    segment_name
+        The name of the segment whose SegmentCoordinateSystemReal should be expressed in the global
 
     Returns
     -------
-    np.ndarray
-        Global 4x4 transformation matrix.
+    The SegmentCoordinateSystemReal in global reference frame
     """
-    segment = model.segments[segment_name]
 
-    # Find which dofs are associated with this segment
-    segment_q_idx = model.dof_indices(segment_name)
-    local_q = q[segment_q_idx]
+    if segment_name == "base":
+        return np.eye(4)
+    elif model.segments[segment_name].segment_coordinate_system.is_in_global:
+        return model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
 
-    # Compute the segment's local transform for the given q
-    rt_local = segment.rt_from_local_q(local_q)  # <- Must return a 4x4 np.array
-
-    if segment.parent_name is None or segment.parent_name == "base":
-        return rt_local
     else:
-        parent_rt = segment_coordinate_system_in_global(model, segment.parent_name, q)
-        return parent_rt @ rt_local
+
+        current_segment = model.segments[segment_name]
+        rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
+        while current_segment.segment_coordinate_system.is_in_local:
+            current_parent_name = current_segment.parent_name
+            if (
+                current_parent_name == "base" or current_parent_name is None
+            ):  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
+                break
+            current_segment = model.segments[current_parent_name]
+            rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
+
+        return get_closest_rotation_matrix(rt_to_global)[:, :, np.newaxis]
+
+# def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment_name: str, q: np.ndarray) -> np.ndarray:
+#     """
+#     Computes the global coordinate system of a segment from local rt and generalized coordinates.
+#
+#     Parameters
+#     ----------
+#     model : BiomechanicalModelReal
+#         The model to use.
+#     segment_name : str
+#         Name of the segment.
+#     q : np.ndarray
+#         Generalized coordinates (nb_q, ).
+#
+#     Returns
+#     -------
+#     np.ndarray
+#         Global 4x4 transformation matrix.
+#     """
+#     segment = model.segments[segment_name]
+#
+#     # Find which dofs are associated with this segment
+#     segment_q_idx = model.dof_indices(segment_name)
+#     local_q = q[segment_q_idx]
+#
+#     # Compute the segment's local transform for the given q
+#     rt_local = segment.rt_from_local_q(local_q)  # <- Must return a 4x4 np.array
+#
+#     if segment.parent_name is None or segment.parent_name == "base":
+#         return rt_local
+#     else:
+#         parent_rt = segment_coordinate_system_in_global(model, segment.parent_name, q)
+#         return parent_rt @ rt_local
 
 
 def _marker_residual(model: "BiomechanicalModelReal",
@@ -188,24 +188,36 @@ def inverse_kinematics(
     return optimal_q
 
 def find_children(model: "BiomechanicalModelReal", parent_name: str):
+    children = []
+    for segment_name in model.segments:
+        if model.segments[segment_name].parent_name == parent_name:
+            children.append(segment_name)
+    return children
 
 def point_from_global_to_local(point_in_global, jcs_in_global):
     rt_matrix = RotoTransMatrix()
-    rt_matrix.from_rt_matrix(jcs_in_global)
+    rt_matrix.rt_matrix = jcs_in_global
     return rt_matrix.inverse @ np.hstack((point_in_global, 1))
 
 def point_from_local_to_global(point_in_local, jcs_in_global):
     rt_matrix = RotoTransMatrix()
-    rt_matrix.from_rt_matrix(jcs_in_global)
+    rt_matrix.rt_matrix = jcs_in_global
     return rt_matrix @ np.hstack((point_in_local, 1))
 
-# def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
-#     segment_rt_in_global = {}
-#     for segment_name in model.segments:
-#         rt_to_global = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-#         if model.segments[segment_name].translations != Translations.NONE:
-#
-#         if model.segments[segment_name].rotations != Rotations.NONE:
+def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
+    """
+    Applied the generalized coordinates to move find the position and orientation of the model's segments.
+    Here, we assume that the parent is always defined before the child in the model.
+    """
+    segment_rt_in_global = {}
+    for segment_name in model.segments:
+
+        if not model.segments[segment_name].segment_coordinate_system.is_in_local:
+            raise NotImplementedError("The function forward_kinematics is not implemented yet for global rt. They should be converted to local.")
+
+        rt_to_global = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+        if model.segments[segment_name].nb_q == 0:
+            segment_rt_in_global[segment_name] = rt_to_global
 
 def markers_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
 

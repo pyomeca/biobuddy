@@ -278,12 +278,27 @@ class BiomodModelParser:
         except EndOfFileReached:
             pass
 
+
     def to_real(self) -> BiomechanicalModelReal:
-        model = BiomechanicalModelReal()
+        model = BiomechanicalModelReal(gravity=self.gravity)
 
         # Add the segments
         for segment in self.segments:
-            model.segments.append(deepcopy(segment))
+            model.add_segment(deepcopy(segment))
+
+        # Add the muscle groups
+        for muscle_group in self.muscle_groups:
+            model.add_muscle_group(deepcopy(muscle_group))
+
+        # Add the muscles
+        for muscle in self.muscles:
+            model.add_muscle(deepcopy(muscle))
+
+        # Add the via points
+        for via_point in self.via_points:
+            model.add_via_point(deepcopy(via_point))
+
+        model.warnings = self.warnings
 
         return model
 

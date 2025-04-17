@@ -124,6 +124,30 @@ class ScaleTool:
 
         return self.scaled_model
 
+    def add_scaling_segment(self, scaling_segment: SegmentScaling):
+        """
+        Add a scaling segment to the scale tool.
+
+        Parameters
+        ----------
+        scaling_segment
+            The scaling segment to add
+        """
+
+        if not isinstance(scaling_segment, SegmentScaling):
+            raise RuntimeError("The scaling segment must be of type SegmentScaling.")
+        self.scaling_segments.append(scaling_segment)
+
+    def remove_scaling_segment(self, segment_scaling_name: str):
+        """
+        Remove a scaling segment from the scale tool.
+
+        Parameters
+        ----------
+        segment_scaling_name
+            The name of the scaling segment to remove
+        """
+        self.scaling_segments.remove(segment_scaling_name)
 
     def check_that_makers_do_not_move(self, marker_positions, marker_names):
         """
@@ -260,7 +284,7 @@ class ScaleTool:
             # Scale segments
             if segment_name in self.scaling_segments.keys():
                 this_segment_scale_factor = scaling_factors[segment_name].to_vector()
-                self.scaled_model.segments.append(
+                self.scaled_model.add_segment(
                     self.scale_segment(
                         deepcopy(self.original_model.segments[segment_name]),
                         parent_scale_factor,
@@ -304,9 +328,9 @@ class ScaleTool:
                 and insertion_parent_name not in self.scaling_segments.keys()
             ):
                 # If the muscle is not attached to a segment that is scaled, do not scale the muscle
-                self.scaled_model.muscles.append(deepcopy(self.original_model.muscles[muscle_name]))
+                self.scaled_model.add_muscle(deepcopy(self.original_model.muscles[muscle_name]))
             else:
-                self.scaled_model.muscles.append(
+                self.scaled_model.add_muscles(
                     self.scale_muscle(
                         deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
                     )
@@ -320,9 +344,9 @@ class ScaleTool:
 
             if parent_name not in self.scaling_segments.keys():
                 # If the via point is not attached to a segment that is scaled, do not scale the via point
-                self.scaled_model.via_points.append(deepcopy(self.original_model.via_points[via_point_name]))
+                self.scaled_model.add_via_point(deepcopy(self.original_model.via_points[via_point_name]))
             else:
-                self.scaled_model.via_points.append(
+                self.scaled_model.add_via_point(
                     self.scale_via_point(deepcopy(self.original_model.via_points[via_point_name]), parent_scale_factor)
                 )
 
@@ -488,7 +512,7 @@ class ScaleTool:
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
                 segment_jcs = self.scaled_model_biorbd.globalJCS(q_static, i_segment, True).to_array()
                 rt_matrix = RotoTransMatrix()
-                rt_matrix.from_rt_matrix(segment_jcs)
+                rt_matrix.rt_matrix = segment_jcs
                 marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(

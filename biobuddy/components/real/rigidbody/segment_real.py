@@ -95,8 +95,26 @@ class SegmentReal:
         self._qdot_ranges = value
 
     @property
+    def marker_names(self):
+        return [marker.name for marker in self.markers]
+
+    @property
+    def contact_names(self):
+        return [contact.name for contact in self.contacts]
+
+    @property
+    def imu_names(self):
+        return [imu.name for imu in self.imus]
+
+    @property
     def nb_q(self):
-        return len(self.translations.value) + len(self.rotations.value)
+        nb_translations = 0
+        if self.translations is not None and self.translations != Translations.NONE:
+            nb_translations = len(self.translations.value)
+        nb_rotations = 0
+        if self.rotations is not None and self.rotations != Rotations.NONE:
+            nb_rotations = len(self.rotations.value)
+        return nb_translations + nb_rotations
 
     @property
     def markers(self) -> NamedList[MarkerReal]:
@@ -208,6 +226,9 @@ class SegmentReal:
         for i_rot in range(len(self.rotations.value)):
             rot = self.rotations.value[-i_rot]
             rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot+1)]) @ rotation
+        rt.rotation = rotation
+
+        return rt.rt_matrix
 
 
     def to_biomod(self, with_mesh):

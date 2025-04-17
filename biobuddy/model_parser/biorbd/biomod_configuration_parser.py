@@ -79,7 +79,7 @@ class BiomodConfigurationParser:
 
                 elif isinstance(current_component, SegmentScaling):
                     if token == "endscalingsegment":
-                        self.scale_tool.scaling_segments.append(current_component)
+                        self.scale_tool.add_scaling_segment(current_component)
                         current_component = None
 
                     elif token == "scalingtype":
