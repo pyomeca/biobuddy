@@ -98,7 +98,7 @@ def _marker_residual(
 
     for i_marker in range(nb_markers):
         vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
-            markers_model[:3, i_marker, 0] - experimental_markers[:, i_marker]
+            markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
         )
     # TODO: setup the IKTask to set the "q_ref" to something else than zero.
     out = np.hstack(
@@ -239,6 +239,12 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
     Applied the generalized coordinates to move find the position and orientation of the model's segments.
     Here, we assume that the parent is always defined before the child in the model.
     """
+    if len(q.shape) == 1:
+        q = q[:, np.newaxis]
+    elif len(q.shape) > 2:
+        raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+    nb_frames = q.shape[1]
+
     segment_rt_in_global = {}
     for segment_name in model.segments.keys():
 
@@ -247,19 +253,21 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
                 "The function forward_kinematics is not implemented yet for global rt. They should be converted to local."
             )
 
-        segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-        parent_name = model.segments[segment_name].parent_name
-        if parent_name == "base":
-            parent_rt = np.identity(4)
-        else:
-            parent_rt = segment_rt_in_global[parent_name]
+        segment_rt_in_global[segment_name] = np.ones((4, 4, nb_frames))
+        for i_frame in range(nb_frames):
+            segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+            parent_name = model.segments[segment_name].parent_name
+            if parent_name == "base":
+                parent_rt = np.identity(4)
+            else:
+                parent_rt = segment_rt_in_global[parent_name][:, :, i_frame]
 
-        if model.segments[segment_name].nb_q == 0:
-            segment_rt_in_global[segment_name] = parent_rt @ segment_rt
-        else:
-            local_q = q[model.dof_indices(segment_name)]
-            rt_caused_by_q = model.segments[segment_name].rt_from_local_q(local_q)
-            segment_rt_in_global[segment_name] = parent_rt @ segment_rt @ rt_caused_by_q
+            if model.segments[segment_name].nb_q == 0:
+                segment_rt_in_global[segment_name][:, :, i_frame] = parent_rt @ segment_rt
+            else:
+                local_q = q[model.dof_indices(segment_name), i_frame]
+                rt_caused_by_q = model.segments[segment_name].rt_from_local_q(local_q)
+                segment_rt_in_global[segment_name][:, :, i_frame] = parent_rt @ segment_rt @ rt_caused_by_q
 
     return segment_rt_in_global
 

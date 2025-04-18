@@ -66,7 +66,7 @@ scaled_model_CAC = scale_tool.scale(file_path=static_c3d_file_path, first_frame=
 **Joint center identification:**
 The `JointCenterTool` allows you to identify the joint centers of your model based on the movement of segments during functional trials.
 First, you need to define the joint center configuration using `JointCenterTool.add()` method to define the joint center you want to relocate.
-Then, you can use the `JointCenterTool.perform_tasks()` method to relocate each joint.
+Then, you can use the `JointCenterTool.replace_joint_centers()` method to relocate each joint.
 ```python3
 from biobuddy import JointCenterTool
 
@@ -98,7 +98,7 @@ joint_center_tool.add(
 )
 
 # Perform the joint center identification
-modified_model = joint_center_tool.perform_tasks()
+modified_model = joint_center_tool.replace_joint_centers()
 ```
 
 # How to cite

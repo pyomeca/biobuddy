@@ -52,6 +52,13 @@ class Score:
             The last frame to consider in the functional trial.
         """
 
+        illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        for name in illegal_names:
+            if name in parent_name:
+                raise RuntimeError(f"The names {name} are not allowed in the parent or child names. Please change the segment named {parent_name} from the Score configuration.")
+            if name in child_name:
+                raise RuntimeError(f"The names {name} are not allowed in the parent or child names. Please change the segment named {child_name} from the Score configuration.")
+
         # Original attributes
         self.file_path = file_path
         self.parent_name = parent_name
@@ -158,11 +165,18 @@ class Score:
 
         # Replace the model components in the new local reference frame
         parent_cor_position_in_global = segment_coordinate_system_in_global(new_model, self.parent_name)[:3, 3, 0]
+
+        if new_model.segments[self.child_name].segment_coordinate_system is None or new_model.segments[self.child_name].segment_coordinate_system.is_in_global:
+            raise RuntimeError("The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm.")
         scs_in_local = deepcopy(new_model.segments[self.child_name].segment_coordinate_system.scs)
         scs_in_local[:3, 3] = cor_in_global[:3] - parent_cor_position_in_global
 
         # Segment RT
-        new_model.segments[self.child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+        if self.child_name + "_parent_offset" in new_model.segment_names:
+            segment_to_move_rt_from = self.child_name + "_parent_offset"
+        else:
+            segment_to_move_rt_from = self.child_name
+        new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
             scs=scs_in_local,
             is_scs_local=True,
         )
@@ -253,10 +267,13 @@ class JointCenterTool:
             raise RuntimeError("The joint center must be a Score or Sara object.")
 
         # Check that there is really a link between parent and child segments
-        if self.original_model.segments[jcs_identifier.child_name].parent_name != jcs_identifier.parent_name:
-            raise RuntimeError(
-                f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}."
-            )
+        current_segment = deepcopy(self.original_model.segments[jcs_identifier.child_name])
+        while current_segment.parent_name != jcs_identifier.parent_name:
+            current_segment = deepcopy(self.original_model.segments[current_segment.parent_name])
+            if current_segment.parent_name == "" or current_segment.parent_name == "base" or current_segment.parent_name is None:
+                raise RuntimeError(
+                    f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
+                )
 
     def replace_joint_centers(self) -> BiomechanicalModelReal:
 
