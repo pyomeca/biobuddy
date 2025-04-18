@@ -27,7 +27,7 @@ def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_
     """
 
     if segment_name == "base":
-        return np.eye(4)
+        return np.identity(4)
     elif model.segments[segment_name].segment_coordinate_system.is_in_local:
         return model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
     else:
@@ -57,7 +57,7 @@ def segment_coordinate_system_in_global(model: "BiomechanicalModelReal", segment
     """
 
     if segment_name == "base":
-        return np.eye(4)
+        return np.identity(4)
     elif model.segments[segment_name].segment_coordinate_system.is_in_global:
         return model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
 
@@ -250,7 +250,7 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
         segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
         parent_name = model.segments[segment_name].parent_name
         if parent_name == "base":
-            parent_rt = np.eye(4)
+            parent_rt = np.identity(4)
         else:
             parent_rt = segment_rt_in_global[parent_name]
 

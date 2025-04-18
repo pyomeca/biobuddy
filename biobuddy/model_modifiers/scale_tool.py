@@ -67,6 +67,7 @@ class ScaleTool:
         mass: float,
         q_regularization_weight: float = None,
         initial_static_pose: np.ndarray = None,
+        make_static_pose_the_models_zero: bool = True,
         visualize_optimal_static_pose: bool = False,
     ) -> BiomechanicalModelReal:
         """
@@ -87,6 +88,10 @@ class ScaleTool:
         initial_static_pose
             The approximate posture (q) in which the subject will be during the static trial.
             Ideally, this should be zero so that the posture of the original model would be in the same posture as the subject during the static trial.
+        make_static_pose_the_models_zero
+            If True, the static posture of the model will be set to zero after scaling. Thus when a vector of zero is sent ot the model, it will be in the same posture as the subject during the static trisl.
+        visualize_optimal_static_pose
+            If True, the optimal static pose will be visualized using pyorerun. Itis always recommended to visually inspect the result of the scaling procedure to make sure it went all right.
         """
 
         # Check file format
@@ -122,9 +127,14 @@ class ScaleTool:
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
 
-        # self.modify_muscle_parameters()
+        # self.modify_muscle_parameters() # TODO !!!!!!!
         self.place_model_in_static_pose(
-            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
+            marker_positions,
+            marker_names,
+            q_regularization_weight,
+            initial_static_pose,
+            make_static_pose_the_models_zero,
+            visualize_optimal_static_pose,
         )
 
         return self.scaled_model
@@ -510,7 +520,8 @@ class ScaleTool:
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-    def replace_markers_on_segments(self, marker_positions: np.ndarray, marker_names: list[str]):
+
+    def replace_markers_on_segments_global_scs(self, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_local:
                 raise RuntimeError(
@@ -524,19 +535,40 @@ class ScaleTool:
                 rt.rt_matrix = deepcopy(segment.segment_coordinate_system.scs[:, :, 0])
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
+
+    def replace_markers_on_segments_local_scs(self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray):
+        jcs_in_global = forward_kinematics(self.scaled_model, q)
+        for i_segment, segment in enumerate(self.scaled_model.segments):
+            if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
+                raise RuntimeError(
+                    "Something went wrong. Since make_static_pose_the_models_zero was set to False, the segment's coordinate system should be in the local reference frames."
+                )
+            for marker in segment.markers:
+                marker_name = marker.name
+                marker_index = marker_names.index(marker_name)
+                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
+                rt = RotoTransMatrix()
+                rt.rt_matrix = deepcopy(jcs_in_global[segment.name])
+                marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
+
+
     def place_model_in_static_pose(
         self,
         marker_positions: np.ndarray,
         marker_names: list[str],
         q_regularization_weight: float | None,
         initial_static_pose: np.ndarray | None,
+        make_static_pose_the_models_zero: bool,
         visualize_optimal_static_pose: bool,
     ):
         q_static = self.find_static_pose(
             marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
         )
-        self.make_static_pose_the_zero(q_static)
-        self.replace_markers_on_segments(marker_positions, marker_names)
+        if make_static_pose_the_models_zero:
+            self.make_static_pose_the_zero(q_static)
+            self.replace_markers_on_segments_global_scs(marker_positions, marker_names)
+        else:
+            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static)
 
     def modify_muscle_parameters(self):
         """

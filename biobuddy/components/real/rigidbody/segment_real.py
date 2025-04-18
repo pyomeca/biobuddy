@@ -210,7 +210,7 @@ class SegmentReal:
             raise RuntimeError(
                 f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
             )
-        rt = np.eye(4)
+        rt = np.identity(4)
 
         if self.nb_q != 0:
             # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?

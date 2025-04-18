@@ -59,7 +59,8 @@ def main(visualization):
         last_frame=200,
         mass=80,
         q_regularization_weight=0.01,
-        visualize_optimal_static_pose=True,
+        make_static_pose_the_models_zero=True,
+        visualize_optimal_static_pose=False,
     )
 
     # Write the scaled model to a .bioMod file
@@ -74,11 +75,11 @@ def main(visualization):
         viz = pyorerun.PhaseRerun(t)
         q = np.zeros((42, 10))
 
-        # # Biorbd model translated from .osim
-        # viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
-        # viz_biomod_model.options.transparent_mesh = False
-        # viz_biomod_model.options.show_gravity = True
-        # viz.add_animated_model(viz_biomod_model, q)
+        # Biorbd model translated from .osim
+        viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
+        viz_biomod_model.options.transparent_mesh = False
+        viz_biomod_model.options.show_gravity = True
+        viz.add_animated_model(viz_biomod_model, q)
 
         # Add the experimental markers from the static trial
         fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
@@ -97,7 +98,6 @@ def main(visualization):
 if __name__ == "__main__":
     try:
         import pyorerun
-
         visualization = True
     except:
         visualization = False

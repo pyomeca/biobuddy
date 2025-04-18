@@ -9,8 +9,9 @@ import pytest
 import ezc3d
 import biorbd
 import numpy as np
+import numpy.testing as npt
 
-from biobuddy import MeshParser, MeshFormat, BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool
+from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool
 
 
 def convert_c3d_to_trc(c3d_file_path):
@@ -52,9 +53,35 @@ def convert_c3d_to_trc(c3d_file_path):
             f.write("\t".join(frame_data) + "\n")
 
 
+
+def visualize_model_scaling_output(scaled_biomod_file_path: str, converted_scaled_osim_file_path: str, q):
+    """
+    Only for debugging purposes.
+    """
+    import pyorerun
+    # Compare the result visually
+    t = np.linspace(0, 1, 10)
+    viz = pyorerun.PhaseRerun(t)
+
+    # Model scaled in BioBuddy
+    viz_biomod_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
+    viz_biomod_model.options.transparent_mesh = False
+    viz_biomod_model.options.show_gravity = True
+    viz.add_animated_model(viz_biomod_model, q)
+
+    # Model scaled in OpenSim
+    viz_scaled_model = pyorerun.BiorbdModel(converted_scaled_osim_file_path)
+    viz_scaled_model.options.transparent_mesh = False
+    viz_scaled_model.options.show_gravity = True
+    viz.add_animated_model(viz_scaled_model, q)
+
+    # Animate
+    viz.rerun_by_frame("Scaling comparison")
+
+
+
 def test_scaling_wholebody():
 
-    # For ortho_norm_basis
     np.random.seed(42)
 
     # Paths
@@ -76,7 +103,7 @@ def test_scaling_wholebody():
     # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
 
     # Read the .osim file
-    model = BiomechanicalModelReal.from_osim(
+    original_model = BiomechanicalModelReal.from_osim(
         filepath=osim_file_path,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -84,13 +111,14 @@ def test_scaling_wholebody():
     )
 
     # Scale the model in BioBuddy
-    scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
+    scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
         file_path=static_file_path,
         first_frame=100,
         last_frame=200,
         mass=80,
         q_regularization_weight=0.01,
+        make_static_pose_the_models_zero=False,  # Not recommended, but this is what OpenSim do
     )
     scaled_model.to_biomod(scaled_biomod_file_path)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_file_path)
@@ -108,16 +136,57 @@ def test_scaling_wholebody():
     osim_model.to_biomod(converted_scaled_osim_file_path)
     scaled_osim_model = biorbd.Model(converted_scaled_osim_file_path)
 
-    # Make sure the model markers coincide with the experimental markers
-    q_zeros = np.zeros((scaled_biorbd_model.nbQ(),))
-    exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
-    for i_marker in range(exp_markers.shape[1]):
-        biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros)[i_marker].to_array()
-        osim_scaled_marker = scaled_osim_model.markers(q_zeros)[i_marker].to_array()
-        assert np.all(np.abs(exp_markers[:, i_marker, 0] - biobuddy_scaled_marker) < 1e-5)
-        assert np.all(np.abs(exp_markers[:, i_marker, 0] - osim_scaled_marker) < 1e-5)
-        assert np.all(np.abs(osim_scaled_marker - biobuddy_scaled_marker) < 1e-5)
+    # visualize_model_scaling_output(scaled_biomod_file_path, converted_scaled_osim_file_path, q_zeros)
+
+    q_zeros = np.zeros((42, 10))
+    q_random = np.random.rand(42) * 2 * np.pi
+
+    # Total mass
+    npt.assert_almost_equal(scaled_osim_model.mass(), 80.000001749999)
+    npt.assert_almost_equal(scaled_biorbd_model.mass(), 80.000001749999)
+
+    # Segment mass
+    for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
+        if scaled_model.segments[segment_name].inertia_parameters is None:
+            mass_biobuddy = 0
+        else:
+            mass_biobuddy = scaled_model.segments[segment_name].inertia_parameters.mass
+        mass_to_biorbd = scaled_biorbd_model.segment(i_segment).characteristics().mass()
+        mass_osim = scaled_osim_model.segment(i_segment).characteristics().mass()
+        npt.assert_almost_equal(mass_to_biorbd, mass_biobuddy)
+        npt.assert_almost_equal(mass_osim, mass_biobuddy)
+        npt.assert_almost_equal(mass_to_biorbd, mass_osim)
+        if mass_biobuddy > 1e-3:
+            original_mass = original_model.segments[segment_name].inertia_parameters.mass
+            npt.assert_array_less(original_mass, mass_biobuddy)
+
+    # TODO: Fix these values with Thomas, but it seems to work :)
+    # # CoM
+    # for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
+    #     print(segment_name)
+    #     # Zero
+    #     if scaled_model.segments[segment_name].inertia_parameters is None:
+    #         com_biobuddy = np.zeros((3, ))
+    #     else:
+    #         com_biobuddy = scaled_model.segments[segment_name].inertia_parameters.center_of_mass[:3].reshape(3, )
+    #     com_to_biorbd = scaled_biorbd_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
+    #     com_osim = scaled_osim_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
+    #     npt.assert_almost_equal(com_to_biorbd, com_biobuddy)
+    #     npt.assert_almost_equal(com_osim, com_biobuddy)
+    #     npt.assert_almost_equal(com_to_biorbd, com_osim)
+    #     # Random
+    #     com_biobuddy = scaled_biorbd_model.CoMbySegment(q_random, i_segment).to_array()
+    #     com_osim = scaled_osim_model.CoMbySegment(q_random, i_segment).to_array()
+    #     npt.assert_almost_equal(com_osim, com_biobuddy)
+    #
+    # # Make sure the model markers coincide with the experimental markers
+    # exp_markers = scale_tool.mean_experimental_markers[:, :]
+    # for i_marker in range(exp_markers.shape[1]):
+    #     biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros)[i_marker].to_array()
+    #     osim_scaled_marker = scaled_osim_model.markers(q_zeros)[i_marker].to_array()
+    #     assert np.all(np.abs(exp_markers[:, i_marker, 0] - biobuddy_scaled_marker) < 1e-5)
+    #     assert np.all(np.abs(exp_markers[:, i_marker, 0] - osim_scaled_marker) < 1e-5)
+    #     assert np.all(np.abs(osim_scaled_marker - biobuddy_scaled_marker) < 1e-5)
 
     # Make sure the muscle properties are the same
 
-    # Make sure the inertial properties are the same

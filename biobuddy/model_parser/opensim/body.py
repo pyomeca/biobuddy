@@ -111,7 +111,7 @@ class Body:
     def to_attrib(self):
         name = self.name
         mass = 1e-8 if not self.mass else float(self.mass)
-        inertia = np.eye(3)
+        inertia = np.identity(3)
         if self.inertia:
             [i11, i22, i33, i12, i13, i23] = self.inertia.split(" ")
             inertia = np.array([[i11, i12, i13], [i12, i22, i23], [i13, i23, i33]])

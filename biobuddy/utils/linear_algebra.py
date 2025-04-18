@@ -181,7 +181,7 @@ def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
         return rt_matrix
 
     else:
-        output_rt = np.eye(4)
+        output_rt = np.identity(4)
         output_rt[:3, 3] = rt_matrix[:3, 3]
 
         u, _, vt = np.linalg.svd(rt_matrix[:3, :3])
@@ -301,7 +301,7 @@ class OrthoMatrix:
         return coord_sys(self.axe_1)[1] + coord_sys(self.axe_2)[1] + coord_sys(self.axe_3)[1]
 
     def has_no_transformation(self):
-        return np.all(self.get_matrix() == np.eye(4))
+        return np.all(self.get_matrix() == np.identity(4))
 
 
 class RotoTransMatrix:
