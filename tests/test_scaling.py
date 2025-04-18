@@ -53,12 +53,12 @@ def convert_c3d_to_trc(c3d_file_path):
             f.write("\t".join(frame_data) + "\n")
 
 
-
 def visualize_model_scaling_output(scaled_biomod_file_path: str, converted_scaled_osim_file_path: str, q):
     """
     Only for debugging purposes.
     """
     import pyorerun
+
     # Compare the result visually
     t = np.linspace(0, 1, 10)
     viz = pyorerun.PhaseRerun(t)
@@ -77,7 +77,6 @@ def visualize_model_scaling_output(scaled_biomod_file_path: str, converted_scale
 
     # Animate
     viz.rerun_by_frame("Scaling comparison")
-
 
 
 def test_scaling_wholebody():
@@ -189,4 +188,3 @@ def test_scaling_wholebody():
     #     assert np.all(np.abs(osim_scaled_marker - biobuddy_scaled_marker) < 1e-5)
 
     # Make sure the muscle properties are the same
-

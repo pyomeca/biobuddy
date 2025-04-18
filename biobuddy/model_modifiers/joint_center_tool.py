@@ -55,9 +55,13 @@ class Score:
         illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
         for name in illegal_names:
             if name in parent_name:
-                raise RuntimeError(f"The names {name} are not allowed in the parent or child names. Please change the segment named {parent_name} from the Score configuration.")
+                raise RuntimeError(
+                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {parent_name} from the Score configuration."
+                )
             if name in child_name:
-                raise RuntimeError(f"The names {name} are not allowed in the parent or child names. Please change the segment named {child_name} from the Score configuration.")
+                raise RuntimeError(
+                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {child_name} from the Score configuration."
+                )
 
         # Original attributes
         self.file_path = file_path
@@ -75,7 +79,6 @@ class Score:
             else:
                 raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
 
-
     def _rt_from_trial(self, original_model: "BiomechanicalModelReal") -> tuple[np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
@@ -92,7 +95,9 @@ class Score:
         # Get the segment RT in static pose to compute the marker position in the local reference frame
         parent_jcs_in_global = RotoTransMatrix()
         parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)
-        parent_markers_local = parent_jcs_in_global.inverse @ self.c3d_data.mean_marker_positions(self.parent_marker_names)
+        parent_markers_local = parent_jcs_in_global.inverse @ self.c3d_data.mean_marker_positions(
+            self.parent_marker_names
+        )
 
         child_jcs_in_global = RotoTransMatrix()
         child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)
@@ -114,14 +119,17 @@ class Score:
         for i_frame in range(nb_frames):
             # Finding the RT allowing to align the segments' markers
             rt_parent[:, :, i_frame] = get_rt_aligning_markers_in_global(
-                parent_markers_global[:, :, i_frame], parent_local_centered, parent_local_centroid)
+                parent_markers_global[:, :, i_frame], parent_local_centered, parent_local_centroid
+            )
             rt_child[:, :, i_frame] = get_rt_aligning_markers_in_global(
-                child_markers_global[:, :, i_frame], child_local_centered, child_local_centroid)
+                child_markers_global[:, :, i_frame], child_local_centered, child_local_centroid
+            )
 
         return rt_parent, rt_child
 
-
-    def _score_algorithm(self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True) -> np.ndarray:
+    def _score_algorithm(
+        self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True
+    ) -> np.ndarray:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
@@ -151,9 +159,9 @@ class Score:
             parent_trans = parent_rt[:3, 3, i]
             child_trans = child_rt[:3, 3, i]
 
-            A[3*i:3*(i+1), 0:3] = child_rot
-            A[3*i:3*(i+1), 3:6] = -parent_rot
-            b[3*i:3*(i+1)] = parent_trans - child_trans
+            A[3 * i : 3 * (i + 1), 0:3] = child_rot
+            A[3 * i : 3 * (i + 1), 3:6] = -parent_rot
+            b[3 * i : 3 * (i + 1)] = parent_trans - child_trans
 
         # Solve via least squares: A x = b → x = [CoR2_local; CoR1_local]
         x, residuals_ls, _, _ = np.linalg.lstsq(A, b, rcond=None)
@@ -161,8 +169,8 @@ class Score:
         cor_parent_local = x[3:]
 
         # Compute transformed CoR positions in global frame
-        cor_parent_global = np.einsum('ijk,k->ij', parent_rt, np.append(cor_parent_local, 1))  # shape (4, N)
-        cor_child_global = np.einsum('ijk,k->ij', child_rt, np.append(cor_child_local, 1))
+        cor_parent_global = np.einsum("ijk,k->ij", parent_rt, np.append(cor_parent_local, 1))  # shape (4, N)
+        cor_child_global = np.einsum("ijk,k->ij", child_rt, np.append(cor_child_local, 1))
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
@@ -180,7 +188,6 @@ class Score:
         )
         return cor_mean_global
 
-
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial using the current model to identify the orientation of the segments
@@ -192,8 +199,13 @@ class Score:
         # Replace the model components in the new local reference frame
         parent_cor_position_in_global = segment_coordinate_system_in_global(new_model, self.parent_name)[:3, 3, 0]
 
-        if new_model.segments[self.child_name].segment_coordinate_system is None or new_model.segments[self.child_name].segment_coordinate_system.is_in_global:
-            raise RuntimeError("The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm.")
+        if (
+            new_model.segments[self.child_name].segment_coordinate_system is None
+            or new_model.segments[self.child_name].segment_coordinate_system.is_in_global
+        ):
+            raise RuntimeError(
+                "The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm."
+            )
         scs_in_local = deepcopy(new_model.segments[self.child_name].segment_coordinate_system.scs)
         scs_in_local[:3, 3] = cor_in_global[:3] - parent_cor_position_in_global
 
@@ -296,7 +308,11 @@ class JointCenterTool:
         current_segment = deepcopy(self.original_model.segments[jcs_identifier.child_name])
         while current_segment.parent_name != jcs_identifier.parent_name:
             current_segment = deepcopy(self.original_model.segments[current_segment.parent_name])
-            if current_segment.parent_name == "" or current_segment.parent_name == "base" or current_segment.parent_name is None:
+            if (
+                current_segment.parent_name == ""
+                or current_segment.parent_name == "base"
+                or current_segment.parent_name is None
+            ):
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )

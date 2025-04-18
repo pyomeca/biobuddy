@@ -260,7 +260,9 @@ def is_ortho_basis(basis) -> bool:
     )
 
 
-def get_rt_aligning_markers_in_global(markers_in_global: np.ndarray, local_centered: np.ndarray, local_centroid: np.ndarray) -> np.ndarray:
+def get_rt_aligning_markers_in_global(
+    markers_in_global: np.ndarray, local_centered: np.ndarray, local_centroid: np.ndarray
+) -> np.ndarray:
 
     global_centroid = np.mean(markers_in_global, axis=1, keepdims=True)
     global_centered = markers_in_global - global_centroid
@@ -283,7 +285,6 @@ def get_rt_aligning_markers_in_global(markers_in_global: np.ndarray, local_cente
     rt_matrix[:3, 3] = translation
 
     return rt_matrix
-
 
 
 class OrthoMatrix:

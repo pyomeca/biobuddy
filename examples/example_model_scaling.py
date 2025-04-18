@@ -98,6 +98,7 @@ def main(visualization):
 if __name__ == "__main__":
     try:
         import pyorerun
+
         visualization = True
     except:
         visualization = False

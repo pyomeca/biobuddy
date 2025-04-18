@@ -520,7 +520,6 @@ class ScaleTool:
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-
     def replace_markers_on_segments_global_scs(self, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_local:
@@ -535,8 +534,9 @@ class ScaleTool:
                 rt.rt_matrix = deepcopy(segment.segment_coordinate_system.scs[:, :, 0])
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
-
-    def replace_markers_on_segments_local_scs(self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray):
+    def replace_markers_on_segments_local_scs(
+        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray
+    ):
         jcs_in_global = forward_kinematics(self.scaled_model, q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
@@ -550,7 +550,6 @@ class ScaleTool:
                 rt = RotoTransMatrix()
                 rt.rt_matrix = deepcopy(jcs_in_global[segment.name])
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
-
 
     def place_model_in_static_pose(
         self,
