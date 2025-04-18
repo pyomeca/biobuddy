@@ -4,7 +4,6 @@ import numpy as np
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.biomechanical_model_real_utils import (
-    inverse_kinematics,
     segment_coordinate_system_in_global,
     markers_in_global,
     contacts_in_global,
@@ -13,6 +12,7 @@ from ..components.real.biomechanical_model_real_utils import (
 )
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
+from ..utils.linear_algebra import RotoTransMatrix, get_rt_aligning_markers_in_global
 
 _logger = logging.getLogger(__name__)
 
@@ -75,81 +75,111 @@ class Score:
             else:
                 raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
 
-    def _rt_from_trial(self, original_model) -> tuple[np.ndarray, np.ndarray]:
 
-        optimal_q = inverse_kinematics(
-            original_model, marker_positions=self.c3d_data.all_marker_positions, marker_names=self.c3d_data.marker_names
-        )
-        jcs_in_global = forward_kinematics(original_model, optimal_q)
+    def _rt_from_trial(self, original_model: "BiomechanicalModelReal") -> tuple[np.ndarray, np.ndarray]:
+        """
+        Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
+
+        Parameters
+        ----------
+        original_model
+            The scaled model
+
+        Returns
+        ----------
+
+        """
+        # Get the segment RT in static pose to compute the marker position in the local reference frame
+        parent_jcs_in_global = RotoTransMatrix()
+        parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)
+        parent_markers_local = parent_jcs_in_global.inverse @ self.c3d_data.mean_marker_positions(self.parent_marker_names)
+
+        child_jcs_in_global = RotoTransMatrix()
+        child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)
+        child_markers_local = child_jcs_in_global.inverse @ self.c3d_data.mean_marker_positions(self.child_marker_names)
+
+        # Marker positions in the global
+        parent_markers_global = self.c3d_data.get_position(self.parent_marker_names)
+        child_markers_global = self.c3d_data.get_position(self.child_marker_names)
+
+        # Centroid of local marker set (constant)
+        parent_local_centroid = np.mean(parent_markers_local, axis=1, keepdims=True)
+        parent_local_centered = parent_markers_local - parent_local_centroid
+        child_local_centroid = np.mean(child_markers_local, axis=1, keepdims=True)
+        child_local_centered = child_markers_local - child_local_centroid
 
         nb_frames = self.c3d_data.all_marker_positions.shape[2]
         rt_parent = np.zeros((4, 4, nb_frames))
         rt_child = np.zeros((4, 4, nb_frames))
         for i_frame in range(nb_frames):
-            rt_parent[:, :, i_frame] = jcs_in_global[self.parent_name]
-            rt_child[:, :, i_frame] = jcs_in_global[self.child_name]
+            # Finding the RT allowing to align the segments' markers
+            rt_parent[:, :, i_frame] = get_rt_aligning_markers_in_global(
+                parent_markers_global[:, :, i_frame], parent_local_centered, parent_local_centroid)
+            rt_child[:, :, i_frame] = get_rt_aligning_markers_in_global(
+                child_markers_global[:, :, i_frame], child_local_centered, child_local_centroid)
 
         return rt_parent, rt_child
 
-    def _score_algorithm(
-        self,
-        parent_markers: np.ndarray,
-        child_markers: np.ndarray,
-        rt_parent: np.ndarray,
-        rt_child: np.ndarray,
-    ):
 
-        def apply_transform(rt, cor_part):
-            homog_cor = np.append(cor_part, 1)
-            return np.einsum("ijk,k->ij", rt, homog_cor)
+    def _score_algorithm(self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True) -> np.ndarray:
+        """
+        Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
-        nb_frames = parent_markers.shape[2]
-        a_matrix = np.full((3 * nb_frames, 6), np.nan)
-        b_vector = np.full((3 * nb_frames, 1), np.nan)
+        Parameters
+        ----------
+        parent_rt : np.ndarray, shape (4, 4, N)
+            Homogeneous transformations of the parent segment (e.g., pelvis)
+        child_rt : np.ndarray, shape (4, 4, N)
+            Homogeneous transformations of the child segment (e.g., femur)
+        recursive_outlier_removal : bool
+            If True, performs 95th percentile residual filtering and recomputes the center.
 
-        for i_frame in range(nb_frames):
-            a_matrix[i_frame * 3 : i_frame * 3 + 3, :] = np.hstack(
-                (rt_child[:3, :3, i_frame], -rt_parent[:3, :3, i_frame])
-            )
-            b_vector[i_frame * 3 : i_frame * 3 + 3, :] = rt_parent[:3, 3, i_frame].reshape(3, 1) - rt_child[
-                :3, 3, i_frame
-            ].reshape(3, 1)
+        Returns
+        -------
+        CoR_global : np.ndarray, shape (3,)
+            Estimated global position of the center of rotation.
+        """
+        nb_frames = parent_rt.shape[2]
 
-        valid_rows = ~np.isnan(a_matrix[:, 0])
-        U, S, Vt = np.linalg.svd(a_matrix[valid_rows, :], full_matrices=False)
-        V = Vt.T
-        dS = S
+        # Build linear system A x = b to solve for CoR positions in child and parent segment frames
+        A = np.zeros((3 * nb_frames, 6))
+        b = np.zeros((3 * nb_frames,))
 
-        cor_in_local = V @ np.diag(1.0 / dS) @ U.T @ b_vector[valid_rows].flatten()
+        for i in range(nb_frames):
+            parent_rot = parent_rt[:3, :3, i]
+            child_rot = child_rt[:3, :3, i]
+            parent_trans = parent_rt[:3, 3, i]
+            child_trans = child_rt[:3, 3, i]
 
-        parent_current_cor_in_global = apply_transform(rt_parent, cor_in_local[3:6])
-        child_current_cor_in_global = apply_transform(rt_child, cor_in_local[0:3])
-        residual = np.sqrt(np.sum((parent_current_cor_in_global - child_current_cor_in_global) ** 2, axis=0))
+            A[3*i:3*(i+1), 0:3] = child_rot
+            A[3*i:3*(i+1), 3:6] = -parent_rot
+            b[3*i:3*(i+1)] = parent_trans - child_trans
 
-        cor_in_global = 0.5 * (parent_current_cor_in_global + child_current_cor_in_global)
+        # Solve via least squares: A x = b → x = [CoR2_local; CoR1_local]
+        x, residuals_ls, _, _ = np.linalg.lstsq(A, b, rcond=None)
+        cor_child_local = x[:3]
+        cor_parent_local = x[3:]
 
-        # Compute distances of markers to the center of rotation
-        diff_parent_markers = parent_markers - cor_in_global[:3].reshape(3, 1, -1)
-        cor_parent_markers_distance = np.sqrt(np.sum(diff_parent_markers**2, axis=0)).T
+        # Compute transformed CoR positions in global frame
+        cor_parent_global = np.einsum('ijk,k->ij', parent_rt, np.append(cor_parent_local, 1))  # shape (4, N)
+        cor_child_global = np.einsum('ijk,k->ij', child_rt, np.append(cor_child_local, 1))
 
-        diff_child_markers = child_markers - cor_in_global[:3].reshape(3, 1, -1)
-        cor_child_markers_distance = np.sqrt(np.sum(diff_child_markers**2, axis=0)).T
+        residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
-        _logger.info(f"The std of markers position is {cor_parent_markers_distance, cor_child_markers_distance}")
-        if residual > 0.25:
-            raise RuntimeError(
-                f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments."
-            )
+        if recursive_outlier_removal:
+            threshold = np.percentile(residuals, 95)
+            valid = residuals < threshold
+            if np.sum(valid) < nb_frames:
+                return self._score_algorithm(parent_rt[:, :, valid], child_rt[:, :, valid], recursive_outlier_removal)
+
+        # Final output
+        cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
         _logger.info(
-            f"\nThere is a residual distance between the parent's and the child's CoR position of : {residual}"
+            f"\nThere is a residual distance between the parent's and the child's CoR position of : {residuals}"
         )
-        if residual > 0.25:
-            raise RuntimeError(
-                f"The distance between the parent {self.parent_name} and the child {self.child_name} CoR position is too high. Please make sure that the maker do not move on the segments during the functional trials and that there are enough markers on each segments."
-            )
+        return cor_mean_global
 
-        return cor_in_global
 
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
@@ -157,11 +187,7 @@ class Score:
         rt_parent, rt_child = self._rt_from_trial(original_model)
 
         # Apply the algo to identify the joint center
-        parent_markers = self.c3d_data.get_position(self.parent_marker_names)
-        child_markers = self.c3d_data.get_position(self.child_marker_names)
-        cor_in_global = self._score_algorithm(
-            parent_markers=parent_markers, child_markers=child_markers, rt_parent=rt_parent, rt_child=rt_child
-        )
+        cor_in_global = self._score_algorithm(rt_parent, rt_child)
 
         # Replace the model components in the new local reference frame
         parent_cor_position_in_global = segment_coordinate_system_in_global(new_model, self.parent_name)[:3, 3, 0]

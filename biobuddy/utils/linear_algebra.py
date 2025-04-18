@@ -260,6 +260,32 @@ def is_ortho_basis(basis) -> bool:
     )
 
 
+def get_rt_aligning_markers_in_global(markers_in_global: np.ndarray, local_centered: np.ndarray, local_centroid: np.ndarray) -> np.ndarray:
+
+    global_centroid = np.mean(markers_in_global, axis=1, keepdims=True)
+    global_centered = markers_in_global - global_centroid
+
+    # Cross-covariance matrix
+    H = global_centered @ local_centered.T
+
+    # SVD decomposition
+    U, _, Vt = np.linalg.svd(H)
+    rotation = U @ Vt
+    if np.linalg.det(R) < 0:
+        # Reflection correction
+        Vt[-1, :] *= -1
+        rotation = U @ Vt
+
+    translation = global_centroid.squeeze() - rotation @ local_centroid.squeeze()
+
+    rt_matrix = np.identity(4)
+    rt_matrix[:3, :3] = rotation
+    rt_matrix[:3, 3] = translation
+
+    return rt_matrix
+
+
+
 class OrthoMatrix:
     def __init__(self, translation=(0, 0, 0), rotation_1=(0, 0, 0), rotation_2=(0, 0, 0), rotation_3=(0, 0, 0)):
         self.trans = np.transpose(np.array([translation]))
