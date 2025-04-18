@@ -8,7 +8,7 @@ from .mesh_file_real import MeshFileReal
 from .mesh_real import MeshReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
-from ....utils.linear_algebra import RotoTransMatrix, rotation_matrix_from_euler
+from ....utils.linear_algebra import RotoTransMatrix, euler_and_translation_to_matrix
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 from ....utils.named_list import NamedList
@@ -210,29 +210,31 @@ class SegmentReal:
             raise RuntimeError(
                 f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
             )
+        rt = np.eye(4)
 
-        rt = RotoTransMatrix()
-        rt.rt_matrix = np.eye(4)
-
-        # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
-        # TODO: make the order trans, rot dynamic
-        if self.translations != Translations.NONE:
-            translations = np.zeros((3,))
+        if self.nb_q != 0:
+            # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
+            # TODO: make the order trans, rot dynamic
             q_counter = 0
-            for i_trans, trans in enumerate(["X", "Y", "Z"]):
-                if trans in self.translations.value:
-                    translations[i_trans] = local_q[q_counter]
-                    q_counter += 1
-            rt.translation = translations
+            translations = np.zeros((3,))
+            rotations = np.zeros((3,))
+            angle_sequence = "xyz"
+            if self.translations != Translations.NONE:
+                for i_trans, trans in enumerate(["X", "Y", "Z"]):
+                    if trans in self.translations.value.upper():
+                        translations[i_trans] = local_q[q_counter]
+                        q_counter += 1
 
-        if self.rotations != Rotations.NONE:
-            rotation = np.eye(3)
-            for i_rot in range(len(self.rotations.value)):
-                rot = self.rotations.value[-i_rot]
-                rotation = rotation_matrix_from_euler(rot, local_q[-(i_rot + 1)]) @ rotation
-            rt.rotation = rotation
+            if self.rotations != Rotations.NONE:
+                rotations = local_q[q_counter:]
+                angle_sequence = self.rotations.value
 
-        return rt.rt_matrix
+
+            rt = euler_and_translation_to_matrix(angles=rotations,
+                                                angle_sequence=angle_sequence,
+                                                translations=translations)
+
+        return rt
 
     def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly

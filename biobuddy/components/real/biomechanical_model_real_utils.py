@@ -1,10 +1,12 @@
 from copy import deepcopy
+import logging
 import numpy as np
 from scipy import optimize
 
 from ...utils.aliases import point_to_array
 from ...utils.linear_algebra import RotoTransMatrix, get_closest_rotation_matrix
 
+_logger = logging.getLogger(__name__)
 
 # TODO: The two following functions should be handled differently
 def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
@@ -170,9 +172,12 @@ def inverse_kinematics(
         model.to_biomod("temporary.bioMod", with_mesh=False)
         with_biorbd = True
         model_to_use = biorbd.Model("temporary.bioMod")
+
+        _logger.info(f"Using biorbd for the inverse kinematics as it is faster")
     except:
         with_biorbd = False
         model_to_use = deepcopy(model)
+        _logger.info(f"Using slower Python code for the inverse kinematics as either biorbd is not installed or the model is not compatible with biorbd.")
 
     marker_indices = [marker_names.index(m) for m in model.marker_names]
     markers_real = marker_positions[:, marker_indices, :]
@@ -240,10 +245,10 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
             )
 
         segment_rt = model.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-        if model.segments[segment_name].parent_name == "base":
+        parent_name = model.segments[segment_name].parent_name
+        if parent_name == "base":
             parent_rt = np.eye(4)
         else:
-            parent_name = model.segments[segment_name].parent_name
             parent_rt = segment_rt_in_global[parent_name]
 
         if model.segments[segment_name].nb_q == 0:
@@ -251,7 +256,7 @@ def forward_kinematics(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
         else:
             local_q = q[model.dof_indices(segment_name)]
             rt_caused_by_q = model.segments[segment_name].rt_from_local_q(local_q)
-            segment_rt_in_global[segment_name] = parent_rt @ rt_caused_by_q @ segment_rt
+            segment_rt_in_global[segment_name] = parent_rt @ segment_rt @ rt_caused_by_q
 
     return segment_rt_in_global
 

@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from enum import Enum
 
@@ -275,7 +276,6 @@ class ScaleTool:
                         is_scs_local=True,
                     )
                     self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
-                    parent_scale_factor = np.ones((4, 1))
 
             # Apply scaling to the current segment
             if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
@@ -474,9 +474,8 @@ class ScaleTool:
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
 
-            # TODO: REMOVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            debugging_model_path = (
-                "/home/charbie/Documents/Programmation/biobuddy/examples/models/temporary_model.bioMod"
+            debugging_model_path = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "../../examples/models/temporary_model.bioMod")
             )
             self.scaled_model.to_biomod(debugging_model_path)
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
@@ -501,7 +500,7 @@ class ScaleTool:
         return np.median(optimal_q, axis=1)
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
-        jcs_in_global = forward_kinematics(self.original_model, q_static)
+        jcs_in_global = forward_kinematics(self.scaled_model, q_static)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=jcs_in_global[segment_name],
@@ -511,17 +510,17 @@ class ScaleTool:
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-    def replace_markers_on_segments(self, q_static: np.ndarray, marker_positions: np.ndarray, marker_names: list[str]):
-        jcs_in_global = forward_kinematics(self.original_model, q_static)
-        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
-            for marker in self.scaled_model.segments[segment_name].markers:
+    def replace_markers_on_segments(self, marker_positions: np.ndarray, marker_names: list[str]):
+        for i_segment, segment in enumerate(self.scaled_model.segments):
+            if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_local:
+                raise RuntimeError("Something went wrong. Following make_static_pose_the_zero, the segment's coordinate system should be in the global.")
+            for marker in segment.markers:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                segment_jcs = jcs_in_global[segment_name]
-                rt_matrix = RotoTransMatrix()
-                rt_matrix.rt_matrix = segment_jcs
-                marker.position = rt_matrix.inverse @ np.hstack((this_marker_position, 1))
+                rt = RotoTransMatrix()
+                rt.rt_matrix = deepcopy(segment.segment_coordinate_system.scs[:, :, 0])
+                marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(
         self,
@@ -535,7 +534,7 @@ class ScaleTool:
             marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
         )
         self.make_static_pose_the_zero(q_static)
-        self.replace_markers_on_segments(q_static, marker_positions, marker_names)
+        self.replace_markers_on_segments(marker_positions, marker_names)
 
     def modify_muscle_parameters(self):
         """

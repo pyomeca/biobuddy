@@ -1,5 +1,4 @@
 """
-TODO: remove biorbd dependency !!!
 TODO: Test the muscles and inertial values.
 TODO: Add the biomod sclaing configuration + test it
 """
@@ -110,13 +109,14 @@ def test_scaling_wholebody():
     scaled_osim_model = biorbd.Model(converted_scaled_osim_file_path)
 
     # Make sure the model markers coincide with the experimental markers
-    q_zeros = np.zeros((scaled_biorbd_model.nbQ(), 1))
+    q_zeros = np.zeros((scaled_biorbd_model.nbQ(), ))
     exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
-    biobuddy_scaled_markers = scaled_biorbd_model.markers(q_zeros).to_array()
-    osim_scaled_markers = scaled_osim_model.markers(q_zeros).to_array()
-    assert np.all(np.abs(exp_markers - biobuddy_scaled_markers) < 1e-5)
-    assert np.all(np.abs(exp_markers - osim_scaled_markers) < 1e-5)
-    assert np.all(np.abs(osim_scaled_markers - biobuddy_scaled_markers) < 1e-5)
+    for i_marker in range(exp_markers.shape[1]):
+        biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros)[i_marker].to_array()
+        osim_scaled_marker = scaled_osim_model.markers(q_zeros)[i_marker].to_array()
+        assert np.all(np.abs(exp_markers[:, i_marker, 0] - biobuddy_scaled_marker) < 1e-5)
+        assert np.all(np.abs(exp_markers[:, i_marker, 0] - osim_scaled_marker) < 1e-5)
+        assert np.all(np.abs(osim_scaled_marker - biobuddy_scaled_marker) < 1e-5)
 
     # Make sure the muscle properties are the same
 

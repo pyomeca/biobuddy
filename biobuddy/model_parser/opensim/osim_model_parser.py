@@ -48,7 +48,7 @@ class OsimModelParser:
         filepath: str,
         muscle_type: MuscleType,
         muscle_state_type: MuscleStateType,
-        mesh_dir: str,
+        mesh_dir: str = None,
         print_warnings: bool = True,
         ignore_fixed_dof_tag: bool = False,
         ignore_clamped_dof_tag: bool = False,
@@ -68,7 +68,7 @@ class OsimModelParser:
         print_warnings : bool, optional
             Whether to print conversion warnings, default True
         mesh_dir : str, optional
-            Directory containing mesh files, defaults to 'Geometry_cleaned'
+            Directory containing mesh files
 
         Raises
         ------
@@ -385,6 +385,7 @@ class OsimModelParser:
                 self.warnings.append(f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped.")
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
+
         rotomatrix = OrthoMatrix([0, 0, 0])
         if not skip_virtual:
             parent = dof.parent_body.split("/")[-1]
@@ -393,8 +394,8 @@ class OsimModelParser:
             body_name = body.name + "_parent_offset"
             offset = [dof.parent_offset_trans, dof.parent_offset_rot]
             self.write_virtual_segment(name=body_name, parent_name=parent, frame_offset=offset, rt_in_matrix=0)
-
             parent = body_name
+
             # Coordinates
             (
                 translations,
@@ -409,7 +410,6 @@ class OsimModelParser:
 
             is_dof_trans, is_dof_rot = np.array(is_dof_trans), np.array(is_dof_rot)
             dof_axis = np.array(["x", "y", "z"])
-            # if len(translations) != 0 or len(rotations) != 0 -> Segments to define transformation axis.\n")
 
             # Translations
             if len(translations) != 0:
@@ -498,9 +498,9 @@ class OsimModelParser:
             com=body.mass_center,
             mass=body.mass,
             inertia=body.inertia,
-            mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] else None,
-            mesh_color=body.mesh_color[0],
-            mesh_scale=body.mesh_scale_factor[0],
+            mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
+            mesh_color=body.mesh_color[0] if body.mesh[0] and mesh_dir is not None else None,
+            mesh_scale=body.mesh_scale_factor[0] if body.mesh[0] and mesh_dir is not None else None,
             rt_in_matrix=0,
         )
 
@@ -509,9 +509,9 @@ class OsimModelParser:
         if rt_in_matrix == 0:
             frame_offset = frame_offset if frame_offset else [[0, 0, 0], [0, 0, 0]]
             segment_coordinate_system = SegmentCoordinateSystemReal.from_euler_and_translation(
-                angles=frame_offset[1],
+                angles=np.array(frame_offset[1]),
                 angle_sequence="xyz",
-                translations=frame_offset[0],
+                translations=np.array(frame_offset[0]),
                 is_scs_local=True,
             )
         else:
@@ -572,16 +572,14 @@ class OsimModelParser:
                 )
                 initial_rotation = compute_matrix_rotation([0, 0, float(default_values[i])])
 
-            # TODO: Do not add a try here. If the you can know in advance the error, test it with a if.
-            #  If you actually need a try, catch a specific error (`except ERRORNAME:` instead of `except:`)
-            try:
-                coordinate = spatial_transform[i].coordinate
+            coordinate = spatial_transform[i].coordinate
+            if coordinate is None:
+                body_dof = name + f"_rotation_{i}"
+                rot_dof = ""
+            else:
                 rot_dof = list_rot_dof[count_dof_rot] if not coordinate.locked else "//" + list_rot_dof[count_dof_rot]
                 body_dof = name + "_" + spatial_transform[i].coordinate.name
                 q_range = q_ranges[i]
-            except:
-                body_dof = name + f"_rotation_{i}"
-                rot_dof = ""
 
             frame_offset.set_rotation_matrix(axis_basis[i].dot(initial_rotation))
             count_dof_rot += 1
@@ -614,7 +612,6 @@ class OsimModelParser:
         True segments hold the inertia and markers, but do not have any DoFs.
         These segments are the last "segment" to be added.
         """
-
         inertia_parameters = None
         if inertia:
             [i11, i22, i33, i12, i13, i23] = inertia.split(" ")
@@ -705,9 +702,9 @@ class OsimModelParser:
                 name=body_name,
                 parent_name=parent,
                 frame_offset=body.mesh_offset[i],
-                mesh_file=f"{mesh_dir}/{body.mesh[i]}",
-                mesh_color=body.mesh_color[i],
-                mesh_scale=body.mesh_scale_factor[i],
+                mesh_file=f"{mesh_dir}/{body.mesh[i]}" if mesh_dir is not None else None,
+                mesh_color=body.mesh_color[i] if mesh_dir is not None else None,
+                mesh_scale=body.mesh_scale_factor[i] if mesh_dir is not None else None,
                 rt_in_matrix=1,
             )
             parent_name = body_name
