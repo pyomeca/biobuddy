@@ -8,6 +8,7 @@ from ...utils.linear_algebra import RotoTransMatrix, get_closest_rotation_matrix
 
 _logger = logging.getLogger(__name__)
 
+
 # TODO: The two following functions should be handled differently
 def segment_coordinate_system_in_local(model: "BiomechanicalModelReal", segment_name: str) -> np.ndarray:
     """
@@ -177,7 +178,9 @@ def inverse_kinematics(
     except:
         with_biorbd = False
         model_to_use = deepcopy(model)
-        _logger.info(f"Using slower Python code for the inverse kinematics as either biorbd is not installed or the model is not compatible with biorbd.")
+        _logger.info(
+            f"Using slower Python code for the inverse kinematics as either biorbd is not installed or the model is not compatible with biorbd."
+        )
 
     marker_indices = [marker_names.index(m) for m in model.marker_names]
     markers_real = marker_positions[:, marker_indices, :]

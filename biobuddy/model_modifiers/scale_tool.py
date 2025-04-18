@@ -513,7 +513,9 @@ class ScaleTool:
     def replace_markers_on_segments(self, marker_positions: np.ndarray, marker_names: list[str]):
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_local:
-                raise RuntimeError("Something went wrong. Following make_static_pose_the_zero, the segment's coordinate system should be in the global.")
+                raise RuntimeError(
+                    "Something went wrong. Following make_static_pose_the_zero, the segment's coordinate system should be in the global."
+                )
             for marker in segment.markers:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)

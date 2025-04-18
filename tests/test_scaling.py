@@ -109,7 +109,7 @@ def test_scaling_wholebody():
     scaled_osim_model = biorbd.Model(converted_scaled_osim_file_path)
 
     # Make sure the model markers coincide with the experimental markers
-    q_zeros = np.zeros((scaled_biorbd_model.nbQ(), ))
+    q_zeros = np.zeros((scaled_biorbd_model.nbQ(),))
     exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
     for i_marker in range(exp_markers.shape[1]):
         biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros)[i_marker].to_array()

@@ -18,9 +18,8 @@ def test_rt():
             translations = np.random.rand(3)
 
             rt_biobuddy = euler_and_translation_to_matrix(
-                angles=angles,
-                angle_sequence=angle_sequence.value,
-                translations=translations)
+                angles=angles, angle_sequence=angle_sequence.value, translations=translations
+            )
             rot_biobuddy = rt_biobuddy[:3, :3]
             rot_biorbd = biorbd.Rotation.fromEulerAngles(angles, angle_sequence.value).to_array()
 

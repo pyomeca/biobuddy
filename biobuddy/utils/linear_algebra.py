@@ -15,6 +15,7 @@ def rot_x_matrix(angle):
         ]
     )
 
+
 def rot_y_matrix(angle):
     """
     Rotation matrix around the y-axis
@@ -27,6 +28,7 @@ def rot_y_matrix(angle):
         ]
     )
 
+
 def rot_z_matrix(angle):
     """
     Rotation matrix around the z-axis
@@ -38,6 +40,7 @@ def rot_z_matrix(angle):
             [0, 0, 1],
         ]
     )
+
 
 def euler_and_translation_to_matrix(
     angles: np.ndarray,

@@ -10,7 +10,6 @@ from biobuddy.components.real.biomechanical_model_real_utils import markers_in_g
 
 def test_biomechanics_model_real_utils_functions():
 
-
     # For ortho_norm_basis
     np.random.seed(42)
 
@@ -52,7 +51,9 @@ def test_biomechanics_model_real_utils_functions():
     for i_marker in range(nb_markers):
         markers_biorbd = model_biorbd.markers(q_random)[i_marker].to_array()
         npt.assert_array_almost_equal(
-            markers_biobuddy[:3, i_marker].reshape(3, ),
+            markers_biobuddy[:3, i_marker].reshape(
+                3,
+            ),
             markers_biorbd,
-            decimal=4
+            decimal=4,
         )

@@ -229,10 +229,9 @@ class SegmentReal:
                 rotations = local_q[q_counter:]
                 angle_sequence = self.rotations.value
 
-
-            rt = euler_and_translation_to_matrix(angles=rotations,
-                                                angle_sequence=angle_sequence,
-                                                translations=translations)
+            rt = euler_and_translation_to_matrix(
+                angles=rotations, angle_sequence=angle_sequence, translations=translations
+            )
 
         return rt
 
