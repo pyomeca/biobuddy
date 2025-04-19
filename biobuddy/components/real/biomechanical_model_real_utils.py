@@ -283,13 +283,13 @@ def markers_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> 
     nb_frames = q.shape[1]
 
     marker_positions = np.ones((4, model.nb_markers, nb_frames))
+    jcs_in_global = forward_kinematics(model, q)
     for i_frame in range(nb_frames):
-        jcs_in_global = forward_kinematics(model, q[:, i_frame])
         i_marker = 0
         for i_segment, segment in enumerate(model.segments):
             for marker in segment.markers:
                 marker_in_global = point_from_local_to_global(
-                    point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name]
+                    point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
                 )
                 marker_positions[:, i_marker] = marker_in_global
                 i_marker += 1
@@ -310,7 +310,7 @@ def contacts_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) ->
         for i_segment, segment in enumerate(model.segments):
             for contact in segment.contacts:
                 contact_in_global = point_from_local_to_global(
-                    point_in_local=contact.position, jcs_in_global=jcs_in_global[segment]
+                    point_in_local=contact.position, jcs_in_global=jcs_in_global[segment][:, :, i_frame]
                 )
                 contact_positions[:, i_contact] = contact_in_global
                 i_contact += 1

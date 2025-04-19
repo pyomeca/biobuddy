@@ -513,7 +513,7 @@ class ScaleTool:
         jcs_in_global = forward_kinematics(self.scaled_model, q_static)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name],
+                scs=jcs_in_global[segment_name][:, :, 0],
                 parent_scs=None,
                 is_scs_local=(
                     segment_name == "base"
@@ -548,7 +548,7 @@ class ScaleTool:
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
                 rt = RotoTransMatrix()
-                rt.rt_matrix = deepcopy(jcs_in_global[segment.name])
+                rt.rt_matrix = deepcopy(jcs_in_global[segment.name][:, :, 0])
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(

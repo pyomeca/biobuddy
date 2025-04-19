@@ -137,6 +137,9 @@ def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
 
+def unit_vector(x):
+    """ Returns a unit vector """
+    return x / np.linalg.norm(x)
 
 def compute_matrix_rotation(_rot_value) -> np.ndarray:
     rot_x = np.array(
@@ -264,6 +267,10 @@ def get_rt_aligning_markers_in_global(
     markers_in_global: np.ndarray, local_centered: np.ndarray, local_centroid: np.ndarray
 ) -> np.ndarray:
 
+    markers_in_global = markers_in_global[:3, :]
+    local_centered = local_centered[:3, :]
+    local_centroid = local_centroid[:3]
+
     global_centroid = np.mean(markers_in_global, axis=1, keepdims=True)
     global_centered = markers_in_global - global_centroid
 
@@ -273,7 +280,7 @@ def get_rt_aligning_markers_in_global(
     # SVD decomposition
     U, _, Vt = np.linalg.svd(H)
     rotation = U @ Vt
-    if np.linalg.det(R) < 0:
+    if np.linalg.det(rotation) < 0:
         # Reflection correction
         Vt[-1, :] *= -1
         rotation = U @ Vt
@@ -281,8 +288,8 @@ def get_rt_aligning_markers_in_global(
     translation = global_centroid.squeeze() - rotation @ local_centroid.squeeze()
 
     rt_matrix = np.identity(4)
-    rt_matrix[:3, :3] = rotation
-    rt_matrix[:3, 3] = translation
+    rt_matrix[:3, :3] = rotation[:3, :3]
+    rt_matrix[:3, 3] = translation[:3]
 
     return rt_matrix
 

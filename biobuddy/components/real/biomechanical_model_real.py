@@ -236,7 +236,7 @@ class BiomechanicalModelReal:
 
     def dof_indices(self, segment_name) -> list[int]:
         """
-        Get the indices of the degrees of freedom of a segment
+        Get the indices of the degrees of freedom from the model
 
         Parameters
         ----------
@@ -255,6 +255,19 @@ class BiomechanicalModelReal:
                 nb_rotations = len(segment.rotations.value) if segment.rotations != Rotations.NONE else 0
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
         raise ValueError(f"Segment {segment_name} not found in the model")
+
+
+    def markers_indices(self, marker_names: list[str] ) -> list[int]:
+        """
+        Get the indices of the markers of the model
+
+        Parameters
+        ----------
+        marker_names
+            The name of the markers to get the indices for
+        """
+        return [self.marker_names.index(marker) for marker in marker_names]
+
 
     @property
     def mass(self) -> float:
