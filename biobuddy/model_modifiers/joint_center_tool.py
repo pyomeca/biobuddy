@@ -186,7 +186,7 @@ class Score:
             return np.array([0, np.nan, 1, np.nan, 0, np.nan, 2])
 
         best_score = 0
-        best_combo = np.zeros((nb_markers + 3, ))
+        best_combo = np.zeros((nb_markers + 3,))
         half_combos = list(itertools.combinations(range(nb_markers), nb_markers // 2))
 
         for i in range(len(half_combos) // 2):
@@ -208,7 +208,6 @@ class Score:
                         best_combo = list(a1) + [np.nan] + list(a2) + [np.nan] + list(b1) + [np.nan] + list(b2)
         return np.array(best_combo)
 
-
     def _use_4_groups(self, markers: np.ndarray, groups: np.ndarray):
         """
         Build orthonormal basis using grouped markers.
@@ -225,10 +224,10 @@ class Score:
             Local coordinate system (X, Y, Z axes)
         """
         nan_indices = np.where(np.isnan(groups))[0]
-        a1 = groups[0: nan_indices[0]].astype(int)
-        a2 = groups[nan_indices[0] + 1: nan_indices[1]].astype(int)
-        b1 = groups[nan_indices[1] + 1: nan_indices[2]].astype(int)
-        b2 = groups[nan_indices[2] + 1:].astype(int)
+        a1 = groups[0 : nan_indices[0]].astype(int)
+        a2 = groups[nan_indices[0] + 1 : nan_indices[1]].astype(int)
+        b1 = groups[nan_indices[1] + 1 : nan_indices[2]].astype(int)
+        b2 = groups[nan_indices[2] + 1 :].astype(int)
 
         x_axis = np.mean(markers[:3, a1], axis=1) - np.mean(markers[:3, a2], axis=1)
         y_axis = np.mean(markers[:3, b1], axis=1) - np.mean(markers[:3, b2], axis=1)
@@ -236,7 +235,6 @@ class Score:
         y_axis = np.cross(z_axis, x_axis)
 
         return np.stack([unit_vector(x_axis), unit_vector(y_axis), unit_vector(z_axis)], axis=1)
-
 
     def _optimal_local_rt(self, markers: np.ndarray, static_markers: np.ndarray, rotation_init: np.ndarray):
 
@@ -289,7 +287,7 @@ class Score:
         Q[3, 3, :] = trace_S.flatten()
 
         Y = np.ones((4, nb_frames))
-        YtQY = np.zeros((nb_frames, ))
+        YtQY = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
             YtQY[i_frame] = Y[:, i_frame].T @ Q[:, :, i_frame] @ Y[:, i_frame]
 
@@ -305,14 +303,14 @@ class Score:
 
             Yi, Zi, Gi = Yj.copy(), Zj.copy(), Gj.copy()
 
-            ZZi = np.zeros((nb_frames, ))
-            YYi = np.zeros((nb_frames, ))
-            YZi = np.zeros((nb_frames, ))
+            ZZi = np.zeros((nb_frames,))
+            YYi = np.zeros((nb_frames,))
+            YZi = np.zeros((nb_frames,))
             ZiQ = np.zeros((4, nb_frames))
             YiQ = np.zeros((4, nb_frames))
-            ZiQZi = np.zeros((nb_frames, ))
-            dot_ZiQ_Yi = np.zeros((nb_frames, ))
-            dot_YiQ_Yi = np.zeros((nb_frames, ))
+            ZiQZi = np.zeros((nb_frames,))
+            dot_ZiQ_Yi = np.zeros((nb_frames,))
+            dot_YiQ_Yi = np.zeros((nb_frames,))
             for i_frame in range(nb_frames):
                 ZZi[i_frame] = np.dot(Zi[:, i_frame], Zi[:, i_frame])
                 YYi[i_frame] = np.dot(Yi[:, i_frame], Yi[:, i_frame])
@@ -326,7 +324,7 @@ class Score:
             a = YZi * ZiQZi - ZZi * dot_ZiQ_Yi
             b = YYi * ZiQZi - ZZi * dot_YiQ_Yi
             c = YYi * dot_ZiQ_Yi - YZi * dot_YiQ_Yi
-            delta = ((YYi * ZZi - YZi ** 2) * b ** 2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
+            delta = ((YYi * ZZi - YZi**2) * b**2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
             mu = (-b - np.sqrt(delta)) / (2 * a)
             Yj = Yi + mu * Zi
 
@@ -341,7 +339,7 @@ class Score:
 
                 Gj[:, i_frame] = 2 / yk_norm_sq * (qy - (yq_y / yk_norm_sq) * yk)
 
-            nu = np.zeros((nb_frames, ))
+            nu = np.zeros((nb_frames,))
             Zj = np.zeros((4, nb_frames))
             for i_frame in range(nb_frames):
                 numerator = np.dot(Gj[:, i_frame], Gj[:, i_frame] - Gi[:, i_frame])
@@ -374,7 +372,7 @@ class Score:
         # Rd[:3, 3, :] = tp2.squeeze()
         # Rd[3, 3, :] = 1
 
-        m = np.zeros((nb_frames, ))
+        m = np.zeros((nb_frames,))
         M = np.zeros((3, nb_frames))
         for i_frame in range(nb_frames):
             m[i_frame] = md[i_frame] * m1 - np.dot(Md[:, i_frame], M1)
@@ -397,11 +395,12 @@ class Score:
         for i_marker in range(nb_markers):
             static_local = rotation_init[:3, :3].T @ (static_markers[:, i_marker] - mean_static_markers.squeeze())
             for i_frame in range(nb_frames):
-                current_local = R[:3, :, i_frame].T @ (markers[:, i_marker, i_frame] - np.nanmean(mean_markers, axis=2)[:, 0])
+                current_local = R[:3, :, i_frame].T @ (
+                    markers[:, i_marker, i_frame] - np.nanmean(mean_markers, axis=2)[:, 0]
+                )
                 residual[i_frame, i_marker] = np.linalg.norm(static_local - current_local)
 
-        return local_rt  #, Rd, residual
-
+        return local_rt  # , Rd, residual
 
     def _rt_from_trial(self, original_model: "BiomechanicalModelReal") -> tuple[np.ndarray, np.ndarray]:
         """
@@ -416,7 +415,7 @@ class Score:
         ----------
 
         """
-        static_markers = markers_in_global(original_model, np.zeros((original_model.nb_q, )))
+        static_markers = markers_in_global(original_model, np.zeros((original_model.nb_q,)))
 
         parent_static_markers = static_markers[:, original_model.markers_indices(self.parent_marker_names)]
         child_static_markers = static_markers[:, original_model.markers_indices(self.child_marker_names)]
@@ -428,12 +427,12 @@ class Score:
         # Marker positions in the local
         parent_jcs_in_global = RotoTransMatrix()
         parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)[:, :, 0]
-        parent_markers_local = np.einsum('ij,jkf->ikf', parent_jcs_in_global.inverse, parent_markers_global)
+        parent_markers_local = np.einsum("ij,jkf->ikf", parent_jcs_in_global.inverse, parent_markers_global)
         mean_parent_markers_local = np.nanmean(parent_markers_local, axis=2)
 
         child_jcs_in_global = RotoTransMatrix()
         child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)[:, :, 0]
-        child_markers_local = np.einsum('ij,jkf->ikf', child_jcs_in_global.inverse, child_markers_global)
+        child_markers_local = np.einsum("ij,jkf->ikf", child_jcs_in_global.inverse, child_markers_global)
         mean_child_markers_local = np.nanmean(child_markers_local, axis=2)
 
         parent_marker_groups = self._four_groups(mean_parent_markers_local)

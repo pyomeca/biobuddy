@@ -256,8 +256,7 @@ class BiomechanicalModelReal:
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
         raise ValueError(f"Segment {segment_name} not found in the model")
 
-
-    def markers_indices(self, marker_names: list[str] ) -> list[int]:
+    def markers_indices(self, marker_names: list[str]) -> list[int]:
         """
         Get the indices of the markers of the model
 
@@ -267,7 +266,6 @@ class BiomechanicalModelReal:
             The name of the markers to get the indices for
         """
         return [self.marker_names.index(marker) for marker in marker_names]
-
 
     @property
     def mass(self) -> float:

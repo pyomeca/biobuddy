@@ -137,9 +137,11 @@ def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
 
+
 def unit_vector(x):
-    """ Returns a unit vector """
+    """Returns a unit vector"""
     return x / np.linalg.norm(x)
+
 
 def compute_matrix_rotation(_rot_value) -> np.ndarray:
     rot_x = np.array(
