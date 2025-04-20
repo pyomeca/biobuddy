@@ -342,38 +342,38 @@ class OrthoMatrix:
 
 class RotoTransMatrix:
     def __init__(self):
-        self._rt_matrix = None
+        self._rt = None
 
     def from_rotation_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
         rt_matrix[:3, 3] = translation
         rt_matrix[3, 3] = 1.0
-        self._rt_matrix = rt_matrix
+        self._rt = rt_matrix
 
     @property
     def rt_matrix(self) -> np.ndarray:
-        return self._rt_matrix
+        return self._rt
 
     @rt_matrix.setter
     def rt_matrix(self, value: np.ndarray):
-        self._rt_matrix = value
+        self._rt = value
 
     @property
     def translation(self) -> np.ndarray:
-        return self._rt_matrix[:3, 3]
+        return self._rt[:3, 3]
 
     @translation.setter
     def translation(self, value: np.ndarray):
-        self._rt_matrix[:3, 3] = value
+        self._rt[:3, 3] = value
 
     @property
     def rotation_matrix(self) -> np.ndarray:
-        return self._rt_matrix[:3, :3]
+        return self._rt[:3, :3]
 
     @rotation_matrix.setter
     def rotation_matrix(self, value: np.ndarray):
-        self._rt_matrix[:3, :3] = value
+        self._rt[:3, :3] = value
 
     @property
     def inverse(self) -> np.ndarray:

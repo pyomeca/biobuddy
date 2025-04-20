@@ -299,8 +299,14 @@ def markers_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> 
 
 def contacts_in_global(model: "BiomechanicalModelReal", q: np.ndarray = None) -> np.ndarray:
 
+
     q = np.zeros((model.nb_q, 1)) if q is None else q
-    nb_frames = q.shape[2]
+    if len(q.shape) == 1:
+        q = q[:, np.newaxis]
+    elif len(q.shape) > 2:
+        raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+    nb_frames = q.shape[1]
 
     jcs_in_global = forward_kinematics(model, q)
 

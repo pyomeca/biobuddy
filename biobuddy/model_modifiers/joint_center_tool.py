@@ -8,8 +8,7 @@ from ..components.real.biomechanical_model_real_utils import (
     segment_coordinate_system_in_global,
     markers_in_global,
     contacts_in_global,
-    point_from_global_to_local,
-    forward_kinematics,
+    segment_coordinate_system_in_local,
 )
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
@@ -427,12 +426,22 @@ class Score:
         # Marker positions in the local
         parent_jcs_in_global = RotoTransMatrix()
         parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)[:, :, 0]
-        parent_markers_local = np.einsum("ij,jkf->ikf", parent_jcs_in_global.inverse, parent_markers_global)
+
+        n_markers = parent_markers_global.shape[1]
+        n_frames = parent_markers_global.shape[2]
+        parent_markers_local = np.zeros((4, n_markers, n_frames))
+        for i_frame in range(n_frames):
+            for i_marker in range(n_markers):
+                parent_markers_local[:, i_marker, i_frame] = parent_jcs_in_global.inverse @ parent_markers_global[:, i_marker, i_frame]
         mean_parent_markers_local = np.nanmean(parent_markers_local, axis=2)
 
         child_jcs_in_global = RotoTransMatrix()
         child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)[:, :, 0]
-        child_markers_local = np.einsum("ij,jkf->ikf", child_jcs_in_global.inverse, child_markers_global)
+        n_markers = child_markers_global.shape[1]
+        child_markers_local = np.zeros((4, n_markers, n_frames))
+        for i_frame in range(n_frames):
+            for i_marker in range(n_markers):
+                child_markers_local[:, i_marker, i_frame] = child_jcs_in_global.inverse @ child_markers_global[:, i_marker, i_frame]
         mean_child_markers_local = np.nanmean(child_markers_local, axis=2)
 
         parent_marker_groups = self._four_groups(mean_parent_markers_local)
@@ -441,8 +450,8 @@ class Score:
         # parent_initial_rotation = np.zeros((3, 3, nb_frames))
         # child_initial_rotation = np.zeros((3, 3, nb_frames))
         # for i_frame in range(nb_frames):
-        parent_initial_rotation = self._use_4_groups(parent_markers_local[:, :, 0], parent_marker_groups)
-        child_initial_rotation = self._use_4_groups(child_markers_local[:, :, 0], child_marker_groups)
+        parent_initial_rotation = self._use_4_groups(np.nanmean(parent_markers_local, axis=2), parent_marker_groups)
+        child_initial_rotation = self._use_4_groups(np.nanmean(child_markers_local, axis=2), child_marker_groups)
 
         rt_parent = self._optimal_local_rt(parent_markers_local, parent_static_markers, parent_initial_rotation)
         rt_child = self._optimal_local_rt(child_markers_local, child_static_markers, child_initial_rotation)
@@ -564,10 +573,11 @@ class Score:
         rt_parent, rt_child = self._rt_from_trial(original_model)
 
         # Apply the algo to identify the joint center
-        cor_in_global = self._score_algorithm(rt_parent, rt_child)
+        cor_in_global = np.hstack((self._score_algorithm(rt_parent, rt_child), 1))
 
         # Replace the model components in the new local reference frame
-        parent_cor_position_in_global = segment_coordinate_system_in_global(new_model, self.parent_name)[:3, 3, 0]
+        parent_jcs_in_global = RotoTransMatrix()
+        parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(new_model, self.parent_name)
 
         if (
             new_model.segments[self.child_name].segment_coordinate_system is None
@@ -577,7 +587,7 @@ class Score:
                 "The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm."
             )
         scs_in_local = deepcopy(new_model.segments[self.child_name].segment_coordinate_system.scs)
-        scs_in_local[:3, 3] = cor_in_global[:3] - parent_cor_position_in_global
+        scs_in_local[:, 3, 0] = parent_jcs_in_global.inverse @ cor_in_global
 
         # Segment RT
         if self.child_name + "_parent_offset" in new_model.segment_names:
@@ -590,16 +600,12 @@ class Score:
         )
         # Markers
         marker_positions = markers_in_global(original_model)
-        for i_marker, marker_name in new_model.segments[self.child_name].markers:
-            new_model.segments[self.child_name].markers[marker_name].position = point_from_global_to_local(
-                marker_positions[i_marker], cor_in_global
-            )
+        for i_marker, marker in enumerate(new_model.segments[self.child_name].markers):
+            marker.position = parent_jcs_in_global.inverse @ marker_positions[:, i_marker, 0]
         # Contacts
         contact_positions = contacts_in_global(original_model)
-        for i_contact, contact_name in new_model.segments[self.child_name].contacts:
-            new_model.segments[self.child_name].contacts[contact_name].position = point_from_global_to_local(
-                contact_positions[i_contact], cor_in_global
-            )
+        for i_contact, contact in enumerate(new_model.segments[self.child_name].contacts):
+            contact.position = parent_jcs_in_global.inverse @ contact_positions[:, i_contact, 0]
         # IMUs
         # Muscles origin, insertion, via points
 
@@ -648,6 +654,14 @@ class Sara:
 
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal):
+
+        # Make sure that the scs ar in lical before starting
+        for segment in original_model.segments:
+            if segment.segment_coordinate_system.is_in_global:
+                segment.segment_coordinate_system = SegmentCoordinateSystemReal(
+                    scs=deepcopy(segment_coordinate_system_in_local(original_model, segment.name)),
+                    is_scs_local=True,
+                )
 
         # Original attributes
         self.original_model = original_model
