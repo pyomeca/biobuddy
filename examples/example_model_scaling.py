@@ -25,13 +25,13 @@ def main(visualization):
 
     # Paths
     current_path_file = Path(__file__).parent
-    osim_file_path = f"{current_path_file}/models/wholebody.osim"
-    biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
+    osim_filepath = f"{current_path_file}/models/wholebody.osim"
+    biomod_filepath = f"{current_path_file}/models/wholebody.bioMod"
     geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     xml_filepath = f"{current_path_file}/models/wholebody.xml"
-    scaled_biomod_file_path = f"{current_path_file}/models/wholebody_scaled.bioMod"
-    static_file_path = f"{current_path_file}/data/static.c3d"
+    scaled_biomod_filepath = f"{current_path_file}/models/wholebody_scaled.bioMod"
+    static_filepath = f"{current_path_file}/data/static.c3d"
 
     # # Convert the vtp files
     # mesh = MeshParser(geometry_folder=geometry_path)
@@ -40,21 +40,21 @@ def main(visualization):
 
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        filepath=osim_file_path,
+        filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
 
     # Translate into biomod
-    model.to_biomod(biomod_file_path)
+    model.to_biomod(biomod_filepath)
 
     # Setup the scaling configuration (which markers to use)
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
 
     # Scale the model
     scaled_model = scale_tool.scale(
-        file_path=static_file_path,
+        file_path=static_filepath,
         first_frame=100,
         last_frame=200,
         mass=80,
@@ -64,10 +64,10 @@ def main(visualization):
     )
 
     # Write the scaled model to a .bioMod file
-    scaled_model.to_biomod(scaled_biomod_file_path, with_mesh=True)
+    scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=True)
 
     # Test that the model created is valid
-    biorbd.Model(scaled_biomod_file_path)
+    biorbd.Model(scaled_biomod_filepath)
 
     if visualization:
         # Compare the result visually
@@ -76,7 +76,7 @@ def main(visualization):
         q = np.zeros((42, 10))
 
         # Biorbd model translated from .osim
-        viz_biomod_model = pyorerun.BiorbdModel(biomod_file_path)
+        viz_biomod_model = pyorerun.BiorbdModel(biomod_filepath)
         viz_biomod_model.options.transparent_mesh = False
         viz_biomod_model.options.show_gravity = True
         viz.add_animated_model(viz_biomod_model, q)
@@ -86,7 +86,7 @@ def main(visualization):
         pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
 
         # Model output
-        viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
+        viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_filepath)
         viz_scaled_model.options.transparent_mesh = False
         viz_scaled_model.options.show_gravity = True
         viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)

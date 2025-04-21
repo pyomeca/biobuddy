@@ -60,7 +60,7 @@ class ScaleTool:
 
     def scale(
         self,
-        file_path: str,
+        filepath: str,
         first_frame: int,
         last_frame: int,
         mass: float,
@@ -464,8 +464,7 @@ class ScaleTool:
         visualize_optimal_static_pose: bool,
     ) -> np.ndarray:
 
-        optimal_q = self.inverse_kinematics(
-            self.scaled_model,
+        optimal_q = self.scaled_model.inverse_kinematics(
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,

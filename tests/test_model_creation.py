@@ -41,7 +41,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     Produces a model from real data
     """
 
-    kinematic_model_file_path = "temporary.bioMod"
+    kinematic_model_filepath = "temporary.bioMod"
 
     # Create a model holder
     bio_model = BiomechanicalModelReal()
@@ -207,9 +207,9 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=np.array([0, 1, 1])))
 
     # Put the model together, print it and print it to a bioMod file
-    bio_model.to_biomod(kinematic_model_file_path)
+    bio_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
     assert bio_model.nb_q == 7
     assert model.nbSegment() == 8
@@ -226,7 +226,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     destroy_model(bio_model)
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
+        os.remove(kinematic_model_filepath)
 
 
 def write_markers_to_c3d(save_path: str, model):
@@ -247,14 +247,14 @@ def write_markers_to_c3d(save_path: str, model):
 
 def test_model_creation_from_data(remove_temporary: bool = True):
 
-    kinematic_model_file_path = "temporary.bioMod"
-    c3d_file_path = "temporary.c3d"
+    kinematic_model_filepath = "temporary.bioMod"
+    c3d_filepath = "temporary.c3d"
     test_model_creation_from_static(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
-    model = Model(kinematic_model_file_path)
-    write_markers_to_c3d(c3d_file_path, model)
-    os.remove(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
+    write_markers_to_c3d(c3d_filepath, model)
+    os.remove(kinematic_model_filepath)
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
@@ -413,12 +413,12 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together
-    real_model = model.to_real(C3dData(c3d_file_path))
+    real_model = model.to_real(C3dData(c3d_filepath))
 
     # print it to a bioMod file
-    real_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
     assert model.nbSegment() == 8
     assert model.nbMarkers() == 25
@@ -428,14 +428,14 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
-        os.remove(c3d_file_path)
+        os.remove(kinematic_model_filepath)
+        os.remove(c3d_filepath)
 
 
 def test_complex_model(remove_temporary: bool = True):
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
-    kinematic_model_file_path = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
+    kinematic_model_filepath = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
     mesh_path = f"meshes/pendulum.STL"
 
     # Create a model holder
@@ -522,9 +522,9 @@ def test_complex_model(remove_temporary: bool = True):
     real_model = bio_model.to_real({})
 
     # Print it to a bioMod file
-    real_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 4
     assert real_model.nb_q == 4
     assert model.nbSegment() == 2
@@ -541,4 +541,4 @@ def test_complex_model(remove_temporary: bool = True):
     destroy_model(real_model)
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
+        os.remove(kinematic_model_filepath)

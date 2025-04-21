@@ -312,7 +312,7 @@ class MomentArmTest(ModelEvaluation):
 
 
 class VisualizeModel:
-    def __init__(self, biomod_file_path):
+    def __init__(self, biomod_filepath):
         try:
             import pyorerun
             import numpy as np
@@ -324,14 +324,14 @@ class VisualizeModel:
         viz = pyorerun.PhaseRerun(t)
 
         # Model output
-        model = pyorerun.BiorbdModel(biomod_file_path)
+        model = pyorerun.BiorbdModel(biomod_filepath)
         model.options.transparent_mesh = False
         model.options.show_gravity = True
         q = np.zeros((model.nb_q, 10))
         viz.add_animated_model(model, q)
 
         # Model reference
-        reference_model = pyorerun.BiorbdModel(biomod_file_path.replace(".bioMod", "_reference.bioMod"))
+        reference_model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_reference.bioMod"))
         reference_model.options.transparent_mesh = False
         reference_model.options.show_gravity = True
         q_ref = np.zeros((reference_model.nb_q, 10))
@@ -349,28 +349,28 @@ def test_kinematics():
 
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    biomod_file_path = parent_path + f"/examples/models/Wu_Shoulder_Model_via_points.bioMod"
-    osim_file_path = parent_path + f"/examples/models/Wu_Shoulder_Model_via_points.osim"
+    biomod_filepath = parent_path + f"/examples/models/Wu_Shoulder_Model_via_points.bioMod"
+    osim_filepath = parent_path + f"/examples/models/Wu_Shoulder_Model_via_points.osim"
 
     # Delete the biomod file so we are sure to create it
-    if os.path.exists(biomod_file_path):
-        os.remove(biomod_file_path)
+    if os.path.exists(biomod_filepath):
+        os.remove(biomod_filepath)
 
     # Convert osim to biomod
     model = BiomechanicalModelReal.from_osim(
-        filepath=osim_file_path,
+        filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
-    model.to_biomod(biomod_file_path, with_mesh=False)
+    model.to_biomod(biomod_filepath, with_mesh=False)
 
     # Test that the model created is valid
-    biomod_model = biorbd.Model(biomod_file_path)
+    biomod_model = biorbd.Model(biomod_filepath)
     nb_q = biomod_model.nbQ()
 
     # Test the marker position error
-    kin_test = KinematicsTest(biomod=biomod_file_path, osim_model=osim_file_path)
+    kin_test = KinematicsTest(biomod=biomod_filepath, osim_model=osim_filepath)
     markers_error = kin_test.from_states(states=np.random.rand(nb_q, 20) * 0.2, plot=False)
     np.testing.assert_almost_equal(np.mean(markers_error), 0, decimal=4)
 
@@ -448,25 +448,25 @@ def test_translation_osim_to_biomod():
         for name in files:
             if name.endswith(".osim"):
                 folder = root.split("/")[-1]
-                osim_file_path = os.path.join(root, name)
-                biomod_file_path = os.path.join(biomod_root_path, name.replace(".osim", ".bioMod"))
+                osim_filepath = os.path.join(root, name)
+                biomod_filepath = os.path.join(biomod_root_path, name.replace(".osim", ".bioMod"))
 
                 if os.path.join(folder, name) in successful_models + translation_and_rotation_dofs:
                     # Delete the biomod file so we are sure to create it
-                    if os.path.exists(biomod_file_path):
-                        os.remove(biomod_file_path)
+                    if os.path.exists(biomod_filepath):
+                        os.remove(biomod_filepath)
 
                     print(f" ******** Converting {os.path.join(folder, name)} ******** ")
                     # Convert osim to biomod
                     model = BiomechanicalModelReal.from_osim(
-                        filepath=osim_file_path,
+                        filepath=osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
                     )
-                    model.to_biomod(biomod_file_path, with_mesh=False)
+                    model.to_biomod(biomod_filepath, with_mesh=False)
 
                     # Test that the model created is valid
-                    biomod_model = biorbd.Model(biomod_file_path)
+                    biomod_model = biorbd.Model(biomod_filepath)
                     nb_q = biomod_model.nbQ()
                     nb_markers = biomod_model.nbMarkers()
                     nb_muscles = biomod_model.nbMuscles()
@@ -474,13 +474,13 @@ def test_translation_osim_to_biomod():
                     if os.path.join(folder, name) not in translation_and_rotation_dofs:
                         # Test the position of the markers
                         if nb_markers > 0:
-                            kin_test = KinematicsTest(biomod=biomod_file_path, osim_model=osim_file_path)
+                            kin_test = KinematicsTest(biomod=biomod_filepath, osim_model=osim_filepath)
                             markers_error = kin_test.from_states(states=np.random.rand(nb_q, 1) * 0.2, plot=False)
                             np.testing.assert_almost_equal(np.mean(markers_error), 0, decimal=4)
 
                         # Test the moment arm error
                         if nb_muscles > 0:
-                            muscle_test = MomentArmTest(biomod=biomod_file_path, osim_model=osim_file_path)
+                            muscle_test = MomentArmTest(biomod=biomod_filepath, osim_model=osim_filepath)
                             muscle_error = muscle_test.from_markers(
                                 markers=np.random.rand(3, nb_markers, 1), plot=False
                             )
@@ -493,7 +493,7 @@ def test_translation_osim_to_biomod():
                         match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
                         model = BiomechanicalModelReal.from_osim(
-                            filepath=osim_file_path,
+                            filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
                         )
@@ -504,7 +504,7 @@ def test_translation_osim_to_biomod():
                         match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
                         model = BiomechanicalModelReal.from_osim(
-                            filepath=osim_file_path,
+                            filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
                         )
