@@ -235,7 +235,9 @@ class Score:
 
         return np.stack([unit_vector(x_axis), unit_vector(y_axis), unit_vector(z_axis)], axis=1)
 
-    def _optimal_rt(self, markers: np.ndarray, static_markers: np.ndarray, rotation_init: np.ndarray, marker_names: str):
+    def _optimal_rt(
+        self, markers: np.ndarray, static_markers: np.ndarray, rotation_init: np.ndarray, marker_names: str
+    ):
 
         def inv_ppvect(x):
             return np.array([x[2, 1], x[0, 2], x[1, 0]])
@@ -273,11 +275,19 @@ class Score:
             current_static_marker_centered = static_centered[:3, i_marker, 0]
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = functional_centered[:3, i_marker, i_frame]
-                if np.abs(np.linalg.norm(current_static_marker_centered) - np.linalg.norm(current_functional_marker_centered)) > 0.05:
-                    raise RuntimeError(f"The marker {marker_name} seem to move during the functional trial."
-                                       f"The distance between the center and this marker is "
-                                       f"{np.linalg.norm(current_static_marker_centered)} during the static trial and "
-                                       f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial.")
+                if (
+                    np.abs(
+                        np.linalg.norm(current_static_marker_centered)
+                        - np.linalg.norm(current_functional_marker_centered)
+                    )
+                    > 0.05
+                ):
+                    raise RuntimeError(
+                        f"The marker {marker_name} seem to move during the functional trial."
+                        f"The distance between the center and this marker is "
+                        f"{np.linalg.norm(current_static_marker_centered)} during the static trial and "
+                        f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial."
+                    )
                 F[:, :, i_frame] += np.outer(current_functional_marker_centered, current_static_marker_centered)
 
         S = 0.5 * (F + np.transpose(F, (1, 0, 2)))
@@ -462,8 +472,18 @@ class Score:
         parent_initial_rotation = self._use_4_groups(mean_parent_markers, parent_marker_groups)
         child_initial_rotation = self._use_4_groups(mean_child_markers, child_marker_groups)
 
-        rt_parent = self._optimal_rt(self.parent_markers_global, self.parent_static_markers, parent_initial_rotation, marker_names=self.parent_marker_names)
-        rt_child = self._optimal_rt(self.child_markers_global, self.child_static_markers, child_initial_rotation, marker_names=self.child_marker_names)
+        rt_parent = self._optimal_rt(
+            self.parent_markers_global,
+            self.parent_static_markers,
+            parent_initial_rotation,
+            marker_names=self.parent_marker_names,
+        )
+        rt_child = self._optimal_rt(
+            self.child_markers_global,
+            self.child_static_markers,
+            child_initial_rotation,
+            marker_names=self.child_marker_names,
+        )
 
         return rt_parent, rt_child
 
@@ -744,8 +764,8 @@ class JointCenterTool:
                     )
                     if np.abs(distance_static - distance_trial) > 0.01:
                         raise RuntimeError(
-                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments.")
-
+                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments."
+                        )
 
     def replace_joint_centers(self) -> BiomechanicalModelReal:
 
@@ -754,7 +774,9 @@ class JointCenterTool:
         for task in self.joint_center_tasks:
 
             # Marker positions in the global from the static trial
-            task.parent_static_markers = static_markers[:, self.original_model.markers_indices(task.parent_marker_names)]
+            task.parent_static_markers = static_markers[
+                :, self.original_model.markers_indices(task.parent_marker_names)
+            ]
             task.child_static_markers = static_markers[:, self.original_model.markers_indices(task.child_marker_names)]
 
             # Marker positions in the global from this functional trial

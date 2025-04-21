@@ -25,15 +25,15 @@ class C3dData:
         return self.get_position(marker_names=self.marker_names)
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
-        """ Get the geometrical center position between markers"""
+        """Get the geometrical center position between markers"""
         return np.nanmean(self.get_position(marker_names), axis=1)
 
     def mean_marker_position(self, marker_name: str) -> np.ndarray:
-        """ Get the mean position of a marker"""
+        """Get the mean position of a marker"""
         return np.nanmean(self.get_position((marker_name,)), axis=2)
 
     def std_marker_position(self, marker_name: str) -> np.ndarray:
-        """ Get the std from the position of a marker"""
+        """Get the std from the position of a marker"""
         return np.nanstd(self.get_position((marker_name,)), axis=2)
 
     def _indices_in_c3d(self, from_markers: tuple[str, ...] | list[str]) -> tuple[int, ...]:

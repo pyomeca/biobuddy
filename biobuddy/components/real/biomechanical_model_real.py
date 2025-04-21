@@ -366,4 +366,3 @@ class BiomechanicalModelReal(ModelDynamics):
 
         writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
         writer.write(self)
-

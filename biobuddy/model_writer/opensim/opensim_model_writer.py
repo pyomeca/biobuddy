@@ -1,5 +1,3 @@
-
-
 class OpensimModelWriter:
     def __init__(self, filepath: str, with_mesh: bool = False):
         """

@@ -1,5 +1,3 @@
-
-
 class BiorbdModelWriter:
     def __init__(self, filepath: str, with_mesh: bool = False):
         """
@@ -31,7 +29,9 @@ class BiorbdModelWriter:
         out_string += "// --------------------------------------------------------------\n\n"
         for segment in model.segments:
             if segment.segment_coordinate_system.is_in_global:
-                raise RuntimeError(f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global.")
+                raise RuntimeError(
+                    f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
+                )
             out_string += segment.to_biomod(with_mesh=self.with_mesh)
             out_string += "\n\n\n"  # Give some space between segments
 

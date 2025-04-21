@@ -15,6 +15,7 @@ def requires_initialization(method):
         if not self.is_initialized:
             raise RuntimeError(f"{method.__name__} cannot be called because the object is not initialized.")
         return method(self, *args, **kwargs)
+
     return wrapper
 
 
@@ -133,10 +134,12 @@ class ModelDynamics:
         )
         return out
 
-
     @staticmethod
     def _marker_jacobian(
-        model: "BiomechanicalModelReal" or "biorbd.Model", q_regularization_weight: float, q: np.ndarray, with_biorbd: bool
+        model: "BiomechanicalModelReal" or "biorbd.Model",
+        q_regularization_weight: float,
+        q: np.ndarray,
+        with_biorbd: bool,
     ) -> np.ndarray:
         nb_q = q.shape[0]
         nb_markers = model.nbMarkers() if with_biorbd else model.nb_markers
@@ -156,7 +159,6 @@ class ModelDynamics:
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
 
         return vec_jacobian
-
 
     @requires_initialization
     def inverse_kinematics(
@@ -231,7 +233,6 @@ class ModelDynamics:
 
         return optimal_q
 
-
     @requires_initialization
     def forward_kinematics(self, q: np.ndarray = None) -> dict[str, np.ndarray]:
         """
@@ -272,7 +273,6 @@ class ModelDynamics:
 
         return segment_rt_in_global
 
-
     @requires_initialization
     def markers_in_global(self, q: np.ndarray = None) -> np.ndarray:
 
@@ -297,7 +297,6 @@ class ModelDynamics:
                     i_marker += 1
 
         return marker_positions
-
 
     @requires_initialization
     def contacts_in_global(self, q: np.ndarray = None) -> np.ndarray:
@@ -324,7 +323,6 @@ class ModelDynamics:
                     i_contact += 1
 
         return contact_positions
-
 
     @requires_initialization
     def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.0001) -> np.ndarray:
@@ -356,7 +354,6 @@ class ModelDynamics:
                 jac[:, i_marker, i_q] = (f1[:, i_marker] - f0[:, i_marker]) / epsilon
 
         return jac
-
 
     @requires_initialization
     def muscle_length(self, muscle_name: str, q: np.ndarray) -> np.ndarray:
