@@ -5,7 +5,6 @@ from enum import Enum
 import numpy as np
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
-from ..components.real.biomechanical_model_real_utils import inverse_kinematics, muscle_length, forward_kinematics
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
@@ -465,7 +464,7 @@ class ScaleTool:
         visualize_optimal_static_pose: bool,
     ) -> np.ndarray:
 
-        optimal_q = inverse_kinematics(
+        optimal_q = self.inverse_kinematics(
             self.scaled_model,
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
@@ -510,7 +509,7 @@ class ScaleTool:
         return np.median(optimal_q, axis=1)
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
-        jcs_in_global = forward_kinematics(self.scaled_model, q_static)
+        jcs_in_global = self.scaled_model.forward_kinematics(q_static)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=jcs_in_global[segment_name][:, :, 0],
@@ -537,7 +536,7 @@ class ScaleTool:
     def replace_markers_on_segments_local_scs(
         self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray
     ):
-        jcs_in_global = forward_kinematics(self.scaled_model, q)
+        jcs_in_global = self.scaled_model.forward_kinematics(q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
                 raise RuntimeError(
@@ -577,8 +576,8 @@ class ScaleTool:
         muscle_names = self.original_model.muscle_names
         q_zeros = np.zeros((self.original_model.nb_q,))
         for muscle_name in self.original_model.muscles.keys():
-            original_muscle_length = muscle_length(self.original_model, muscle_name, q_zeros)
-            scaled_muscle_length = muscle_length(self.scaled_model, muscle_name, q_zeros)
+            original_muscle_length = self.original_model.muscle_length(muscle_name, q_zeros)
+            scaled_muscle_length = self.scaled_model.muscle_length(muscle_name, q_zeros)
             if self.original_model.muscles[muscle_name].optimal_length is None:
                 print("sss")
             self.scaled_model.muscles[muscle_name].optimal_length = (

@@ -3,7 +3,6 @@ from typing import TypeAlias
 
 from .marker_real import MarkerReal
 from ....utils.translations import Translations
-from ..biomechanical_model_real_utils import markers_in_global
 
 
 class MeanMarker:
@@ -120,7 +119,7 @@ class SegmentWiseScaling:
 
         original_marker_names = original_model.marker_names
         q_zeros = np.zeros((original_model.nb_q, 1))
-        markers = markers_in_global(original_model, q_zeros)
+        markers = original_model.markers_in_global(q_zeros)
 
         scale_factor = []
         for marker_pair in self.marker_pairs:

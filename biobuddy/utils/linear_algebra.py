@@ -296,6 +296,18 @@ def get_rt_aligning_markers_in_global(
     return rt_matrix
 
 
+def point_from_global_to_local(point_in_global: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.rt_matrix = jcs_in_global
+    return rt_matrix.inverse @ point_to_array(point=point_in_global)
+
+
+def point_from_local_to_global(point_in_local: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.rt_matrix = jcs_in_global
+    return rt_matrix.rt_matrix @ point_to_array(point=point_in_local)
+
+
 class OrthoMatrix:
     def __init__(self, translation=(0, 0, 0), rotation_1=(0, 0, 0), rotation_2=(0, 0, 0), rotation_3=(0, 0, 0)):
         self.trans = np.transpose(np.array([translation]))

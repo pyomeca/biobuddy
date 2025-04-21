@@ -4,12 +4,6 @@ import numpy as np
 import itertools
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
-from ..components.real.biomechanical_model_real_utils import (
-    segment_coordinate_system_in_global,
-    markers_in_global,
-    contacts_in_global,
-    segment_coordinate_system_in_local,
-)
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
 from ..utils.linear_algebra import RotoTransMatrix, unit_vector
@@ -100,11 +94,11 @@ class Score:
     #
     #     # Get the segment RT in static pose to compute the marker position in the local reference frame
     #     parent_jcs_in_global = RotoTransMatrix()
-    #     parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)[:, :, 0]
+    #     parent_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(self.parent_name)[:, :, 0]
     #     parent_markers_local = np.einsum('ij,jkf->ikf', parent_jcs_in_global.inverse, parent_markers_global)
     #
     #     child_jcs_in_global = RotoTransMatrix()
-    #     child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)[:, :, 0]
+    #     child_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(self.child_name)[:, :, 0]
     #     child_markers_local = np.einsum('ij,jkf->ikf', child_jcs_in_global.inverse, child_markers_global)
     #
     #     # Centroid of local marker set (constant)
@@ -414,7 +408,7 @@ class Score:
         ----------
 
         """
-        static_markers = markers_in_global(original_model, np.zeros((original_model.nb_q,)))
+        static_markers = original_model.markers_in_global(np.zeros((original_model.nb_q,)))
 
         parent_static_markers = static_markers[:, original_model.markers_indices(self.parent_marker_names)]
         child_static_markers = static_markers[:, original_model.markers_indices(self.child_marker_names)]
@@ -425,7 +419,7 @@ class Score:
 
         # Marker positions in the local
         parent_jcs_in_global = RotoTransMatrix()
-        parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.parent_name)[:, :, 0]
+        parent_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(self.parent_name)[:, :, 0]
 
         n_markers = parent_markers_global.shape[1]
         n_frames = parent_markers_global.shape[2]
@@ -436,7 +430,7 @@ class Score:
         mean_parent_markers_local = np.nanmean(parent_markers_local, axis=2)
 
         child_jcs_in_global = RotoTransMatrix()
-        child_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(original_model, self.child_name)[:, :, 0]
+        child_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(self.child_name)[:, :, 0]
         n_markers = child_markers_global.shape[1]
         child_markers_local = np.zeros((4, n_markers, n_frames))
         for i_frame in range(n_frames):
@@ -577,7 +571,7 @@ class Score:
 
         # Replace the model components in the new local reference frame
         parent_jcs_in_global = RotoTransMatrix()
-        parent_jcs_in_global.rt_matrix = segment_coordinate_system_in_global(new_model, self.parent_name)
+        parent_jcs_in_global.rt_matrix = new_model.segment_coordinate_system_in_global(self.parent_name)
 
         if (
             new_model.segments[self.child_name].segment_coordinate_system is None
@@ -599,11 +593,11 @@ class Score:
             is_scs_local=True,
         )
         # Markers
-        marker_positions = markers_in_global(original_model)
+        marker_positions = original_model.markers_in_global()
         for i_marker, marker in enumerate(new_model.segments[self.child_name].markers):
             marker.position = parent_jcs_in_global.inverse @ marker_positions[:, i_marker, 0]
         # Contacts
-        contact_positions = contacts_in_global(original_model)
+        contact_positions = original_model.contacts_in_global()
         for i_contact, contact in enumerate(new_model.segments[self.child_name].contacts):
             contact.position = parent_jcs_in_global.inverse @ contact_positions[:, i_contact, 0]
         # IMUs
@@ -659,7 +653,7 @@ class JointCenterTool:
         for segment in original_model.segments:
             if segment.segment_coordinate_system.is_in_global:
                 segment.segment_coordinate_system = SegmentCoordinateSystemReal(
-                    scs=deepcopy(segment_coordinate_system_in_local(original_model, segment.name)),
+                    scs=deepcopy(original_model.segment_coordinate_system_in_local(segment.name)),
                     is_scs_local=True,
                 )
 

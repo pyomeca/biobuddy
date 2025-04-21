@@ -7,16 +7,20 @@ from ...utils.translations import Translations
 from ...utils.rotations import Rotations
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
-from .biomechanical_model_real_utils import segment_coordinate_system_in_local
+from .model_dynamics import ModelDynamics
 
 
-class BiomechanicalModelReal:
+class BiomechanicalModelReal(ModelDynamics):
     def __init__(self, gravity: Point = None):
+
         # Imported here to prevent from circular imports
         from ..generic.muscle.muscle_group import MuscleGroup
         from .muscle.muscle_real import MuscleReal
         from .muscle.via_point_real import ViaPointReal
         from .rigidbody.segment_real import SegmentReal
+
+        super().__init__()
+        self.is_initialized = True  # So we can now use the ModelDynamics functions
 
         self.header = ""
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
@@ -201,6 +205,13 @@ class BiomechanicalModelReal:
         Get the names of the via points in the model
         """
         return list(self.via_points.keys())
+
+    def children_segment_names(self, parent_name: str):
+        children = []
+        for segment_name in self.segments.keys():
+            if self.segments[segment_name].parent_name == parent_name:
+                children.append(segment_name)
+        return children
 
     @property
     def nb_segments(self) -> int:

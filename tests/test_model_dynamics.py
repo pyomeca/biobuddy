@@ -5,7 +5,6 @@ import numpy.testing as npt
 import biorbd
 
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType
-from biobuddy.components.real.biomechanical_model_real_utils import markers_in_global, forward_kinematics
 
 
 def test_biomechanics_model_real_utils_functions():
@@ -37,7 +36,7 @@ def test_biomechanics_model_real_utils_functions():
     q_random = np.random.rand(nb_q)
 
     # Forward kinematics
-    jcs_biobuddy = forward_kinematics(model, q_random)
+    jcs_biobuddy = model.forward_kinematics(q_random)
     for i_segment in range(nb_segments):
         jcs_biorbd = model_biorbd.globalJCS(q_random, i_segment).to_array()
         npt.assert_array_almost_equal(
@@ -47,7 +46,7 @@ def test_biomechanics_model_real_utils_functions():
         )
 
     # Markers position in global
-    markers_biobuddy = markers_in_global(model, q_random)
+    markers_biobuddy = model.markers_in_global(q_random)
     for i_marker in range(nb_markers):
         markers_biorbd = model_biorbd.markers(q_random)[i_marker].to_array()
         npt.assert_array_almost_equal(
