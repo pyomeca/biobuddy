@@ -136,7 +136,8 @@ class ScaleTool:
             visualize_optimal_static_pose,
         )
 
-        return self.scaled_model.segments_rt_to_local()
+        self.scaled_model.segments_rt_to_local()
+        return self.scaled_model
 
     def add_scaling_segment(self, scaling_segment: SegmentScaling):
         """

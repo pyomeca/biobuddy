@@ -339,9 +339,10 @@ class BiomechanicalModelReal(ModelDynamics):
         model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
-        return model.segments_rt_to_local()
+        model.segments_rt_to_local()
+        return model
 
-    def to_biomod(self, filepath: str, with_mesh: bool = True):
+    def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
         Write the bioMod file.
 
@@ -357,15 +358,12 @@ class BiomechanicalModelReal(ModelDynamics):
         writer = BiorbdModelWriter(filepath=filepath, with_mesh=with_mesh)
         writer.write(self)
 
-    def to_osim(self, filepath: str, with_mesh: bool = False):
+    def to_osim(self, filepath: str, with_mesh: bool = False) -> None:
         """
         Write the .osim file
         """
-        raise NotImplementedError("To be Implemented in model_writer")
+        from ...model_writer.opensim.opensim_model_writer import OpensimModelWriter
 
-        # removing any character that is not ascii readable from the out_string before writing the model
-        cleaned_string = out_string.encode("ascii", "ignore").decode()
+        writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
+        writer.write(self)
 
-        # Write it to the .osim file
-        with open(filepath, "w") as file:
-            file.write(cleaned_string)

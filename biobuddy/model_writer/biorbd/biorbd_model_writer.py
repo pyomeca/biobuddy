@@ -1,4 +1,3 @@
-from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 
 
 class BiorbdModelWriter:
@@ -16,9 +15,9 @@ class BiorbdModelWriter:
         self.filepath = filepath
         self.with_mesh = with_mesh
 
-    def write(self, model: BiomechanicalModelReal) -> None:
+    def write(self, model: "BiomechanicalModelReal") -> None:
         """
-        Writes the BiomechanicalModelReal into a text file of a specific format
+        Writes the BiomechanicalModelReal into a text file of formal .bioMod
         """
 
         # Collect the text to write

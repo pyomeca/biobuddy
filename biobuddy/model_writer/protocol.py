@@ -1,7 +1,5 @@
 from typing import Protocol
 
-from ....components.real.biomechanical_model_real import BiomechanicalModelReal
-
 
 class ModelWriter(Protocol):
     def __init__(self, filepath: str, with_mesh: bool = False):
@@ -16,7 +14,7 @@ class ModelWriter(Protocol):
             If the mesh files should be added to the model to write
         """
 
-    def write(self, model: BiomechanicalModelReal) -> None:
+    def write(self, model: "BiomechanicalModelReal") -> None:
         """
         Writes the BiomechanicalModelReal into a text file of a specific format
 
