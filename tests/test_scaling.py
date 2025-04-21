@@ -19,7 +19,7 @@ def convert_c3d_to_trc(c3d_filepath):
     This function reads the c3d static file and converts it into a trc file that will be used to scale the model in OpenSim.
     The trc file is saved at the same place as the original c3d file.
     """
-    trc_file_path = c3d_filepath.replace(".c3d", ".trc")
+    trc_filepath = c3d_filepath.replace(".c3d", ".trc")
 
     c3d = ezc3d.c3d(c3d_filepath)
     labels = c3d["parameters"]["POINT"]["LABELS"]["value"]
@@ -27,8 +27,8 @@ def convert_c3d_to_trc(c3d_filepath):
     frame_rate = c3d["header"]["points"]["frame_rate"]
     marker_data = c3d["data"]["points"][:3, :, :] / 1000  # Convert in meters
 
-    with open(trc_file_path, "w") as f:
-        trc_file_name = os.path.basename(trc_file_path)
+    with open(trc_filepath, "w") as f:
+        trc_file_name = os.path.basename(trc_filepath)
         f.write(f"PathFileType\t4\t(X/Y/Z)\t{trc_file_name}\n")
         f.write("DataRate\tCameraRate\tNumFrames\tNumMarkers\tUnits\tOrigDataRate\tOrigDataStartFrame\tOrigNumFrames\n")
         f.write(
@@ -53,7 +53,7 @@ def convert_c3d_to_trc(c3d_filepath):
             f.write("\t".join(frame_data) + "\n")
 
 
-def visualize_model_scaling_output(scaled_biomod_file_path: str, converted_scaled_osim_file_path: str, q):
+def visualize_model_scaling_output(scaled_biomod_filepath: str, converted_scaled_osim_filepath: str, q):
     """
     Only for debugging purposes.
     """
@@ -64,13 +64,13 @@ def visualize_model_scaling_output(scaled_biomod_file_path: str, converted_scale
     viz = pyorerun.PhaseRerun(t)
 
     # Model scaled in BioBuddy
-    viz_biomod_model = pyorerun.BiorbdModel(scaled_biomod_file_path)
+    viz_biomod_model = pyorerun.BiorbdModel(scaled_biomod_filepath)
     viz_biomod_model.options.transparent_mesh = False
     viz_biomod_model.options.show_gravity = True
     viz.add_animated_model(viz_biomod_model, q)
 
     # Model scaled in OpenSim
-    viz_scaled_model = pyorerun.BiorbdModel(converted_scaled_osim_file_path)
+    viz_scaled_model = pyorerun.BiorbdModel(converted_scaled_osim_filepath)
     viz_scaled_model.options.transparent_mesh = False
     viz_scaled_model.options.show_gravity = True
     viz.add_animated_model(viz_scaled_model, q)
@@ -87,12 +87,12 @@ def test_scaling_wholebody():
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cleaned_relative_path = "Geometry_cleaned"
 
-    osim_file_path = parent_path + "/examples/models/wholebody.osim"
+    osim_filepath = parent_path + "/examples/models/wholebody.osim"
     xml_filepath = parent_path + "/examples/models/wholebody.xml"
-    scaled_biomod_file_path = parent_path + "/examples/models/wholebody_scaled.bioMod"
-    converted_scaled_osim_file_path = parent_path + "/examples/models/wholebody_converted_scaled.bioMod"
-    scaled_osim_file_path = parent_path + "/examples/models/wholebody_scaled.osim"
-    static_file_path = parent_path + "/examples/data/static.c3d"
+    scaled_biomod_filepath = parent_path + "/examples/models/wholebody_scaled.bioMod"
+    converted_scaled_osim_filepath = parent_path + "/examples/models/wholebody_converted_scaled.bioMod"
+    scaled_osim_filepath = parent_path + "/examples/models/wholebody_scaled.osim"
+    static_filepath = parent_path + "/examples/data/static.c3d"
 
     # # Convert the vtp mesh files
     # geometry_path = parent_path + "/external/opensim-models/Geometry"
@@ -103,7 +103,7 @@ def test_scaling_wholebody():
 
     # Read the .osim file
     original_model = BiomechanicalModelReal.from_osim(
-        filepath=osim_file_path,
+        filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
@@ -112,30 +112,30 @@ def test_scaling_wholebody():
     # Scale the model in BioBuddy
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
-        file_path=static_file_path,
+        filepath=static_filepath,
         first_frame=100,
         last_frame=200,
         mass=80,
         q_regularization_weight=0.01,
         make_static_pose_the_models_zero=False,  # Not recommended, but this is what OpenSim do
     )
-    scaled_model.to_biomod(scaled_biomod_file_path)
-    scaled_biorbd_model = biorbd.Model(scaled_biomod_file_path)
+    scaled_model.to_biomod(scaled_biomod_filepath)
+    scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
     # Scale in Opensim's GUI
-    # convert_c3d_to_trc(static_file_path)
+    # convert_c3d_to_trc(static_filepath)
 
     # Import the model scaled in OpeSim's GUI
     osim_model = BiomechanicalModelReal.from_osim(
-        filepath=scaled_osim_file_path,
+        filepath=scaled_osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
     )
-    osim_model.to_biomod(converted_scaled_osim_file_path)
-    scaled_osim_model = biorbd.Model(converted_scaled_osim_file_path)
+    osim_model.to_biomod(converted_scaled_osim_filepath)
+    scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
 
-    # visualize_model_scaling_output(scaled_biomod_file_path, converted_scaled_osim_file_path, q_zeros)
+    # visualize_model_scaling_output(scaled_biomod_filepath, converted_scaled_osim_filepath, q_zeros)
 
     q_zeros = np.zeros((42, 10))
     q_random = np.random.rand(42) * 2 * np.pi

@@ -60,7 +60,7 @@ from biobuddy import ScaleTool
 scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
 
 # Performing the scaling based on a static trial
-scaled_model_CAC = scale_tool.scale(file_path=static_c3d_filepath, first_frame=100, last_frame=200, mass=mass)
+scaled_model_CAC = scale_tool.scale(filepath=static_c3d_filepath, first_frame=100, last_frame=200, mass=mass)
 ```
 
 **Joint center identification:**
@@ -75,7 +75,7 @@ joint_center_tool = JointCenterTool(scaled_model)
 # Example for the right hip
 joint_center_tool.add(
     Score(
-        file_path=hip_movement_c3d_filepath,
+        filepath=hip_movement_c3d_filepath,
         parent_name="pelvis",
         child_name="femur_r",
         parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -87,7 +87,7 @@ joint_center_tool.add(
 # Example for the right knee
 joint_center_tool.add(
     Sara(
-        file_path=knee_movement_c3d_filepath,
+        filepath=knee_movement_c3d_filepath,
         parent_name="femur_r",
         child_name="tibia_r",
         parent_marker_names=["RGT", "RUB_Leg", "RUF_Leg", "FBF_Leg"],

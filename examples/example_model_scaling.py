@@ -54,7 +54,7 @@ def main(visualization):
 
     # Scale the model
     scaled_model = scale_tool.scale(
-        file_path=static_filepath,
+        filepath=static_filepath,
         first_frame=100,
         last_frame=200,
         mass=80,

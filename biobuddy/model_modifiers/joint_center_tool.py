@@ -14,7 +14,7 @@ _logger = logging.getLogger(__name__)
 class Score:
     def __init__(
         self,
-        file_path: str,
+        filepath: str,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -30,7 +30,7 @@ class Score:
 
         Parameters
         ----------
-        file_path
+        filepath
             The path to the .c3d file containing the functional trial.
         parent_name
             The name of the joint's parent segment.
@@ -58,20 +58,20 @@ class Score:
                 )
 
         # Original attributes
-        self.file_path = file_path
+        self.filepath = filepath
         self.parent_name = parent_name
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
         self.child_marker_names = child_marker_names
 
         # Check file format
-        if file_path.endswith(".c3d"):
-            self.c3d_data = C3dData(file_path, first_frame, last_frame)
+        if filepath.endswith(".c3d"):
+            self.c3d_data = C3dData(filepath, first_frame, last_frame)
         else:
-            if file_path.endswith(".trc"):
+            if filepath.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
-                raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
+                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
 
     # def _rt_from_trial(self, original_model: "BiomechanicalModelReal") -> tuple[np.ndarray, np.ndarray]:
     #     """
@@ -605,7 +605,7 @@ class Score:
 
 
 class Sara:
-    def __init__(self, file_path: str, parent_name: str, child_name: str, first_frame: int, last_frame: int):
+    def __init__(self, filepath: str, parent_name: str, child_name: str, first_frame: int, last_frame: int):
         """
         Initializes the Sara class which will find the position of the joint center using functional movements.
         The algorithm considers that both segments are rigid bodies and that the joint center is located at the
@@ -614,7 +614,7 @@ class Sara:
 
         Parameters
         ----------
-        file_path
+        filepath
             The path to the .c3d file containing the functional trial.
         parent_name
             The name of the joint's parent segment.
@@ -627,21 +627,21 @@ class Sara:
         """
 
         # Original attributes
-        self.file_path = file_path
+        self.filepath = filepath
         self.parent_name = parent_name
         self.child_name = child_name
 
         # Check file format
-        if file_path.endswith(".c3d"):
+        if filepath.endswith(".c3d"):
             # Load the c3d file
-            c3d_data = C3dData(file_path, first_frame, last_frame)
+            c3d_data = C3dData(filepath, first_frame, last_frame)
             self.marker_names = c3d_data.marker_names
             self.marker_positions = c3d_data.all_marker_positions[:3, :, :]
         else:
-            if file_path.endswith(".trc"):
+            if filepath.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
-                raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
+                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
 
         raise NotImplementedError("The SARA algorithm is not implemented yet.")
 

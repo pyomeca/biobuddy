@@ -14,17 +14,17 @@ def test_biomechanics_model_real_utils_functions():
 
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    osim_file_path = parent_path + "/examples/models/wholebody.osim"
-    biorbd_file_path = osim_file_path.replace(".osim", ".bioMod")
+    osim_filepath = parent_path + "/examples/models/wholebody.osim"
+    biorbd_filepath = osim_filepath.replace(".osim", ".bioMod")
 
     # Define models
     model = BiomechanicalModelReal.from_osim(
-        filepath=osim_file_path,
+        filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
     )
-    model.to_biomod(biorbd_file_path)
-    model_biorbd = biorbd.Model(biorbd_file_path)
+    model.to_biomod(biorbd_filepath)
+    model_biorbd = biorbd.Model(biorbd_filepath)
 
     nb_q = model.nb_q
     assert nb_q == 42
