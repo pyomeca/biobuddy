@@ -289,6 +289,19 @@ class BiomechanicalModelReal(ModelDynamics):
                 total_mass += segment.inertia_parameters.mass
         return total_mass
 
+    def segments_rt_to_local(self):
+        """
+        Make sure all scs are expressed in the local reference frame before moving on to the next step.
+        This method should be called everytime a model is returned to the user to avoid any confusion.
+        """
+        from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
+        for segment in self.segments:
+            segment.segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=deepcopy(self.segment_coordinate_system_in_local(segment.name)),
+                is_scs_local=True,
+            )
+
     @staticmethod
     def from_biomod(
         filepath: str,
@@ -323,96 +336,36 @@ class BiomechanicalModelReal(ModelDynamics):
         """
         from ...model_parser.opensim import OsimModelParser
 
-        return OsimModelParser(
+        model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
+        return model.segments_rt_to_local()
 
-    def to_biomod(self, file_path: str, with_mesh: bool = True):
+    def to_biomod(self, filepath: str, with_mesh: bool = True):
         """
         Write the bioMod file.
 
         Parameters
         ----------
-        file_path
+        filepath
             The path to save the bioMod
         with_mesh
             If the mesh should be written to the bioMod file
         """
+        from ...model_writer.biorbd.biorbd_model_writer import BiorbdModelWriter
 
-        # Collect the text to write
-        out_string = "version 4\n\n"
+        writer = BiorbdModelWriter(filepath=filepath, with_mesh=with_mesh)
+        writer.write(self)
 
-        out_string += self.header
-
-        out_string += "\n\n\n"
-        out_string += "// --------------------------------------------------------------\n"
-        out_string += "// SEGMENTS\n"
-        out_string += "// --------------------------------------------------------------\n\n"
-        for segment in self.segments:
-            # Make sure the scs are in the local reference frame before printing
-            from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-
-            segment.segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=deepcopy(segment_coordinate_system_in_local(self, segment.name)),
-                is_scs_local=True,
-            )
-            out_string += segment.to_biomod(with_mesh=with_mesh)
-            out_string += "\n\n\n"  # Give some space between segments
-
-        if self.muscle_groups:
-            out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLE GROUPS\n"
-            out_string += "// --------------------------------------------------------------\n\n"
-            for muscle_group in self.muscle_groups:
-                out_string += muscle_group.to_biomod()
-                out_string += "\n"
-            out_string += "\n\n\n"  # Give some space after muscle groups
-
-        if self.muscles:
-            out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLES\n"
-            out_string += "// --------------------------------------------------------------\n\n"
-            for muscle in self.muscles:
-                out_string += muscle.to_biomod()
-                out_string += "\n\n\n"  # Give some space between muscles
-
-        if self.via_points:
-            out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLES VIA POINTS\n"
-            out_string += "// --------------------------------------------------------------\n\n"
-            for via_point in self.via_points:
-                out_string += via_point.to_biomod()
-                out_string += "\n\n\n"  # Give some space between via points
-
-        if self.warnings:
-            out_string += "\n/*-------------- WARNINGS---------------\n"
-            for warning in self.warnings:
-                out_string += "\n" + warning
-            out_string += "*/\n"
-
-        # removing any character that is not ascii readable from the out_string before writing the model
-        cleaned_string = out_string.encode("ascii", "ignore").decode()
-
-        # Write it to the .bioMod file
-        with open(file_path, "w") as file:
-            file.write(cleaned_string)
-
-    def to_osim(self, save_path: str, header: str = "", print_warnings: bool = True):
+    def to_osim(self, filepath: str, with_mesh: bool = False):
         """
         Write the .osim file
-
-        Parameters
-        ----------
-        save_path
-            The path to save the osim to
-        print_warnings
-            If the function should print warnings or not in the osim output file if problems are encountered
         """
-        raise NotImplementedError("meh")
+        raise NotImplementedError("To be Implemented in model_writer")
 
         # removing any character that is not ascii readable from the out_string before writing the model
         cleaned_string = out_string.encode("ascii", "ignore").decode()
 
         # Write it to the .osim file
-        with open(file_path, "w") as file:
+        with open(filepath, "w") as file:
             file.write(cleaned_string)

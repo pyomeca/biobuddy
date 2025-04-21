@@ -700,4 +700,4 @@ class JointCenterTool:
         for task in self.joint_center_tasks:
             task.perform_task(self.original_model, self.new_model)
 
-        return self.new_model
+        return self.new_model.segments_rt_to_local()

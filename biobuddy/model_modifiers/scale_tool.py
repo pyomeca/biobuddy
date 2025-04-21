@@ -74,7 +74,7 @@ class ScaleTool:
 
         Parameters
         ----------
-        file_path
+        filepath
             The .c3d or .trc file of the static trial to use for the scaling
         first_frame
             The index of the first frame to use in the .c3d file.
@@ -94,16 +94,16 @@ class ScaleTool:
         """
 
         # Check file format
-        if file_path.endswith(".c3d"):
+        if filepath.endswith(".c3d"):
             # Load the c3d file
-            c3d_data = C3dData(file_path, first_frame, last_frame)
+            c3d_data = C3dData(filepath, first_frame, last_frame)
             marker_names = c3d_data.marker_names
             marker_positions = c3d_data.all_marker_positions[:3, :, :]
         else:
-            if file_path.endswith(".trc"):
+            if filepath.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
-                raise RuntimeError("The file_path (static trial) must be a .c3d file in a static posture.")
+                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
 
         # Check the weights
         for marker in self.marker_weightings:
@@ -136,7 +136,7 @@ class ScaleTool:
             visualize_optimal_static_pose,
         )
 
-        return self.scaled_model
+        return self.scaled_model.segments_rt_to_local()
 
     def add_scaling_segment(self, scaling_segment: SegmentScaling):
         """
