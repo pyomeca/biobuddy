@@ -6,7 +6,7 @@ import itertools
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
-from ..utils.linear_algebra import RotoTransMatrix, unit_vector
+from ..utils.linear_algebra import RotoTransMatrix, unit_vector, quaternion_to_rotation_matrix
 
 _logger = logging.getLogger(__name__)
 
@@ -236,7 +236,7 @@ class Score:
         return np.stack([unit_vector(x_axis), unit_vector(y_axis), unit_vector(z_axis)], axis=1)
 
     def _optimal_rt(
-        self, markers: np.ndarray, static_markers: np.ndarray, rotation_init: np.ndarray, marker_names: str
+        self, markers: np.ndarray, static_markers: np.ndarray, rotation_init: np.ndarray, marker_names: list[str]
     ):
 
         def inv_ppvect(x):
@@ -266,8 +266,8 @@ class Score:
         functional_centered = markers - mean_markers
         static_centered = static_markers - mean_static_markers
 
-        m1 = np.sqrt((1 + np.trace(rotation_init[:3, :3])) / 4)
-        M1 = inv_ppvect((rotation_init[:3, :3] - rotation_init[:3, :3].T) / (4 * m1))
+        static_quaternion_scalar = np.sqrt((1 + np.trace(rotation_init[:3, :3])) / 4)
+        static_quaternion_vector = inv_ppvect((rotation_init[:3, :3] - rotation_init[:3, :3].T) / (4 * static_quaternion_scalar))
         # T0 = np.mean(markers[:, :, 0], axis=1, keepdims=True)
 
         F = np.zeros((3, 3, nb_frames))
@@ -353,6 +353,8 @@ class Score:
             Yj = Yi + mu * Zi
 
             Gj = np.zeros((4, nb_frames))
+            nu = np.zeros((nb_frames,))
+            Zj = np.zeros((4, nb_frames))
             for i_frame in range(nb_frames):
                 yk = Yj[:, i_frame]
                 qk = Q[:, :, i_frame]
@@ -363,9 +365,6 @@ class Score:
 
                 Gj[:, i_frame] = 2 / yk_norm_sq * (qy - (yq_y / yk_norm_sq) * yk)
 
-            nu = np.zeros((nb_frames,))
-            Zj = np.zeros((4, nb_frames))
-            for i_frame in range(nb_frames):
                 numerator = np.dot(Gj[:, i_frame], Gj[:, i_frame] - Gi[:, i_frame])
                 denominator = np.dot(Gi[:, i_frame], Gi[:, i_frame])
                 nu_k = numerator / denominator if denominator != 0 else 0
@@ -375,19 +374,19 @@ class Score:
         # Final pose
         X = np.zeros_like(Yj)
         for i_frame in range(nb_frames):
-            norm_yk = np.linalg.norm(Yj[:, i_frame])
+            norm_yk = np.sqrt(np.dot(Yj[:, i_frame].T, Yj[:, i_frame]))
             if norm_yk != 0:
                 X[:, i_frame] = Yj[:, i_frame] / norm_yk
 
-        md = X[3, :]
-        Md = X[:3, :]
+        functional_quaternion_scalar = X[3, :]
+        functional_quaternion_vector = X[:3, :]
 
-        # PP_Md = ppvect_mat(Md)
-        # MdT_Md = np.einsum("ijk,ijk->1jk", np.transpose(Md, (1, 0, 2)), Md)
+        # PP_Md = ppvect_mat(functional_quaternion_vector)
+        # MdT_Md = np.einsum("ijk,ijk->1jk", np.transpose(functional_quaternion_vector, (1, 0, 2)), functional_quaternion_vector)
 
-        # tp1 = (md ** 2 - MdT_Md) * np.eye(3)[:, :, None] + \
-        #       2 * np.einsum("ijk,jik->ijk", Md, np.transpose(Md, (1, 0, 2))) + \
-        #       2 * md * PP_Md
+        # tp1 = (functional_quaternion_scalar ** 2 - MdT_Md) * np.eye(3)[:, :, None] + \
+        #       2 * np.einsum("ijk,jik->ijk", functional_quaternion_vector, np.transpose(functional_quaternion_vector, (1, 0, 2))) + \
+        #       2 * functional_quaternion_scalar * PP_Md
 
         # tp2 = mean_markers + tp1 @ (-T0)
 
@@ -396,30 +395,37 @@ class Score:
         # Rd[:3, 3, :] = tp2.squeeze()
         # Rd[3, 3, :] = 1
 
-        m = np.zeros((nb_frames,))
-        M = np.zeros((3, nb_frames))
+        quaternion_real_scalar = np.zeros((nb_frames,))
+        quaternion_vector = np.zeros((3, nb_frames))
+        rotation = np.zeros((3, 3, nb_frames))
         for i_frame in range(nb_frames):
-            m[i_frame] = md[i_frame] * m1 - np.dot(Md[:, i_frame], M1)
-            M[:, i_frame] = md[i_frame] * M1 + m1 * Md[:, i_frame] + np.cross(Md[:, i_frame], M1)
 
-        R = np.zeros((3, 3, nb_frames))
-        for i_frame in range(nb_frames):
-            M_k = M[:, i_frame]
-            MtM = M_k @ M_k.T
-            MMt = np.dot(M_k.T, M_k).item()
-            R[:, :, i_frame] = (m[i_frame] ** 2 - MMt) * np.eye(3) + 2 * MtM + 2 * m[i_frame] * ppvect_mat(M_k)
+            # Compute the quaternion
+            quaternion_real_scalar[i_frame] = functional_quaternion_scalar[i_frame] * static_quaternion_scalar - np.dot(functional_quaternion_vector[:, i_frame].T, static_quaternion_vector)
+            quaternion_vector[:, i_frame] = functional_quaternion_scalar[i_frame] * static_quaternion_vector + static_quaternion_scalar * functional_quaternion_vector[:, i_frame] + np.dot(ppvect_mat(functional_quaternion_vector[:, i_frame]), static_quaternion_vector)
+
+            # Renormalization of the quaternion to make sure it lies in SO(3)
+            quaternion_norm = np.linalg.norm(np.hstack((quaternion_real_scalar[i_frame], quaternion_vector[:, i_frame])))
+            if np.abs(1 - quaternion_norm) > 1e-3:
+                raise RuntimeError("The quaternion norm is not close to 1.")
+            quaternion_real_scalar[i_frame] /= quaternion_norm
+            quaternion_vector[:, i_frame] /= quaternion_norm
+
+            # Transforming into a rotation matrix
+            rotation[:, :, i_frame] = quaternion_to_rotation_matrix(quaternion_real_scalar[i_frame], quaternion_vector[:, i_frame])
 
         # Fill final RT
         optimal_rt = np.zeros((4, 4, nb_frames))
-        optimal_rt[:3, :3, :] = R
-        optimal_rt[:3, 3, :] = mean_markers.squeeze()
+        optimal_rt[:3, :3, :] = rotation
+        for i_frame in range(nb_frames):
+            optimal_rt[:3, 3, i_frame] = mean_static_markers[:, 0, 0]
         optimal_rt[3, 3, :] = 1
 
         residual = np.full((nb_frames, nb_markers), np.nan)
         for i_marker in range(nb_markers):
             static_local = rotation_init[:3, :3].T @ (static_markers[:, i_marker] - mean_static_markers.squeeze())
             for i_frame in range(nb_frames):
-                current_local = R[:3, :, i_frame].T @ (
+                current_local = rotation[:3, :, i_frame].T @ (
                     markers[:, i_marker, i_frame] - np.nanmean(mean_markers, axis=2)[:, 0]
                 )
                 residual[i_frame, i_marker] = np.linalg.norm(static_local - current_local)
@@ -463,14 +469,15 @@ class Score:
         mean_parent_markers = np.nanmean(self.parent_markers_global, axis=2)
         mean_child_markers = np.nanmean(self.child_markers_global, axis=2)
 
-        parent_marker_groups = self._four_groups(mean_parent_markers)
-        child_marker_groups = self._four_groups(mean_child_markers)
+        # parent_marker_groups = self._four_groups(mean_parent_markers)
+        # child_marker_groups = self._four_groups(mean_child_markers)
+        # parent_initial_rotation = self._use_4_groups(mean_parent_markers, parent_marker_groups)
+        # child_initial_rotation = self._use_4_groups(mean_child_markers, child_marker_groups)
 
-        # parent_initial_rotation = np.zeros((3, 3, nb_frames))
-        # child_initial_rotation = np.zeros((3, 3, nb_frames))
-        # for i_frame in range(nb_frames):
-        parent_initial_rotation = self._use_4_groups(mean_parent_markers, parent_marker_groups)
-        child_initial_rotation = self._use_4_groups(mean_child_markers, child_marker_groups)
+        parent_marker_groups = self._four_groups(self.parent_static_markers[:, :, 0])
+        child_marker_groups = self._four_groups(self.child_static_markers[:, :, 0])
+        parent_initial_rotation = self._use_4_groups(self.parent_static_markers[:, :, 0], parent_marker_groups)
+        child_initial_rotation = self._use_4_groups(self.child_static_markers[:, :, 0], child_marker_groups)
 
         rt_parent = self._optimal_rt(
             self.parent_markers_global,
@@ -615,26 +622,37 @@ class Score:
             raise RuntimeError(
                 "The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm."
             )
-        scs_in_local = deepcopy(new_model.segments[self.child_name].segment_coordinate_system.scs)
-        scs_in_local[:, 3, 0] = parent_jcs_in_global.inverse @ cor_in_global
 
         # Segment RT
+        reset_axis_rt = RotoTransMatrix()
+        reset_axis_rt.rt_matrix = np.eye(4)
         if self.child_name + "_parent_offset" in new_model.segment_names:
             segment_to_move_rt_from = self.child_name + "_parent_offset"
+            if self.child_name + "_reset_axis" in new_model.segment_names:
+                reset_axis_rt.rt_matrix = deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
         else:
             segment_to_move_rt_from = self.child_name
+        scs_in_local = deepcopy(new_model.segments[segment_to_move_rt_from].segment_coordinate_system.scs)
+        scs_in_local[:, 3, 0] = parent_jcs_in_global.inverse @ cor_in_global
         new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
             scs=scs_in_local,
             is_scs_local=True,
         )
+
+        # New position of the child jsc after replacing the parent_offset segment
+        new_child_jcs_in_global = RotoTransMatrix()
+        new_child_jcs_in_global.rt_matrix = new_model.segment_coordinate_system_in_global(self.child_name)
+
         # Markers
         marker_positions = original_model.markers_in_global()
         for i_marker, marker in enumerate(new_model.segments[self.child_name].markers):
-            marker.position = parent_jcs_in_global.inverse @ marker_positions[:, i_marker, 0]
+            marker_index = original_model.markers_indices([marker.name])
+            marker.position = new_child_jcs_in_global.inverse @ marker_positions[:, marker_index, 0]
         # Contacts
         contact_positions = original_model.contacts_in_global()
         for i_contact, contact in enumerate(new_model.segments[self.child_name].contacts):
-            contact.position = parent_jcs_in_global.inverse @ contact_positions[:, i_contact, 0]
+            contact_index = original_model.markers_indices([contact.name])
+            contact.position = new_child_jcs_in_global.inverse @ contact_positions[:, contact_index, 0]
         # IMUs
         # Muscles origin, insertion, via points
 

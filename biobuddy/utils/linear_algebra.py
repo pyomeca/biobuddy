@@ -201,6 +201,37 @@ def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
         return output_rt
 
 
+def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -> np.ndarray:
+    """
+    Convert a unit quaternion to a 4x4 homogeneous rotation matrix.
+
+    Parameters
+    ----------
+    quat_scalar
+        The real part of the quaternion
+    quat_vector: shape (3, )
+    The imaginary vertor of the quaternion
+
+    Returns
+    -------
+    rt_matrix : ndarray, shape (4, 4)
+        Homogeneous transformation matrix (rotation only, no translation)
+    """
+    qw = quat_scalar
+    qx, qy, qz = quat_vector
+
+    rot_matrix = np.array([
+        [1.0 - 2.0 * qy ** 2 - 2.0 * qz ** 2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
+        [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx ** 2 - 2.0 * qz ** 2, 2.0 * qy * qz - 2.0 * qx * qw],
+        [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx ** 2 - 2.0 * qy ** 2],
+    ])
+
+    if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
+        raise RuntimeError("Something went wrong, the rotation matrix computed does not lie in SO(3).")
+
+    return rot_matrix
+
+
 def coord_sys(axis) -> tuple[list[np.ndarray], str]:
     # define orthonormal coordinate system with given z-axis
     [a, b, c] = axis
