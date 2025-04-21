@@ -12,7 +12,7 @@ _logger = logging.getLogger(__name__)
 def requires_initialization(method):
     @wraps(method)
     def wrapper(self, *args, **kwargs):
-        if not getattr(self, 'is_initialized', False):
+        if not self.is_initialized:
             raise RuntimeError(f"{method.__name__} cannot be called because the object is not initialized.")
         return method(self, *args, **kwargs)
     return wrapper
@@ -238,7 +238,9 @@ class ModelDynamics:
         Applied the generalized coordinates to move find the position and orientation of the model's segments.
         Here, we assume that the parent is always defined before the child in the model.
         """
-        if len(q.shape) == 1:
+        if q is None:
+            q = np.zeros((self.nb_q, 1))
+        elif len(q.shape) == 1:
             q = q[:, np.newaxis]
         elif len(q.shape) > 2:
             raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
