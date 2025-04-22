@@ -397,7 +397,7 @@ class Score:
         # Fill final RT
         optimal_rt = np.zeros((4, 4, nb_frames))
         optimal_rt[:3, :3, :] = rotation
-        optimal_rt[:3, 3, :] = mean_markers[:, np.newaxis, np.newaxis]
+        optimal_rt[:3, 3, :] = mean_markers[:, np.newaxis]
         optimal_rt[3, 3, :] = 1
 
         # for i_frame in range(nb_frames):
@@ -412,7 +412,7 @@ class Score:
             static_local = rotation_init[:3, :3].T @ (static_markers[:, i_marker] - mean_static_markers.squeeze())
             for i_frame in range(nb_frames):
                 current_local = rotation[:3, :, i_frame].T @ (
-                    markers[:, i_marker, i_frame] - np.nanmean(mean_markers, axis=2)[:, 0]
+                    markers[:, i_marker, i_frame] - mean_markers
                 )
                 residual[i_frame, i_marker] = np.linalg.norm(static_local - current_local)
 
