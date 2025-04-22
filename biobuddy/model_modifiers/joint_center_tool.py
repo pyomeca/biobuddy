@@ -302,13 +302,9 @@ class Score:
             Q[3, 3, i_frame] = trace_S
 
         Y = np.ones((4, nb_frames))
-        YtQY = np.zeros((nb_frames,))
-        for i_frame in range(nb_frames):
-            YtQY[i_frame] = Y[:, i_frame].T @ Q[:, :, i_frame] @ Y[:, i_frame]
-
         G = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
-            G[:, i_frame] = 0.5 * (Q[:, :, i_frame] @ Y[:, i_frame] - YtQY[i_frame] / 4 * Y[:, i_frame])
+            G[:, i_frame] = 0.5 * (np.dot(Q[:, :, i_frame], Y[:, i_frame]) - np.dot(np.dot(np.dot(Y[i_frame].T, Q[:, :, i_frame]), Y[i_frame]) / 4, Y[:, i_frame]))
 
         Yj, Zj, Gj = Y.copy(), G.copy(), G.copy()
         for _ in range(200):
@@ -318,57 +314,37 @@ class Score:
 
             Yi, Zi, Gi = Yj.copy(), Zj.copy(), Gj.copy()
 
-            ZZi = np.zeros((nb_frames,))
-            YYi = np.zeros((nb_frames,))
-            YZi = np.zeros((nb_frames,))
-            ZiQ = np.zeros((4, nb_frames))
-            YiQ = np.zeros((4, nb_frames))
-            ZiQZi = np.zeros((nb_frames,))
-            dot_ZiQ_Yi = np.zeros((nb_frames,))
-            dot_YiQ_Yi = np.zeros((nb_frames,))
             for i_frame in range(nb_frames):
-                ZZi[i_frame] = np.dot(Zi[:, i_frame], Zi[:, i_frame])
-                YYi[i_frame] = np.dot(Yi[:, i_frame], Yi[:, i_frame])
-                YZi[i_frame] = np.dot(Yi[:, i_frame], Zi[:, i_frame])
-                ZiQ[:, i_frame] = Zi[:, i_frame] @ Q[:, :, i_frame]
-                YiQ[:, i_frame] = Yi[:, i_frame] @ Q[:, :, i_frame]
-                ZiQZi[i_frame] = np.dot(ZiQ[:, i_frame], Zi[:, i_frame])
-                dot_ZiQ_Yi[i_frame] = np.dot(ZiQ[:, i_frame], Yi[:, i_frame])
-                dot_YiQ_Yi[i_frame] = np.dot(YiQ[:, i_frame], Yi[:, i_frame])
+                ZZi = np.dot(Zi[:, i_frame].T, Zi[:, i_frame])
+                YYi = np.dot(Yi[:, i_frame].T, Yi[:, i_frame])
+                YZi = np.dot(Yi[:, i_frame].T, Zi[:, i_frame])
+                ZiQ = np.dot(Zi[:, i_frame].T, Q[:, :, i_frame])
+                YiQ = np.dot(Yi[:, i_frame].T, Q[:, :, i_frame])
+                ZiQZi = np.dot(ZiQ, Zi[:, i_frame])
+                dot_ZiQ_Yi = np.dot(ZiQ, Yi[:, i_frame])
+                dot_YiQ_Yi = np.dot(YiQ, Yi[:, i_frame])
 
-            a = YZi * ZiQZi - ZZi * dot_ZiQ_Yi
-            b = YYi * ZiQZi - ZZi * dot_YiQ_Yi
-            c = YYi * dot_ZiQ_Yi - YZi * dot_YiQ_Yi
-            denominator = YYi * ZZi
-            # if any(np.abs(denominator) < 1e-15):
-            #     # Rerun the optimization without the bad indices
-            #     bad_indices = np.where(np.abs(denominator) < 1e-15)[0]
-            #     good_indices = [idx for idx in range(nb_frames) if idx not in bad_indices]
-            #     self._optimal_rt(markers[:, :, good_indices], static_markers, rotation_init)
-            #     _logger.info(f"Removed frames {bad_indices} from the optimal rt computation.")
+                a = np.dot(YZi, ZiQZi) - np.dot(ZZi, dot_ZiQ_Yi)
+                b = np.dot(YYi, ZiQZi) - np.dot(ZZi, dot_YiQ_Yi)
+                c = np.dot(YYi, dot_ZiQ_Yi) - np.dot(YZi, dot_YiQ_Yi)
 
-            delta = ((YYi * ZZi - YZi**2) * b**2 + (YYi * a - ZZi * c) ** 2) / denominator
-            mu = (-b - np.sqrt(delta)) / (2 * a)
-            Yj = Yi + mu * Zi
+                delta = ((np.dot(YYi, ZZi) - YZi**2) * b**2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
+                mu = (-b - np.sqrt(delta)) / (2 * a)
+                Yj[:, i_frame] = Yi[:, i_frame] + mu * Zi[:, i_frame]
+                Gj[:, i_frame] = np.dot(2 / np.dot(Yj[:, i_frame].T, Yj[:, i_frame]), np.dot(Q[:, :, i_frame], Yj[:, i_frame]) - np.dot(np.dot(np.dot(Yj[:, i_frame].T, Q[:, :, i_frame]), Yj[:, i_frame]) / np.dot(Yj[:, i_frame].T, Yj[:, i_frame]), Yj[:, i_frame]))
+                # yk = Yj[:, i_frame]
+                # qk = Q[:, :, i_frame]
+                #
+                # yk_norm_sq = np.dot(yk, yk)
+                # qy = qk @ yk
+                # yq_y = np.dot(yk, qy)
 
-            Gj = np.zeros((4, nb_frames))
-            nu = np.zeros((nb_frames,))
-            Zj = np.zeros((4, nb_frames))
-            for i_frame in range(nb_frames):
-                yk = Yj[:, i_frame]
-                qk = Q[:, :, i_frame]
-
-                yk_norm_sq = np.dot(yk, yk)
-                qy = qk @ yk
-                yq_y = np.dot(yk, qy)
-
-                Gj[:, i_frame] = 2 / yk_norm_sq * (qy - (yq_y / yk_norm_sq) * yk)
+                # Gj[:, i_frame] = 2 / yk_norm_sq * (qy - (yq_y / yk_norm_sq) * yk)
 
                 numerator = np.dot(Gj[:, i_frame], Gj[:, i_frame] - Gi[:, i_frame])
                 denominator = np.dot(Gi[:, i_frame], Gi[:, i_frame])
-                nu_k = numerator / denominator if denominator != 0 else 0
-                nu[i_frame] = nu_k
-                Zj[:, i_frame] = Gj[:, i_frame] + nu_k * Zi[:, i_frame]
+                nu = numerator / denominator if denominator != 0 else 0
+                Zj[:, i_frame] = Gj[:, i_frame] + nu * Zi[:, i_frame]
 
         # Final pose
         X = np.zeros_like(Yj)
