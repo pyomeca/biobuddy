@@ -267,7 +267,7 @@ class Score:
         static_centered = static_markers - mean_static_markers
 
         static_quaternion_scalar = np.sqrt((1 + np.trace(rotation_init[:3, :3])) / 4)
-        static_quaternion_vector = inv_ppvect((rotation_init[:3, :3] - rotation_init[:3, :3].T) / (4 * static_quaternion_scalar))
+        static_quaternion_vector = inv_ppvect((rotation_init[:3, :3] - rotation_init[:3, :3].T) / 4 / static_quaternion_scalar)
         # T0 = np.mean(markers[:, :, 0], axis=1, keepdims=True)
 
         F = np.zeros((3, 3, nb_frames))
@@ -288,19 +288,18 @@ class Score:
                         f"{np.linalg.norm(current_static_marker_centered)} during the static trial and "
                         f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial."
                     )
-                F[:, :, i_frame] += np.outer(current_functional_marker_centered, current_static_marker_centered)
+                F[:, :, i_frame] += np.dot(current_functional_marker_centered, current_static_marker_centered)
 
         S = 0.5 * (F + np.transpose(F, (1, 0, 2)))
-        W = 0.5 * (F - np.transpose(F, (1, 0, 2)))
-        W_vec = np.array([W[2, 1, :], W[0, 2, :], W[1, 0, :]]).reshape(3, 1, nb_frames)
-
+        W = (F - np.transpose(F, (1, 0, 2)))
+        W_vec = np.array([W[2, 1, :], W[0, 2, :], W[1, 0, :]])
         Q = np.zeros((4, 4, nb_frames))
-        I = np.eye(3).reshape(3, 3, 1)
-        trace_S = np.trace(S, axis1=0, axis2=1).reshape(1, 1, nb_frames)
-        Q[:3, :3, :] = 2 * S - trace_S * I
-        Q[:3, 3, :] = W_vec[:, 0, :]
-        Q[3, :3, :] = np.transpose(W_vec, (1, 0, 2))
-        Q[3, 3, :] = trace_S.flatten()
+        for i_frame in range(nb_frames):
+            trace_S = np.trace(S[:, :, i_frame])
+            Q[:3, :3, i_frame] = 2 * S[:, :, i_frame] - trace_S * np.identity(3)
+            Q[:3, 3, i_frame] = W_vec[:, i_frame]
+            Q[3, :3, i_frame] = np.transpose(W_vec[:, i_frame])
+            Q[3, 3, i_frame] = trace_S
 
         Y = np.ones((4, nb_frames))
         YtQY = np.zeros((nb_frames,))
@@ -418,7 +417,11 @@ class Score:
         optimal_rt = np.zeros((4, 4, nb_frames))
         optimal_rt[:3, :3, :] = rotation
         for i_frame in range(nb_frames):
-            optimal_rt[:3, 3, i_frame] = mean_static_markers[:, 0, 0]
+            # vector_from_static_center_to_joint: np.ndarray
+            # center_position_this_frame = np.nanmean(markers[:, :, i_frame], axis=1)
+            # translation_for_joint = np.dot(rotation[:3, :3, i_frame], vector_from_static_center_to_joint)
+            # optimal_rt[:3, 3, i_frame] = center_position_this_frame + translation_for_joint
+            optimal_rt[:3, 3, i_frame] = np.nanmean(markers[:, :, i_frame], axis=1)
         optimal_rt[3, 3, :] = 1
 
         residual = np.full((nb_frames, nb_markers), np.nan)
@@ -432,19 +435,25 @@ class Score:
 
         return optimal_rt  # , Rd, residual
 
-    def _rt_from_trial(self) -> tuple[np.ndarray, np.ndarray]:
+    def _rt_from_trial(self, original_model: "BiomechanicalModelReal") -> tuple[np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
-
-        Parameters
-        ----------
-        original_model
-            The scaled model
-
-        Returns
-        ----------
-
         """
+
+        # parent_markers_indices = original_model.markers_indices(self.parent_marker_names)
+        # parent_markers_static = original_model.markers_in_global(np.zeros((original_model.nb_q, )))[:3, parent_markers_indices]
+        # center_parent_markers_static = np.mean(parent_markers_static, axis=1)[:, 0]
+        # current_parent_joint_position = original_model.segment_coordinate_system_in_global(self.parent_name)[:3, 3, 0]
+        # vector_from_parent_center_to_joint = current_parent_joint_position - center_parent_markers_static
+        #
+        # child_markers_indices = original_model.markers_indices(self.child_marker_names)
+        # child_markers_static = original_model.markers_in_global(np.zeros((original_model.nb_q,)))[:3,
+        #                         child_markers_indices]
+        # center_child_markers_static = np.mean(child_markers_static, axis=1)[:, 0]
+        # current_child_joint_position = original_model.segment_coordinate_system_in_global(self.child_name)[:3, 3, 0]
+        # vector_from_child_center_to_joint = current_child_joint_position - center_child_markers_static
+
+
         # # Marker positions in the local
         # parent_jcs_in_global = RotoTransMatrix()
         # parent_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(self.parent_name)[:, :, 0]
@@ -466,8 +475,8 @@ class Score:
         #         child_markers_local[:, i_marker, i_frame] = child_jcs_in_global.inverse @ child_markers_global[:, i_marker, i_frame]
         # mean_child_markers_local = np.nanmean(child_markers_local, axis=2)
 
-        mean_parent_markers = np.nanmean(self.parent_markers_global, axis=2)
-        mean_child_markers = np.nanmean(self.child_markers_global, axis=2)
+        # mean_parent_markers = np.nanmean(self.parent_markers_global, axis=2)
+        # mean_child_markers = np.nanmean(self.child_markers_global, axis=2)
 
         # parent_marker_groups = self._four_groups(mean_parent_markers)
         # child_marker_groups = self._four_groups(mean_child_markers)
@@ -482,12 +491,14 @@ class Score:
         rt_parent = self._optimal_rt(
             self.parent_markers_global,
             self.parent_static_markers,
+            # vector_from_parent_center_to_joint,
             parent_initial_rotation,
             marker_names=self.parent_marker_names,
         )
         rt_child = self._optimal_rt(
             self.child_markers_global,
             self.child_static_markers,
+            # vector_from_child_center_to_joint,
             child_initial_rotation,
             marker_names=self.child_marker_names,
         )
@@ -606,7 +617,7 @@ class Score:
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial using the current model to identify the orientation of the segments
-        rt_parent, rt_child = self._rt_from_trial()
+        rt_parent, rt_child = self._rt_from_trial(original_model)
 
         # Apply the algo to identify the joint center
         cor_in_global = np.hstack((self._score_algorithm(rt_parent, rt_child), 1))
