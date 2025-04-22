@@ -260,11 +260,29 @@ class Score:
         if len(marker_names) != nb_markers:
             raise RuntimeError(f"The marker_names {marker_names} do not match the number of markers {nb_markers}.")
 
-        mean_markers = np.mean(markers, axis=1, keepdims=True)
         mean_static_markers = np.mean(static_markers, axis=1, keepdims=True)
-
-        functional_centered = markers - mean_markers
         static_centered = static_markers - mean_static_markers
+
+        functional_mean_markers_each_frame = np.nanmean(markers, axis=1, keepdims=True)
+        for i_marker, marker_name in enumerate(marker_names):
+            for i_frame in range(nb_frames):
+                current_functional_marker_centered = markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, 0, i_frame]
+                if (
+                    np.abs(
+                        np.linalg.norm(static_centered[:, i_marker, 0])
+                        - np.linalg.norm(current_functional_marker_centered)
+                    )
+                    > 0.05
+                ):
+                    raise RuntimeError(
+                        f"The marker {marker_name} seem to move during the functional trial."
+                        f"The distance between the center and this marker is "
+                        f"{np.linalg.norm(static_centered)} during the static trial and "
+                        f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial."
+                    )
+
+        mean_markers = np.mean(np.nanmean(markers, axis=1), axis=1)
+        functional_centered = markers - mean_markers[:, np.newaxis, np.newaxis]
 
         static_quaternion_scalar = np.sqrt((1 + np.trace(rotation_init[:3, :3])) / 4)
         static_quaternion_vector = inv_ppvect((rotation_init[:3, :3] - rotation_init[:3, :3].T) / 4 / static_quaternion_scalar)
@@ -275,20 +293,7 @@ class Score:
             current_static_marker_centered = static_centered[:3, i_marker, 0]
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = functional_centered[:3, i_marker, i_frame]
-                if (
-                    np.abs(
-                        np.linalg.norm(current_static_marker_centered)
-                        - np.linalg.norm(current_functional_marker_centered)
-                    )
-                    > 0.05
-                ):
-                    raise RuntimeError(
-                        f"The marker {marker_name} seem to move during the functional trial."
-                        f"The distance between the center and this marker is "
-                        f"{np.linalg.norm(current_static_marker_centered)} during the static trial and "
-                        f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial."
-                    )
-                F[:, :, i_frame] += np.dot(current_functional_marker_centered, current_static_marker_centered)
+                F[:, :, i_frame] += np.outer(current_functional_marker_centered, current_static_marker_centered)
 
         S = 0.5 * (F + np.transpose(F, (1, 0, 2)))
         W = (F - np.transpose(F, (1, 0, 2)))
@@ -392,13 +397,15 @@ class Score:
         # Fill final RT
         optimal_rt = np.zeros((4, 4, nb_frames))
         optimal_rt[:3, :3, :] = rotation
-        for i_frame in range(nb_frames):
+        optimal_rt[:3, 3, :] = mean_markers[:, np.newaxis, np.newaxis]
+        optimal_rt[3, 3, :] = 1
+
+        # for i_frame in range(nb_frames):
             # vector_from_static_center_to_joint: np.ndarray
             # center_position_this_frame = np.nanmean(markers[:, :, i_frame], axis=1)
             # translation_for_joint = np.dot(rotation[:3, :3, i_frame], vector_from_static_center_to_joint)
             # optimal_rt[:3, 3, i_frame] = center_position_this_frame + translation_for_joint
-            optimal_rt[:3, 3, i_frame] = np.nanmean(markers[:, :, i_frame], axis=1)
-        optimal_rt[3, 3, :] = 1
+            # optimal_rt[:3, 3, i_frame] = np.mean(markers[:, i_frame], axis=1)
 
         residual = np.full((nb_frames, nb_markers), np.nan)
         for i_marker in range(nb_markers):
