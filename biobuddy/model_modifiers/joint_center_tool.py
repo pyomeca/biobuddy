@@ -309,7 +309,7 @@ class Score:
         Y = np.ones((4, nb_frames))
         G = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
-            G[:, i_frame] = 0.5 * (np.dot(Q[:, :, i_frame], Y[:, i_frame]) - np.dot(np.dot(np.dot(Y[i_frame].T, Q[:, :, i_frame]), Y[i_frame]) / 4, Y[:, i_frame]))
+            G[:, i_frame] = 0.5 * (np.dot(Q[:, :, i_frame], Y[:, i_frame]) - np.dot(np.dot(np.dot(Y[:, i_frame].T, Q[:, :, i_frame]), Y[:, i_frame]) / 4, Y[:, i_frame]))
 
         Yj, Zj, Gj = Y.copy(), G.copy(), G.copy()
         for _ in range(200):
