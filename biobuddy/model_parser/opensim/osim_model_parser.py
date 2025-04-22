@@ -24,7 +24,7 @@ from ...utils.linear_algebra import (
     compute_matrix_rotation,
     is_ortho_basis,
     ortho_norm_basis,
-    get_closest_rotation_matrix,
+    get_closest_rt_matrix,
 )
 from ...utils.rotations import Rotations
 from ...utils.translations import Translations
@@ -520,7 +520,7 @@ class OsimModelParser:
             rotation_matrix = frame_offset.get_rotation_matrix()
             rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
             segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
-                rt_matrix=get_closest_rotation_matrix(rt_matrix), is_scs_local=True
+                rt_matrix=get_closest_rt_matrix(rt_matrix), is_scs_local=True
             )
         return segment_coordinate_system
 

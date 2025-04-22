@@ -4,7 +4,7 @@ import numpy as np
 from scipy import optimize
 from functools import wraps
 
-from ...utils.linear_algebra import RotoTransMatrix, get_closest_rotation_matrix, point_from_local_to_global
+from ...utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix, point_from_local_to_global
 
 _logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class ModelDynamics:
             parent_scs.rt_matrix = self.segment_coordinate_system_in_global(segment_name=parent_name)
             inv_parent_scs = parent_scs.inverse
             scs_in_local = inv_parent_scs @ self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-            return get_closest_rotation_matrix(scs_in_local)[:, :, np.newaxis]
+            return get_closest_rt_matrix(scs_in_local)[:, :, np.newaxis]
 
     @requires_initialization
     def segment_coordinate_system_in_global(self, segment_name: str) -> np.ndarray:
@@ -93,7 +93,7 @@ class ModelDynamics:
                 current_segment = self.segments[current_parent_name]
                 rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
 
-            return get_closest_rotation_matrix(rt_to_global)[:, :, np.newaxis]
+            return get_closest_rt_matrix(rt_to_global)[:, :, np.newaxis]
 
     @staticmethod
     def _marker_residual(
@@ -218,10 +218,10 @@ class ModelDynamics:
             q_regularization_weight = 0.0
 
         optimal_q = np.zeros((self.nb_q, nb_frames))
-        for f in range(nb_frames):
+        for i_frame in range(nb_frames):
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
-                    model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, f], with_biorbd
+                    model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, i_frame], with_biorbd
                 ),
                 jac=lambda q: self._marker_jacobian(model_to_use, q_regularization_weight, q, with_biorbd),
                 x0=init,
@@ -229,7 +229,7 @@ class ModelDynamics:
                 xtol=1e-6,
                 tr_options=dict(disp=False),
             )
-            optimal_q[:, f] = sol.x
+            optimal_q[:, i_frame] = sol.x
 
         return optimal_q
 

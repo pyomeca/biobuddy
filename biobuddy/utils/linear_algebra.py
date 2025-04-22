@@ -178,10 +178,15 @@ def rot2eul(rot) -> np.ndarray:
     return np.array((alpha, beta, gamma))
 
 
-def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
+def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     """
     Projects a rotation matrix to the closest rotation matrix using Singular Value Decomposition (SVD).
     """
+    if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) > 0.1:
+        raise RuntimeError(f"The rotation matrix {rt_matrix[:3, :3]} is far from SO(3).")
+    if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
+        raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
+
     if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) < 1e-6:
         return rt_matrix
 
