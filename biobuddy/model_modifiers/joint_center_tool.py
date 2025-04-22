@@ -273,6 +273,7 @@ class Score:
         optimal_rt[:3, 3, :] = mean_markers[:, np.newaxis]
         optimal_rt[3, 3, :] = 1
 
+        mean_static_markers_in_global = np.mean(static_markers_in_global, axis=1)
         residual = np.full((nb_frames, nb_markers), np.nan)
         for i_marker in range(nb_markers):
             static_local = rotation_init[:3, :3].T @ (static_markers_in_global[:, i_marker] - mean_static_markers_in_global.squeeze())
@@ -379,14 +380,26 @@ class Score:
 
         if self.method == "numerical":
             # rt are in the global but are positioned at the center of the markers
-            rt_parent = self._optimal_rt(
+            rt_parent_functional = self._optimal_rt(
                 self.parent_markers_global,
                 self.parent_static_markers_in_global,
                 parent_initial_rotation,
                 marker_names=self.parent_marker_names,
             )
-            rt_child = self._optimal_rt(
+            rt_child_functional = self._optimal_rt(
                 self.child_markers_global,
+                self.child_static_markers_in_global,
+                child_initial_rotation,
+                marker_names=self.child_marker_names,
+            )
+            rt_parent_static = self._optimal_rt(
+                self.parent_static_markers_in_global,
+                self.parent_static_markers_in_global,
+                parent_initial_rotation,
+                marker_names=self.parent_marker_names,
+            )
+            rt_child_static = self._optimal_rt(
+                self.child_static_markers_in_global,
                 self.child_static_markers_in_global,
                 child_initial_rotation,
                 marker_names=self.child_marker_names,
@@ -491,30 +504,10 @@ class Score:
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial using the current model to identify the orientation of the segments
-        # rt_parent, rt_child = self._rt_from_trial()
         rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self._rt_from_trial()
 
         cor_in_global, cor_in_parent, cor_in_child = self._score_algorithm(rt_parent_functional, rt_child_functional)
         cor_global_static = 0.5 * (rt_parent_static[:, :, 0] @ np.hstack((cor_in_parent, 1)) + rt_child_static[:, :, 0] @ np.hstack((cor_in_child, 1)))
-
-        # rt_from_functional_to_static
-        # Apply the algo to identify the joint center
-        # cor_in_parent = np.hstack((self._score_algorithm(rt_parent, rt_child), 1))
-        # old_parent_jcs_in_global = new_model.segment_coordinate_system_in_global(self.parent_name)
-        # rt_from_functional_to_static = rt_parent[] @
-        # if self.method == "numerical":
-        #     # The CoR is expressed at the center of the markers during the functional trial
-        #     parent_mean_position = np.nanmean(self.parent_markers_global, axis=(1, 2))
-        #     global_rt_parent = deepcopy(rt_parent)
-        #     global_rt_parent[:3, 3] += parent_mean_position
-        #     cor_in_global = global_rt_parent @ np.hstack((cor_in_parent, 1))
-        # elif self.method == "optimization":
-        #     # The CoR is expressed at the old joint center during the functional trial
-        #     cor_in_global = old_parent_jcs_in_global @ np.hstack((cor_in_parent, 1))
-        # else:
-        #     raise RuntimeError(f"The method {self.method} is not recognized.")
-
-        # cor_in_global = old_parent_jcs_in_global[:, :, 0] @ cor_in_parent
 
         # Replace the model components in the new local reference frame
         parent_jcs_in_global = RotoTransMatrix()
