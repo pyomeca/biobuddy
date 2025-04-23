@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import itertools
 from scipy import optimize
+from scipy.linalg import svd
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
@@ -438,7 +439,7 @@ class Score:
 
     def _score_algorithm(
         self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
@@ -461,6 +462,8 @@ class Score:
         # Build linear system A x = b to solve for CoR positions in child and parent segment frames
         A = np.zeros((3 * nb_frames, 6))
         b = np.zeros((3 * nb_frames,))
+        A[:, :] = np.nan
+        b[:] = np.nan
 
         for i in range(nb_frames):
             parent_rot = parent_rt[:3, :3, i]
@@ -472,10 +475,18 @@ class Score:
             A[3 * i : 3 * (i + 1), 3:6] = -parent_rot
             b[3 * i : 3 * (i + 1)] = parent_trans - child_trans
 
-        # Solve via least squares: A x = b → x = [CoR2_local; CoR1_local]
-        x, residuals_ls, _, _ = np.linalg.lstsq(A, b, rcond=None)
-        cor_child_local = x[:3]
-        cor_parent_local = x[3:]
+        # Remove nans
+        valid_rows = ~np.isnan(A[:, 0])
+        A_valid = A[valid_rows, :]
+        b_valid = b[valid_rows]
+
+        # Compute SVD
+        U, S, Vh = svd(A_valid, full_matrices=False)
+        V = Vh.T
+
+        CoR = V @ np.diag(1 / S) @ U.T @ b_valid
+        cor_child_local = CoR[:3]
+        cor_parent_local = CoR[3:]
 
         # Compute transformed CoR positions in global frame
         cor_parent_global = np.zeros((4, parent_rt.shape[2]))
@@ -487,10 +498,14 @@ class Score:
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
         if recursive_outlier_removal:
+            # The first time, remove the outliers
             threshold = np.mean(residuals) + 1.5 * np.std(residuals)
             valid = residuals < threshold
             if np.sum(valid) < nb_frames:
-                return self._score_algorithm(parent_rt[:, :, valid], child_rt[:, :, valid], recursive_outlier_removal)
+                _logger.info(
+                    f"\nRemoving {nb_frames - np.sum(valid)} frames"
+                )
+                return self._score_algorithm(parent_rt[:, :, valid], child_rt[:, :, valid], recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -498,7 +513,7 @@ class Score:
         _logger.info(
             f"\nThere is a residual distance between the parent's and the child's CoR position of : {np.nanmean(residuals)} +- {np.nanstd(residuals)}"
         )
-        return cor_mean_global, cor_parent_local, cor_child_local
+        return cor_mean_global, cor_parent_local, cor_child_local, parent_rt, child_rt
 
 
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
@@ -506,8 +521,37 @@ class Score:
         # Reconstruct the trial using the current model to identify the orientation of the segments
         rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self._rt_from_trial()
 
-        cor_in_global, cor_in_parent, cor_in_child = self._score_algorithm(rt_parent_functional, rt_child_functional)
-        cor_global_static = 0.5 * (rt_parent_static[:, :, 0] @ np.hstack((cor_in_parent, 1)) + rt_child_static[:, :, 0] @ np.hstack((cor_in_child, 1)))
+        cor_in_global, cor_in_parent, cor_in_child, associated_parent_rt, associated_child_rt = self._score_algorithm(rt_parent_functional, rt_child_functional)
+        print("Difference in CoR position between parent and child is large !!!!")
+        print("associated_parent_rt[:, :, 0] @ np.hstack((cor_in_parent, 1)) : ", associated_parent_rt[:, :, 0] @ np.hstack((cor_in_parent, 1)))
+        print("associated_child_rt[:, :, 0] @ np.hstack((cor_in_child, 1)) : ", associated_child_rt[:, :, 0] @ np.hstack((cor_in_child, 1)))
+
+        a = 0.5 * (rt_parent_static[:, :, 0] @ np.hstack((cor_in_parent, 1)) + rt_child_static[:, :, 0] @ np.hstack((cor_in_child, 1)))
+
+        nb_frames = associated_parent_rt.shape[2]
+        b = np.zeros((4, nb_frames))
+        c = np.zeros((4, nb_frames))
+        d = np.zeros((4, nb_frames))
+        for i_frame in range(nb_frames):
+            b[:, i_frame] = 0.5 * (associated_parent_rt[:, :, i_frame] @ np.hstack((cor_in_parent, 1)) + associated_child_rt[:, :, i_frame] @ np.hstack((cor_in_child, 1)))
+
+            parent_functional = RotoTransMatrix()
+            parent_functional.rt_matrix = associated_parent_rt[:, :, i_frame]
+            rt_functional_to_static_parent = RotoTransMatrix()
+            rt_functional_to_static_parent.rt_matrix = parent_functional.inverse @ rt_parent_static[:, :, 0]
+
+            child_functional = RotoTransMatrix()
+            child_functional.rt_matrix = associated_child_rt[:, :, i_frame]
+            rt_functional_to_static_child = RotoTransMatrix()
+            rt_functional_to_static_child.rt_matrix = child_functional.inverse @ rt_child_static[:, :, 0]
+
+            c[:, i_frame] = rt_functional_to_static_parent.rt_matrix @ np.hstack((cor_in_parent, 1))
+            d[:, i_frame] = rt_functional_to_static_child.rt_matrix @ np.hstack((cor_in_child, 1))
+
+        print(f"a = {a}")
+        print(f"b = {np.mean(b, axis=1)}")
+        print(f"c = {np.mean(c, axis=1)}")
+        print(f"d = {np.mean(d, axis=1)}")
 
         # Replace the model components in the new local reference frame
         parent_jcs_in_global = RotoTransMatrix()
