@@ -167,6 +167,7 @@ class ModelDynamics:
         marker_names: list[str],
         q_regularization_weight: float = None,
         q_target: np.ndarray = None,
+        method: str = "lm",
     ) -> np.ndarray:
         """
         Solve the inverse kinematics problem using least squares optimization.
@@ -184,6 +185,8 @@ class ModelDynamics:
             The weight of the regularization term. If None, no regularization is applied.
         q_target
             The target posture to match. If None, the target posture is set to zero.
+        method
+            The least square method to use. By default, the Levenberg-Marquardt method is used.
         """
 
         try:
@@ -225,7 +228,7 @@ class ModelDynamics:
                 ),
                 jac=lambda q: self._marker_jacobian(model_to_use, q_regularization_weight, q, with_biorbd),
                 x0=init,
-                method="lm",
+                method=method,
                 xtol=1e-6,
                 tr_options=dict(disp=False),
             )

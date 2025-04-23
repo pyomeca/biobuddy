@@ -68,6 +68,7 @@ class ScaleTool:
         initial_static_pose: np.ndarray = None,
         make_static_pose_the_models_zero: bool = True,
         visualize_optimal_static_pose: bool = False,
+        method: str = "lm",
     ) -> BiomechanicalModelReal:
         """
         Scale the model using the configuration defined in the ScaleTool.
@@ -91,6 +92,8 @@ class ScaleTool:
             If True, the static posture of the model will be set to zero after scaling. Thus when a vector of zero is sent ot the model, it will be in the same posture as the subject during the static trisl.
         visualize_optimal_static_pose
             If True, the optimal static pose will be visualized using pyorerun. Itis always recommended to visually inspect the result of the scaling procedure to make sure it went all right.
+        method
+            The lease square method to use. (default: "lm", other options: "trf" or "dogbox")
         """
 
         # Check file format
@@ -134,6 +137,7 @@ class ScaleTool:
             initial_static_pose,
             make_static_pose_the_models_zero,
             visualize_optimal_static_pose,
+            method,
         )
 
         self.scaled_model.segments_rt_to_local()
@@ -463,6 +467,7 @@ class ScaleTool:
         q_regularization_weight: float | None,
         initial_static_pose: np.ndarray | None,
         visualize_optimal_static_pose: bool,
+        method: str,
     ) -> np.ndarray:
 
         optimal_q = self.scaled_model.inverse_kinematics(
@@ -470,6 +475,7 @@ class ScaleTool:
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
             q_target=initial_static_pose,
+            method=method,
         )
 
         if visualize_optimal_static_pose:
@@ -558,9 +564,10 @@ class ScaleTool:
         initial_static_pose: np.ndarray | None,
         make_static_pose_the_models_zero: bool,
         visualize_optimal_static_pose: bool,
+        method: str,
     ):
         q_static = self.find_static_pose(
-            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose
+            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose, method
         )
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
