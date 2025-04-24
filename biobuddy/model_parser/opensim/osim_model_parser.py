@@ -368,6 +368,8 @@ class OsimModelParser:
                     maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation.
                 )
 
+                self.biomechanical_model_real.add_muscle(muscle_real)
+
                 # Add via points if any
                 for via_point in muscle.via_point:
                     via_real = ViaPointReal(
@@ -378,8 +380,6 @@ class OsimModelParser:
                         position=np.array([float(v) for v in via_point.position.split()]),
                     )
                     self.biomechanical_model_real.add_via_point(via_real)
-
-                self.biomechanical_model_real.add_muscle(muscle_real)
 
             except Exception as e:
                 self.warnings.append(f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped.")
@@ -671,7 +671,7 @@ class OsimModelParser:
                 rotations=rotations,
                 q_ranges=(
                     self.get_q_range(q_range)
-                    if (translations != Translations.NONE and rotations != Rotations.NONE)
+                    if (translations != Translations.NONE or rotations != Rotations.NONE)
                     else None
                 ),
                 qdot_ranges=None,  # OpenSim does not handle qdot ranges

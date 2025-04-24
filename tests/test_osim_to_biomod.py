@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import opensim as osim
 import pytest
+import numpy.testing as npt
 import lxml
 
 from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
@@ -53,6 +54,56 @@ class ModelEvaluation:
 
     def from_states(self, states, plot: bool = True) -> list:
         pass
+
+    def test_segment_names(self):
+
+        # Test number of segments
+        nb_segments = self.osim_model.getNumBodies()
+        biorbd_segment_names = [self.biomod_model.segment(i).name().to_string() for i in range(self.biomod_model.nbSegment())]
+        biorbd_parent_names = [self.biomod_model.segment(i).parent().to_string() for i in range(self.biomod_model.nbSegment())]
+        assert len(biorbd_segment_names) >= nb_segments
+
+        for i_segment in range(nb_segments):
+
+            # Test segment names
+            current_segment = self.osim_model.get_BodySet().get(i_segment)
+            osim_segment_name = current_segment.getName()
+            assert osim_segment_name in biorbd_segment_names
+
+            # Test parent
+            socket_names = [current_segment.getSocketNames().get(i) for i in range(current_segment.getNumSockets())]
+            if 'parent_frame' in socket_names:
+                osim_parent = current_segment.getSocket('parent_frame').getConnecteeName()
+
+                # Find corresponding parent in Biorbd (only if it's in the list)
+                assert osim_parent in biorbd_parent_names
+
+        # TODO: Test meshes
+
+        for i_joint in range(self.osim_model.getNumJoints()):
+            current_joint = self.osim_model.getJointSet().get(i_joint)
+            print(current_joint.getName())
+
+        # Test DoFs
+        osim_dofs = self.osim_model.getCoordinateSet()
+        ordered_osim_idx = self._reorder_osim_coordinate()
+        assert self.osim_model.getCoordinateSet().getSize() == self.biomod_model.nbQ()
+
+        min_bound_biorbd = []
+        max_bound_biorbd = []
+        for segment in self.biomod_model.segments():
+            this_range = segment.QRanges()
+            for i in range(len(this_range)):
+                min_bound_biorbd += [segment.QRanges()[i].min()]
+                max_bound_biorbd += [segment.QRanges()[i].max()]
+
+        for i_dof_biomod, i_dof_osim in enumerate(ordered_osim_idx):
+            # Test ranges
+            min_bound_osim = osim_dofs.get(i_dof_osim).get_range(0)
+            max_bound_osim  = osim_dofs.get(i_dof_osim).get_range(1)
+            npt.assert_almost_equal(min_bound_osim, min_bound_biorbd[i_dof_biomod], decimal=5)
+            npt.assert_almost_equal(max_bound_osim, max_bound_biorbd[i_dof_biomod], decimal=5)
+
 
     def _plot_markers(
         self, default_nb_line: int, osim_marker_idx: list, osim_markers: np.ndarray, biorbd_markers: np.ndarray
@@ -472,6 +523,10 @@ def test_translation_osim_to_biomod():
                     nb_muscles = biomod_model.nbMuscles()
 
                     if os.path.join(folder, name) not in translation_and_rotation_dofs:
+                        # Test the components
+                        model_evaluation = ModelEvaluation(biomod=biomod_filepath, osim_model=osim_filepath)
+                        model_evaluation.test_segment_names()
+
                         # Test the position of the markers
                         if nb_markers > 0:
                             kin_test = KinematicsTest(biomod=biomod_filepath, osim_model=osim_filepath)
