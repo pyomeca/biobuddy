@@ -189,7 +189,7 @@ class Score:
             current_static_marker_centered = static_centered[:3, i_marker, 0]
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = functional_centered[:3, i_marker, i_frame]
-                F[:, :, i_frame] += np.dot(current_functional_marker_centered, current_static_marker_centered)
+                F[:, :, i_frame] += current_functional_marker_centered * current_static_marker_centered
 
         S = 0.5 * (F + np.transpose(F, (1, 0, 2)))
         W = (F - np.transpose(F, (1, 0, 2)))
@@ -465,15 +465,15 @@ class Score:
         A[:, :] = np.nan
         b[:] = np.nan
 
-        for i in range(nb_frames):
-            parent_rot = parent_rt[:3, :3, i]
-            child_rot = child_rt[:3, :3, i]
-            parent_trans = parent_rt[:3, 3, i]
-            child_trans = child_rt[:3, 3, i]
+        for i_frame in range(nb_frames):
+            parent_rot = parent_rt[:3, :3, i_frame]
+            child_rot = child_rt[:3, :3, i_frame]
+            parent_trans = parent_rt[:3, 3, i_frame]
+            child_trans = child_rt[:3, 3, i_frame]
 
-            A[3 * i : 3 * (i + 1), 0:3] = child_rot
-            A[3 * i : 3 * (i + 1), 3:6] = -parent_rot
-            b[3 * i : 3 * (i + 1)] = parent_trans - child_trans
+            A[3 * i_frame : 3 * (i_frame + 1), 0:3] = child_rot
+            A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -parent_rot
+            b[3 * i_frame : 3 * (i_frame + 1)] = parent_trans - child_trans
 
         # Remove nans
         valid_rows = ~np.isnan(A[:, 0])
@@ -481,25 +481,27 @@ class Score:
         b_valid = b[valid_rows]
 
         # Compute SVD
-        U, S, Vh = svd(A_valid, full_matrices=False)
-        V = Vh.T
+        U, S, Vt = np.linalg.svd(A_valid, full_matrices=False)
 
-        CoR = V @ np.diag(1 / S) @ U.T @ b_valid
+        # Compute pseudo-inverse solution
+        S_inv = np.diag(1.0 / S)
+        CoR = Vt.T @ S_inv @ U.T @ b_valid
+
         cor_child_local = CoR[:3]
         cor_parent_local = CoR[3:]
 
         # Compute transformed CoR positions in global frame
         cor_parent_global = np.zeros((4, parent_rt.shape[2]))
         cor_child_global = np.zeros((4, child_rt.shape[2]))
-        for i in range(parent_rt.shape[2]):
-            cor_parent_global[:, i] = parent_rt[:, :, i] @ np.hstack((cor_parent_local, 1))
-            cor_child_global[:, i] = child_rt[:, :, i] @ np.hstack((cor_child_local, 1))
+        for i_frame in range(parent_rt.shape[2]):
+            cor_parent_global[:, i_frame] = parent_rt[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
+            cor_child_global[:, i_frame] = child_rt[:, :, i_frame] @ np.hstack((cor_child_local, 1))
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
         if recursive_outlier_removal:
             # The first time, remove the outliers
-            threshold = np.mean(residuals) + 1.5 * np.std(residuals)
+            threshold = np.mean(residuals) + 1.0 * np.std(residuals)
             valid = residuals < threshold
             if np.sum(valid) < nb_frames:
                 _logger.info(
@@ -518,7 +520,7 @@ class Score:
 
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
-        # Reconstruct the trial using the current model to identify the orientation of the segments
+        # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self._rt_from_trial()
 
         cor_in_global, cor_in_parent, cor_in_child, associated_parent_rt, associated_child_rt = self._score_algorithm(rt_parent_functional, rt_child_functional)
