@@ -291,6 +291,17 @@ class ScaleTool:
                     )
                     self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
 
+                # Scale the meshes of the intermediary ghost segments
+                looping_parent_name = self.original_model.segments[segment_name].parent_name  # The current segment's mesh will be scaled later
+                scale_factor = scaling_factors[segment_name].to_vector()
+                while "_parent_offset" not in looping_parent_name:
+                    mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
+                    if mesh_file is not None:
+                        mesh_file.mesh_scale *= scale_factor
+                        mesh_file.mesh_translation *= scale_factor
+                    self.scaled_model.segments[looping_parent_name].mesh_file = mesh_file
+                    looping_parent_name = self.original_model.segments[looping_parent_name].parent_name
+
             # Apply scaling to the current segment
             if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
                 parent_scale_factor = scaling_factors[
