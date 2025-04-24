@@ -292,7 +292,9 @@ class ScaleTool:
                     self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
 
                 # Scale the meshes of the intermediary ghost segments
-                looping_parent_name = self.original_model.segments[segment_name].parent_name  # The current segment's mesh will be scaled later
+                looping_parent_name = self.original_model.segments[
+                    segment_name
+                ].parent_name  # The current segment's mesh will be scaled later
                 scale_factor = scaling_factors[segment_name].to_vector()
                 while "_parent_offset" not in looping_parent_name:
                     mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
@@ -578,7 +580,12 @@ class ScaleTool:
         method: str,
     ):
         q_static = self.find_static_pose(
-            marker_positions, marker_names, q_regularization_weight, initial_static_pose, visualize_optimal_static_pose, method
+            marker_positions,
+            marker_names,
+            q_regularization_weight,
+            initial_static_pose,
+            visualize_optimal_static_pose,
+            method,
         )
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)

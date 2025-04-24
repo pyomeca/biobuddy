@@ -163,9 +163,15 @@ def test_scaling_wholebody():
         print(segment_name)
         # Zero
         if scaled_model.segments[segment_name].inertia_parameters is None:
-            com_biobuddy = np.zeros((3, ))
+            com_biobuddy = np.zeros((3,))
         else:
-            com_biobuddy = scaled_model.segments[segment_name].inertia_parameters.center_of_mass[:3].reshape(3, )
+            com_biobuddy = (
+                scaled_model.segments[segment_name]
+                .inertia_parameters.center_of_mass[:3]
+                .reshape(
+                    3,
+                )
+            )
         com_to_biorbd = scaled_biorbd_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
         com_osim = scaled_osim_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
         npt.assert_almost_equal(com_to_biorbd, com_biobuddy)

@@ -225,11 +225,13 @@ def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -
     qw = quat_scalar
     qx, qy, qz = quat_vector
 
-    rot_matrix = np.array([
-        [1.0 - 2.0 * qy ** 2 - 2.0 * qz ** 2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
-        [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx ** 2 - 2.0 * qz ** 2, 2.0 * qy * qz - 2.0 * qx * qw],
-        [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx ** 2 - 2.0 * qy ** 2],
-    ])
+    rot_matrix = np.array(
+        [
+            [1.0 - 2.0 * qy**2 - 2.0 * qz**2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
+            [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx**2 - 2.0 * qz**2, 2.0 * qy * qz - 2.0 * qx * qw],
+            [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx**2 - 2.0 * qy**2],
+        ]
+    )
 
     if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
         raise RuntimeError("Something went wrong, the rotation matrix computed does not lie in SO(3).")

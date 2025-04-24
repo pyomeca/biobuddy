@@ -59,8 +59,12 @@ class ModelEvaluation:
 
         # Test number of segments
         nb_segments = self.osim_model.getNumBodies()
-        biorbd_segment_names = [self.biomod_model.segment(i).name().to_string() for i in range(self.biomod_model.nbSegment())]
-        biorbd_parent_names = [self.biomod_model.segment(i).parent().to_string() for i in range(self.biomod_model.nbSegment())]
+        biorbd_segment_names = [
+            self.biomod_model.segment(i).name().to_string() for i in range(self.biomod_model.nbSegment())
+        ]
+        biorbd_parent_names = [
+            self.biomod_model.segment(i).parent().to_string() for i in range(self.biomod_model.nbSegment())
+        ]
         assert len(biorbd_segment_names) >= nb_segments
 
         for i_segment in range(nb_segments):
@@ -72,8 +76,8 @@ class ModelEvaluation:
 
             # Test parent
             socket_names = [current_segment.getSocketNames().get(i) for i in range(current_segment.getNumSockets())]
-            if 'parent_frame' in socket_names:
-                osim_parent = current_segment.getSocket('parent_frame').getConnecteeName()
+            if "parent_frame" in socket_names:
+                osim_parent = current_segment.getSocket("parent_frame").getConnecteeName()
 
                 # Find corresponding parent in Biorbd (only if it's in the list)
                 assert osim_parent in biorbd_parent_names
@@ -100,10 +104,9 @@ class ModelEvaluation:
         for i_dof_biomod, i_dof_osim in enumerate(ordered_osim_idx):
             # Test ranges
             min_bound_osim = osim_dofs.get(i_dof_osim).get_range(0)
-            max_bound_osim  = osim_dofs.get(i_dof_osim).get_range(1)
+            max_bound_osim = osim_dofs.get(i_dof_osim).get_range(1)
             npt.assert_almost_equal(min_bound_osim, min_bound_biorbd[i_dof_biomod], decimal=5)
             npt.assert_almost_equal(max_bound_osim, max_bound_biorbd[i_dof_biomod], decimal=5)
-
 
     def _plot_markers(
         self, default_nb_line: int, osim_marker_idx: list, osim_markers: np.ndarray, biorbd_markers: np.ndarray
