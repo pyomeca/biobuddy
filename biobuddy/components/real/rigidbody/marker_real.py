@@ -142,7 +142,7 @@ class MarkerReal:
         out_string += f"\tparent\t{self.parent_name}\n"
 
         p = self.mean_position
-        out_string += f"\tposition\t{p[0]:0.4f}\t{p[1]:0.4f}\t{p[2]:0.4f}\n"
+        out_string += f"\tposition\t{p[0]:0.8f}\t{p[1]:0.8f}\t{p[2]:0.8f}\n"
         out_string += f"\ttechnical\t{1 if self.is_technical else 0}\n"
         out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
         out_string += "endmarker\n"

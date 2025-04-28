@@ -242,7 +242,7 @@ class ScaleTool:
             if self.personalize_mass_distribution:
                 segment_masses[segment_name] = (
                     deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
-                    * scaling_factors[segment_name].to_vector()
+                    * scaling_factors[segment_name].mass
                 )
             else:
                 segment_masses[segment_name] = (

@@ -41,13 +41,15 @@ class ScaleFactor:
 
 
 class AxisWiseScaling:
-    def __init__(self, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
+    def __init__(self, segment_name: str, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
 
         Parameters
         ----------
+        segment_name
+            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -77,6 +79,7 @@ class AxisWiseScaling:
 
     def compute_scale_factors(
         self,
+        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
@@ -86,7 +89,7 @@ class AxisWiseScaling:
 
 
 class SegmentWiseScaling:
-    def __init__(self, axis: Translations, marker_pairs: list[list[str, str]]):
+    def __init__(self, segment_name: str, axis: Translations, marker_pairs: list[list[str, str]]):
         """
         One scaling factor is applied per segment.
         This method is equivalent to OpenSim's method.
@@ -94,6 +97,8 @@ class SegmentWiseScaling:
 
         Parameters
         ----------
+        segment_name
+            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -112,14 +117,11 @@ class SegmentWiseScaling:
 
     def compute_scale_factors(
         self,
+        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
     ) -> ScaleFactor:
-
-        original_marker_names = original_model.marker_names
-        q_zeros = np.zeros((original_model.nb_q, 1))
-        markers = original_model.markers_in_global(q_zeros)
 
         scale_factor = []
         for marker_pair in self.marker_pairs:
@@ -132,8 +134,8 @@ class SegmentWiseScaling:
             )
 
             # Distance between the marker pairs in the original model
-            marker1_position_original = markers[:3, original_marker_names.index(marker_pair[0]), 0]
-            marker2_position_original = markers[:3, original_marker_names.index(marker_pair[1]), 0]
+            marker1_position_original = original_model.segments[segment_name].markers[marker_pair[0]].position[:3]
+            marker2_position_original = original_model.segments[segment_name].markers[marker_pair[1]].position[:3]
             distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
 
             scale_factor += [mean_distance_subject / distance_original]
@@ -167,6 +169,7 @@ class BodyWiseScaling:
 
     def compute_scale_factors(
         self,
+        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
@@ -210,7 +213,7 @@ class SegmentScaling:
     def compute_scaling_factors(
         self, original_model: "BiomechanicalModelReal", marker_positions: np.ndarray, marker_names: list[str]
     ) -> ScaleFactor:
-        return self.scaling_type.compute_scale_factors(original_model, marker_positions, marker_names)
+        return self.scaling_type.compute_scale_factors(self.name, original_model, marker_positions, marker_names)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

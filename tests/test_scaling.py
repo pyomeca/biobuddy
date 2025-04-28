@@ -10,7 +10,7 @@ import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool
+from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
 
 
 def convert_c3d_to_trc(c3d_filepath):
@@ -138,6 +138,43 @@ def test_scaling_wholebody():
 
     q_zeros = np.zeros((42, 10))
     q_random = np.random.rand(42) * 2 * np.pi
+
+
+    # Test the scaling factors
+    c3d_data = C3dData(c3d_path=static_filepath, first_frame=100, last_frame=200)
+    marker_names = c3d_data.marker_names
+    marker_positions = c3d_data.all_marker_positions[:3, :, :]
+    # Pelvis
+    biobuddy_scaling_factors = scale_tool.scaling_segments["pelvis"].compute_scaling_factors(
+        original_model,
+        marker_positions,
+        marker_names)
+    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.002)
+    # Radius Right
+    biobuddy_scaling_factors = scale_tool.scaling_segments["radius_r"].compute_scaling_factors(
+        original_model,
+        marker_positions,
+        marker_names)
+    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.032)
+    # Radius Left
+    biobuddy_scaling_factors = scale_tool.scaling_segments["radius_l"].compute_scaling_factors(
+        original_model,
+        marker_positions,
+        marker_names)
+    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.027)
+    # Tibia Right
+    biobuddy_scaling_factors = scale_tool.scaling_segments["tibia_r"].compute_scaling_factors(
+        original_model,
+        marker_positions,
+        marker_names)
+    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.000)
+    # Tibia Left
+    biobuddy_scaling_factors = scale_tool.scaling_segments["tibia_l"].compute_scaling_factors(
+        original_model,
+        marker_positions,
+        marker_names)
+    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.000)
+
 
     # Total mass
     npt.assert_almost_equal(scaled_osim_model.mass(), 69.2, decimal=5)

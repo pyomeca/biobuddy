@@ -278,7 +278,9 @@ class ModelDynamics:
 
     @requires_initialization
     def markers_in_global(self, q: np.ndarray = None) -> np.ndarray:
-
+        """
+        TODO: to be tested ?
+        """
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
             q = q[:, np.newaxis]

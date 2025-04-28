@@ -120,7 +120,7 @@ class OsimConfigurationParser:
                         )
 
                 elif match_tag(element, "preserve_mass_distribution"):
-                    self.scale_tool.personalize_mass_distribution = str_to_bool(element.text)
+                    self.scale_tool.personalize_mass_distribution = not str_to_bool(element.text)
 
                 elif match_tag(element, "scaling_order"):
                     if not match_text(element, "measurements"):
@@ -231,7 +231,7 @@ class OsimConfigurationParser:
     ):
         self.scale_tool.add_scaling_segment(
             SegmentScaling(
-                name=segment_name, scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set)
+                name=segment_name, scaling_type=SegmentWiseScaling(segment_name=segment_name, axis=body_scale_set, marker_pairs=marker_pair_set)
             )
         )
 
