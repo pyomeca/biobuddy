@@ -4,6 +4,8 @@ TODO: Add the biomod sclaing configuration + test it
 
 import os
 import pytest
+import opensim as osim
+import shutil
 
 import ezc3d
 import biorbd
@@ -82,25 +84,44 @@ def test_scaling_wholebody():
 
     np.random.seed(42)
 
-    # Paths
+    # --- Paths --- #
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cleaned_relative_path = "Geometry_cleaned"
-
     osim_filepath = parent_path + "/examples/models/wholebody.osim"
     xml_filepath = parent_path + "/examples/models/wholebody.xml"
     scaled_biomod_filepath = parent_path + "/examples/models/wholebody_scaled.bioMod"
     converted_scaled_osim_filepath = parent_path + "/examples/models/wholebody_converted_scaled.bioMod"
     scaled_osim_filepath = parent_path + "/examples/models/wholebody_scaled.osim"
     static_filepath = parent_path + "/examples/data/static.c3d"
+    trc_file_path = parent_path + "/examples/data/static.trc"
 
-    # # Convert the vtp mesh files
+    # --- Convert the vtp mesh files --- #
     # geometry_path = parent_path + "/external/opensim-models/Geometry"
     # cleaned_geometry_path = parent_path + "/models/Geometry_cleaned"
     # mesh_parser = MeshParser(geometry_path)
     # mesh_parser.process_meshes(fail_on_error=False)
     # mesh_parser.write(cleaned_geometry_path, MeshFormat.VTP)
 
-    # Read the .osim file
+    # --- Scale in opensim ---#
+    # convert_c3d_to_trc(static_filepath)  # To translate c3d to trc
+    shutil.copyfile(trc_file_path, parent_path + "/examples/models/static.trc")
+    shutil.copyfile(xml_filepath, "wholebody.xml")
+    shutil.copyfile(osim_filepath, "wholebody.osim")
+    opensim_tool = osim.ScaleTool(xml_filepath)
+    opensim_tool.run()
+
+    # --- Read the model scaled in OpenSim and translate to bioMod --- #
+    osim_model_scaled = BiomechanicalModelReal.from_osim(
+        filepath=parent_path + "/examples/models/scaled.osim",
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir=cleaned_relative_path,
+    )
+    osim_model_scaled.to_biomod(converted_scaled_osim_filepath)
+    scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
+
+
+    # --- Scale in BioBuddy --- #
     original_model = BiomechanicalModelReal.from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
@@ -108,74 +129,51 @@ def test_scaling_wholebody():
         mesh_dir=cleaned_relative_path,
     )
 
-    # Scale the model in BioBuddy
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
         filepath=static_filepath,
         first_frame=0,
         last_frame=531,
         mass=69.2,
-        q_regularization_weight=0.01,
+        q_regularization_weight=0.1,
         make_static_pose_the_models_zero=False,
     )
     scaled_model.to_biomod(scaled_biomod_filepath)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
-    # Scale in Opensim's GUI
-    # convert_c3d_to_trc(static_filepath)
-
-    # Import the model scaled in OpeSim's GUI
-    osim_model = BiomechanicalModelReal.from_osim(
-        filepath=scaled_osim_filepath,
-        muscle_type=MuscleType.HILL_DE_GROOTE,
-        muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir=cleaned_relative_path,
-    )
-    osim_model.to_biomod(converted_scaled_osim_filepath)
-    scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
-
-    # visualize_model_scaling_output(scaled_biomod_filepath, converted_scaled_osim_filepath, q_zeros)
-
     q_zeros = np.zeros((42, 10))
     q_random = np.random.rand(42) * 2 * np.pi
 
-
-    # Test the scaling factors
+    # --- Test the scaling factors --- #
     c3d_data = C3dData(c3d_path=static_filepath, first_frame=100, last_frame=200)
     marker_names = c3d_data.marker_names
     marker_positions = c3d_data.all_marker_positions[:3, :, :]
-    # Pelvis
-    biobuddy_scaling_factors = scale_tool.scaling_segments["pelvis"].compute_scaling_factors(
-        original_model,
-        marker_positions,
-        marker_names)
-    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.002)
-    # Radius Right
-    biobuddy_scaling_factors = scale_tool.scaling_segments["radius_r"].compute_scaling_factors(
-        original_model,
-        marker_positions,
-        marker_names)
-    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.032)
-    # Radius Left
-    biobuddy_scaling_factors = scale_tool.scaling_segments["radius_l"].compute_scaling_factors(
-        original_model,
-        marker_positions,
-        marker_names)
-    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.027)
-    # Tibia Right
-    biobuddy_scaling_factors = scale_tool.scaling_segments["tibia_r"].compute_scaling_factors(
-        original_model,
-        marker_positions,
-        marker_names)
-    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.000)
-    # Tibia Left
-    biobuddy_scaling_factors = scale_tool.scaling_segments["tibia_l"].compute_scaling_factors(
-        original_model,
-        marker_positions,
-        marker_names)
-    npt.assert_almost_equal(biobuddy_scaling_factors.mass, 1.000)
+
+    # Scaling factors from scaling_factors.osim  (TODO: add the scaling factors in the osim parser)
+    scaling_factors = {"pelvis": 0.883668,
+                       "femur_r": 1.1075,
+                       "tibia_r": 1.00352,
+                       "talus_r": 0.961683,
+                       "calcn_r": 1.05904,
+                       "toes_r": 0.999246,
+                       "torso": 1.04094,
+                       "head_and_neck": 1.02539,
+                       "humerus_r": 1.00517,
+                       "ulna_r": 1.12622,
+                       "radius_r": 1.04826,
+                       "lunate_r": 1.12829,
+                       "hand_r": 1.18954,
+                       "fingers_r": 1.26327,
+                       }
+    for segment_name, scale_factor in scaling_factors.items():
+        biobuddy_scaling_factors = scale_tool.scaling_segments[segment_name].compute_scaling_factors(
+            original_model,
+            marker_positions,
+            marker_names)
+        npt.assert_almost_equal(biobuddy_scaling_factors.mass, scale_factor, decimal=2)
 
 
+    # --- Test masses --- #
     # Total mass
     npt.assert_almost_equal(scaled_osim_model.mass(), 69.2, decimal=5)
     npt.assert_almost_equal(scaled_biorbd_model.mass(), 69.2, decimal=5)

@@ -123,6 +123,10 @@ class SegmentWiseScaling:
         marker_names: list[str],
     ) -> ScaleFactor:
 
+        original_marker_names = original_model.marker_names
+        q_zeros = np.zeros((original_model.nb_q, 1))
+        markers = original_model.markers_in_global(q_zeros)
+
         scale_factor = []
         for marker_pair in self.marker_pairs:
 
@@ -134,8 +138,8 @@ class SegmentWiseScaling:
             )
 
             # Distance between the marker pairs in the original model
-            marker1_position_original = original_model.segments[segment_name].markers[marker_pair[0]].position[:3]
-            marker2_position_original = original_model.segments[segment_name].markers[marker_pair[1]].position[:3]
+            marker1_position_original = markers[:3, original_marker_names.index(marker_pair[0]), 0]
+            marker2_position_original = markers[:3, original_marker_names.index(marker_pair[1]), 0]
             distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
 
             scale_factor += [mean_distance_subject / distance_original]

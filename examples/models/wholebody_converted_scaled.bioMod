@@ -1,7 +1,7 @@
 version 4
 
 
-// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/wholebody_scaled.osim on the 2025-04-24 16:58
+// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/scaled.osim on the 2025-04-28 17:13
 
 // Original file publication : Whole body model that consists of 23 bodies, 42 degrees of freedom and 30 muscles. The whole-body geometric model and the lower limbs, pelvis and upper limbs anthropometry are based on the running model of Hammer et al. 2010 which consists of 12 segments and 29 degrees of freedom. Extra segments and degrees of freedom were later added based on Dumas et al. 2007. Muscles Each lower extremity had seven degrees-of-freedom; the hip was modeled as a ball-and-socket joint (3 dofs), the knee was modeled as a revolute joint with 1 dof, the ankle was modeled as 2 revolute joints and feet toes with one revolute joint. The pelvis joint was model as a free flyer joint (6 dofs) to allow the model to translate and rotate in the 3D space, the lumbar motion was modeled as a ball-and-socket joint (3 dofs) (Anderson and Pandy, 1999) and the neck joint was modeled as a ball-and-socket joint (3 dofs). Mass properties of the torso and head (including the neck) segments were estimated from Dumas et al., 2007. Each arm consisted of 8 degrees-of-freedom; the shoulder was modeled as a ball-and-socket joint (3 dofs), the elbow and forearm rotation were each modeled with revolute joints (1 dof) (Holzbaur et al., 2005), the wrist flexion and deviation were each modeled with revolute joints and the hand fingers were modeled with 1 revolute joint. Mass properties for the arms were estimated from 1 and de Leva, 1996. The model also include 30 superficial muscles of the whole body..
 
@@ -145,25 +145,25 @@ endsegment
 
 marker	RASIS
 	parent	pelvis
-	position	-0.0054	0.0272	0.1358
+	position	-0.00430714	0.02728261	0.13542773
 	technical	1
 	anatomical	0
 endmarker
 marker	LASIS
 	parent	pelvis
-	position	0.0029	0.0374	-0.1198
+	position	0.00207867	0.03677210	-0.12024431
 	technical	1
 	anatomical	0
 endmarker
 marker	LPSIS
 	parent	pelvis
-	position	-0.1932	0.0396	-0.0241
+	position	-0.19331144	0.03969829	-0.02305161
 	technical	1
 	anatomical	0
 endmarker
 marker	RPSIS
 	parent	pelvis
-	position	-0.1914	0.0386	0.0373
+	position	-0.19096215	0.03887491	0.03827578
 	technical	1
 	anatomical	0
 endmarker
@@ -204,9 +204,9 @@ segment	femur_r_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	xyz
 	rangesQ 
-		-0.523598	2.094395
-		-0.872665	0.523599
-		-0.785398	0.610865
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
 
 endsegment
 
@@ -246,19 +246,19 @@ endsegment
 
 marker	RLFE
 	parent	femur_r
-	position	0.0050	-0.4335	0.0657
+	position	0.00490122	-0.43343533	0.06567068
 	technical	1
 	anatomical	0
 endmarker
 marker	RMFE
 	parent	femur_r
-	position	0.0015	-0.4457	-0.0504
+	position	0.00160180	-0.44563968	-0.05045578
 	technical	1
 	anatomical	0
 endmarker
 marker	RGT
 	parent	femur_r
-	position	0.0118	-0.0055	0.1187
+	position	0.01209605	-0.00551726	0.11887849
 	technical	1
 	anatomical	0
 endmarker
@@ -285,12 +285,6 @@ segment	tibia_r_translation
 		0.000000	1.000000	0.000000	0.000000
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
-	translations	xy
-	rangesQ 
-		-2.443461	0.174533
-		-2.443461	0.174533
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -305,7 +299,7 @@ segment	tibia_r_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-2.443461	0.174533
+		-3.141600	0.349100
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -363,19 +357,19 @@ endsegment
 
 marker	RATT
 	parent	tibia_r
-	position	0.0468	-0.0645	0.0337
+	position	0.04675586	-0.06439652	0.03363107
 	technical	1
 	anatomical	0
 endmarker
 marker	RLM
 	parent	tibia_r
-	position	-0.0186	-0.4447	0.0383
+	position	-0.01837136	-0.44466198	0.03795943
 	technical	1
 	anatomical	0
 endmarker
 marker	RSPH
 	parent	tibia_r
-	position	0.0165	-0.4317	-0.0367
+	position	0.01684222	-0.43164342	-0.03693593
 	technical	1
 	anatomical	0
 endmarker
@@ -410,13 +404,13 @@ segment	talus_r_ankle_angle_r
 	parent	talus_r_translation
 	RTinMatrix	1
 	RT
-		-0.105014	0.068090	-0.992137	0.000000
-		-0.174022	0.981001	0.085746	0.000000
-		0.979126	0.181659	-0.091169	0.000000
+		-0.105014	0.373088	-0.921834	0.000000
+		-0.174022	0.905762	0.386408	0.000000
+		0.979126	0.200998	-0.030192	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.872665	0.349066
+		-1.570796	1.570796
 
 endsegment
 
@@ -426,9 +420,9 @@ segment	talus_r_rotation_1
 	parent	talus_r_ankle_angle_r
 	RTinMatrix	1
 	RT
-		-0.005536	-0.174022	0.984726	0.000000
-		0.086098	0.981001	0.173848	0.000000
-		-0.996271	0.085746	0.009552	0.000000
+		0.145270	-0.174022	0.973968	0.000000
+		0.411715	0.905762	0.100427	0.000000
+		-0.899660	0.386408	0.203228	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -438,9 +432,9 @@ segment	talus_r_rotation_2
 	parent	talus_r_rotation_1
 	RTinMatrix	1
 	RT
-		0.000787	-0.005566	0.999984	0.000000
-		0.990163	0.139921	-0.000000	0.000000
-		-0.139919	0.990147	0.005622	0.000000
+		-0.121826	0.083192	0.989059	0.000000
+		0.563934	0.825820	0.000000	0.000000
+		-0.816784	0.557764	-0.147521	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -450,8 +444,8 @@ segment	talus_r_reset_axis
 	parent	talus_r_rotation_2
 	RTinMatrix	1
 	RT
-		0.014921	0.990163	-0.139124	0.000000
-		-0.105592	0.139921	0.984516	0.000000
+		0.088066	0.563934	-0.821110	0.000000
+		-0.060138	0.825820	0.560719	0.000000
 		0.994298	-0.000000	0.106641	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -508,13 +502,13 @@ segment	calcn_r_subtalar_angle_r
 	parent	calcn_r_translation
 	RTinMatrix	1
 	RT
-		0.787180	0.454640	0.416714	0.000000
-		0.604747	-0.436515	-0.666134	0.000000
-		-0.120949	0.776374	-0.618558	0.000000
+		0.787180	0.316267	0.529456	0.000000
+		0.604747	-0.227475	-0.763240	0.000000
+		-0.120949	0.920994	-0.370325	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.349066	0.523599
+		-1.570796	1.570796
 
 endsegment
 
@@ -524,9 +518,9 @@ segment	calcn_r_rotation_1
 	parent	calcn_r_subtalar_angle_r
 	RTinMatrix	1
 	RT
-		0.197390	0.604747	-0.771568	0.000000
-		0.892469	-0.436515	-0.113816	0.000000
-		-0.405631	-0.666134	-0.625882	0.000000
+		0.743238	0.604747	-0.286142	0.000000
+		0.505515	-0.227475	0.832292	0.000000
+		0.438236	-0.763240	-0.474777	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -536,9 +530,9 @@ segment	calcn_r_rotation_2
 	parent	calcn_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.209754	0.132028	-0.968799	0.000000
-		0.532699	0.846305	0.000000	0.000000
-		0.819899	-0.516079	-0.247847	0.000000
+		-0.885189	0.295557	-0.359286	0.000000
+		0.316705	0.948524	0.000000	0.000000
+		0.340792	-0.113788	-0.933227	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -548,9 +542,9 @@ segment	calcn_r_reset_axis
 	parent	calcn_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.836488	0.532699	0.128526	0.000000
-		0.526520	0.846305	-0.080899	0.000000
-		-0.151867	0.000000	-0.988401	0.000000
+		-0.937522	0.316705	0.144050	0.000000
+		0.313031	0.948524	-0.048097	0.000000
+		-0.151867	-0.000000	-0.988401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -578,19 +572,19 @@ endsegment
 
 marker	RCAL
 	parent	calcn_r
-	position	-0.0041	-0.0194	-0.0339
+	position	-0.00401007	-0.01920109	-0.03415414
 	technical	1
 	anatomical	0
 endmarker
 marker	RMFH1
 	parent	calcn_r
-	position	0.1974	0.0172	-0.0404
+	position	0.19758722	0.01661394	-0.04022360
 	technical	1
 	anatomical	0
 endmarker
 marker	RMFH5
 	parent	calcn_r
-	position	0.1640	-0.0241	0.0599
+	position	0.16375018	-0.02427190	0.06007867
 	technical	1
 	anatomical	0
 endmarker
@@ -631,7 +625,7 @@ segment	toes_r_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.785398	1.570796
+		-1.570796	1.570796
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -673,7 +667,7 @@ endsegment
 
 marker	RTT2
 	parent	toes_r
-	position	0.0565	0.0130	0.0170
+	position	0.05665871	0.01219325	0.01740141
 	technical	1
 	anatomical	0
 endmarker
@@ -714,9 +708,9 @@ segment	femur_l_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	xyz
 	rangesQ 
-		-0.523598	2.094395
-		-0.872665	0.523599
-		-0.785398	0.610865
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
 
 endsegment
 
@@ -756,19 +750,19 @@ endsegment
 
 marker	LGT
 	parent	femur_l
-	position	0.0106	-0.0261	-0.1212
+	position	0.01162396	-0.02636962	-0.12085766
 	technical	1
 	anatomical	0
 endmarker
 marker	LLFE
 	parent	femur_l
-	position	0.0092	-0.4157	-0.0663
+	position	0.00976279	-0.41599047	-0.06611904
 	technical	1
 	anatomical	0
 endmarker
 marker	LMFE
 	parent	femur_l
-	position	-0.0022	-0.4443	0.0499
+	position	-0.00332951	-0.44456375	0.04995846
 	technical	1
 	anatomical	0
 endmarker
@@ -795,12 +789,6 @@ segment	tibia_l_translation
 		0.000000	1.000000	0.000000	0.000000
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
-	translations	xy
-	rangesQ 
-		-2.443461	0.174533
-		-2.443461	0.174533
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -815,7 +803,7 @@ segment	tibia_l_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-2.443461	0.174533
+		-3.141600	0.349100
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -873,19 +861,19 @@ endsegment
 
 marker	LATT
 	parent	tibia_l
-	position	0.0440	-0.0787	-0.0291
+	position	0.04408199	-0.07894713	-0.02836395
 	technical	1
 	anatomical	0
 endmarker
 marker	LLM
 	parent	tibia_l
-	position	-0.0123	-0.4647	-0.0373
+	position	-0.01162306	-0.46500154	-0.03755912
 	technical	1
 	anatomical	0
 endmarker
 marker	LSPH
 	parent	tibia_l
-	position	0.0139	-0.4365	0.0407
+	position	0.01340717	-0.43682488	0.04087090
 	technical	1
 	anatomical	0
 endmarker
@@ -920,13 +908,13 @@ segment	talus_l_ankle_angle_l
 	parent	talus_l_translation
 	RTinMatrix	1
 	RT
-		0.105014	0.047417	-0.993340	0.000000
-		0.174022	0.982574	0.065300	0.000000
-		0.979126	-0.179721	0.094932	0.000000
+		0.105014	0.890274	-0.443153	0.000000
+		0.174022	0.422290	0.889599	0.000000
+		0.979126	-0.170539	-0.110581	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.872665	0.349066
+		-1.047198	1.047198
 
 endsegment
 
@@ -936,9 +924,9 @@ segment	talus_l_rotation_1
 	parent	talus_l_ankle_angle_l
 	RTinMatrix	1
 	RT
-		0.725587	0.174022	0.665762	0.000000
-		-0.083111	0.982574	-0.166254	0.000000
-		-0.683093	0.065300	0.727407	0.000000
+		0.952409	0.174022	0.250266	0.000000
+		0.157413	0.422290	-0.892688	0.000000
+		-0.261033	0.889599	0.374800	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -948,9 +936,9 @@ segment	talus_l_rotation_2
 	parent	talus_l_rotation_1
 	RTinMatrix	1
 	RT
-		-0.723946	0.137187	0.676078	0.000000
-		0.186186	0.982515	0.000000	0.000000
-		-0.664256	0.125876	-0.736830	0.000000
+		-0.922536	0.290411	0.254144	0.000000
+		0.300270	0.953854	-0.000000	0.000000
+		-0.242416	0.076312	-0.967166	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -960,9 +948,9 @@ segment	talus_l_reset_axis
 	parent	talus_l_rotation_2
 	RTinMatrix	1
 	RT
-		-0.104776	0.186186	-0.976912	0.000000
-		0.019855	0.982515	0.185124	0.000000
-		0.994298	-0.000000	-0.106641	0.000000
+		-0.101720	0.300270	-0.948415	0.000000
+		0.032021	0.953854	0.298558	0.000000
+		0.994298	0.000000	-0.106641	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1018,13 +1006,13 @@ segment	calcn_l_subtalar_angle_l
 	parent	calcn_l_translation
 	RTinMatrix	1
 	RT
-		-0.787180	-0.055636	-0.614209	0.000000
-		-0.604747	-0.125683	0.786438	0.000000
-		-0.120949	0.990509	0.065289	0.000000
+		-0.787180	-0.556102	0.266643	0.000000
+		-0.604747	0.780811	-0.156893	0.000000
+		-0.120949	-0.284755	-0.950939	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.349066	0.523599
+		-1.570796	1.570796
 
 endsegment
 
@@ -1034,9 +1022,9 @@ segment	calcn_l_rotation_1
 	parent	calcn_l_subtalar_angle_l
 	RTinMatrix	1
 	RT
-		-0.371928	-0.604747	0.704237	0.000000
-		0.917745	-0.125683	0.376760	0.000000
-		-0.139334	0.786438	0.601749	0.000000
+		-0.795582	-0.604747	-0.036456	0.000000
+		-0.583258	0.780811	-0.223932	0.000000
+		0.163887	-0.156893	-0.973923	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1046,9 +1034,9 @@ segment	calcn_l_rotation_2
 	parent	calcn_l_rotation_1
 	RTinMatrix	1
 	RT
-		0.350581	0.308517	0.884257	0.000000
-		-0.660635	0.750707	-0.000000	0.000000
-		-0.663818	-0.584171	0.467001	0.000000
+		0.672504	0.738677	-0.045774	0.000000
+		-0.739452	0.673209	-0.000000	0.000000
+		0.030816	0.033848	0.998952	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1058,9 +1046,9 @@ segment	calcn_l_reset_axis
 	parent	calcn_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.742000	-0.660635	0.114008	0.000000
-		0.652972	0.750707	0.100329	0.000000
-		-0.151867	0.000000	0.988401	0.000000
+		0.665401	-0.739452	0.102238	0.000000
+		0.730875	0.673209	0.112298	0.000000
+		-0.151867	-0.000000	0.988401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1088,19 +1076,19 @@ endsegment
 
 marker	LCAL
 	parent	calcn_l
-	position	-0.0009	-0.0340	0.0254
+	position	-0.00077285	-0.03460464	0.02392452
 	technical	1
 	anatomical	0
 endmarker
 marker	LMFH1
 	parent	calcn_l
-	position	0.2033	0.0164	0.0434
+	position	0.20329429	0.01556758	0.04342916
 	technical	1
 	anatomical	0
 endmarker
 marker	LMFH5
 	parent	calcn_l
-	position	0.1636	-0.0339	-0.0585
+	position	0.16396129	-0.03295330	-0.05939517
 	technical	1
 	anatomical	0
 endmarker
@@ -1141,7 +1129,7 @@ segment	toes_l_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.785398	1.047198
+		-1.047198	1.047198
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -1183,7 +1171,7 @@ endsegment
 
 marker	LTT2
 	parent	toes_l
-	position	0.0570	0.0130	-0.0246
+	position	0.05722718	0.01344599	-0.02459335
 	technical	1
 	anatomical	0
 endmarker
@@ -1224,9 +1212,9 @@ segment	torso_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	xyz
 	rangesQ 
-		-1.570796	0.523598
-		-0.523598	0.523598
-		-0.523598	0.523598
+		-1.570796	1.570796
+		-1.570796	1.570796
+		-1.570796	1.570796
 
 endsegment
 
@@ -1282,37 +1270,37 @@ endsegment
 
 marker	STR
 	parent	torso
-	position	0.1200	0.2746	0.0041
+	position	0.12025178	0.27451877	0.00370814
 	technical	1
 	anatomical	0
 endmarker
 marker	RA
 	parent	torso
-	position	-0.0466	0.4562	0.1732
+	position	-0.04574213	0.45615276	0.17345974
 	technical	1
 	anatomical	0
 endmarker
 marker	LA
 	parent	torso
-	position	-0.0425	0.4604	-0.1742
+	position	-0.04301324	0.46029862	-0.17387538
 	technical	1
 	anatomical	0
 endmarker
 marker	C7
 	parent	torso
-	position	-0.0760	0.4760	-0.0020
+	position	-0.07585998	0.47590736	-0.00153922
 	technical	1
 	anatomical	0
 endmarker
 marker	T10
 	parent	torso
-	position	-0.1024	0.2641	-0.0001
+	position	-0.10219629	0.26405613	0.00042165
 	technical	1
 	anatomical	0
 endmarker
 marker	SUP
 	parent	torso
-	position	0.0638	0.4354	-0.0023
+	position	0.06394965	0.43532175	-0.00240398
 	technical	1
 	anatomical	0
 endmarker
@@ -1353,9 +1341,9 @@ segment	head_and_neck_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	xyz
 	rangesQ 
-		-1.047198	1.047198
-		-0.785398	0.785398
-		-1.396263	1.396263
+		-1.745330	1.047198
+		-0.600000	0.600000
+		-1.221700	1.221700
 
 endsegment
 
@@ -1377,13 +1365,13 @@ segment	head_and_neck_geom_2
 	parent	head_and_neck_reset_axis
 	RTinMatrix	1
 	RT
-		1.000000	0.000000	0.000000	0.020508
-		0.000000	1.000000	0.000000	-0.533201
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.061523
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
-	meshfile	Geometry_cleaned/hat_skull.vtp
+	meshfile	Geometry_cleaned/skull.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.1689412839607716	1.1689412839607716	1.1689412839607716
+	meshscale	1.0253870911936593	1.0253870911936593	1.0253870911936593
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -1403,39 +1391,39 @@ segment	head_and_neck
 		0.025793	0.000217	0.000242
 		0.000217	0.016775	0.000107
 		0.000242	0.000107	0.025889
-	meshfile	Geometry_cleaned/hat_jaw.vtp
+	meshfile	Geometry_cleaned/jaw.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.158687413048835	1.158687413048835	1.158687413048835
+	meshscale	1.0253870911936593	1.0253870911936593	1.0253870911936593
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
 marker	SEL
 	parent	head_and_neck
-	position	0.1384	0.2190	-0.0001
+	position	0.13831270	0.21910226	0.00016369
 	technical	1
 	anatomical	0
 endmarker
 marker	OCC
 	parent	head_and_neck
-	position	-0.0839	0.1444	-0.0094
+	position	-0.08396811	0.14417036	-0.00904334
 	technical	1
 	anatomical	0
 endmarker
 marker	RTEMP
 	parent	head_and_neck
-	position	0.0278	0.1965	0.0904
+	position	0.02774800	0.19634609	0.09076178
 	technical	1
 	anatomical	0
 endmarker
 marker	LTEMP
 	parent	head_and_neck
-	position	0.0218	0.1957	-0.0903
+	position	0.02166637	0.19572389	-0.08992920
 	technical	1
 	anatomical	0
 endmarker
 marker	HV
 	parent	head_and_neck
-	position	0.0025	0.2971	0.0086
+	position	0.00226678	0.29702735	0.00906276
 	technical	1
 	anatomical	0
 endmarker
@@ -1477,8 +1465,8 @@ segment	humerus_r_rotation_transform
 	rotations	xyz
 	rangesQ 
 		-1.570796	3.141600
-		-3.141600	0.610900
-		-1.745329	1.745329
+		-3.839700	1.570796
+		-1.570796	1.570796
 
 endsegment
 
@@ -1518,13 +1506,13 @@ endsegment
 
 marker	RLHE
 	parent	humerus_r
-	position	0.0121	-0.2908	0.0317
+	position	0.01263186	-0.29058709	0.03167705
 	technical	1
 	anatomical	0
 endmarker
 marker	RMHE
 	parent	humerus_r
-	position	-0.0140	-0.2947	-0.0451
+	position	-0.01614394	-0.29470290	-0.04413475
 	technical	1
 	anatomical	0
 endmarker
@@ -1559,13 +1547,13 @@ segment	ulna_r_elbow_flex_r
 	parent	ulna_r_translation
 	RTinMatrix	1
 	RT
-		0.226047	0.888980	-0.398268	0.000000
-		0.022269	0.404027	0.914476	0.000000
-		0.973862	-0.215584	0.071532	0.000000
+		0.226047	0.842954	-0.488192	0.000000
+		0.022269	0.496561	0.867716	0.000000
+		0.973862	-0.207016	0.093474	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		0.000000	2.967100
+		0.000000	3.141600
 
 endsegment
 
@@ -1575,9 +1563,9 @@ segment	ulna_r_rotation_1
 	parent	ulna_r_elbow_flex_r
 	RTinMatrix	1
 	RT
-		0.999267	0.022269	-0.031146	0.000000
-		-0.037492	0.404027	-0.913978	0.000000
-		-0.007769	0.914476	0.404566	0.000000
+		0.878053	0.022269	0.478044	0.000000
+		0.405298	0.496561	-0.767568	0.000000
+		-0.254471	0.867716	0.426981	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1587,9 +1575,9 @@ segment	ulna_r_rotation_2
 	parent	ulna_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.684974	0.727901	-0.031154	0.000000
-		0.728254	0.685307	-0.000000	0.000000
-		0.021350	-0.022688	-0.999515	0.000000
+		-0.844467	0.241321	0.478163	0.000000
+		0.274768	0.961511	0.000000	0.000000
+		-0.459759	0.131384	-0.878271	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1599,8 +1587,8 @@ segment	ulna_r_reset_axis
 	parent	ulna_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.154950	0.728254	-0.667560	0.000000
-		0.164661	0.685307	0.709395	0.000000
+		-0.217400	0.274768	-0.936611	0.000000
+		0.062126	0.961511	0.267652	0.000000
 		0.974103	0.000000	-0.226103	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -1657,13 +1645,13 @@ segment	radius_r_pro_sup_r
 	parent	radius_r_translation
 	RTinMatrix	1
 	RT
-		0.056398	0.244643	0.967972	0.000000
-		0.998406	-0.015715	-0.054200	0.000000
-		0.001952	0.969486	-0.245140	0.000000
+		0.056398	0.777028	0.626934	0.000000
+		0.998406	-0.045120	-0.033893	0.000000
+		0.001952	0.627846	-0.778335	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.349100	3.490700
+		-3.141600	3.141600
 
 endsegment
 
@@ -1673,9 +1661,9 @@ segment	radius_r_rotation_1
 	parent	radius_r_pro_sup_r
 	RTinMatrix	1
 	RT
-		0.053190	0.998406	-0.018851	0.000000
-		0.582896	-0.015715	0.812395	0.000000
-		0.810804	-0.054199	-0.582803	0.000000
+		0.029401	0.998406	-0.048168	0.000000
+		0.928541	-0.045121	-0.368478	0.000000
+		-0.370064	-0.033892	-0.928388	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1685,9 +1673,9 @@ segment	radius_r_rotation_2
 	parent	radius_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.826809	0.452552	-0.334042	0.000000
-		0.480132	0.877196	0.000000	0.000000
-		0.293021	-0.160384	-0.942558	0.000000
+		-0.395501	0.339143	-0.853558	0.000000
+		0.650948	0.759122	-0.000000	0.000000
+		0.647955	-0.555622	-0.520998	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1697,8 +1685,8 @@ segment	radius_r_reset_axis
 	parent	radius_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.876671	0.480132	-0.030349	0.000000
-		0.479844	0.877196	0.016611	0.000000
+		-0.758668	0.650948	-0.026264	0.000000
+		0.650558	0.759122	0.022521	0.000000
 		0.034598	-0.000000	-0.999401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -1727,13 +1715,13 @@ endsegment
 
 marker	RUS
 	parent	radius_r
-	position	-0.0354	-0.2538	-0.0184
+	position	-0.03084585	-0.25449429	-0.01754694
 	technical	1
 	anatomical	0
 endmarker
 marker	RRS
 	parent	radius_r
-	position	0.0023	-0.2516	0.0497
+	position	0.00482448	-0.25131006	0.05156163
 	technical	1
 	anatomical	0
 endmarker
@@ -2100,13 +2088,13 @@ endsegment
 
 marker	RHMH5
 	parent	hand_r
-	position	0.0146	-0.0934	-0.0530
+	position	0.00494103	-0.09364532	-0.05276969
 	technical	1
 	anatomical	0
 endmarker
 marker	RHMH2
 	parent	hand_r
-	position	0.0075	-0.1121	0.0415
+	position	-0.00492480	-0.11251939	0.04141218
 	technical	1
 	anatomical	0
 endmarker
@@ -2147,7 +2135,7 @@ segment	fingers_r_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.174500	1.570800
+		-1.570800	1.570800
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -2177,7 +2165,7 @@ segment	fingers_r_geom_2
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/index_medial_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2193,7 +2181,7 @@ segment	fingers_r_geom_3
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/index_distal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2209,7 +2197,7 @@ segment	fingers_r_geom_4
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/middle_proximal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2225,7 +2213,7 @@ segment	fingers_r_geom_5
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/middle_medial_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2241,7 +2229,7 @@ segment	fingers_r_geom_6
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/middle_distal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2257,7 +2245,7 @@ segment	fingers_r_geom_7
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/ring_proximal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2273,7 +2261,7 @@ segment	fingers_r_geom_8
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/ring_medial_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2289,7 +2277,7 @@ segment	fingers_r_geom_9
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/ring_distal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2305,7 +2293,7 @@ segment	fingers_r_geom_10
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/little_proximal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2321,7 +2309,7 @@ segment	fingers_r_geom_11
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/little_medial_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2337,7 +2325,7 @@ segment	fingers_r_geom_12
 		0.000000	0.000000	0.000000	1.000000
 	meshfile	Geometry_cleaned/little_distal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
@@ -2351,7 +2339,7 @@ segment	fingers_r
 		0.000000	1.000000	0.000000	-0.000000
 		0.000000	0.000000	1.000000	-0.000000
 		0.000000	0.000000	0.000000	1.000000
-	mass	0.170951667823506
+	mass	0.1709516678235058
 	CenterOfMass	0.000000	-0.086023	0.000000
 	inertia
 		0.002728	0.000000	0.000000
@@ -2359,13 +2347,13 @@ segment	fingers_r
 		0.000000	0.000000	0.002728
 	meshfile	Geometry_cleaned/index_proximal_rvs.vtp
 	meshcolor	1.0	1.0	1.0
-	meshscale	1.0737818840861193	1.0737818840861193	1.0737818840861193
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
 	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
 endsegment
 
 marker	RFT3
 	parent	fingers_r
-	position	0.0327	-0.1103	-0.0038
+	position	0.04484855	-0.10530222	-0.00524589
 	technical	1
 	anatomical	0
 endmarker
@@ -2407,8 +2395,8 @@ segment	humerus_l_rotation_transform
 	rotations	xyz
 	rangesQ 
 		-1.570796	3.141600
-		-3.141600	0.610900
-		-1.745329	1.745329
+		-3.839700	1.570796
+		-1.570796	1.570796
 
 endsegment
 
@@ -2448,13 +2436,13 @@ endsegment
 
 marker	LLHE
 	parent	humerus_l
-	position	0.0149	-0.2903	-0.0319
+	position	0.01483484	-0.29044109	-0.03170098
 	technical	1
 	anatomical	0
 endmarker
 marker	LMHE
 	parent	humerus_l
-	position	-0.0119	-0.2895	0.0409
+	position	-0.01315533	-0.28951570	0.04055181
 	technical	1
 	anatomical	0
 endmarker
@@ -2489,13 +2477,13 @@ segment	ulna_l_elbow_flex_l
 	parent	ulna_l_translation
 	RTinMatrix	1
 	RT
-		-0.226047	0.660501	-0.715989	0.000000
-		-0.022269	0.731318	0.681673	0.000000
-		0.973862	0.170034	-0.150604	0.000000
+		-0.226047	0.529189	-0.817840	0.000000
+		-0.022269	0.836544	0.547447	0.000000
+		0.973862	0.141961	-0.177314	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		0.000000	2.967100
+		0.000000	3.141600
 
 endsegment
 
@@ -2505,9 +2493,9 @@ segment	ulna_l_rotation_1
 	parent	ulna_l_elbow_flex_l
 	RTinMatrix	1
 	RT
-		0.181074	-0.022269	0.983217	0.000000
-		0.673516	0.731318	-0.107474	0.000000
-		-0.716651	0.681673	0.147421	0.000000
+		0.717547	-0.022269	0.696154	0.000000
+		0.394670	0.836544	-0.380039	0.000000
+		-0.573900	0.547447	0.609049	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2517,9 +2505,9 @@ segment	ulna_l_rotation_2
 	parent	ulna_l_rotation_1
 	RTinMatrix	1
 	RT
-		-0.064152	0.169377	0.983461	0.000000
-		0.935171	0.354197	-0.000000	0.000000
-		-0.348339	0.919704	-0.181119	0.000000
+		-0.253299	0.671542	0.696326	0.000000
+		0.935654	0.352920	0.000000	0.000000
+		-0.245747	0.651520	-0.717725	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2529,9 +2517,9 @@ segment	ulna_l_reset_axis
 	parent	ulna_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.080085	0.935171	-0.345025	0.000000
-		-0.211445	0.354197	0.910953	0.000000
-		0.974103	-0.000000	0.226103	0.000000
+		0.079796	0.935654	-0.343780	0.000000
+		-0.211554	0.352920	0.911423	0.000000
+		0.974103	0.000000	0.226103	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2587,13 +2575,13 @@ segment	radius_l_pro_sup_l
 	parent	radius_l_translation
 	RTinMatrix	1
 	RT
-		-0.056398	0.384182	-0.921533	0.000000
-		-0.998406	-0.019897	0.052808	0.000000
-		0.001952	0.923043	0.384692	0.000000
+		-0.056398	0.530133	-0.846037	0.000000
+		-0.998406	-0.028289	0.048829	0.000000
+		0.001952	0.847442	0.530884	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.349100	3.490700
+		-3.141600	3.141600
 
 endsegment
 
@@ -2603,9 +2591,9 @@ segment	radius_l_rotation_1
 	parent	radius_l_pro_sup_l
 	RTinMatrix	1
 	RT
-		-0.018107	-0.998406	0.053448	0.000000
-		0.999252	-0.019897	-0.033153	0.000000
-		0.034164	0.052808	0.998020	0.000000
+		-0.048939	-0.998406	0.028098	0.000000
+		0.864877	-0.028289	0.501186	0.000000
+		-0.499593	0.048829	0.864883	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2615,9 +2603,9 @@ segment	radius_l_rotation_2
 	parent	radius_l_rotation_1
 	RTinMatrix	1
 	RT
-		0.288687	0.140047	0.947125	0.000000
-		-0.436470	0.899719	-0.000000	0.000000
-		-0.852147	-0.413392	0.320864	0.000000
+		0.536953	0.681006	0.497908	0.000000
+		-0.785266	0.619158	-0.000000	0.000000
+		-0.308284	-0.390990	0.867230	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2627,9 +2615,9 @@ segment	radius_l_reset_axis
 	parent	radius_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.899181	-0.436470	-0.031122	0.000000
-		0.436209	0.899719	-0.015098	0.000000
-		0.034590	-0.000000	0.999402	0.000000
+		0.618788	-0.785266	-0.021417	0.000000
+		0.784796	0.619158	-0.027163	0.000000
+		0.034590	0.000000	0.999402	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2657,13 +2645,13 @@ endsegment
 
 marker	LUS
 	parent	radius_l
-	position	-0.0343	-0.2573	0.0165
+	position	-0.03067343	-0.25796672	0.01529420
 	technical	1
 	anatomical	0
 endmarker
 marker	LRS
 	parent	radius_l
-	position	0.0052	-0.2498	-0.0487
+	position	0.00798747	-0.24955339	-0.05031837
 	technical	1
 	anatomical	0
 endmarker
@@ -3030,13 +3018,13 @@ endsegment
 
 marker	LHMH2
 	parent	hand_l
-	position	0.0023	-0.1076	-0.0362
+	position	-0.00751202	-0.10764314	-0.03608903
 	technical	1
 	anatomical	0
 endmarker
 marker	LHMH5
 	parent	hand_l
-	position	0.0153	-0.0912	0.0569
+	position	0.00626582	-0.09155787	0.05689467
 	technical	1
 	anatomical	0
 endmarker
@@ -3077,7 +3065,7 @@ segment	fingers_l_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
-		-0.174500	1.570800
+		-1.570800	1.570800
 		-6.283185	6.283185
 		-6.283185	6.283185
 
@@ -3295,7 +3283,7 @@ endsegment
 
 marker	LFT3
 	parent	fingers_l
-	position	0.0310	-0.1020	-0.0011
+	position	0.04077085	-0.09801924	0.00031475
 	technical	1
 	anatomical	0
 endmarker

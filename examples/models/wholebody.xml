@@ -12,7 +12,7 @@
 		<!--Specifies the name of the unscaled model (.osim) and the marker set.-->
 		<GenericModelMaker>
 			<!--Model file (.osim) for the unscaled model.-->
-			<model_file>Unassigned</model_file>
+			<model_file>wholebody.osim</model_file>
 			<!--Set of model markers used to scale the model. Scaling is done based on distances between model markers compared to the same distances between the corresponding experimental markers.-->
 			<marker_set_file>Unassigned</marker_set_file>
 		</GenericModelMaker>
@@ -754,15 +754,15 @@
 				<groups />
 			</ScaleSet>
 			<!--TRC file (.trc) containing the marker positions used for measurement-based scaling. This is usually a static trial, but doesn't need to be.  The marker-pair distances are computed for each time step in the TRC file and averaged across the time range.-->
-			<marker_file>AOT_01_static.trc</marker_file>
+			<marker_file>static.trc</marker_file>
 			<!--Time range over which to average marker-pair distances in the marker file (.trc) for measurement-based scaling.-->
 			<time_range> 0 5.2999999999999998224</time_range>
 			<!--Flag (true or false) indicating whether or not to preserve relative mass between segments.-->
 			<preserve_mass_distribution>false</preserve_mass_distribution>
 			<!--Name of OpenSim model file (.osim) to write when done scaling.-->
-			<output_model_file>/Users/thomasaout/Desktop/../Documents/Python/manip_4/output/Model_AOT/AOT_scaled.osim</output_model_file>
+			<output_model_file>scaled.osim</output_model_file>
 			<!--Name of file to write containing the scale factors that were applied to the unscaled model (optional).-->
-			<output_scale_file>Unassigned</output_scale_file>
+			<output_scale_file>scaling_factors.osim</output_scale_file>
 		</ModelScaler>
 		<!--Specifies parameters for placing markers on the model once a model is scaled. -->
 		<MarkerPlacer>
@@ -1069,15 +1069,15 @@
 				<groups />
 			</IKTaskSet>
 			<!--TRC file (.trc) containing the time history of experimental marker positions (usually a static trial).-->
-			<marker_file>AOT_01_static.trc</marker_file>
+			<marker_file>static.trc</marker_file>
 			<!--Name of file containing the joint angles used to set the initial configuration of the model for the purpose of placing the markers. These coordinate values can also be included in the optimization problem used to place the markers. Before the model markers are placed, a single frame of an inverse kinematics (IK) problem is solved. The IK problem can be solved simply by matching marker positions, but if the model markers are not in the correct locations, the IK solution will not be very good and neither will marker placement. Alternatively, coordinate values (specified in this file) can be specified and used to influence the IK solution. This is valuable particularly if you have high confidence in the coordinate values. For example, you know for the static trial the subject was standing will all joint angles close to zero. If the coordinate set (see the CoordinateSet property) contains non-zero weights for coordinates, the IK solution will try to match not only the marker positions, but also the coordinates in this file. Least-squared error is used to solve the IK problem. -->
-			<coordinate_file>Unassigned</coordinate_file>
+			<coordinate_file>static.trc</coordinate_file>
 			<!--Time range over which the marker positions are averaged.-->
 			<time_range> 0 5.2999999999999998224</time_range>
 			<!--Name of the motion file (.mot) written after marker relocation (optional).-->
 			<output_motion_file>Unassigned</output_motion_file>
 			<!--Output OpenSim model file (.osim) after scaling and maker placement.-->
-			<output_model_file>Unassigned</output_model_file>
+			<output_model_file>scaled.osim</output_model_file>
 			<!--Output marker set containing the new marker locations after markers have been placed.-->
 			<output_marker_file>Unassigned</output_marker_file>
 			<!--Maximum amount of movement allowed in marker data when averaging frames of the static trial. A negative value means there is not limit.-->
