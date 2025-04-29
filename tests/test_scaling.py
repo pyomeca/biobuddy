@@ -119,7 +119,6 @@ def test_scaling_wholebody():
     osim_model_scaled.to_biomod(converted_scaled_osim_filepath)
     scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
 
-
     # --- Scale in BioBuddy --- #
     original_model = BiomechanicalModelReal.from_osim(
         filepath=osim_filepath,
@@ -153,28 +152,27 @@ def test_scaling_wholebody():
 
     # TODO: Find out why there is a discrepancy between the OpenSim and BioBuddy scaling factors of the to the third decimal.
     # Scaling factors from scaling_factors.osim  (TODO: add the scaling factors in the osim parser)
-    scaling_factors = {"pelvis": 0.883668,
-                       "femur_r": 1.1075,
-                       "tibia_r": 1.00352,
-                       "talus_r": 0.961683,
-                       "calcn_r": 1.05904,
-                       "toes_r": 0.999246,
-                       "torso": 1.04094,
-                       # "head_and_neck": 1.02539,  # There seems to be a trick somewhere to remove the helmet offset,
-                       "humerus_r": 1.00517,
-                       "ulna_r": 1.12622,
-                       "radius_r": 1.04826,
-                       "lunate_r": 1.12829,
-                       # "hand_r": 1.18954,
-                       # "fingers_r": 1.26327,  # There is a problem with the hands in this model
-                       }
+    scaling_factors = {
+        "pelvis": 0.883668,
+        "femur_r": 1.1075,
+        "tibia_r": 1.00352,
+        "talus_r": 0.961683,
+        "calcn_r": 1.05904,
+        "toes_r": 0.999246,
+        "torso": 1.04094,
+        # "head_and_neck": 1.02539,  # There seems to be a trick somewhere to remove the helmet offset,
+        "humerus_r": 1.00517,
+        "ulna_r": 1.12622,
+        "radius_r": 1.04826,
+        "lunate_r": 1.12829,
+        # "hand_r": 1.18954,
+        # "fingers_r": 1.26327,  # There is a problem with the hands in this model
+    }
     for segment_name, scale_factor in scaling_factors.items():
         biobuddy_scaling_factors = scale_tool.scaling_segments[segment_name].compute_scaling_factors(
-            original_model,
-            marker_positions,
-            marker_names)
+            original_model, marker_positions, marker_names
+        )
         npt.assert_almost_equal(biobuddy_scaling_factors.mass, scale_factor, decimal=2)
-
 
     # --- Test masses --- #
     # Total mass
@@ -201,9 +199,9 @@ def test_scaling_wholebody():
             original_mass = original_model.segments[segment_name].inertia_parameters.mass
             # We have to let a huge buffer here because of the renormalization
             if scaling_factors[segment_name] < 1:
-                npt.assert_array_less(mass_biobuddy*0.9, original_mass)
+                npt.assert_array_less(mass_biobuddy * 0.9, original_mass)
             else:
-                npt.assert_array_less(original_mass, mass_biobuddy*1.1)
+                npt.assert_array_less(original_mass, mass_biobuddy * 1.1)
 
     # CoM
     for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
@@ -258,8 +256,22 @@ def test_scaling_wholebody():
 
     # Muscle properties
     for muscle in original_model.muscles.keys():
-        if (muscle in ["semiten_r", "vas_med_r", "vas_lat_r", "med_gas_r", "lat_gas_r", "semiten_l", "vas_med_l", "vas_lat_l", "med_gas_l", "lat_gas_l"] or
-                "stern_mast" in muscle):
+        if (
+            muscle
+            in [
+                "semiten_r",
+                "vas_med_r",
+                "vas_lat_r",
+                "med_gas_r",
+                "lat_gas_r",
+                "semiten_l",
+                "vas_med_l",
+                "vas_lat_l",
+                "med_gas_l",
+                "lat_gas_l",
+            ]
+            or "stern_mast" in muscle
+        ):
             # Skipping muscles with ConditionalPathPoints and MovingPathPoints
             # Skipping the head since there is a difference in scaling
             continue
@@ -270,7 +282,6 @@ def test_scaling_wholebody():
         biobuddy_tendon_slack_length = scaled_model.muscles[muscle].tendon_slack_length
         osim_tendon_slack_length = osim_model_scaled.muscles[muscle].tendon_slack_length
         npt.assert_almost_equal(biobuddy_tendon_slack_length, osim_tendon_slack_length, decimal=6)
-
 
     # Make sure the experimental markers are at the same position as the model's ones in static pose
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
@@ -289,4 +300,3 @@ def test_scaling_wholebody():
     for i_marker in range(exp_markers.shape[1]):
         biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros[:, 0])[i_marker].to_array()
         npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_scaled_marker, decimal=5)
-

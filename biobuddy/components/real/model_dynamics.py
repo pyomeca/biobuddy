@@ -373,8 +373,14 @@ class ModelDynamics:
             if via_point.muscle_name == muscle_name:
                 rt = self.segment_coordinate_system_in_global(via_point.parent_name)[:, :, 0]
                 muscle_via_points += [rt @ via_point.position]
-        origin_position = self.segment_coordinate_system_in_global(muscle_origin_parent_name)[:, :, 0] @ self.muscles[muscle_name].origin_position
-        insertion_position = self.segment_coordinate_system_in_global(muscle_insertion_parent_name)[:, :, 0] @ self.muscles[muscle_name].insertion_position
+        origin_position = (
+            self.segment_coordinate_system_in_global(muscle_origin_parent_name)[:, :, 0]
+            @ self.muscles[muscle_name].origin_position
+        )
+        insertion_position = (
+            self.segment_coordinate_system_in_global(muscle_insertion_parent_name)[:, :, 0]
+            @ self.muscles[muscle_name].insertion_position
+        )
 
         # TODO: @pariterre how is it done in biorbd ? (Do I have to sort them according to the distance?)
         # if len(muscle_via_points) > 1:
@@ -382,7 +388,6 @@ class ModelDynamics:
         muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
         muscle_norm = 0
         for i_point in range(len(muscle_trajectory) - 1):
-            muscle_norm += np.linalg.norm(muscle_trajectory[i_point][:3] - muscle_trajectory[i_point+1][:3])
+            muscle_norm += np.linalg.norm(muscle_trajectory[i_point][:3] - muscle_trajectory[i_point + 1][:3])
 
         return muscle_norm
-

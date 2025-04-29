@@ -248,14 +248,18 @@ class ScaleTool:
                 else:
                     # Keeping the same mass distribution as the original model
                     segment_masses[segment_name] = (
-                        deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
+                        deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                        * mass
+                        / original_mass
                     )
             else:
                 # If the segment is not scaled, keep its original mass
                 if self.original_model.segments[segment_name].inertia_parameters is None:
                     segment_masses[segment_name] = 0
                 else:
-                    raise NotImplementedError(f"You have a segment {segment_name} which has a non-null inertial parameter (mass {self.original_model.segments[segment_name].inertia_parameters.mass} kg) but is not scaled. The interpretation of this case is unclear.")
+                    raise NotImplementedError(
+                        f"You have a segment {segment_name} which has a non-null inertial parameter (mass {self.original_model.segments[segment_name].inertia_parameters.mass} kg) but is not scaled. The interpretation of this case is unclear."
+                    )
                     # segment_masses[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
 
             total_scaled_mass += segment_masses[segment_name]
@@ -619,7 +623,7 @@ class ScaleTool:
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
-            q = np.zeros((self.scaled_model.nb_q, ))
+            q = np.zeros((self.scaled_model.nb_q,))
         else:
             q = q_static
         self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q)
