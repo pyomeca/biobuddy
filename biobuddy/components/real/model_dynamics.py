@@ -102,6 +102,7 @@ class ModelDynamics:
         q_target: np.ndarray,
         q: np.ndarray,
         experimental_markers: np.ndarray,
+        marker_weights_reordered: np.ndarray,
         with_biorbd: bool,
     ) -> np.ndarray:
 
@@ -118,7 +119,7 @@ class ModelDynamics:
         for i_marker in range(nb_markers):
             vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
                 markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
-            )
+            ) * marker_weights_reordered[i_marker]
         # TODO: setup the IKTask to set the "q_ref" to something else than zero.
         out = np.hstack(
             (
@@ -139,6 +140,7 @@ class ModelDynamics:
         model: "BiomechanicalModelReal" or "biorbd.Model",
         q_regularization_weight: float,
         q: np.ndarray,
+        marker_weights_reordered: np.ndarray,
         with_biorbd: bool,
     ) -> np.ndarray:
         nb_q = q.shape[0]
@@ -148,9 +150,9 @@ class ModelDynamics:
         if with_biorbd:
             jacobian_matrix = np.zeros((3, nb_markers, nb_q))
             for i_marker in range(nb_markers):
-                jacobian_matrix[:, i_marker, :] = model.markersJacobian(q)[i_marker].to_array()
+                jacobian_matrix[:, i_marker, :] = model.markersJacobian(q)[i_marker].to_array() * marker_weights_reordered[i_marker]
         else:
-            jacobian_matrix = np.array(model.markers_jacobian(q))
+            jacobian_matrix = np.array(model.markers_jacobian(q)) * marker_weights_reordered
 
         for i_marker in range(nb_markers):
             vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
@@ -167,6 +169,7 @@ class ModelDynamics:
         marker_names: list[str],
         q_regularization_weight: float = None,
         q_target: np.ndarray = None,
+        marker_weights: dict[str, float] = None,
         method: str = "lm",
     ) -> np.ndarray:
         """
@@ -185,6 +188,8 @@ class ModelDynamics:
             The weight of the regularization term. If None, no regularization is applied.
         q_target
             The target posture to match. If None, the target posture is set to zero.
+        marker_weights
+            The weights of each marker to consider during the least squares. If None, all markers are equally weighted.
         method
             The least square method to use. By default, the Levenberg-Marquardt method is used.
         """
@@ -205,11 +210,23 @@ class ModelDynamics:
                 f"Using slower Python code for the inverse kinematics as either biorbd is not installed or the model is not compatible with biorbd."
             )
 
+        nb_q = self.nb_q
+        nb_markers = len(self.marker_names)
+        nb_frames = marker_positions.shape[2]
+
         marker_indices = [marker_names.index(m) for m in self.marker_names]
         markers_real = marker_positions[:, marker_indices, :]
 
-        nb_q = self.nb_q
-        nb_frames = marker_positions.shape[2]
+        if marker_weights is None:
+            marker_weights = {marker_name: 1.0 for marker_name in marker_names}
+        else:
+            for marker_name in self.marker_names:
+                if marker_name not in marker_weights:
+                    raise ValueError(f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them.")
+
+        marker_weights_reordered = np.zeros((nb_markers, ))
+        for i_marker in range(nb_markers):
+            marker_weights_reordered[i_marker] = marker_weights[self.marker_names[i_marker]]
 
         init = np.ones((nb_q,)) * 0.0001
         if q_target is not None:
@@ -224,9 +241,9 @@ class ModelDynamics:
         for i_frame in range(nb_frames):
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
-                    model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, i_frame], with_biorbd
+                    model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, i_frame], marker_weights_reordered, with_biorbd
                 ),
-                jac=lambda q: self._marker_jacobian(model_to_use, q_regularization_weight, q, with_biorbd),
+                jac=lambda q: self._marker_jacobian(model_to_use, q_regularization_weight, q, marker_weights_reordered, with_biorbd),
                 x0=init,
                 method=method,
                 xtol=1e-6,
@@ -362,6 +379,9 @@ class ModelDynamics:
 
     @requires_initialization
     def muscle_length(self, muscle_name: str) -> np.ndarray:
+        """
+        Please note that the muscle trajectory is computed based on the order of declaration of the via points in the model.
+        """
         # TODO: consider computing the muscle length in other configurations than the zero position.
         muscle_group_name = self.muscles[muscle_name].muscle_group
         muscle_origin_parent_name = self.muscle_groups[muscle_group_name].origin_parent_name
@@ -381,9 +401,6 @@ class ModelDynamics:
             self.segment_coordinate_system_in_global(muscle_insertion_parent_name)[:, :, 0]
             @ self.muscles[muscle_name].insertion_position
         )
-
-        # TODO: @pariterre how is it done in biorbd ? (Do I have to sort them according to the distance?)
-        # if len(muscle_via_points) > 1:
 
         muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
         muscle_norm = 0

@@ -1,6 +1,7 @@
 import os
 from copy import deepcopy
 from enum import Enum
+import logging
 
 import numpy as np
 
@@ -17,6 +18,8 @@ from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
+
+_logger = logging.getLogger(__name__)
 
 
 class InertialCharacteristics(Enum):
@@ -277,6 +280,9 @@ class ScaleTool:
         scaling_factors, segment_masses = self.get_scaling_factors_and_masses(
             marker_positions, marker_names, mass, original_mass
         )
+        _logger.info("Scaling factors for each segment:")
+        for segment_name in scaling_factors.keys():
+            _logger.info(f"  {segment_name}: {scaling_factors[segment_name].to_vector()}")
 
         self.scaled_model.header = deepcopy(self.original_model.header) + f"\nModel scaled using Biobuddy.\n"
         self.scaled_model.gravity = deepcopy(self.original_model.gravity)
@@ -535,6 +541,7 @@ class ScaleTool:
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
             q_target=initial_static_pose,
+            marker_weights=self.marker_weightings,
             method=method,
         )
 
