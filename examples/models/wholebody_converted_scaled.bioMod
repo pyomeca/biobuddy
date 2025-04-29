@@ -1,7 +1,7 @@
 version 4
 
 
-// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/scaled.osim on the 2025-04-28 17:13
+// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/scaled.osim on the 2025-04-29 14:10
 
 // Original file publication : Whole body model that consists of 23 bodies, 42 degrees of freedom and 30 muscles. The whole-body geometric model and the lower limbs, pelvis and upper limbs anthropometry are based on the running model of Hammer et al. 2010 which consists of 12 segments and 29 degrees of freedom. Extra segments and degrees of freedom were later added based on Dumas et al. 2007. Muscles Each lower extremity had seven degrees-of-freedom; the hip was modeled as a ball-and-socket joint (3 dofs), the knee was modeled as a revolute joint with 1 dof, the ankle was modeled as 2 revolute joints and feet toes with one revolute joint. The pelvis joint was model as a free flyer joint (6 dofs) to allow the model to translate and rotate in the 3D space, the lumbar motion was modeled as a ball-and-socket joint (3 dofs) (Anderson and Pandy, 1999) and the neck joint was modeled as a ball-and-socket joint (3 dofs). Mass properties of the torso and head (including the neck) segments were estimated from Dumas et al., 2007. Each arm consisted of 8 degrees-of-freedom; the shoulder was modeled as a ball-and-socket joint (3 dofs), the elbow and forearm rotation were each modeled with revolute joints (1 dof) (Holzbaur et al., 2005), the wrist flexion and deviation were each modeled with revolute joints and the hand fingers were modeled with 1 revolute joint. Mass properties for the arms were estimated from 1 and de Leva, 1996. The model also include 30 superficial muscles of the whole body..
 
@@ -3314,14 +3314,9 @@ musclegroup	pelvis_to_tibia_r
 	InsertionParent	tibia_r
 endmusclegroup
 
-musclegroup	femur_r_to_femur_r
+musclegroup	femur_r_to_tibia_r
 	OriginParent	femur_r
-	InsertionParent	femur_r
-endmusclegroup
-
-musclegroup	femur_r_to_calcn_r
-	OriginParent	femur_r
-	InsertionParent	calcn_r
+	InsertionParent	tibia_r
 endmusclegroup
 
 musclegroup	tibia_r_to_calcn_r
@@ -3339,14 +3334,9 @@ musclegroup	pelvis_to_tibia_l
 	InsertionParent	tibia_l
 endmusclegroup
 
-musclegroup	femur_l_to_femur_l
+musclegroup	femur_l_to_tibia_l
 	OriginParent	femur_l
-	InsertionParent	femur_l
-endmusclegroup
-
-musclegroup	femur_l_to_calcn_l
-	OriginParent	femur_l
-	InsertionParent	calcn_l
+	InsertionParent	tibia_l
 endmusclegroup
 
 musclegroup	tibia_l_to_calcn_l
@@ -3362,11 +3352,6 @@ endmusclegroup
 musclegroup	torso_to_head_and_neck
 	OriginParent	torso
 	InsertionParent	head_and_neck
-endmusclegroup
-
-musclegroup	torso_to_torso
-	OriginParent	torso
-	InsertionParent	torso
 endmusclegroup
 
 musclegroup	torso_to_ulna_r
@@ -3583,7 +3568,7 @@ endmuscle
 muscle	vas_med_r
 	type	hilldegroote
 	statetype	degroote
-	musclegroup	femur_r_to_femur_r
+	musclegroup	femur_r_to_tibia_r
 	originposition	0.0155	-0.2325	0.0208
 	insertionposition	0.0394	-0.3067	0.001
 	optimallength	0.0990
@@ -3597,41 +3582,13 @@ endmuscle
 muscle	vas_lat_r
 	type	hilldegroote
 	statetype	degroote
-	musclegroup	femur_r_to_femur_r
+	musclegroup	femur_r_to_tibia_r
 	originposition	0.0053	-0.2053	0.0387
 	insertionposition	0.0298	-0.287	0.0453
 	optimallength	0.0933
 	maximalforce	1871.0000
 	tendonslacklength	0.1744
 	pennationangle	0.0873
-endmuscle
-
-
-
-muscle	med_gas_r
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	femur_r_to_calcn_r
-	originposition	-0.021	-0.4351	-0.026
-	insertionposition	0.0	0.0328	-0.0056
-	optimallength	0.0598
-	maximalforce	1558.0000
-	tendonslacklength	0.3885
-	pennationangle	0.2967
-endmuscle
-
-
-
-muscle	lat_gas_r
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	femur_r_to_calcn_r
-	originposition	-0.0244	-0.437	0.0301
-	insertionposition	0.0	0.0328	-0.0056
-	optimallength	0.0637
-	maximalforce	683.0000
-	tendonslacklength	0.3783
-	pennationangle	0.1396
 endmuscle
 
 
@@ -3765,7 +3722,7 @@ endmuscle
 muscle	vas_med_l
 	type	hilldegroote
 	statetype	degroote
-	musclegroup	femur_l_to_femur_l
+	musclegroup	femur_l_to_tibia_l
 	originposition	0.015	-0.2248	-0.0201
 	insertionposition	0.0381	-0.2965	-0.001
 	optimallength	0.0956
@@ -3779,41 +3736,13 @@ endmuscle
 muscle	vas_lat_l
 	type	hilldegroote
 	statetype	degroote
-	musclegroup	femur_l_to_femur_l
+	musclegroup	femur_l_to_tibia_l
 	originposition	0.0051	-0.1986	-0.0374
 	insertionposition	0.0288	-0.2775	-0.0438
 	optimallength	0.0901
 	maximalforce	1871.0000
 	tendonslacklength	0.1684
 	pennationangle	0.0873
-endmuscle
-
-
-
-muscle	med_gas_l
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	femur_l_to_calcn_l
-	originposition	-0.0203	-0.4208	0.0252
-	insertionposition	0.0	0.0326	0.0056
-	optimallength	0.0602
-	maximalforce	1558.0000
-	tendonslacklength	0.3913
-	pennationangle	0.2967
-endmuscle
-
-
-
-muscle	lat_gas_l
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	femur_l_to_calcn_l
-	originposition	-0.0236	-0.4226	-0.0291
-	insertionposition	0.0	0.0326	0.0056
-	optimallength	0.0642
-	maximalforce	683.0000
-	tendonslacklength	0.3811
-	pennationangle	0.1396
 endmuscle
 
 
@@ -3954,34 +3883,6 @@ muscle	l_stern_mast
 	maximalforce	68.9500
 	tendonslacklength	0.0579
 	pennationangle	0.2618
-endmuscle
-
-
-
-muscle	r_trap_acr
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	torso_to_torso
-	originposition	-0.0677	0.4372	0.0
-	insertionposition	0.0	0.4268	-0.1041
-	optimallength	0.0958
-	maximalforce	376.9500
-	tendonslacklength	0.0797
-	pennationangle	0.0000
-endmuscle
-
-
-
-muscle	l_trap_acr
-	type	hilldegroote
-	statetype	degroote
-	musclegroup	torso_to_torso
-	originposition	-0.0677	0.4372	0.0
-	insertionposition	0.0	0.4268	0.1041
-	optimallength	0.0958
-	maximalforce	376.9500
-	tendonslacklength	0.0797
-	pennationangle	0.0000
 endmuscle
 
 
@@ -4242,7 +4143,7 @@ endmuscle
 // MUSCLES VIA POINTS
 // --------------------------------------------------------------
 
-viapoint	DELT1-P2
+viapoint	ant_delt_r-DELT1-P2
 	parent	humerus_r
 	muscle	ant_delt_r
 	musclegroup	humerus_r_to_torso
@@ -4251,7 +4152,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P3
+viapoint	ant_delt_r-DELT1-P3
 	parent	humerus_r
 	muscle	ant_delt_r
 	musclegroup	humerus_r_to_torso
@@ -4260,7 +4161,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P2
+viapoint	ant_delt_l-DELT1-P2
 	parent	humerus_l
 	muscle	ant_delt_l
 	musclegroup	humerus_l_to_torso
@@ -4269,7 +4170,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P3
+viapoint	ant_delt_l-DELT1-P3
 	parent	humerus_l
 	muscle	ant_delt_l
 	musclegroup	humerus_l_to_torso
@@ -4278,7 +4179,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P2
+viapoint	medial_delt_l-DELT1-P2
 	parent	humerus_l
 	muscle	medial_delt_l
 	musclegroup	humerus_l_to_torso
@@ -4287,7 +4188,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P2
+viapoint	post_delt_r-DELT1-P2
 	parent	humerus_r
 	muscle	post_delt_r
 	musclegroup	humerus_r_to_torso
@@ -4296,7 +4197,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P3
+viapoint	post_delt_r-DELT1-P3
 	parent	torso
 	muscle	post_delt_r
 	musclegroup	humerus_r_to_torso
@@ -4305,7 +4206,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P2
+viapoint	post_delt_l-DELT1-P2
 	parent	humerus_l
 	muscle	post_delt_l
 	musclegroup	humerus_l_to_torso
@@ -4314,7 +4215,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P3
+viapoint	post_delt_l-DELT1-P3
 	parent	torso
 	muscle	post_delt_l
 	musclegroup	humerus_l_to_torso
@@ -4323,7 +4224,7 @@ endviapoint
 
 
 
-viapoint	DELT1-P2
+viapoint	medial_delt_r-DELT1-P2
 	parent	humerus_r
 	muscle	medial_delt_r
 	musclegroup	humerus_r_to_torso
@@ -4332,7 +4233,7 @@ endviapoint
 
 
 
-viapoint	semiten_r-P3
+viapoint	semiten_r-semiten_r-P3
 	parent	tibia_r
 	muscle	semiten_r
 	musclegroup	pelvis_to_tibia_r
@@ -4341,7 +4242,7 @@ endviapoint
 
 
 
-viapoint	semiten_r-P4
+viapoint	semiten_r-semiten_r-P4
 	parent	tibia_r
 	muscle	semiten_r
 	musclegroup	pelvis_to_tibia_r
@@ -4350,7 +4251,7 @@ endviapoint
 
 
 
-viapoint	bifemlh_r-P2
+viapoint	bifemlh_r-bifemlh_r-P2
 	parent	tibia_r
 	muscle	bifemlh_r
 	musclegroup	pelvis_to_tibia_r
@@ -4359,7 +4260,7 @@ endviapoint
 
 
 
-viapoint	sar_r-P2
+viapoint	sar_r-sar_r-P2
 	parent	femur_r
 	muscle	sar_r
 	musclegroup	pelvis_to_tibia_r
@@ -4368,7 +4269,7 @@ endviapoint
 
 
 
-viapoint	sar_r-P3
+viapoint	sar_r-sar_r-P3
 	parent	tibia_r
 	muscle	sar_r
 	musclegroup	pelvis_to_tibia_r
@@ -4377,7 +4278,7 @@ endviapoint
 
 
 
-viapoint	sar_r-P4
+viapoint	sar_r-sar_r-P4
 	parent	tibia_r
 	muscle	sar_r
 	musclegroup	pelvis_to_tibia_r
@@ -4386,7 +4287,7 @@ endviapoint
 
 
 
-viapoint	tfl_r-P2
+viapoint	tfl_r-tfl_r-P2
 	parent	femur_r
 	muscle	tfl_r
 	musclegroup	pelvis_to_tibia_r
@@ -4395,7 +4296,7 @@ endviapoint
 
 
 
-viapoint	tfl_r-P3
+viapoint	tfl_r-tfl_r-P3
 	parent	femur_r
 	muscle	tfl_r
 	musclegroup	pelvis_to_tibia_r
@@ -4404,7 +4305,7 @@ endviapoint
 
 
 
-viapoint	tib_post_r-P2
+viapoint	tib_post_r-tib_post_r-P2
 	parent	tibia_r
 	muscle	tib_post_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4413,7 +4314,7 @@ endviapoint
 
 
 
-viapoint	tib_post_r-P3
+viapoint	tib_post_r-tib_post_r-P3
 	parent	calcn_r
 	muscle	tib_post_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4422,7 +4323,7 @@ endviapoint
 
 
 
-viapoint	tib_ant_r-P2
+viapoint	tib_ant_r-tib_ant_r-P2
 	parent	tibia_r
 	muscle	tib_ant_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4431,7 +4332,7 @@ endviapoint
 
 
 
-viapoint	per_long_r-P2
+viapoint	per_long_r-per_long_r-P2
 	parent	tibia_r
 	muscle	per_long_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4440,7 +4341,7 @@ endviapoint
 
 
 
-viapoint	per_long_r-P3
+viapoint	per_long_r-per_long_r-P3
 	parent	tibia_r
 	muscle	per_long_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4449,7 +4350,7 @@ endviapoint
 
 
 
-viapoint	per_long_r-P4
+viapoint	per_long_r-per_long_r-P4
 	parent	calcn_r
 	muscle	per_long_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4458,7 +4359,7 @@ endviapoint
 
 
 
-viapoint	per_long_r-P5
+viapoint	per_long_r-per_long_r-P5
 	parent	calcn_r
 	muscle	per_long_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4467,7 +4368,7 @@ endviapoint
 
 
 
-viapoint	per_long_r-P6
+viapoint	per_long_r-per_long_r-P6
 	parent	calcn_r
 	muscle	per_long_r
 	musclegroup	tibia_r_to_calcn_r
@@ -4476,7 +4377,7 @@ endviapoint
 
 
 
-viapoint	semiten_l-P3
+viapoint	semiten_l-semiten_l-P3
 	parent	tibia_l
 	muscle	semiten_l
 	musclegroup	pelvis_to_tibia_l
@@ -4485,7 +4386,7 @@ endviapoint
 
 
 
-viapoint	semiten_l-P4
+viapoint	semiten_l-semiten_l-P4
 	parent	tibia_l
 	muscle	semiten_l
 	musclegroup	pelvis_to_tibia_l
@@ -4494,7 +4395,7 @@ endviapoint
 
 
 
-viapoint	bifemlh_l-P2
+viapoint	bifemlh_l-bifemlh_l-P2
 	parent	tibia_l
 	muscle	bifemlh_l
 	musclegroup	pelvis_to_tibia_l
@@ -4503,7 +4404,7 @@ endviapoint
 
 
 
-viapoint	sar_l-P2
+viapoint	sar_l-sar_l-P2
 	parent	femur_l
 	muscle	sar_l
 	musclegroup	pelvis_to_tibia_l
@@ -4512,7 +4413,7 @@ endviapoint
 
 
 
-viapoint	sar_l-P3
+viapoint	sar_l-sar_l-P3
 	parent	tibia_l
 	muscle	sar_l
 	musclegroup	pelvis_to_tibia_l
@@ -4521,7 +4422,7 @@ endviapoint
 
 
 
-viapoint	sar_l-P4
+viapoint	sar_l-sar_l-P4
 	parent	tibia_l
 	muscle	sar_l
 	musclegroup	pelvis_to_tibia_l
@@ -4530,7 +4431,7 @@ endviapoint
 
 
 
-viapoint	tfl_l-P2
+viapoint	tfl_l-tfl_l-P2
 	parent	femur_l
 	muscle	tfl_l
 	musclegroup	pelvis_to_tibia_l
@@ -4539,7 +4440,7 @@ endviapoint
 
 
 
-viapoint	tfl_l-P3
+viapoint	tfl_l-tfl_l-P3
 	parent	femur_l
 	muscle	tfl_l
 	musclegroup	pelvis_to_tibia_l
@@ -4548,7 +4449,7 @@ endviapoint
 
 
 
-viapoint	tib_post_l-P2
+viapoint	tib_post_l-tib_post_l-P2
 	parent	tibia_l
 	muscle	tib_post_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4557,7 +4458,7 @@ endviapoint
 
 
 
-viapoint	tib_post_l-P3
+viapoint	tib_post_l-tib_post_l-P3
 	parent	calcn_l
 	muscle	tib_post_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4566,7 +4467,7 @@ endviapoint
 
 
 
-viapoint	tib_ant_l-P2
+viapoint	tib_ant_l-tib_ant_l-P2
 	parent	tibia_l
 	muscle	tib_ant_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4575,7 +4476,7 @@ endviapoint
 
 
 
-viapoint	per_long_l-P2
+viapoint	per_long_l-per_long_l-P2
 	parent	tibia_l
 	muscle	per_long_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4584,7 +4485,7 @@ endviapoint
 
 
 
-viapoint	per_long_l-P3
+viapoint	per_long_l-per_long_l-P3
 	parent	tibia_l
 	muscle	per_long_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4593,7 +4494,7 @@ endviapoint
 
 
 
-viapoint	per_long_l-P4
+viapoint	per_long_l-per_long_l-P4
 	parent	calcn_l
 	muscle	per_long_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4602,7 +4503,7 @@ endviapoint
 
 
 
-viapoint	per_long_l-P5
+viapoint	per_long_l-per_long_l-P5
 	parent	calcn_l
 	muscle	per_long_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4611,7 +4512,7 @@ endviapoint
 
 
 
-viapoint	per_long_l-P6
+viapoint	per_long_l-per_long_l-P6
 	parent	calcn_l
 	muscle	per_long_l
 	musclegroup	tibia_l_to_calcn_l
@@ -4620,7 +4521,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P2
+viapoint	TRIlong-TRIlong-P2
 	parent	humerus_r
 	muscle	TRIlong
 	musclegroup	torso_to_ulna_r
@@ -4629,7 +4530,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P3
+viapoint	TRIlong-TRIlong-P3
 	parent	humerus_r
 	muscle	TRIlong
 	musclegroup	torso_to_ulna_r
@@ -4638,7 +4539,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P4
+viapoint	TRIlong-TRIlong-P4
 	parent	humerus_r
 	muscle	TRIlong
 	musclegroup	torso_to_ulna_r
@@ -4647,7 +4548,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P2
+viapoint	TRIlong_l-TRIlong-P2
 	parent	humerus_l
 	muscle	TRIlong_l
 	musclegroup	torso_to_ulna_l
@@ -4656,7 +4557,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P3
+viapoint	TRIlong_l-TRIlong-P3
 	parent	humerus_l
 	muscle	TRIlong_l
 	musclegroup	torso_to_ulna_l
@@ -4665,7 +4566,7 @@ endviapoint
 
 
 
-viapoint	TRIlong-P4
+viapoint	TRIlong_l-TRIlong-P4
 	parent	humerus_l
 	muscle	TRIlong_l
 	musclegroup	torso_to_ulna_l
@@ -4674,7 +4575,7 @@ endviapoint
 
 
 
-viapoint	TRIlat-P2
+viapoint	TRIlat-TRIlat-P2
 	parent	humerus_r
 	muscle	TRIlat
 	musclegroup	humerus_r_to_ulna_r
@@ -4683,7 +4584,7 @@ endviapoint
 
 
 
-viapoint	TRIlat-P3
+viapoint	TRIlat-TRIlat-P3
 	parent	humerus_r
 	muscle	TRIlat
 	musclegroup	humerus_r_to_ulna_r
@@ -4692,7 +4593,7 @@ endviapoint
 
 
 
-viapoint	TRIlat-P4
+viapoint	TRIlat-TRIlat-P4
 	parent	humerus_r
 	muscle	TRIlat
 	musclegroup	humerus_r_to_ulna_r
@@ -4701,7 +4602,7 @@ endviapoint
 
 
 
-viapoint	TRIlat_l-P2
+viapoint	TRIlat_l-TRIlat_l-P2
 	parent	humerus_l
 	muscle	TRIlat_l
 	musclegroup	humerus_l_to_ulna_l
@@ -4710,7 +4611,7 @@ endviapoint
 
 
 
-viapoint	TRIlat_l-P3
+viapoint	TRIlat_l-TRIlat_l-P3
 	parent	humerus_l
 	muscle	TRIlat_l
 	musclegroup	humerus_l_to_ulna_l
@@ -4719,7 +4620,7 @@ endviapoint
 
 
 
-viapoint	TRIlat_l-P4
+viapoint	TRIlat_l-TRIlat_l-P4
 	parent	humerus_l
 	muscle	TRIlat_l
 	musclegroup	humerus_l_to_ulna_l
@@ -4728,7 +4629,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P2
+viapoint	BIClong-BIClong-P2
 	parent	torso
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4737,7 +4638,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P3
+viapoint	BIClong-BIClong-P3
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4746,7 +4647,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P4
+viapoint	BIClong-BIClong-P4
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4755,7 +4656,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P5
+viapoint	BIClong-BIClong-P5
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4764,7 +4665,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P6
+viapoint	BIClong-BIClong-P6
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4773,7 +4674,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P7
+viapoint	BIClong-BIClong-P7
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4782,7 +4683,7 @@ endviapoint
 
 
 
-viapoint	BIClong-P8
+viapoint	BIClong-BIClong-P8
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4791,7 +4692,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P9
+viapoint	BIClong-BIClong_l-P9
 	parent	humerus_r
 	muscle	BIClong
 	musclegroup	torso_to_radius_r
@@ -4800,7 +4701,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P2
+viapoint	BIClong_l-BIClong_l-P2
 	parent	torso
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4809,7 +4710,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P3
+viapoint	BIClong_l-BIClong_l-P3
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4818,7 +4719,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P4
+viapoint	BIClong_l-BIClong_l-P4
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4827,7 +4728,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P5
+viapoint	BIClong_l-BIClong_l-P5
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4836,7 +4737,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P6
+viapoint	BIClong_l-BIClong_l-P6
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4845,7 +4746,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P7
+viapoint	BIClong_l-BIClong_l-P7
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4854,7 +4755,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P8
+viapoint	BIClong_l-BIClong_l-P8
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4863,7 +4764,7 @@ endviapoint
 
 
 
-viapoint	BIClong_l-P9
+viapoint	BIClong_l-BIClong_l-P9
 	parent	humerus_l
 	muscle	BIClong_l
 	musclegroup	torso_to_radius_l
@@ -4872,7 +4773,7 @@ endviapoint
 
 
 
-viapoint	BRD-P2
+viapoint	BRD-BRD-P2
 	parent	radius_r
 	muscle	BRD
 	musclegroup	humerus_r_to_radius_r
@@ -4881,7 +4782,7 @@ endviapoint
 
 
 
-viapoint	BRD_l-P2
+viapoint	BRD_l-BRD_l-P2
 	parent	radius_l
 	muscle	BRD_l
 	musclegroup	humerus_l_to_radius_l
@@ -4890,7 +4791,7 @@ endviapoint
 
 
 
-viapoint	FCR-P2
+viapoint	FCR-FCR-P2
 	parent	radius_r
 	muscle	FCR
 	musclegroup	humerus_r_to_hand_r
@@ -4899,7 +4800,7 @@ endviapoint
 
 
 
-viapoint	FCR_l-P2
+viapoint	FCR_l-FCR_l-P2
 	parent	radius_l
 	muscle	FCR_l
 	musclegroup	humerus_l_to_hand_l
@@ -4908,7 +4809,7 @@ endviapoint
 
 
 
-viapoint	ECRL-P2
+viapoint	ECRL-ECRL-P2
 	parent	radius_r
 	muscle	ECRL
 	musclegroup	humerus_r_to_hand_r
@@ -4917,7 +4818,7 @@ endviapoint
 
 
 
-viapoint	ECRL-P3
+viapoint	ECRL-ECRL-P3
 	parent	radius_r
 	muscle	ECRL
 	musclegroup	humerus_r_to_hand_r
@@ -4926,7 +4827,7 @@ endviapoint
 
 
 
-viapoint	ECRL_l-P2
+viapoint	ECRL_l-ECRL_l-P2
 	parent	radius_l
 	muscle	ECRL_l
 	musclegroup	humerus_l_to_hand_l
@@ -4935,7 +4836,7 @@ endviapoint
 
 
 
-viapoint	ECRL_l-P3
+viapoint	ECRL_l-ECRL_l-P3
 	parent	radius_l
 	muscle	ECRL_l
 	musclegroup	humerus_l_to_hand_l
@@ -4944,7 +4845,7 @@ endviapoint
 
 
 
-viapoint	PT-P2
+viapoint	PT-PT-P2
 	parent	ulna_r
 	muscle	PT
 	musclegroup	humerus_r_to_radius_r
@@ -4953,7 +4854,7 @@ endviapoint
 
 
 
-viapoint	PT-P3
+viapoint	PT-PT-P3
 	parent	radius_r
 	muscle	PT
 	musclegroup	humerus_r_to_radius_r
@@ -4962,7 +4863,7 @@ endviapoint
 
 
 
-viapoint	PT_l-P2
+viapoint	PT_l-PT_l-P2
 	parent	ulna_l
 	muscle	PT_l
 	musclegroup	humerus_l_to_radius_l
@@ -4971,7 +4872,7 @@ endviapoint
 
 
 
-viapoint	PT_l-P3
+viapoint	PT_l-PT_l-P3
 	parent	radius_l
 	muscle	PT_l
 	musclegroup	humerus_l_to_radius_l
@@ -4980,7 +4881,7 @@ endviapoint
 
 
 
-viapoint	LAT2-P2
+viapoint	LAT2-LAT2-P2
 	parent	torso
 	muscle	LAT2
 	musclegroup	humerus_r_to_torso
@@ -4989,7 +4890,7 @@ endviapoint
 
 
 
-viapoint	LAT2-P3
+viapoint	LAT2-LAT2-P3
 	parent	torso
 	muscle	LAT2
 	musclegroup	humerus_r_to_torso
@@ -4998,7 +4899,7 @@ endviapoint
 
 
 
-viapoint	LAT2_l-P2
+viapoint	LAT2_l-LAT2_l-P2
 	parent	torso
 	muscle	LAT2_l
 	musclegroup	humerus_l_to_torso
@@ -5007,7 +4908,7 @@ endviapoint
 
 
 
-viapoint	LAT2_l-P3
+viapoint	LAT2_l-LAT2_l-P3
 	parent	torso
 	muscle	LAT2_l
 	musclegroup	humerus_l_to_torso
@@ -5016,7 +4917,7 @@ endviapoint
 
 
 
-viapoint	PECM2-P2
+viapoint	PECM2-PECM2-P2
 	parent	torso
 	muscle	PECM2
 	musclegroup	humerus_r_to_torso
@@ -5025,7 +4926,7 @@ endviapoint
 
 
 
-viapoint	PECM2-P3
+viapoint	PECM2-PECM2-P3
 	parent	torso
 	muscle	PECM2
 	musclegroup	humerus_r_to_torso
@@ -5034,7 +4935,7 @@ endviapoint
 
 
 
-viapoint	PECM2-P2_l
+viapoint	PECM2_l-PECM2-P2_l
 	parent	torso
 	muscle	PECM2_l
 	musclegroup	humerus_l_to_torso
@@ -5043,7 +4944,7 @@ endviapoint
 
 
 
-viapoint	PECM2-P3_l
+viapoint	PECM2_l-PECM2-P3_l
 	parent	torso
 	muscle	PECM2_l
 	musclegroup	humerus_l_to_torso
@@ -5052,3 +4953,26 @@ endviapoint
 
 
 
+
+/*-------------- WARNINGS---------------
+
+Some conditional path points were present for the semiten_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_med_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_med_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_lat_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_lat_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the med_gas_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the lat_gas_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the semiten_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_med_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_med_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_lat_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_lat_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the med_gas_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the lat_gas_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Failed to convert muscle med_gas_r: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle lat_gas_r: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle med_gas_l: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle lat_gas_l: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle r_trap_acr: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle l_trap_acr: The origin and insertion parent names cannot be the same.. Muscle skipped.*/

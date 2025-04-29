@@ -62,6 +62,13 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        if optimal_length is not None and optimal_length <= 0:
+            raise ValueError("The optimal length of the muscle must be greater than 0.")
+        if maximal_force is not None and maximal_force <= 0:
+            raise ValueError("The maximal force of the muscle must be greater than 0.")
+        if maximal_excitation is not None and maximal_excitation <= 0:
+            raise ValueError("The maximal excitation of the muscle must be greater than 1.")
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type

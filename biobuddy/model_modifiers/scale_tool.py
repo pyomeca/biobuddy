@@ -129,7 +129,7 @@ class ScaleTool:
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
 
-        # self.modify_muscle_parameters() # TODO !!!!!!!
+        self.modify_muscle_parameters()
         self.place_model_in_static_pose(
             marker_positions,
             marker_names,
@@ -140,7 +140,6 @@ class ScaleTool:
             method,
         )
 
-        self.scaled_model.segments_rt_to_local()
         return self.scaled_model
 
     def add_scaling_segment(self, scaling_segment: SegmentScaling):
@@ -228,26 +227,37 @@ class ScaleTool:
         marker_names: list[str],
         mass: float,
         original_mass: float,
-    ) -> tuple[dict[str, "ScaleFactor"], dict[str, np.ndarray]]:
+    ) -> tuple[dict[str, "ScaleFactor"], dict[str, float]]:
 
         scaling_factors = {}
         segment_masses = {}
         total_scaled_mass = 0
-        for segment_name in self.scaling_segments.keys():
-            # Compute the scale factors
-            scaling_factors[segment_name] = self.scaling_segments[segment_name].compute_scaling_factors(
-                self.original_model, marker_positions, marker_names
-            )
-            # Get each segment's scaled mass
-            if self.personalize_mass_distribution:
-                segment_masses[segment_name] = (
-                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
-                    * scaling_factors[segment_name].mass
+        for segment_name in self.original_model.segment_names:
+            if segment_name in self.scaling_segments.keys():
+                # Compute the scale factors
+                scaling_factors[segment_name] = self.scaling_segments[segment_name].compute_scaling_factors(
+                    self.original_model, marker_positions, marker_names
                 )
+                # Get each segment's scaled mass
+                if self.personalize_mass_distribution:
+                    # Personalized scaling for each segment based on the dimension of the segment
+                    segment_masses[segment_name] = (
+                        deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                        * scaling_factors[segment_name].mass
+                    )
+                else:
+                    # Keeping the same mass distribution as the original model
+                    segment_masses[segment_name] = (
+                        deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
+                    )
             else:
-                segment_masses[segment_name] = (
-                    deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass) * mass / original_mass
-                )
+                # If the segment is not scaled, keep its original mass
+                if self.original_model.segments[segment_name].inertia_parameters is None:
+                    segment_masses[segment_name] = 0
+                else:
+                    raise NotImplementedError(f"You have a segment {segment_name} which has a non-null inertial parameter (mass {self.original_model.segments[segment_name].inertia_parameters.mass} kg) but is not scaled. The interpretation of this case is unclear.")
+                    # segment_masses[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+
             total_scaled_mass += segment_masses[segment_name]
 
         # Renormalize segment's mass to make sure the total mass is the mass of the subject
@@ -325,19 +335,16 @@ class ScaleTool:
                 )
 
                 for marker in deepcopy(self.original_model.segments[segment_name].markers):
-                    self.scaled_model.segments[segment_name].remove_marker(marker.name)
                     self.scaled_model.segments[segment_name].add_marker(
                         self.scale_marker(marker, this_segment_scale_factor)
                     )
 
                 for contact in deepcopy(self.original_model.segments[segment_name].contacts):
-                    self.scaled_model.segments[segment_name].remove_contact(contact.name)
                     self.scaled_model.segments[segment_name].add_contact(
                         self.scale_contact(contact, this_segment_scale_factor)
                     )
 
                 for imu in deepcopy(self.original_model.segments[segment_name].imus):
-                    self.scaled_model.segments[segment_name].remove_imu(imu.name)
                     self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
             else:
@@ -402,6 +409,9 @@ class ScaleTool:
         segment_mass: float,
     ) -> SegmentReal:
         """
+        Inertia is scaled using the following formula:
+            I_new = m_new * (radii_of_gyration * scale_factor)**2
+            radii_of_gyration = sqrt(I_original / m_original)
         Only geometrical scaling is implemented.
         TODO: Implement scaling based on De Leva table.
         """
@@ -411,7 +421,7 @@ class ScaleTool:
                 "The segment_coordinate_system is not in the parent reference frame. This is not implemented yet."
             )
 
-        segment_coordinate_system = SegmentCoordinateSystemReal(
+        segment_coordinate_system_scaled = SegmentCoordinateSystemReal(
             scs=self.scale_rt(original_segment.segment_coordinate_system.scs[:, :, 0], parent_scale_factor),
             is_scs_local=True,
         )
@@ -419,59 +429,92 @@ class ScaleTool:
         original_radii_of_gyration = np.array(
             [
                 np.sqrt(inertia / original_segment.inertia_parameters.mass)
-                for inertia in original_segment.inertia_parameters.inertia
+                for inertia in original_segment.inertia_parameters.inertia[:3, :3]
             ]
         )
-        scaled_inertia = segment_mass * (original_radii_of_gyration * scale_factor) ** 2
+        scaled_inertia = segment_mass * (original_radii_of_gyration * scale_factor[:3]) ** 2
 
-        inertia_parameters = InertiaParametersReal(
+        inertia_parameters_scaled = InertiaParametersReal(
             mass=segment_mass,
             center_of_mass=original_segment.inertia_parameters.center_of_mass * scale_factor,
             inertia=scaled_inertia,
         )
 
-        mesh_file = deepcopy(original_segment.mesh_file)
-        mesh_file.mesh_scale *= scale_factor
-        mesh_file.mesh_translation *= scale_factor
+        mesh_scaled = deepcopy(original_segment.mesh)
+        if mesh_scaled is not None:
+            mesh_scaled.positions *= scale_factor
 
-        scaled_segment = deepcopy(original_segment)
-        scaled_segment.segment_coordinate_system = segment_coordinate_system
-        scaled_segment.inertia_parameters = inertia_parameters
-        scaled_segment.mesh_file = mesh_file
+        mesh_file_scaled = deepcopy(original_segment.mesh_file)
+        if mesh_file_scaled is not None:
+            mesh_file_scaled.mesh_scale *= scale_factor
+            mesh_file_scaled.mesh_translation *= scale_factor
 
-        return scaled_segment
+        return SegmentReal(
+            name=deepcopy(original_segment.name),
+            parent_name=deepcopy(original_segment.parent_name),
+            segment_coordinate_system=segment_coordinate_system_scaled,
+            translations=deepcopy(original_segment.translations),
+            rotations=deepcopy(original_segment.rotations),
+            q_ranges=deepcopy(original_segment.q_ranges),
+            qdot_ranges=deepcopy(original_segment.qdot_ranges),
+            inertia_parameters=inertia_parameters_scaled,
+            mesh=mesh_scaled,
+            mesh_file=mesh_file_scaled,
+        )
 
     def scale_marker(self, original_marker: MarkerReal, scale_factor: np.ndarray) -> MarkerReal:
-        scaled_marker = deepcopy(original_marker)
-        scaled_marker.position *= scale_factor
-        return scaled_marker
+        return MarkerReal(
+            name=deepcopy(original_marker.name),
+            parent_name=deepcopy(original_marker.parent_name),
+            position=deepcopy(original_marker.position) * scale_factor,
+            is_technical=deepcopy(original_marker.is_technical),
+            is_anatomical=deepcopy(original_marker.is_anatomical),
+        )
 
     def scale_contact(self, original_contact: ContactReal, scale_factor: np.ndarray) -> ContactReal:
-        scaled_contact = deepcopy(original_contact)
-        scaled_contact.position *= scale_factor
-        return scaled_contact
+        return ContactReal(
+            name=deepcopy(original_contact.name),
+            parent_name=deepcopy(original_contact.parent_name),
+            position=deepcopy(original_contact) * scale_factor,
+            axis=deepcopy(original_contact.axis),
+        )
 
     def scale_imu(
         self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
     ) -> InertialMeasurementUnitReal:
-        scaled_imu = deepcopy(original_imu)
-        scaled_imu.scs = self.scale_rt(original_imu.scs[:, :, 0], scale_factor)
-        return scaled_imu
+        return InertialMeasurementUnitReal(
+            name=deepcopy(original_imu.name),
+            parent_name=deepcopy(original_imu.parent_name),
+            scs=self.scale_rt(original_imu.scs[:, :, 0], scale_factor),
+            is_technical=deepcopy(original_imu.is_technical),
+            is_anatomical=deepcopy(original_imu.is_anatomical),
+        )
 
     def scale_muscle(
         self, original_muscle: MuscleReal, origin_scale_factor: np.ndarray, insertion_scale_factor: np.ndarray
     ) -> MuscleReal:
-        scaled_muscle = deepcopy(original_muscle)
-        scaled_muscle.origin_position *= origin_scale_factor
-        scaled_muscle.insertion_position *= insertion_scale_factor
-        scaled_muscle.optimal_length = (None,)  # Will be set later
-        scaled_muscle.tendon_slack_length = (None,)  # Will be set later
-        return scaled_muscle
+        return MuscleReal(
+            name=deepcopy(original_muscle.name),
+            muscle_type=deepcopy(original_muscle.muscle_type),
+            state_type=deepcopy(original_muscle.state_type),
+            muscle_group=deepcopy(original_muscle.muscle_group),
+            origin_position=deepcopy(original_muscle.origin_position) * origin_scale_factor,
+            insertion_position=deepcopy(original_muscle.insertion_position) * insertion_scale_factor,
+            optimal_length=None,  # Will be set later
+            maximal_force=deepcopy(original_muscle.maximal_force),
+            tendon_slack_length=None,  # Will be set later
+            pennation_angle=deepcopy(original_muscle.pennation_angle),
+            maximal_excitation=deepcopy(original_muscle.maximal_excitation),
+        )
 
     def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
-        scaled_via_point = deepcopy(original_via_point)
-        scaled_via_point.position *= parent_scale_factor
-        return scaled_via_point
+        return ViaPointReal(
+            name=deepcopy(original_via_point.name),
+            parent_name=deepcopy(original_via_point.parent_name),
+            muscle_name=deepcopy(original_via_point.muscle_name),
+            muscle_group=deepcopy(original_via_point.muscle_group),
+            position=original_via_point.position * parent_scale_factor,
+        )
 
     def find_static_pose(
         self,
@@ -538,20 +581,6 @@ class ScaleTool:
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-    def replace_markers_on_segments_global_scs(self, marker_positions: np.ndarray, marker_names: list[str]):
-        for i_segment, segment in enumerate(self.scaled_model.segments):
-            if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_local:
-                raise RuntimeError(
-                    "Something went wrong. Following make_static_pose_the_zero, the segment's coordinate system should be in the global."
-                )
-            for marker in segment.markers:
-                marker_name = marker.name
-                marker_index = marker_names.index(marker_name)
-                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                rt = RotoTransMatrix()
-                rt.rt_matrix = deepcopy(segment.segment_coordinate_system.scs[:, :, 0])
-                marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
-
     def replace_markers_on_segments_local_scs(
         self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray
     ):
@@ -589,22 +618,29 @@ class ScaleTool:
         )
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
-            self.replace_markers_on_segments_global_scs(marker_positions, marker_names)
+            self.scaled_model.segments_rt_to_local()
+            q = np.zeros((self.scaled_model.nb_q, ))
         else:
-            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static)
+            q = q_static
+        self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q)
 
     def modify_muscle_parameters(self):
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
-        # TODO: compute muscle length !
         """
-        muscle_names = self.original_model.muscle_names
-        q_zeros = np.zeros((self.original_model.nb_q,))
-        for muscle_name in self.original_model.muscles.keys():
-            original_muscle_length = self.original_model.muscle_length(muscle_name, q_zeros)
-            scaled_muscle_length = self.scaled_model.muscle_length(muscle_name, q_zeros)
+        for muscle_name in self.original_model.muscle_names:
             if self.original_model.muscles[muscle_name].optimal_length is None:
-                print("sss")
+                raise RuntimeError(
+                    f"The muscle {muscle_name} does not have an optimal length. Please set the optimal length of the muscle in the original model."
+                )
+            elif self.original_model.muscles[muscle_name].tendon_slack_length is None:
+                raise RuntimeError(
+                    f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
+                )
+
+            original_muscle_length = self.original_model.muscle_length(muscle_name)
+            scaled_muscle_length = self.scaled_model.muscle_length(muscle_name)
+
             self.scaled_model.muscles[muscle_name].optimal_length = (
                 deepcopy(self.original_model.muscles[muscle_name].optimal_length)
                 * scaled_muscle_length

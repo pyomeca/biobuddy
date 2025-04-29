@@ -361,5 +361,28 @@ class ModelDynamics:
         return jac
 
     @requires_initialization
-    def muscle_length(self, muscle_name: str, q: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("Please implement the muscle_length function.")
+    def muscle_length(self, muscle_name: str) -> np.ndarray:
+        # TODO: consider computing the muscle length in other configurations than the zero position.
+        muscle_group_name = self.muscles[muscle_name].muscle_group
+        muscle_origin_parent_name = self.muscle_groups[muscle_group_name].origin_parent_name
+        muscle_insertion_parent_name = self.muscle_groups[muscle_group_name].insertion_parent_name
+
+        # Get all the points composing the muscle
+        muscle_via_points = []
+        for via_point in self.via_points:
+            if via_point.muscle_name == muscle_name:
+                rt = self.segment_coordinate_system_in_global(via_point.parent_name)[:, :, 0]
+                muscle_via_points += [rt @ via_point.position]
+        origin_position = self.segment_coordinate_system_in_global(muscle_origin_parent_name)[:, :, 0] @ self.muscles[muscle_name].origin_position
+        insertion_position = self.segment_coordinate_system_in_global(muscle_insertion_parent_name)[:, :, 0] @ self.muscles[muscle_name].insertion_position
+
+        # TODO: @pariterre how is it done in biorbd ? (Do I have to sort them according to the distance?)
+        # if len(muscle_via_points) > 1:
+
+        muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
+        muscle_norm = 0
+        for i_point in range(len(muscle_trajectory) - 1):
+            muscle_norm += np.linalg.norm(muscle_trajectory[i_point][:3] - muscle_trajectory[i_point+1][:3])
+
+        return muscle_norm
+

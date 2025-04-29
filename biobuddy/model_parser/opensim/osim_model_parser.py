@@ -200,7 +200,7 @@ class OsimModelParser:
 
     def _get_joint_set(self):
         joints = []
-        if is_element_empty(self.forceset_elt):
+        if is_element_empty(self.jointset_elt):
             return []
         else:
             for element in self.jointset_elt[0]:
@@ -373,7 +373,7 @@ class OsimModelParser:
                 # Add via points if any
                 for via_point in muscle.via_point:
                     via_real = ViaPointReal(
-                        name=via_point.name,
+                        name=f"{muscle.name}-{via_point.name}",
                         parent_name=via_point.body,
                         muscle_name=muscle.name,
                         muscle_group=muscle_real.muscle_group,
@@ -793,6 +793,18 @@ class OsimModelParser:
                 if "Muscle" in element.tag:
                     original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
                     current_muscle = Muscle.from_element(element, self.ignore_muscle_applied_tag)
+
+                    if len(element.find("GeometryPath").find("PathPointSet")[0].findall("ConditionalPathPoint")):
+                        self.warnings.append(
+                            f"Some conditional path points were present for the {current_muscle.name} muscle. "
+                            "This feature is not implemented in biorbd yet so it will be ignored."
+                        )
+                    if len(element.find("GeometryPath").find("PathPointSet")[0].findall("MovingPathPoint")):
+                        self.warnings.append(
+                            f"Some moving path points were present for the {current_muscle.name} muscle. "
+                            "This feature is not implemented in biorbd yet so it will be ignored."
+                        )
+
                     if current_muscle is not None:
                         forces.append(current_muscle)
                         if forces[-1].wrap:
