@@ -150,7 +150,9 @@ class ModelDynamics:
         if with_biorbd:
             jacobian_matrix = np.zeros((3, nb_markers, nb_q))
             for i_marker in range(nb_markers):
-                jacobian_matrix[:, i_marker, :] = model.markersJacobian(q)[i_marker].to_array() * marker_weights_reordered[i_marker]
+                jacobian_matrix[:, i_marker, :] = (
+                    model.markersJacobian(q)[i_marker].to_array() * marker_weights_reordered[i_marker]
+                )
         else:
             jacobian_matrix = np.array(model.markers_jacobian(q)) * marker_weights_reordered
 
@@ -222,9 +224,11 @@ class ModelDynamics:
         else:
             for marker_name in self.marker_names:
                 if marker_name not in marker_weights:
-                    raise ValueError(f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them.")
+                    raise ValueError(
+                        f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
+                    )
 
-        marker_weights_reordered = np.zeros((nb_markers, ))
+        marker_weights_reordered = np.zeros((nb_markers,))
         for i_marker in range(nb_markers):
             marker_weights_reordered[i_marker] = marker_weights[self.marker_names[i_marker]]
 
@@ -241,9 +245,17 @@ class ModelDynamics:
         for i_frame in range(nb_frames):
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
-                    model_to_use, q_regularization_weight, q_target, q, markers_real[:, :, i_frame], marker_weights_reordered, with_biorbd
+                    model_to_use,
+                    q_regularization_weight,
+                    q_target,
+                    q,
+                    markers_real[:, :, i_frame],
+                    marker_weights_reordered,
+                    with_biorbd,
                 ),
-                jac=lambda q: self._marker_jacobian(model_to_use, q_regularization_weight, q, marker_weights_reordered, with_biorbd),
+                jac=lambda q: self._marker_jacobian(
+                    model_to_use, q_regularization_weight, q, marker_weights_reordered, with_biorbd
+                ),
                 x0=init,
                 method=method,
                 xtol=1e-6,
