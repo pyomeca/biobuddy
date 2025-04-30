@@ -3,17 +3,16 @@ import logging
 import numpy as np
 import itertools
 from scipy import optimize
-from scipy.linalg import svd
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.c3d_data import C3dData
-from ..utils.linear_algebra import RotoTransMatrix, unit_vector, quaternion_to_rotation_matrix, get_closest_rt_matrix
+from ..utils.linear_algebra import RotoTransMatrix, unit_vector, quaternion_to_rotation_matrix, get_closest_rt_matrix, mean_homogenous_matrix
 
 _logger = logging.getLogger(__name__)
 
 
-class Score:
+class RigidSegmentIdentification:
     def __init__(
         self,
         filepath: str,
@@ -26,11 +25,6 @@ class Score:
         method: str = "numerical",
     ):
         """
-        Initializes the Score class which will find the position of the joint center using functional movements.
-        The SCoRE algorithm considers that both segments are rigid bodies and that the joint center is located at the
-        intersection of the two segments.
-        TODO: Add algo ref link.
-
         Parameters
         ----------
         filepath
@@ -57,37 +51,119 @@ class Score:
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
         self.child_marker_names = child_marker_names
+        self.first_frame = first_frame
+        self.last_frame = last_frame
         self.method = method
 
         # Extended attributes
-        self.parent_static_markers_in_global = None
-        self.child_static_markers_in_global = None
-        self.parent_static_markers_in_local = None
-        self.child_static_markers_in_local = None
-        self.parent_markers_global = None
-        self.child_markers_global = None
+        self.parent_static_markers_in_global: np.ndarray = None
+        self.child_static_markers_in_global: np.ndarray = None
+        self.parent_static_markers_in_local: np.ndarray = None
+        self.child_static_markers_in_local: np.ndarray = None
+        self.parent_markers_global: np.ndarray = None
+        self.child_markers_global: np.ndarray = None
+        self.c3d_data: C3dData = None
+        self.marker_name: list[str] = None
+        self.marker_positions: np.ndarray = None
 
+        self._check_segment_names()
+        self._check_c3d_functional_trial_file()
+
+
+    def _check_segment_names(self):
         illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
         for name in illegal_names:
-            if name in parent_name:
+            if name in self.parent_name:
                 raise RuntimeError(
-                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {parent_name} from the Score configuration."
+                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {self.parent_name} from the Score configuration."
                 )
-            if name in child_name:
+            if name in self.child_name:
                 raise RuntimeError(
-                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {child_name} from the Score configuration."
+                    f"The names {name} are not allowed in the parent or child names. Please change the segment named {self.child_name} from the Score configuration."
                 )
 
+    def _check_c3d_functional_trial_file(self):
+        """
+        Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
+        """
         # Check file format
-        if filepath.endswith(".c3d"):
-            self.c3d_data = C3dData(filepath, first_frame, last_frame)
+        if self.filepath.endswith(".c3d"):
+            # Load the c3d file
+            self.c3d_data = C3dData(self.filepath, self.first_frame, self.last_frame)
+            self.marker_names = self.c3d_data.marker_names
+            self.marker_positions = self.c3d_data.all_marker_positions[:3, :, :]
         else:
-            if filepath.endswith(".trc"):
+            if self.filepath.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
                 raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
 
-    def _four_groups(self, markers: np.ndarray):
+        # Check that the markers move
+        std = []
+        for marker_name in self.parent_marker_names + self.child_marker_names:
+            std += self.c3d_data.std_marker_position(marker_name)
+        if all(np.array(std) < 0.01):
+            raise RuntimeError(
+                f"The markers {self.parent_marker_names + self.child_marker_names} are not moving in the functional trial (markers std = {std}). "
+                f"Please check the trial again."
+            )
+
+    def replace_components_in_new_jcs(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
+        """
+        Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
+        TODO: Verify that this also works with non orthonormal rotation axes.
+        """
+        # New position of the child jsc after replacing the parent_offset segment
+        new_child_jcs_in_global = RotoTransMatrix()
+        new_child_jcs_in_global.rt_matrix = new_model.segment_coordinate_system_in_global(self.child_name)
+
+        original_local_scs = RotoTransMatrix()
+        original_local_scs.rt_matrix = original_model.segment_coordinate_system_in_local(self.child_name)
+        new_local_scs = RotoTransMatrix()
+        new_local_scs.rt_matrix = new_model.segment_coordinate_system_in_local(self.child_name)
+        local_scs_transform = RotoTransMatrix()  # The transformation between the old local and the new local jcs
+        local_scs_transform.rt_matrix = get_closest_rt_matrix(original_local_scs.inverse @ new_local_scs.rt_matrix)
+
+        # Next JCS position
+        next_child_name = original_model.children_segment_names(self.child_name)[0]
+        original_next_child_jcs_in_global = RotoTransMatrix()
+        original_next_child_jcs_in_global.rt_matrix = original_model.segment_coordinate_system_in_global(next_child_name)
+        new_jcs_in_local = RotoTransMatrix()
+        new_jcs_in_local.rt_matrix = local_scs_transform.inverse @ original_next_child_jcs_in_global.rt_matrix  # @ local_scs_transform.inverse.T @
+        new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+            scs=new_jcs_in_local.rt_matrix,
+            is_scs_local=True,
+        )
+
+        # Markers
+        marker_positions = original_model.markers_in_global()
+        for marker in new_model.segments[self.child_name].markers:
+            marker_index = original_model.markers_indices([marker.name])
+            marker.position = new_child_jcs_in_global.inverse @ marker_positions[:, marker_index, 0]
+
+        # Contacts
+        contact_positions = original_model.contacts_in_global()
+        for contact in new_model.segments[self.child_name].contacts:
+            contact_index = original_model.contact_indices([contact.name])
+            contact.position = new_child_jcs_in_global.inverse @ contact_positions[:, contact_index, 0]
+
+        # IMUs
+        for imu in new_model.segments[self.child_name].imus:
+            imu.scs = local_scs_transform.inverse @ imu.scs
+
+        # Muscles (origin and insertion)
+        for muscle_name in new_model.muscle_origin_on_this_segment(self.child_name):
+            new_model.muscles[muscle_name].origin_position = new_child_jcs_in_global.inverse @ original_model.muscles[muscle_name].origin_position
+        for muscle_name in new_model.muscle_insertion_on_this_segment(self.child_name):
+            new_model.muscles[muscle_name].insertion_position = new_child_jcs_in_global.inverse @ original_model.muscles[
+                muscle_name].insertion_position
+
+        # Via points
+        for via_point_name in new_model.via_points_on_this_segment(self.child_name):
+            new_model.via_points[via_point_name].position = new_child_jcs_in_global.inverse @ original_model.via_points[via_point_name].position
+
+
+    def four_groups(self, markers: np.ndarray):
         """
         Find 4 groups of markers to define 2 near-orthogonal axes.
 
@@ -129,7 +205,7 @@ class Score:
                         best_combo = list(a1) + [np.nan] + list(a2) + [np.nan] + list(b1) + [np.nan] + list(b2)
         return np.array(best_combo)
 
-    def _use_4_groups(self, markers: np.ndarray, groups: np.ndarray):
+    def use_4_groups(self, markers: np.ndarray, groups: np.ndarray):
         """
         Build orthonormal basis using grouped markers.
 
@@ -145,10 +221,10 @@ class Score:
             Local coordinate system (X, Y, Z axes)
         """
         nan_indices = np.where(np.isnan(groups))[0]
-        a1 = groups[0 : nan_indices[0]].astype(int)
-        a2 = groups[nan_indices[0] + 1 : nan_indices[1]].astype(int)
-        b1 = groups[nan_indices[1] + 1 : nan_indices[2]].astype(int)
-        b2 = groups[nan_indices[2] + 1 :].astype(int)
+        a1 = groups[0: nan_indices[0]].astype(int)
+        a2 = groups[nan_indices[0] + 1: nan_indices[1]].astype(int)
+        b1 = groups[nan_indices[1] + 1: nan_indices[2]].astype(int)
+        b2 = groups[nan_indices[2] + 1:].astype(int)
 
         x_axis = np.mean(markers[:3, a1], axis=1) - np.mean(markers[:3, a2], axis=1)
         y_axis = np.mean(markers[:3, b1], axis=1) - np.mean(markers[:3, b2], axis=1)
@@ -157,12 +233,12 @@ class Score:
 
         return np.stack([unit_vector(x_axis), unit_vector(y_axis), unit_vector(z_axis)], axis=1)
 
-    def _optimal_rt(
-        self,
-        markers: np.ndarray,
-        static_markers_in_global: np.ndarray,
-        rotation_init: np.ndarray,
-        marker_names: list[str],
+    def optimal_rt(
+            self,
+            markers: np.ndarray,
+            static_markers_in_global: np.ndarray,
+            rotation_init: np.ndarray,
+            marker_names: list[str],
     ):
 
         def inv_ppvect(x):
@@ -180,7 +256,7 @@ class Score:
 
         markers = markers[:3, :, :]
         static_markers_in_global = static_markers_in_global[:3, :, :]
-        nb_markers, nb_frames, static_centered = self._check_optimal_rt_inputs(
+        nb_markers, nb_frames, static_centered = self.check_optimal_rt_inputs(
             markers, static_markers_in_global, marker_names
         )
 
@@ -214,8 +290,8 @@ class Score:
         G = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
             G[:, i_frame] = 0.5 * (
-                np.dot(Q[:, :, i_frame], Y[:, i_frame])
-                - np.dot(np.dot(np.dot(Y[:, i_frame].T, Q[:, :, i_frame]), Y[:, i_frame]) / 4, Y[:, i_frame])
+                    np.dot(Q[:, :, i_frame], Y[:, i_frame])
+                    - np.dot(np.dot(np.dot(Y[:, i_frame].T, Q[:, :, i_frame]), Y[:, i_frame]) / 4, Y[:, i_frame])
             )
 
         Yj, Zj, Gj = Y.copy(), G.copy(), G.copy()
@@ -240,7 +316,7 @@ class Score:
                 b = np.dot(YYi, ZiQZi) - np.dot(ZZi, dot_YiQ_Yi)
                 c = np.dot(YYi, dot_ZiQ_Yi) - np.dot(YZi, dot_YiQ_Yi)
 
-                delta = ((np.dot(YYi, ZZi) - YZi**2) * b**2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
+                delta = ((np.dot(YYi, ZZi) - YZi ** 2) * b ** 2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
                 mu = (-b - np.sqrt(delta)) / (2 * a)
                 Yj[:, i_frame] = Yi[:, i_frame] + mu * Zi[:, i_frame]
                 Gj[:, i_frame] = np.dot(
@@ -278,9 +354,9 @@ class Score:
                 functional_quaternion_vector[:, i_frame].T, static_quaternion_vector
             )
             quaternion_vector[:, i_frame] = (
-                functional_quaternion_scalar[i_frame] * static_quaternion_vector
-                + static_quaternion_scalar * functional_quaternion_vector[:, i_frame]
-                + np.dot(ppvect_mat(functional_quaternion_vector[:, i_frame]), static_quaternion_vector)
+                    functional_quaternion_scalar[i_frame] * static_quaternion_vector
+                    + static_quaternion_scalar * functional_quaternion_vector[:, i_frame]
+                    + np.dot(ppvect_mat(functional_quaternion_vector[:, i_frame]), static_quaternion_vector)
             )
 
             # Renormalization of the quaternion to make sure it lies in SO(3)
@@ -298,25 +374,25 @@ class Score:
             )
 
         # Fill final RT
-        optimal_rt = np.zeros((4, 4, nb_frames))
-        optimal_rt[:3, :3, :] = rotation
-        optimal_rt[:3, 3, :] = mean_markers[:, np.newaxis]
-        optimal_rt[3, 3, :] = 1
+        rt_optimal = np.zeros((4, 4, nb_frames))
+        rt_optimal[:3, :3, :] = rotation
+        rt_optimal[:3, 3, :] = mean_markers[:, np.newaxis]
+        rt_optimal[3, 3, :] = 1
 
         mean_static_markers_in_global = np.mean(static_markers_in_global, axis=1)
         residual = np.full((nb_frames, nb_markers), np.nan)
         for i_marker in range(nb_markers):
             static_local = rotation_init[:3, :3].T @ (
-                static_markers_in_global[:, i_marker] - mean_static_markers_in_global.squeeze()
+                    static_markers_in_global[:, i_marker] - mean_static_markers_in_global.squeeze()
             )
             for i_frame in range(nb_frames):
                 current_local = rotation[:3, :, i_frame].T @ (markers[:, i_marker, i_frame] - mean_markers)
                 residual[i_frame, i_marker] = np.linalg.norm(static_local - current_local)
 
-        return optimal_rt
+        return rt_optimal
 
-    def _check_optimal_rt_inputs(
-        self, markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
+    def check_optimal_rt_inputs(
+            self, markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
     ) -> tuple[int, int, np.ndarray]:
 
         nb_markers = markers.shape[1]
@@ -332,14 +408,14 @@ class Score:
         for i_marker, marker_name in enumerate(marker_names):
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = (
-                    markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
+                        markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
                 )
                 if (
-                    np.abs(
-                        np.linalg.norm(static_centered[:, i_marker])
-                        - np.linalg.norm(current_functional_marker_centered)
-                    )
-                    > 0.05
+                        np.abs(
+                            np.linalg.norm(static_centered[:, i_marker])
+                            - np.linalg.norm(current_functional_marker_centered)
+                        )
+                        > 0.05
                 ):
                     raise RuntimeError(
                         f"The marker {marker_name} seem to move during the functional trial."
@@ -349,39 +425,103 @@ class Score:
                     )
             return nb_markers, nb_frames, static_centered
 
-    def _marker_residual(
-        self,
-        rt: np.ndarray,
-        static_markers_in_local: np.ndarray,
-        functional_markers: np.ndarray,
+    def check_marker_positions(self):
+        """
+        Check that the markers are positioned at the same place on the subject between the static trial and the current functional trial.
+        """
+        # Parent
+        for marker_name_1 in self.parent_marker_names:
+            for marker_name_2 in self.parent_marker_names:
+                if marker_name_1 != marker_name_2:
+                    distance_trial = np.linalg.norm(
+                        self.parent_static_markers_in_global[:, self.parent_marker_names.index(marker_name_1), 0]
+                        - self.parent_static_markers_in_global[:, self.parent_marker_names.index(marker_name_2), 0]
+                    )
+                    distance_static = np.linalg.norm(
+                        self.parent_markers_global[:, self.parent_marker_names.index(marker_name_1), 0]
+                        - self.parent_markers_global[:, self.parent_marker_names.index(marker_name_2), 0]
+                    )
+                    if np.abs(distance_static - distance_trial) > 0.05:
+                        raise RuntimeError(
+                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments."
+                        )
+        # Child
+        for marker_name_1 in self.child_marker_names:
+            for marker_name_2 in self.child_marker_names:
+                if marker_name_1 != marker_name_2:
+                    distance_trial = np.linalg.norm(
+                        self.child_static_markers_in_global[:3, self.child_marker_names.index(marker_name_1), 0]
+                        - self.child_static_markers_in_global[:3, self.child_marker_names.index(marker_name_2), 0]
+                    )
+                    distance_static = np.linalg.norm(
+                        self.child_markers_global[:3, self.child_marker_names.index(marker_name_1), 0]
+                        - self.child_markers_global[:3, self.child_marker_names.index(marker_name_2), 0]
+                    )
+                    if np.abs(distance_static - distance_trial) > 0.05:
+                        raise RuntimeError(
+                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments."
+                        )
+
+    def marker_residual(
+            self,
+            rt: np.ndarray,
+            static_markers_in_local: np.ndarray,
+            functional_markers: np.ndarray,
     ) -> float:
         nb_markers = static_markers_in_local.shape[1]
         vect_pos_markers = np.zeros(4 * nb_markers)
         rt_matrix = rt.reshape(4, 4)
         for i_marker in range(nb_markers):
-            vect_pos_markers[i_marker * 4 : (i_marker + 1) * 4] = (
-                rt_matrix @ static_markers_in_local[:, i_marker] - functional_markers[:, i_marker]
-            ) ** 2
+            vect_pos_markers[i_marker * 4: (i_marker + 1) * 4] = (
+                                                                         rt_matrix @ static_markers_in_local[:,
+                                                                                     i_marker] - functional_markers[:,
+                                                                                                 i_marker]
+                                                                 ) ** 2
         return np.sum(vect_pos_markers)
 
-    def _rt_constraints(self, rt: np.ndarray) -> np.ndarray:
+    def marker_residual(
+            self,
+            rt: np.ndarray,
+            static_markers_in_local: np.ndarray,
+            functional_markers: np.ndarray,
+    ) -> float:
+        nb_markers = static_markers_in_local.shape[1]
+        vect_pos_markers = np.zeros(4 * nb_markers)
         rt_matrix = rt.reshape(4, 4)
-        g = rt_matrix.T @ rt_matrix - np.identity(4)
-        return g.flatten()
+        for i_marker in range(nb_markers):
+            vect_pos_markers[i_marker * 4: (i_marker + 1) * 4] = (
+                                                                         rt_matrix @ static_markers_in_local[:,
+                                                                                     i_marker] - functional_markers[:,
+                                                                                                 i_marker]
+                                                                 ) ** 2
+        return np.sum(vect_pos_markers)
 
-    def _scipy_optimal_rt(
-        self,
-        markers: np.ndarray,
-        static_markers_in_local: np.ndarray,
-        rotation_init: np.ndarray,
-        marker_names: list[str],
+    def rt_constraints(self, rt: np.ndarray) -> np.ndarray:
+        rt_matrix = rt.reshape(4, 4)
+        R = rt_matrix[:3, :3]
+        c1, c2, c3 = R[:, 0], R[:, 1], R[:, 2]
+        constraints = np.array([
+            np.dot(c1, c1) - 1,
+            np.dot(c2, c2) - 1,
+            np.dot(c3, c3) - 1,
+            np.dot(c1, c2),
+            np.dot(c1, c3),
+            np.dot(c2, c3),
+        ])
+        return constraints
+
+    def scipy_optimal_rt(
+            self,
+            markers: np.ndarray,
+            static_markers_in_local: np.ndarray,
+            rotation_init: np.ndarray,
+            marker_names: list[str],
     ):
 
-        nb_markers, nb_frames, _ = self._check_optimal_rt_inputs(markers, static_markers_in_local[:3, :], marker_names)
+        nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(markers, static_markers_in_local[:3, :], marker_names)
 
-        optimal_rt = np.zeros((4, 4, nb_frames))
+        rt_optimal = np.zeros((4, 4, nb_frames))
         for i_frame in range(nb_frames):
-
             init = np.eye(4)
             init[:3, :3] = rotation_init
             init[:, 3] = np.nanmean(markers[:, :, i_frame], axis=1)
@@ -395,87 +535,92 @@ class Score:
             ubx[3, :] = [0, 0, 0, 1]
 
             sol = optimize.minimize(
-                fun=lambda rt: self._marker_residual(
+                fun=lambda rt: self.marker_residual(
                     rt,
                     static_markers_in_local,
                     markers[:, :, i_frame],
                 ),
                 x0=init,
                 method="SLSQP",
-                constraints={"type": "eq", "fun": lambda rt: self._rt_constraints(rt)},
+                constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(rt)},
                 bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
             )
-            optimal_rt[:, :, i_frame] = np.reshape(sol.x, (4, 4))
+            if sol.success:
+                rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
+                rotation_init = rt_optimal[:3, :3, i_frame]
+            else:
+                rt_optimal[:, :, i_frame] = np.nan
+                print(f"The optimization failed: {sol.message}")
 
-        return optimal_rt
+        return rt_optimal
 
-    def _rt_from_trial(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def rt_from_trial(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
         """
-        parent_marker_groups = self._four_groups(self.parent_static_markers_in_global[:, :, 0])
-        child_marker_groups = self._four_groups(self.child_static_markers_in_global[:, :, 0])
-        parent_initial_rotation = self._use_4_groups(
-            self.parent_static_markers_in_global[:, :, 0], parent_marker_groups
-        )
-        child_initial_rotation = self._use_4_groups(self.child_static_markers_in_global[:, :, 0], child_marker_groups)
+        parent_marker_groups = self.four_groups(self.parent_static_markers_in_global[:, :, 0])
+        child_marker_groups = self.four_groups(self.child_static_markers_in_global[:, :, 0])
 
         if self.method == "numerical":
-            # rt are in the global but are positioned at the center of the markers
-            rt_parent_functional = self._optimal_rt(
+            # RT are positioned at the center of the markers and are in the global
+            rt_parent_functional = self.optimal_rt(
                 self.parent_markers_global,
                 self.parent_static_markers_in_global,
-                parent_initial_rotation,
+                self.use_4_groups(self.parent_markers_global[:, :, 0], parent_marker_groups),
                 marker_names=self.parent_marker_names,
             )
-            rt_child_functional = self._optimal_rt(
+            rt_child_functional = self.optimal_rt(
                 self.child_markers_global,
                 self.child_static_markers_in_global,
-                child_initial_rotation,
+                self.use_4_groups(self.child_markers_global[:, :, 0], parent_marker_groups),
                 marker_names=self.child_marker_names,
             )
-            rt_parent_static = self._optimal_rt(
+            rt_parent_static = self.optimal_rt(
                 self.parent_static_markers_in_global,
                 self.parent_static_markers_in_global,
-                parent_initial_rotation,
+                self.use_4_groups(self.parent_static_markers_in_global[:, :, 0], parent_marker_groups),
                 marker_names=self.parent_marker_names,
             )
-            rt_child_static = self._optimal_rt(
+            rt_child_static = self.optimal_rt(
                 self.child_static_markers_in_global,
                 self.child_static_markers_in_global,
-                child_initial_rotation,
+                self.use_4_groups(self.child_static_markers_in_global[:, :, 0], child_marker_groups),
                 marker_names=self.child_marker_names,
             )
         elif self.method == "optimization":
-            # rt are in the global but are positioned at the old joint center
-            rt_parent_functional = self._scipy_optimal_rt(
+            # RT coincide with the old model RT and are in the global
+            rt_parent_functional = self.scipy_optimal_rt(
                 self.parent_markers_global,
                 self.parent_static_markers_in_local,
-                parent_initial_rotation,
+                self.use_4_groups(self.parent_markers_global[:, :, 0], parent_marker_groups),
                 marker_names=self.parent_marker_names,
             )
-            rt_child_functional = self._scipy_optimal_rt(
+            rt_child_functional = self.scipy_optimal_rt(
                 self.child_markers_global,
                 self.child_static_markers_in_local,
-                child_initial_rotation,
+                self.use_4_groups(self.child_markers_global[:, :, 0], parent_marker_groups),
                 marker_names=self.child_marker_names,
             )
-            rt_parent_static = self._scipy_optimal_rt(
+            rt_parent_static = self.scipy_optimal_rt(
                 self.parent_static_markers_in_global,
                 self.parent_static_markers_in_local,
-                parent_initial_rotation,
+                self.use_4_groups(self.parent_static_markers_in_global[:, :, 0], parent_marker_groups),
                 marker_names=self.parent_marker_names,
             )
-            rt_child_static = self._scipy_optimal_rt(
+            rt_child_static = self.scipy_optimal_rt(
                 self.child_static_markers_in_global,
                 self.child_static_markers_in_local,
-                child_initial_rotation,
+                self.use_4_groups(self.child_static_markers_in_global[:, :, 0], child_marker_groups),
                 marker_names=self.child_marker_names,
             )
         else:
             raise RuntimeError(f"The method {self.method} is not recognized.")
 
         return rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static
+
+
+
+class Score(RigidSegmentIdentification):
 
     def _score_algorithm(
         self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True
@@ -560,9 +705,9 @@ class Score:
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self._rt_from_trial()
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial()
 
-        cor_in_global, cor_in_parent, cor_in_child, associated_parent_rt, associated_child_rt = self._score_algorithm(
+        cor_in_global, cor_in_parent, cor_in_child, associated_parent_rt, associated_child_rt = self.score_algorithm(
             rt_parent_functional, rt_child_functional
         )
         print("Difference in CoR position between parent and child is large !!!!")
@@ -656,56 +801,206 @@ class Score:
         # Muscles origin, insertion, via points
 
 
-class Sara:
-    def __init__(self, filepath: str, parent_name: str, child_name: str, first_frame: int, last_frame: int):
+class Sara(RigidSegmentIdentification):
+    def __init__(
+            self,
+            filepath: str,
+            parent_name: str,
+            child_name: str,
+            parent_marker_names: list[str],
+            child_marker_names: list[str],
+            first_frame: int,
+            last_frame: int,
+            joint_center_markers: list[str],
+            distal_markers: list[str],
+            method: str = "numerical",
+    ):
+
+        super(Sara, self).__init__(filepath=filepath,
+                             parent_name=parent_name,
+                             child_name=child_name,
+                             parent_marker_names=parent_marker_names,
+                             child_marker_names=child_marker_names,
+                             first_frame=first_frame,
+                             last_frame=last_frame,
+                             method=method)
+
+        self.joint_center_markers = joint_center_markers
+        self.distal_markers = distal_markers
+
+    def _sara_algorithm(self, rt_parent: np.ndarray, rt_child: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Initializes the Sara class which will find the position of the joint center using functional movements.
-        The algorithm considers that both segments are rigid bodies and that the joint center is located at the
-        intersection of the two segments.
-        TODO: Add algo ref link.
+        Perform the SARA algorithm (Ehrig et al., 2007) to estimate the axis of rotation (AoR)
+        between two segments over time using homogeneous transformation matrices.
 
         Parameters
         ----------
-        filepath
-            The path to the .c3d file containing the functional trial.
-        parent_name
-            The name of the joint's parent segment.
-        child_name
-            The name of the joint's child segment.
-        first_frame
-            The first frame to consider in the functional trial.
-        last_frame
-            The last frame to consider in the functional trial.
+        rt_parent : ndarray (4, 4, N)
+            Homogeneous transformation matrices from the global frame to the parent segment.
+        rt_child : ndarray (4, 4, N)
+            Homogeneous transformation matrices from the global frame to the child segment.
+
+        Returns
+        -------
+        aor_global : ndarray (3, N)
+            Orientation of the axis of rotation expressed in the global frame at each frame.
+        aor_local_parent : ndarray (3,)
+            Orientation of AoR expressed in the local frame of the parent segment (normalized).
+        aor_local_child : ndarray (3,)
+            Orientation of AoR expressed in the local frame of the child segment (normalized).
+        point_on_aor_global : ndarray (3, N)
+            Global position of a point A on the axis of rotation at each frame.
+        point_local_parent : ndarray (3,)
+            Position of point A in the local frame of the parent segment.
+        point_local_child : ndarray (3,)
+            Position of point A in the local frame of the child segment.
         """
+        nb_frames = rt_parent.shape[2]
 
-        # Original attributes
-        self.filepath = filepath
-        self.parent_name = parent_name
-        self.child_name = child_name
+        # Build block matrix system R * [rCsi; rCsj] = (p_j - p_i)
+        rot = np.zeros((3 * nb_frames, 6))
+        trans = np.zeros((3 * nb_frames, 1))
 
-        # Extended attributes
-        self.parent_static_markers_in_global = None
-        self.child_static_markers_in_global = None
-        self.parent_static_markers_in_local = None
-        self.child_static_markers_in_local = None
-        self.parent_markers_global = None
-        self.child_markers_global = None
+        for k in range(nb_frames):
+            rotation_parent = rt_parent[:3, :3, k]
+            rotation_child = rt_child[:3, :3, k]
+            rot[3 * k:3 * k + 3, :3] = rotation_parent
+            rot[3 * k:3 * k + 3, 3:] = -rotation_child
+            trans[3 * k:3 * k + 3, 0] = rt_child[:3, 3, k] - rt_parent[:3, 3, k]
 
-        # Check file format
-        if filepath.endswith(".c3d"):
-            # Load the c3d file
-            c3d_data = C3dData(filepath, first_frame, last_frame)
-            self.marker_names = c3d_data.marker_names
-            self.marker_positions = c3d_data.all_marker_positions[:3, :, :]
-        else:
-            if filepath.endswith(".trc"):
-                raise NotImplementedError(".trc files cannot be read yet.")
+        # SVD of the block matrix
+        U, S, Vt = np.linalg.svd(rot, full_matrices=False)
+        V = Vt.T  # Align with MATLAB's V
+
+        # Axis orientations in local frames
+        aor_local_parent = V[:3, -1]
+        aor_local_child = V[3:, -1]
+        aor_local_parent /= np.linalg.norm(aor_local_parent)
+        aor_local_child /= np.linalg.norm(aor_local_child)
+
+        # Compute axis direction in global frame over time
+        a_parent_global = np.zeros((3, nb_frames))
+        a_child_global = np.zeros((3, nb_frames))
+        for k in range(nb_frames):
+            a_parent_global[:, k] = rt_parent[:3, :3, k] @ aor_local_parent
+            a_child_global[:, k] = rt_child[:3, :3, k] @ aor_local_child
+
+        aor_global = 0.5 * (a_parent_global + a_child_global)
+
+        # Solve least squares solution with minimal norm
+        xi = np.zeros((6, 5))
+        for i in range(5):  # Use the 5 largest singular values/vectors
+            if S[i] > 1e-12:  # Avoid division by 0
+                ui = U[:, i]
+                vi = V[:, i]
+                xi[:, i] = (ui.T @ trans[:, 0]) * vi / S[i]
+        x = np.sum(xi, axis=1)
+
+        # Remove projection onto the axis direction to find point on the line
+        point_local_parent = x[:3] - (np.dot(x[:3], aor_local_parent)) * aor_local_parent
+        point_local_child = x[3:] - (np.dot(x[3:], aor_local_child)) * aor_local_child
+
+        # Transform point to global frame at each frame
+        point_on_aor_global = np.zeros((3, nb_frames))
+        for k in range(nb_frames):
+            point_on_aor_parent = rt_parent[:3, :, k] @ np.hstack((point_local_parent, 1))
+            point_on_aor_child = rt_child[:3, :, k] @ np.hstack((point_local_child, 1))
+            point_on_aor_global[:, k] = 0.5 * (point_on_aor_parent + point_on_aor_child)
+
+        return aor_global, aor_local_parent, aor_local_child, point_on_aor_global, point_local_parent, point_local_child
+
+    def _longitudinal_axis(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Estimate the longitudinal axis of the segment and the joint center.
+        """
+        nb_frames = self.c3d_data.nb_frames
+
+        joint_center_markers = self.c3d_data.get_position(self.joint_center_markers)
+        distal_markers = self.c3d_data.get_position(self.distal_markers)
+        joint_center_global = np.ones((4, self.c3d_data.nb_frames))
+        longitudinal_axis_global = np.ones((4, self.c3d_data.nb_frames))
+        for i_frame in range(nb_frames):
+            # Get the joint center at each frame in the global reference frame
+            if np.any(np.isnan(joint_center_markers[:, :, i_frame])):
+                joint_center_global[:, i_frame] = np.nan
             else:
-                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
+                joint_center_global[:, i_frame] = np.mean(joint_center_markers[:, :, i_frame], axis=1)
+                # Get the longitudinal axis in the global reference frame
+                if np.any(np.isnan(distal_markers[:, :, i_frame])):
+                    longitudinal_axis_global[:, i_frame] = np.nan
+                else:
+                    longitudinal_axis_global[:, i_frame] = np.mean(distal_markers[:, :, i_frame], axis=1) - joint_center_global[:, i_frame]
+                    longitudinal_axis_global[:, i_frame] /= np.linalg.norm(longitudinal_axis_global[:, i_frame])
 
-        raise NotImplementedError("The SARA algorithm is not implemented yet.")
+        return joint_center_global, longitudinal_axis_global
 
+    def _extract_scs_from_axis(self, aor_global: np.ndarray, joint_center_global: np.ndarray, longitudinal_axis_global: np.ndarray, rt_parent_functional: np.ndarray) -> np.ndarray:
+        """
+        Extract the segment coordinate system (SCS) from the axis of rotation.
+        This implementation assumes that the rotation axis is the X rotation.
+        """
+        nb_frames = self.c3d_data.nb_frames
+        scs_of_child_in_global = np.zeros((4, 4, nb_frames))
+        scs_of_child_in_local = np.zeros((4, 4, nb_frames))
+        for i_frame in range(nb_frames):
+            if np.any(np.isnan(joint_center_global[:, i_frame])) or np.any(np.isnan(longitudinal_axis_global[:, i_frame])):
+                scs_of_child_in_global[:, :, i_frame] = np.nan
+            else:
+                # Extract an orthonormal basis
+                perpendicular_axis = np.cross(aor_global[:, i_frame], longitudinal_axis_global[:3, i_frame])
+                perpendicular_axis /= np.linalg.norm(perpendicular_axis)
+                accurate_longitudinal_axis = np.cross(perpendicular_axis, aor_global[:, i_frame])
+                accurate_longitudinal_axis /= np.linalg.norm(accurate_longitudinal_axis)
 
+                scs_of_child_in_global[:3, :3, i_frame] = np.column_stack((aor_global[:, i_frame], perpendicular_axis, accurate_longitudinal_axis))
+                scs_of_child_in_global[:3, 3, i_frame] = joint_center_global[:3, i_frame]
+                scs_of_child_in_global[3, 3, i_frame] = 1
+
+                # Transform to local frame
+                parent_rt = RotoTransMatrix()
+                parent_rt.rt_matrix = rt_parent_functional[:, :, i_frame]
+                scs_of_child_in_local[:, :, i_frame] = parent_rt.inverse @ scs_of_child_in_global[:, :, i_frame]
+
+        # Compute the mean SCS of the child in local frame
+        mean_scs_of_child_in_local = mean_homogenous_matrix(scs_of_child_in_local)
+
+        return mean_scs_of_child_in_local
+
+    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
+
+        # Reconstruct the trial to identify the orientation of the segments
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial()
+
+        # Identify the approximate longitudinal axis of the segments
+        joint_center_global, longitudinal_axis_global = self._longitudinal_axis()
+
+        # Identify axis of rotation
+        aor_global, aor_local_parent, aor_local_child, point_on_aor_global, point_local_parent, point_local_child = self._sara_algorithm(
+            rt_parent_functional, rt_child_functional
+        )
+
+        # extract the joint coordinate system
+        mean_scs_of_child_in_local = self._extract_scs_from_axis(aor_global, joint_center_global, longitudinal_axis_global, rt_parent_functional)
+
+        # Segment RT
+        reset_axis_rt = RotoTransMatrix()
+        reset_axis_rt.rt_matrix = np.eye(4)
+        if self.child_name + "_parent_offset" in new_model.segment_names:
+            segment_to_move_rt_from = self.child_name + "_parent_offset"
+            if self.child_name + "_reset_axis" in new_model.segment_names:
+                reset_axis_rt.rt_matrix = deepcopy(
+                    new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs
+                )
+        else:
+            segment_to_move_rt_from = self.child_name
+
+        new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
+            scs=mean_scs_of_child_in_local,
+            is_scs_local=True,
+        )
+        self.replace_components_in_new_jcs(original_model, new_model)
+
+        
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal):
 
@@ -754,54 +1049,7 @@ class JointCenterTool:
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )
-
-        # Check that there is a functional movement in the trial (aka the markers really move)
-        std = []
-        for marker_name in jcs_identifier.parent_marker_names + jcs_identifier.child_marker_names:
-            std += jcs_identifier.c3d_data.std_marker_position(marker_name)
-        if all(np.array(std) < 0.01):
-            raise RuntimeError(
-                f"The markers {jcs_identifier.parent_marker_names + jcs_identifier.child_marker_names} are not moving in the functional trial (markers std = {std}). "
-                f"Please check the trial again."
-            )
-
-    def _check_marker_positions(self, task):
-        """
-        Check that the markers are positioned at the same place on the subject between the static trial and the current functional trial.
-        """
-        # Parent
-        for marker_name_1 in task.parent_marker_names:
-            for marker_name_2 in task.parent_marker_names:
-                if marker_name_1 != marker_name_2:
-                    distance_trial = np.linalg.norm(
-                        task.parent_static_markers_in_global[:, task.parent_marker_names.index(marker_name_1), 0]
-                        - task.parent_static_markers_in_global[:, task.parent_marker_names.index(marker_name_2), 0]
-                    )
-                    distance_static = np.linalg.norm(
-                        task.parent_markers_global[:, task.parent_marker_names.index(marker_name_1), 0]
-                        - task.parent_markers_global[:, task.parent_marker_names.index(marker_name_2), 0]
-                    )
-                    if np.abs(distance_static - distance_trial) > 0.05:
-                        raise RuntimeError(
-                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments."
-                        )
-        # Child
-        for marker_name_1 in task.child_marker_names:
-            for marker_name_2 in task.child_marker_names:
-                if marker_name_1 != marker_name_2:
-                    distance_trial = np.linalg.norm(
-                        task.child_static_markers_in_global[:3, task.child_marker_names.index(marker_name_1), 0]
-                        - task.child_static_markers_in_global[:3, task.child_marker_names.index(marker_name_2), 0]
-                    )
-                    distance_static = np.linalg.norm(
-                        task.child_markers_global[:3, task.child_marker_names.index(marker_name_1), 0]
-                        - task.child_markers_global[:3, task.child_marker_names.index(marker_name_2), 0]
-                    )
-                    if np.abs(distance_static - distance_trial) > 0.05:
-                        raise RuntimeError(
-                            f"There is a difference in marker placement of more than 1cm between the static trial and the functional trial for markers {marker_name_1} and {marker_name_2}. Please make sure that the markers do not move on the subjects segments."
-                        )
-
+                    
     def replace_joint_centers(self) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
@@ -832,7 +1080,7 @@ class JointCenterTool:
             task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
 
             # Replace the joint center in the new model
-            self._check_marker_positions(task)
+            task.check_marker_positions()
             task.perform_task(self.original_model, self.new_model)
 
         self.new_model.segments_rt_to_local()

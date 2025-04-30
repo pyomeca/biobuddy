@@ -278,6 +278,28 @@ class BiomechanicalModelReal(ModelDynamics):
         """
         return [self.marker_names.index(marker) for marker in marker_names]
 
+    def contact_indices(self, contact_names: list[str]) -> list[int]:
+        """
+        Get the indices of the contacts of the model
+
+        Parameters
+        ----------
+        contact_names
+            The name of the contacts to get the indices for
+        """
+        return [self.contact_names.index(contact) for contact in contact_names]
+
+    def imu_indices(self, imu_names: list[str]) -> list[int]:
+        """
+        Get the indices of the imus of the model
+
+        Parameters
+        ----------
+        imu_names
+            The name of the imu to get the indices for
+        """
+        return [self.imu_names.index(imu) for imu in imu_names]
+
     @property
     def mass(self) -> float:
         """
@@ -301,6 +323,32 @@ class BiomechanicalModelReal(ModelDynamics):
                 scs=deepcopy(self.segment_coordinate_system_in_local(segment.name)),
                 is_scs_local=True,
             )
+
+    def muscle_origin_on_this_segment(self, segment_name: str) -> list[str]:
+        """
+        Get the names of the muscles which have an insertion on this segment.
+        """
+        muscle_names = []
+        for muscle in self.muscles:
+            if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:  # TODO: This is wack !
+                muscle_names += [muscle.name]
+        return muscle_names
+
+    def muscle_insertion_on_this_segment(self, segment_name: str) -> list[str]:
+        """
+        Get the names of the muscles which have an insertion on this segment.
+        """
+        muscle_names = []
+        for muscle in self.muscles:
+            if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:  # TODO: This is wack !
+                muscle_names += [muscle.name]
+        return muscle_names
+
+    def via_points_on_this_segment(self, segment_name: str) -> list[str]:
+        """
+        Get the names of the via point which have this segment as a parent.
+        """
+        return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
 
     @staticmethod
     def from_biomod(

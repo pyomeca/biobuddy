@@ -24,6 +24,10 @@ class C3dData:
     def all_marker_positions(self) -> np.ndarray:
         return self.get_position(marker_names=self.marker_names)
 
+    @property
+    def nb_frames(self) -> int:
+        return self.last_frame - self.first_frame
+
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
         """Get the geometrical center position between markers"""
         return np.nanmean(self.get_position(marker_names), axis=1)
