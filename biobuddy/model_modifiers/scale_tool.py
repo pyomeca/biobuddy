@@ -58,7 +58,7 @@ class ScaleTool:
         self.header = ""
         self.original_mass = None
         self.scaling_segments = NamedList[SegmentScaling]()
-        self.marker_weightings = {}
+        self.marker_weights = {}
         self.warnings = ""
 
     def scale(
@@ -112,8 +112,8 @@ class ScaleTool:
                 raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
 
         # Check the weights
-        for marker in self.marker_weightings:
-            if self.marker_weightings[marker] < 0:
+        for marker in self.marker_weights:
+            if self.marker_weights[marker] < 0:
                 raise RuntimeError(f"The weight of marker {marker} is negative. It must be positive.")
 
         # Check the mass
@@ -186,7 +186,7 @@ class ScaleTool:
             return
 
         else:
-            for marker in self.marker_weightings:
+            for marker in self.marker_weights:
                 if marker not in marker_names:
                     raise RuntimeError(f"The marker {marker} is not in the c3d file.")
                 marker_index = marker_names.index(marker)
@@ -541,7 +541,7 @@ class ScaleTool:
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
             q_target=initial_static_pose,
-            marker_weights=self.marker_weightings,
+            marker_weights=self.marker_weights,
             method=method,
         )
 

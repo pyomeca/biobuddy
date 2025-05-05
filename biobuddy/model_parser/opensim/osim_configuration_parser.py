@@ -240,4 +240,4 @@ class OsimConfigurationParser:
 
     def set_marker_weights(self, marker_name: str, apply: bool = True, weight: float = 1):
         if apply:
-            self.scale_tool.marker_weightings[marker_name] = weight
+            self.scale_tool.marker_weights[marker_name] = weight

@@ -95,6 +95,27 @@ class ModelDynamics:
 
             return get_closest_rt_matrix(rt_to_global)[:, :, np.newaxis]
 
+    @requires_initialization
+    def rt_from_parent_offset_to_real_segment(self, segment_name: str) -> RotoTransMatrix:
+        """
+        Computes the RotoTransMatrix from the [segment_name]_parent_offset to the real [segment_name] segment.
+        """
+        parent_name = self.segments[segment_name].parent_name
+        parent_offset_name = segment_name + "_parent_offset"
+        if parent_offset_name not in self.segment_names and parent_name.startswith(segment_name):
+            raise NotImplementedError(f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub.")
+
+        rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
+        while parent_name != parent_offset_name:
+            if parent_name == "base":
+                raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
+            rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
+            parent_name = self.segments[parent_name].parent_name
+
+        out_rt = RotoTransMatrix()
+        out_rt.rt_matrix = rt
+        return out_rt
+
     @staticmethod
     def _marker_residual(
         model: "BiomechanicalModelReal" or "biorbd.Model",
@@ -214,6 +235,11 @@ class ModelDynamics:
 
         nb_q = self.nb_q
         nb_markers = len(self.marker_names)
+        if len(marker_positions.shape) == 2:
+            marker_positions = marker_positions[:, :, np.newaxis]
+        elif len(marker_positions.shape) == 1 or marker_positions.shape[0] > 3:
+            raise RuntimeError(f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}")
+
         nb_frames = marker_positions.shape[2]
 
         marker_indices = [marker_names.index(m) for m in self.marker_names]

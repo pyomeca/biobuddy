@@ -206,12 +206,29 @@ class BiomechanicalModelReal(ModelDynamics):
         """
         return list(self.via_points.keys())
 
+    def has_parent_offset(self, segment_name: str) -> bool:
+        """True if the segment segment_name has an offset parent."""
+        return segment_name + "_parent_offset" in self.segment_names
+
     def children_segment_names(self, parent_name: str):
         children = []
         for segment_name in self.segments.keys():
             if self.segments[segment_name].parent_name == parent_name:
                 children.append(segment_name)
         return children
+
+    def get_chain_between_segments(self, first_segment_name: str, last_segment_name: str) -> list[str]:
+        """
+        Get the name of the segments in the kinematic chain between first_segment_name and last_segment_name
+        """
+        chain = []
+        this_segment = last_segment_name
+        while this_segment != first_segment_name:
+            chain.append(this_segment)
+            this_segment = self.segments[this_segment].parent_name
+        chain.append(first_segment_name)
+        chain.reverse()
+        return chain
 
     @property
     def nb_segments(self) -> int:
