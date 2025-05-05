@@ -10,8 +10,16 @@ from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCo
 from ..utils.translations import Translations
 from ..utils.rotations import Rotations
 from ..utils.c3d_data import C3dData
-from ..utils.linear_algebra import RotoTransMatrix, unit_vector, quaternion_to_rotation_matrix, get_closest_rt_matrix, \
-    mean_homogenous_matrix, compute_matrix_rotation, rot2eul, point_from_local_to_global
+from ..utils.linear_algebra import (
+    RotoTransMatrix,
+    unit_vector,
+    quaternion_to_rotation_matrix,
+    get_closest_rt_matrix,
+    mean_homogenous_matrix,
+    compute_matrix_rotation,
+    rot2eul,
+    point_from_local_to_global,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -77,7 +85,6 @@ class RigidSegmentIdentification:
         self._check_segment_names()
         self._check_c3d_functional_trial_file()
 
-
     def _check_segment_names(self):
         illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
         for name in illegal_names:
@@ -117,11 +124,12 @@ class RigidSegmentIdentification:
             )
 
     def animate_the_segment_reconstruction(
-            self,
-            original_model: BiomechanicalModelReal,
-            rt_parent: np.ndarray,
-            rt_child: np.ndarray,
-            without_exp_markers: bool = False):
+        self,
+        original_model: BiomechanicalModelReal,
+        rt_parent: np.ndarray,
+        rt_child: np.ndarray,
+        without_exp_markers: bool = False,
+    ):
 
         def setup_segments_for_animation(segment_name: str):
             if original_model.has_parent_offset(segment_name):
@@ -130,41 +138,49 @@ class RigidSegmentIdentification:
 
                 # Set rotations and translations to the parent offset
                 parent_offset = original_model.segments[segment_list[0]]
-                joint_model.add_segment(SegmentReal(
-                    name=parent_offset.name,
-                    segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
-                    translations=Translations.XYZ,
-                    rotations=Rotations.XYZ,
-                    mesh_file=original_model.segments[parent_offset.name].mesh_file,
-                ))
+                joint_model.add_segment(
+                    SegmentReal(
+                        name=parent_offset.name,
+                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
+                        translations=Translations.XYZ,
+                        rotations=Rotations.XYZ,
+                        mesh_file=original_model.segments[parent_offset.name].mesh_file,
+                    )
+                )
 
                 for i_segment, segment_name in enumerate(segment_list[1:]):
-                    joint_model.add_segment(SegmentReal(
-                        name=segment_name,
-                        parent_name=segment_list[i_segment],
-                        segment_coordinate_system=deepcopy(original_model.segments[segment_name].segment_coordinate_system),
-                        mesh_file=deepcopy(original_model.segments[segment_name].mesh_file),
-                    )
+                    joint_model.add_segment(
+                        SegmentReal(
+                            name=segment_name,
+                            parent_name=segment_list[i_segment],
+                            segment_coordinate_system=deepcopy(
+                                original_model.segments[segment_name].segment_coordinate_system
+                            ),
+                            mesh_file=deepcopy(original_model.segments[segment_name].mesh_file),
+                        )
                     )
 
                     # Modify the markers from the real segment to leave only the functional trial markers
                     for marker in original_model.segments[segment_name].markers:
-                        if marker.name in self.parent_marker_names+self.child_marker_names:
+                        if marker.name in self.parent_marker_names + self.child_marker_names:
                             joint_model.segments[segment_name].add_marker(marker)
 
             else:
                 if original_model.segments[segment_name].parent_name.startswith(segment_name):
-                    raise NotImplementedError("The parent segment does not have a parent offset, but has other ghost segments as parent. This is not implemented yet.")
-                joint_model.add_segment(SegmentReal(
-                    name=segment_name,
-                    segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
-                    translations=Translations.XYZ,
-                    rotations=Rotations.XYZ,
-                    mesh_file=original_model.segments[segment_name].mesh_file,
-                )
+                    raise NotImplementedError(
+                        "The parent segment does not have a parent offset, but has other ghost segments as parent. This is not implemented yet."
+                    )
+                joint_model.add_segment(
+                    SegmentReal(
+                        name=segment_name,
+                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
+                        translations=Translations.XYZ,
+                        rotations=Rotations.XYZ,
+                        mesh_file=original_model.segments[segment_name].mesh_file,
+                    )
                 )
                 for marker in original_model.segments[segment_name].markers:
-                    if marker.name in self.parent_marker_names+self.child_marker_names:
+                    if marker.name in self.parent_marker_names + self.child_marker_names:
                         joint_model.segments[segment_name].add_marker(marker)
 
         joint_model = BiomechanicalModelReal()
@@ -181,9 +197,7 @@ class RigidSegmentIdentification:
             import pyorerun
             from pyomeca import Markers
         except:
-            raise ImportError(
-                "Please install pyorerun and pyomeca to visualize the segment reconstruction."
-            )
+            raise ImportError("Please install pyorerun and pyomeca to visualize the segment reconstruction.")
 
         # Visualization
         # nb_frames = self.parent_markers_global.shape[2]
@@ -193,8 +207,11 @@ class RigidSegmentIdentification:
         # Add the experimental markers from the static trial
         if not without_exp_markers:
             pyomarkers = Markers(
-                data=np.concatenate((self.parent_markers_global[:, :, :nb_frames], self.child_markers_global[:, :, :nb_frames]), axis=1),
-                channels=self.parent_marker_names+self.child_marker_names)
+                data=np.concatenate(
+                    (self.parent_markers_global[:, :, :nb_frames], self.child_markers_global[:, :, :nb_frames]), axis=1
+                ),
+                channels=self.parent_marker_names + self.child_marker_names,
+            )
 
         joint_model.to_biomod("../models/temporary.bioMod")
 
@@ -208,7 +225,6 @@ class RigidSegmentIdentification:
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
-
 
     def replace_components_in_new_jcs(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
         """
@@ -240,7 +256,10 @@ class RigidSegmentIdentification:
 
         # Meshes  # TODO: verify + test
         if original_model.segments[self.child_name].mesh is not None:
-            new_model.segments[self.child_name].mesh.positions = new_child_jcs_in_global.inverse @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
+            new_model.segments[self.child_name].mesh.positions = (
+                new_child_jcs_in_global.inverse
+                @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
+            )
 
         # Mesh files  # TODO: go up the hierarchy to find the mesh file
         if original_model.segments[self.child_name].mesh_file is not None:
@@ -283,15 +302,22 @@ class RigidSegmentIdentification:
 
         # Muscles (origin and insertion)
         for muscle_name in new_model.muscle_origin_on_this_segment(self.child_name):
-            new_model.muscles[muscle_name].origin_position = new_child_jcs_in_global.inverse @ point_from_local_to_global(original_model.muscles[muscle_name].origin_position, global_jcs)
+            new_model.muscles[muscle_name].origin_position = (
+                new_child_jcs_in_global.inverse
+                @ point_from_local_to_global(original_model.muscles[muscle_name].origin_position, global_jcs)
+            )
         for muscle_name in new_model.muscle_insertion_on_this_segment(self.child_name):
-            new_model.muscles[muscle_name].insertion_position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
-                original_model.muscles[muscle_name].insertion_position, global_jcs)
+            new_model.muscles[muscle_name].insertion_position = (
+                new_child_jcs_in_global.inverse
+                @ point_from_local_to_global(original_model.muscles[muscle_name].insertion_position, global_jcs)
+            )
 
         # Via points
         for via_point_name in new_model.via_points_on_this_segment(self.child_name):
-            new_model.via_points[via_point_name].position = new_child_jcs_in_global.inverse @ point_from_local_to_global(original_model.via_points[via_point_name].position, global_jcs)
-
+            new_model.via_points[via_point_name].position = (
+                new_child_jcs_in_global.inverse
+                @ point_from_local_to_global(original_model.via_points[via_point_name].position, global_jcs)
+            )
 
     def four_groups(self, markers: np.ndarray):
         """
@@ -358,10 +384,10 @@ class RigidSegmentIdentification:
             raise ValueError(f"Invalid markers shape: {markers.shape}, expected (3, n_markers)")
 
         nan_indices = np.where(np.isnan(groups))[0]
-        a1 = groups[0: nan_indices[0]].astype(int)
-        a2 = groups[nan_indices[0] + 1: nan_indices[1]].astype(int)
-        b1 = groups[nan_indices[1] + 1: nan_indices[2]].astype(int)
-        b2 = groups[nan_indices[2] + 1:].astype(int)
+        a1 = groups[0 : nan_indices[0]].astype(int)
+        a2 = groups[nan_indices[0] + 1 : nan_indices[1]].astype(int)
+        b1 = groups[nan_indices[1] + 1 : nan_indices[2]].astype(int)
+        b2 = groups[nan_indices[2] + 1 :].astype(int)
 
         x_axis = np.mean(markers[:3, a1], axis=1) - np.mean(markers[:3, a2], axis=1)
         y_axis = np.mean(markers[:3, b1], axis=1) - np.mean(markers[:3, b2], axis=1)
@@ -371,11 +397,11 @@ class RigidSegmentIdentification:
         return np.stack([unit_vector(x_axis), unit_vector(y_axis), unit_vector(z_axis)], axis=1)
 
     def optimal_rt(
-            self,
-            markers: np.ndarray,
-            static_markers_in_global: np.ndarray,
-            rotation_init: np.ndarray,
-            marker_names: list[str],
+        self,
+        markers: np.ndarray,
+        static_markers_in_global: np.ndarray,
+        rotation_init: np.ndarray,
+        marker_names: list[str],
     ):
 
         def inv_ppvect(x):
@@ -427,8 +453,8 @@ class RigidSegmentIdentification:
         G = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
             G[:, i_frame] = 0.5 * (
-                    np.dot(Q[:, :, i_frame], Y[:, i_frame])
-                    - np.dot(np.dot(np.dot(Y[:, i_frame].T, Q[:, :, i_frame]), Y[:, i_frame]) / 4, Y[:, i_frame])
+                np.dot(Q[:, :, i_frame], Y[:, i_frame])
+                - np.dot(np.dot(np.dot(Y[:, i_frame].T, Q[:, :, i_frame]), Y[:, i_frame]) / 4, Y[:, i_frame])
             )
 
         Yj, Zj, Gj = Y.copy(), G.copy(), G.copy()
@@ -453,7 +479,7 @@ class RigidSegmentIdentification:
                 b = np.dot(YYi, ZiQZi) - np.dot(ZZi, dot_YiQ_Yi)
                 c = np.dot(YYi, dot_ZiQ_Yi) - np.dot(YZi, dot_YiQ_Yi)
 
-                delta = ((np.dot(YYi, ZZi) - YZi ** 2) * b ** 2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
+                delta = ((np.dot(YYi, ZZi) - YZi**2) * b**2 + (YYi * a - ZZi * c) ** 2) / (YYi * ZZi)
                 mu = (-b - np.sqrt(delta)) / (2 * a)
                 Yj[:, i_frame] = Yi[:, i_frame] + mu * Zi[:, i_frame]
                 Gj[:, i_frame] = np.dot(
@@ -491,9 +517,9 @@ class RigidSegmentIdentification:
                 functional_quaternion_vector[:, i_frame].T, static_quaternion_vector
             )
             quaternion_vector[:, i_frame] = (
-                    functional_quaternion_scalar[i_frame] * static_quaternion_vector
-                    + static_quaternion_scalar * functional_quaternion_vector[:, i_frame]
-                    + np.dot(ppvect_mat(functional_quaternion_vector[:, i_frame]), static_quaternion_vector)
+                functional_quaternion_scalar[i_frame] * static_quaternion_vector
+                + static_quaternion_scalar * functional_quaternion_vector[:, i_frame]
+                + np.dot(ppvect_mat(functional_quaternion_vector[:, i_frame]), static_quaternion_vector)
             )
 
             # Renormalization of the quaternion to make sure it lies in SO(3)
@@ -520,7 +546,7 @@ class RigidSegmentIdentification:
         residual = np.full((nb_frames, nb_markers), np.nan)
         for i_marker in range(nb_markers):
             static_local = rotation_init[:3, :3].T @ (
-                    static_markers_in_global[:, i_marker] - mean_static_markers_in_global.squeeze()
+                static_markers_in_global[:, i_marker] - mean_static_markers_in_global.squeeze()
             )
             for i_frame in range(nb_frames):
                 current_local = rotation[:3, :, i_frame].T @ (markers[:, i_marker, i_frame] - mean_markers)
@@ -529,7 +555,7 @@ class RigidSegmentIdentification:
         return rt_optimal
 
     def check_optimal_rt_inputs(
-            self, markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
+        self, markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
     ) -> tuple[int, int, np.ndarray]:
 
         nb_markers = markers.shape[1]
@@ -545,14 +571,14 @@ class RigidSegmentIdentification:
         for i_marker, marker_name in enumerate(marker_names):
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = (
-                        markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
+                    markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
                 )
                 if (
-                        np.abs(
-                            np.linalg.norm(static_centered[:, i_marker])
-                            - np.linalg.norm(current_functional_marker_centered)
-                        )
-                        > 0.05
+                    np.abs(
+                        np.linalg.norm(static_centered[:, i_marker])
+                        - np.linalg.norm(current_functional_marker_centered)
+                    )
+                    > 0.05
                 ):
                     raise RuntimeError(
                         f"The marker {marker_name} seem to move during the functional trial."
@@ -600,45 +626,47 @@ class RigidSegmentIdentification:
                         )
 
     def marker_residual(
-            self,
-            optimal_rt: np.ndarray,
-            static_markers_in_local: np.ndarray,
-            functional_markers_in_global: np.ndarray,
+        self,
+        optimal_rt: np.ndarray,
+        static_markers_in_local: np.ndarray,
+        functional_markers_in_global: np.ndarray,
     ) -> float:
         nb_markers = static_markers_in_local.shape[1]
         vect_pos_markers = np.zeros(4 * nb_markers)
         rt_matrix = optimal_rt.reshape(4, 4)
         for i_marker in range(nb_markers):
-            vect_pos_markers[i_marker * 4: (i_marker + 1) * 4] = (
-                                                                         rt_matrix @ static_markers_in_local[:,
-                                                                                     i_marker] - functional_markers_in_global[:,
-                                                                                                 i_marker]
-                                                                 ) ** 2
+            vect_pos_markers[i_marker * 4 : (i_marker + 1) * 4] = (
+                rt_matrix @ static_markers_in_local[:, i_marker] - functional_markers_in_global[:, i_marker]
+            ) ** 2
         return np.sum(vect_pos_markers)
 
     def rt_constraints(self, optimal_rt: np.ndarray) -> np.ndarray:
         rt_matrix = optimal_rt.reshape(4, 4)
         R = rt_matrix[:3, :3]
         c1, c2, c3 = R[:, 0], R[:, 1], R[:, 2]
-        constraints = np.array([
-            np.dot(c1, c1) - 1,
-            np.dot(c2, c2) - 1,
-            np.dot(c3, c3) - 1,
-            np.dot(c1, c2),
-            np.dot(c1, c3),
-            np.dot(c2, c3),
-        ])
+        constraints = np.array(
+            [
+                np.dot(c1, c1) - 1,
+                np.dot(c2, c2) - 1,
+                np.dot(c3, c3) - 1,
+                np.dot(c1, c2),
+                np.dot(c1, c3),
+                np.dot(c2, c3),
+            ]
+        )
         return constraints
 
     def scipy_optimal_rt(
-            self,
-            markers_in_global: np.ndarray,
-            static_markers_in_local: np.ndarray,
-            rt_init: np.ndarray,
-            marker_names: list[str],
+        self,
+        markers_in_global: np.ndarray,
+        static_markers_in_local: np.ndarray,
+        rt_init: np.ndarray,
+        marker_names: list[str],
     ):
 
-        nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(markers_in_global, static_markers_in_local[:3, :], marker_names)
+        nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(
+            markers_in_global, static_markers_in_local[:3, :], marker_names
+        )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
         for i_frame in range(nb_frames):
@@ -673,7 +701,9 @@ class RigidSegmentIdentification:
 
         return rt_optimal
 
-    def rt_from_trial(self, original_model: BiomechanicalModelReal,  parent_rt_init, child_rt_init) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def rt_from_trial(
+        self, original_model: BiomechanicalModelReal, parent_rt_init, child_rt_init
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
         """
@@ -754,7 +784,6 @@ class RigidSegmentIdentification:
             raise RuntimeError(f"The method {self.method} is not recognized.")
 
         return rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static
-
 
 
 class Score(RigidSegmentIdentification):
@@ -945,29 +974,31 @@ class Score(RigidSegmentIdentification):
 
 class Sara(RigidSegmentIdentification):
     def __init__(
-            self,
-            filepath: str,
-            parent_name: str,
-            child_name: str,
-            parent_marker_names: list[str],
-            child_marker_names: list[str],
-            first_frame: int,
-            last_frame: int,
-            joint_center_markers: list[str],
-            distal_markers: list[str],
-            method: str = "numerical",
-            animate_rt: bool = False,
+        self,
+        filepath: str,
+        parent_name: str,
+        child_name: str,
+        parent_marker_names: list[str],
+        child_marker_names: list[str],
+        first_frame: int,
+        last_frame: int,
+        joint_center_markers: list[str],
+        distal_markers: list[str],
+        method: str = "numerical",
+        animate_rt: bool = False,
     ):
 
-        super(Sara, self).__init__(filepath=filepath,
-                             parent_name=parent_name,
-                             child_name=child_name,
-                             parent_marker_names=parent_marker_names,
-                             child_marker_names=child_marker_names,
-                             first_frame=first_frame,
-                             last_frame=last_frame,
-                             method=method,
-                             animate_rt=animate_rt)
+        super(Sara, self).__init__(
+            filepath=filepath,
+            parent_name=parent_name,
+            child_name=child_name,
+            parent_marker_names=parent_marker_names,
+            child_marker_names=child_marker_names,
+            first_frame=first_frame,
+            last_frame=last_frame,
+            method=method,
+            animate_rt=animate_rt,
+        )
 
         self.joint_center_markers = joint_center_markers
         self.distal_markers = distal_markers
@@ -998,9 +1029,9 @@ class Sara(RigidSegmentIdentification):
         for i_frame in range(nb_frames):
             rotation_parent = rt_parent[:3, :3, i_frame]
             rotation_child = rt_child[:3, :3, i_frame]
-            rot[3 * i_frame:3 * i_frame + 3, :3] = rotation_parent
-            rot[3 * i_frame:3 * i_frame + 3, 3:] = -rotation_child
-            trans[3 * i_frame:3 * i_frame + 3, 0] = rt_child[:3, 3, i_frame] - rt_parent[:3, 3, i_frame]
+            rot[3 * i_frame : 3 * i_frame + 3, :3] = rotation_parent
+            rot[3 * i_frame : 3 * i_frame + 3, 3:] = -rotation_child
+            trans[3 * i_frame : 3 * i_frame + 3, 0] = rt_child[:3, 3, i_frame] - rt_parent[:3, 3, i_frame]
 
         # SVD of the block matrix
         U, S, Vt = np.linalg.svd(rot, full_matrices=False)
@@ -1015,11 +1046,14 @@ class Sara(RigidSegmentIdentification):
         # Compute axis direction in global frame over time
         a_parent_global = np.zeros((3, nb_frames))
         a_child_global = np.zeros((3, nb_frames))
-        residual_angle = np.zeros((nb_frames, ))
+        residual_angle = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
             a_parent_global[:, i_frame] = rt_parent[:3, :3, i_frame] @ aor_local_parent
             a_child_global[:, i_frame] = rt_child[:3, :3, i_frame] @ aor_local_child
-            residual_angle[i_frame] = np.arccos(np.dot(a_parent_global[:, i_frame], a_child_global[:, i_frame]) / (np.linalg.norm(a_parent_global[:, i_frame]) * np.linalg.norm(a_child_global[:, i_frame])))
+            residual_angle[i_frame] = np.arccos(
+                np.dot(a_parent_global[:, i_frame], a_child_global[:, i_frame])
+                / (np.linalg.norm(a_parent_global[:, i_frame]) * np.linalg.norm(a_child_global[:, i_frame]))
+            )
 
         aor_global = 0.5 * (a_parent_global + a_child_global)
 
@@ -1049,12 +1083,20 @@ class Sara(RigidSegmentIdentification):
                 if np.any(np.isnan(distal_markers[:, :, i_frame])):
                     longitudinal_axis_global[:, i_frame] = np.nan
                 else:
-                    longitudinal_axis_global[:, i_frame] = np.mean(distal_markers[:, :, i_frame], axis=1) - joint_center_global[:, i_frame]
+                    longitudinal_axis_global[:, i_frame] = (
+                        np.mean(distal_markers[:, :, i_frame], axis=1) - joint_center_global[:, i_frame]
+                    )
                     longitudinal_axis_global[:3, i_frame] /= np.linalg.norm(longitudinal_axis_global[:3, i_frame])
 
         return joint_center_global, longitudinal_axis_global
 
-    def _extract_scs_from_axis(self, aor_global: np.ndarray, joint_center_global: np.ndarray, longitudinal_axis_global: np.ndarray, rt_parent_functional: np.ndarray) -> np.ndarray:
+    def _extract_scs_from_axis(
+        self,
+        aor_global: np.ndarray,
+        joint_center_global: np.ndarray,
+        longitudinal_axis_global: np.ndarray,
+        rt_parent_functional: np.ndarray,
+    ) -> np.ndarray:
         """
         Extract the segment coordinate system (SCS) from the axis of rotation.
         This implementation assumes that the rotation axis is the X rotation.
@@ -1063,7 +1105,9 @@ class Sara(RigidSegmentIdentification):
         scs_of_child_in_global = np.zeros((4, 4, nb_frames))
         scs_of_child_in_local = np.zeros((4, 4, nb_frames))
         for i_frame in range(nb_frames):
-            if np.any(np.isnan(joint_center_global[:, i_frame])) or np.any(np.isnan(longitudinal_axis_global[:, i_frame])):
+            if np.any(np.isnan(joint_center_global[:, i_frame])) or np.any(
+                np.isnan(longitudinal_axis_global[:, i_frame])
+            ):
                 scs_of_child_in_global[:, :, i_frame] = np.nan
             else:
                 # Extract an orthonormal basis
@@ -1072,7 +1116,9 @@ class Sara(RigidSegmentIdentification):
                 accurate_longitudinal_axis = np.cross(perpendicular_axis, aor_global[:, i_frame])
                 accurate_longitudinal_axis /= np.linalg.norm(accurate_longitudinal_axis)
 
-                scs_of_child_in_global[:3, :3, i_frame] = np.column_stack((aor_global[:, i_frame], -perpendicular_axis, accurate_longitudinal_axis))
+                scs_of_child_in_global[:3, :3, i_frame] = np.column_stack(
+                    (aor_global[:, i_frame], -perpendicular_axis, accurate_longitudinal_axis)
+                )
                 scs_of_child_in_global[:3, 3, i_frame] = joint_center_global[:3, i_frame]
                 scs_of_child_in_global[3, 3, i_frame] = 1
 
@@ -1086,18 +1132,23 @@ class Sara(RigidSegmentIdentification):
 
         return mean_scs_of_child_in_local
 
-    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal,  parent_rt_init, child_rt_init):
+    def perform_task(
+        self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal, parent_rt_init, child_rt_init
+    ):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(original_model,  parent_rt_init, child_rt_init)
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
+            original_model, parent_rt_init, child_rt_init
+        )
 
         # Remove the parent offset from the optimal rt position
         if original_model.has_parent_offset(self.parent_name):
             parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
             rt_parent_functional_offsetted = np.zeros_like(rt_parent_functional)
             for i_frame in range(rt_parent_functional.shape[2]):
-                rt_parent_functional_offsetted[:, :, i_frame] = rt_parent_functional[:, :,
-                                                                i_frame] @ parent_offset_rt.inverse
+                rt_parent_functional_offsetted[:, :, i_frame] = (
+                    rt_parent_functional[:, :, i_frame] @ parent_offset_rt.inverse
+                )
         else:
             rt_parent_functional_offsetted = rt_parent_functional
 
@@ -1105,7 +1156,9 @@ class Sara(RigidSegmentIdentification):
             child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
             rt_child_functional_offsetted = np.zeros_like(rt_child_functional)
             for i_frame in range(rt_parent_functional.shape[2]):
-                rt_child_functional_offsetted[:, :, i_frame] = rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
+                rt_child_functional_offsetted[:, :, i_frame] = (
+                    rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
+                )
         else:
             rt_child_functional_offsetted = rt_child_functional
 
@@ -1120,12 +1173,12 @@ class Sara(RigidSegmentIdentification):
         joint_center_global, longitudinal_axis_global = self._longitudinal_axis()
 
         # Identify axis of rotation
-        aor_global = self._sara_algorithm(
-            rt_parent_functional_offsetted, rt_child_functional_offsetted
-        )
+        aor_global = self._sara_algorithm(rt_parent_functional_offsetted, rt_child_functional_offsetted)
 
         # Extract the joint coordinate system
-        mean_scs_of_child_in_local = self._extract_scs_from_axis(aor_global, joint_center_global, longitudinal_axis_global, rt_parent_functional)
+        mean_scs_of_child_in_local = self._extract_scs_from_axis(
+            aor_global, joint_center_global, longitudinal_axis_global, rt_parent_functional
+        )
         # Remove parent offset
         mean_scs_of_child_in_local = child_offset_rt.inverse @ mean_scs_of_child_in_local @ child_offset_rt.rt_matrix
 
@@ -1147,7 +1200,7 @@ class Sara(RigidSegmentIdentification):
         )
         self.replace_components_in_new_jcs(original_model, new_model)
 
-        
+
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal):
 
@@ -1196,7 +1249,7 @@ class JointCenterTool:
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )
-                    
+
     def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
@@ -1216,7 +1269,10 @@ class JointCenterTool:
             t = np.linspace(0, 1, nb_frames)
             viz = pyorerun.PhaseRerun(t)
 
-            pyomarkers = Markers(data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :nb_frames], channels=self.original_model.marker_names)
+            pyomarkers = Markers(
+                data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :nb_frames],
+                channels=self.original_model.marker_names,
+            )
             self.original_model.to_biomod("../../models/ech_tempo.biomod")
             viz_biomod_model = pyorerun.BiorbdModel("../../models/ech_tempo.biomod")
             viz_biomod_model.options.transparent_mesh = False

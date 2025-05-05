@@ -161,14 +161,12 @@ class BiomodModelParser:
                         max_bound = min_max[1::2]
                         if token == "rangesq":
                             current_component.q_ranges = RangeOfMotion(
-                                range_type=Ranges.Q,
-                                min_bound=min_bound,
-                                max_bound=max_bound)
+                                range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound
+                            )
                         else:
                             current_component.qdot_ranges = RangeOfMotion(
-                                range_type=Ranges.Qdot,
-                                min_bound=min_bound,
-                                max_bound=max_bound)
+                                range_type=Ranges.Qdot, min_bound=min_bound, max_bound=max_bound
+                            )
                     elif token in ("mass", "com", "centerofmass", "inertia", "inertia_xxyyzz"):
                         if current_component.inertia_parameters is None:
                             current_component.inertia_parameters = InertiaParametersReal()
@@ -192,7 +190,9 @@ class BiomodModelParser:
                     elif token == "meshfile":
                         mesh_file_name = read_str(next_token=next_token)
                         if current_component.mesh_file is not None:
-                            raise RuntimeError(f"The mesh file {mesh_file_name} is the second mesh defined for this segment.")
+                            raise RuntimeError(
+                                f"The mesh file {mesh_file_name} is the second mesh defined for this segment."
+                            )
                         current_component.mesh_file = MeshFileReal(mesh_file_name=mesh_file_name)
                     elif token == "meshcolor":
                         if current_component.mesh_file is None:

@@ -103,7 +103,9 @@ class ModelDynamics:
         parent_name = self.segments[segment_name].parent_name
         parent_offset_name = segment_name + "_parent_offset"
         if parent_offset_name not in self.segment_names and parent_name.startswith(segment_name):
-            raise NotImplementedError(f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub.")
+            raise NotImplementedError(
+                f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
+            )
 
         rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
         while parent_name != parent_offset_name:
@@ -238,7 +240,9 @@ class ModelDynamics:
         if len(marker_positions.shape) == 2:
             marker_positions = marker_positions[:, :, np.newaxis]
         elif len(marker_positions.shape) == 1 or marker_positions.shape[0] > 3:
-            raise RuntimeError(f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}")
+            raise RuntimeError(
+                f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}"
+            )
 
         nb_frames = marker_positions.shape[2]
 
