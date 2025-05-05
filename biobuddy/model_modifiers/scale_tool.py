@@ -284,7 +284,7 @@ class ScaleTool:
         for segment_name in scaling_factors.keys():
             _logger.info(f"  {segment_name}: {scaling_factors[segment_name].to_vector()}")
 
-        self.scaled_model.header = deepcopy(self.original_model.header) + f"\nModel scaled using Biobuddy.\n"
+        self.scaled_model.header = deepcopy(self.original_model.header) + f"\n// Model scaled using Biobuddy.\n"
         self.scaled_model.gravity = deepcopy(self.original_model.gravity)
 
         for segment_name in self.original_model.segments.keys():

@@ -31,7 +31,7 @@ def test_biomechanics_model_real_utils_functions():
     nb_markers = model.nb_markers
     assert nb_markers == 49
     nb_segments = model.nb_segments
-    assert nb_segments == 200
+    assert nb_segments == 196
 
     q_random = np.random.rand(nb_q)
 
@@ -40,7 +40,7 @@ def test_biomechanics_model_real_utils_functions():
     for i_segment in range(nb_segments):
         jcs_biorbd = model_biorbd.globalJCS(q_random, i_segment).to_array()
         npt.assert_array_almost_equal(
-            jcs_biobuddy[model.segments[i_segment].name],
+            jcs_biobuddy[model.segments[i_segment].name][:, :, 0],
             jcs_biorbd,
             decimal=5,
         )

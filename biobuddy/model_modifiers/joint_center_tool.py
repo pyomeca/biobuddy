@@ -136,11 +136,24 @@ class RigidSegmentIdentification:
 
                 segment_list = original_model.get_chain_between_segments(segment_name + "_parent_offset", segment_name)
 
+                joint_model.add_segment(
+                    SegmentReal(
+                        name="ground",
+                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.array([
+                            [1, 0, 0,  0],
+                            [0, 0, -1, 0],
+                            [0, 1, 0,  0],
+                            [0, 0, 0,  1],
+                        ]), is_scs_local=True)
+                    )
+                )
+
                 # Set rotations and translations to the parent offset
                 parent_offset = original_model.segments[segment_list[0]]
                 joint_model.add_segment(
                     SegmentReal(
                         name=parent_offset.name,
+                        parent_name="ground",
                         segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
                         translations=Translations.XYZ,
                         rotations=Rotations.XYZ,
@@ -170,9 +183,23 @@ class RigidSegmentIdentification:
                     raise NotImplementedError(
                         "The parent segment does not have a parent offset, but has other ghost segments as parent. This is not implemented yet."
                     )
+
+                joint_model.add_segment(
+                    SegmentReal(
+                        name="ground",
+                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.array([
+                            [1, 0, 0,  0],
+                            [0, 0, -1, 0],
+                            [0, 1, 0,  0],
+                            [0, 0, 0,  1],
+                        ]), is_scs_local=True)
+                    )
+                )
+
                 joint_model.add_segment(
                     SegmentReal(
                         name=segment_name,
+                        parent_name="ground",
                         segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
                         translations=Translations.XYZ,
                         rotations=Rotations.XYZ,
@@ -187,10 +214,16 @@ class RigidSegmentIdentification:
         setup_segments_for_animation(self.parent_name)
         setup_segments_for_animation(self.child_name)
 
-        parent_trans = rt_parent[:3, 3, :].reshape(3, -1)
-        parent_rot = rot2eul(rt_parent[:3, :3, :]).reshape(3, -1)
-        child_trans = rt_child[:3, 3, :].reshape(3, -1)
-        child_rot = rot2eul(rt_child[:3, :3, :]).reshape(3, -1)
+        nb_frames = rt_parent.shape[2]
+        parent_trans = np.zeros((3, nb_frames))
+        parent_rot = np.zeros((3, nb_frames))
+        child_trans = np.zeros((3, nb_frames))
+        child_rot = np.zeros((3, nb_frames))
+        for i_frame in range(nb_frames):
+            parent_trans[:, i_frame] = rt_parent[:3, 3, i_frame]
+            parent_rot[:, i_frame] = rot2eul(rt_parent[:3, :3, i_frame])
+            child_trans[:, i_frame] = rt_child[:3, 3, i_frame]
+            child_rot[:, i_frame] = rot2eul(rt_child[:3, :3, i_frame])
         q = np.vstack((parent_trans, parent_rot, child_trans, child_rot))
 
         try:
@@ -201,7 +234,6 @@ class RigidSegmentIdentification:
 
         # Visualization
         # nb_frames = self.parent_markers_global.shape[2]
-        nb_frames = rt_parent.shape[2]
         t = np.linspace(0, 1, nb_frames)
 
         # Add the experimental markers from the static trial
@@ -213,9 +245,9 @@ class RigidSegmentIdentification:
                 channels=self.parent_marker_names + self.child_marker_names,
             )
 
-        joint_model.to_biomod("../models/temporary.bioMod")
+        joint_model.to_biomod("../models/temporary_rt.bioMod")
 
-        viz_biomod_model = pyorerun.BiorbdModel("../models/temporary.bioMod")
+        viz_biomod_model = pyorerun.BiorbdModel("../models/temporary_rt.bioMod")
         viz_biomod_model.options.transparent_mesh = False
         viz_biomod_model.options.show_gravity = True
 
@@ -1273,8 +1305,8 @@ class JointCenterTool:
                 data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :nb_frames],
                 channels=self.original_model.marker_names,
             )
-            self.original_model.to_biomod("../../models/ech_tempo.biomod")
-            viz_biomod_model = pyorerun.BiorbdModel("../../models/ech_tempo.biomod")
+            self.original_model.to_biomod("../models/ech_tempo.biomod")
+            viz_biomod_model = pyorerun.BiorbdModel("../models/ech_tempo.biomod")
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
             viz.add_animated_model(viz_biomod_model, q_init, tracked_markers=pyomarkers)
@@ -1283,6 +1315,8 @@ class JointCenterTool:
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]
             child_rt_init = segment_rt_in_global[task.child_name]
+            # parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
+            # child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
 
             # TODO: remove
             task.animate_the_segment_reconstruction(
