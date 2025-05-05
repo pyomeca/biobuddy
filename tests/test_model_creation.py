@@ -33,6 +33,7 @@ from biobuddy import (
     Sex,
     SegmentName,
 )
+from test_utils import destroy_model
 
 
 def test_model_creation_from_static(remove_temporary: bool = True):
@@ -40,13 +41,13 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     Produces a model from real data
     """
 
-    kinematic_model_file_path = "temporary.bioMod"
+    kinematic_model_filepath = "temporary.bioMod"
 
     # Create a model holder
     bio_model = BiomechanicalModelReal()
 
     # The trunk segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="TRUNK",
             parent_name="base",
@@ -63,7 +64,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["TRUNK"].add_marker(MarkerReal(name="PELVIS", parent_name="TRUNK", position=np.array([0, 0, 0])))
 
     # The head segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="HEAD",
             parent_name="TRUNK",
@@ -87,7 +88,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     )
 
     # The arm segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="UPPER_ARM",
             parent_name="TRUNK",
@@ -111,7 +112,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         MarkerReal(name="SHOULDER_XY", parent_name="UPPER_ARM", position=np.array([1, 1, 0]))
     )
 
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
@@ -131,7 +132,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         MarkerReal(name="ELBOW_XY", parent_name="LOWER_ARM", position=np.array([1, 1, 0]))
     )
 
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="HAND",
             parent_name="LOWER_ARM",
@@ -149,7 +150,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["HAND"].add_marker(MarkerReal(name="HAND_YZ", parent_name="HAND", position=np.array([0, 1, 1])))
 
     # The thigh segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="THIGH",
             parent_name="TRUNK",
@@ -171,7 +172,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     )
 
     # The shank segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="SHANK",
             parent_name="THIGH",
@@ -189,7 +190,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     )
 
     # The foot segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="FOOT",
             parent_name="SHANK",
@@ -206,17 +207,26 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=np.array([0, 1, 1])))
 
     # Put the model together, print it and print it to a bioMod file
-    bio_model.to_biomod(kinematic_model_file_path)
+    bio_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
+    assert bio_model.nb_q == 7
     assert model.nbSegment() == 8
+    assert bio_model.nb_segments == 8
     assert model.nbMarkers() == 25
+    assert bio_model.nb_markers == 25
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
+    # Test the attributes of the model
+    assert bio_model.segment_names == []
+    assert bio_model.marker_names == []
+
+    destroy_model(bio_model)
+
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
+        os.remove(kinematic_model_filepath)
 
 
 def write_markers_to_c3d(save_path: str, model):
@@ -237,14 +247,14 @@ def write_markers_to_c3d(save_path: str, model):
 
 def test_model_creation_from_data(remove_temporary: bool = True):
 
-    kinematic_model_file_path = "temporary.bioMod"
-    c3d_file_path = "temporary.c3d"
+    kinematic_model_filepath = "temporary.bioMod"
+    c3d_filepath = "temporary.c3d"
     test_model_creation_from_static(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
-    model = Model(kinematic_model_file_path)
-    write_markers_to_c3d(c3d_file_path, model)
-    os.remove(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
+    write_markers_to_c3d(c3d_filepath, model)
+    os.remove(kinematic_model_filepath)
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
@@ -403,34 +413,36 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together
-    real_model = model.to_real(C3dData(c3d_file_path))
+    real_model = model.to_real(C3dData(c3d_filepath))
 
     # print it to a bioMod file
-    real_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
     assert model.nbSegment() == 8
     assert model.nbMarkers() == 25
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
+    # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
+
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
-        os.remove(c3d_file_path)
+        os.remove(kinematic_model_filepath)
+        os.remove(c3d_filepath)
 
 
 def test_complex_model(remove_temporary: bool = True):
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
-    kinematic_model_file_path = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
+    kinematic_model_filepath = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
     mesh_path = f"meshes/pendulum.STL"
 
     # Create a model holder
     bio_model = BiomechanicalModel()
 
     # The ground segment
-    bio_model.segments.append(Segment(name="GROUND"))
+    bio_model.add_segment(Segment(name="GROUND"))
 
     # The pendulum segment
     bio_model.segments.append(
@@ -510,15 +522,23 @@ def test_complex_model(remove_temporary: bool = True):
     real_model = bio_model.to_real({})
 
     # Print it to a bioMod file
-    real_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_filepath)
 
-    model = Model(kinematic_model_file_path)
+    model = Model(kinematic_model_filepath)
     assert model.nbQ() == 4
+    assert real_model.nb_q == 4
     assert model.nbSegment() == 2
+    assert real_model.nb_segments == 2
     assert model.nbMarkers() == 0
+    assert real_model.nb_markers == 0
     assert model.nbMuscles() == 1
+    assert real_model.nb_muscles == 1
     assert model.nbMuscleGroups() == 1
-    assert model.nbContacts() == 3
+    assert real_model.nb_muscle_groups == 1
+    assert model.nbContacts() == 3  # Number of rigid contact axis
+    assert real_model.nb_contacts == 1  # Number of rigid contact points
+
+    destroy_model(real_model)
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
+        os.remove(kinematic_model_filepath)

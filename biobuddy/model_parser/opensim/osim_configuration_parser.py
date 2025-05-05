@@ -2,6 +2,7 @@ from time import strftime
 
 from lxml import etree
 
+from biobuddy import BiomechanicalModelReal
 from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...model_modifiers.scale_tool import ScaleTool
@@ -18,10 +19,7 @@ class OsimConfigurationParser:
     This means that the
     """
 
-    def __init__(
-        self,
-        filepath: str,
-    ):
+    def __init__(self, filepath: str, original_model: "BiomechanicalModelReal"):
         """
         Reads and converts OpenSim configuration files (.xml) to a generic configuration.
 
@@ -51,7 +49,11 @@ class OsimConfigurationParser:
 
         for element in self.configuration.getroot()[0]:
 
-            if match_tag(element, "Mass"):
+            if isinstance(element, etree._Comment):
+                # Skip comments
+                continue
+
+            elif match_tag(element, "Mass"):
                 self.original_mass = float(element.text)  # in kg
                 if self.original_mass <= 0:
                     raise NotImplementedError(f"The mass of the original model must be positive.")
@@ -81,7 +83,7 @@ class OsimConfigurationParser:
                 )
 
         # Initialize and fill the scaling configuration
-        self.scale_tool = ScaleTool()
+        self.scale_tool = ScaleTool(original_model)  # TODO: this is weird !
         self._read()
 
     def _read(self):
@@ -107,14 +109,18 @@ class OsimConfigurationParser:
         else:
             for element in self.model_scaler:
 
-                if match_tag(element, "apply"):
+                if isinstance(element, etree._Comment):
+                    # Skipping comments
+                    continue
+
+                elif match_tag(element, "apply"):
                     if not match_text(element, "True"):
                         raise RuntimeError(
                             f"This scaling configuration does not do any scaling. Please verify your file {self.filepath}"
                         )
 
                 elif match_tag(element, "preserve_mass_distribution"):
-                    self.scale_tool.personalize_mass_distribution = str_to_bool(element.text)
+                    self.scale_tool.personalize_mass_distribution = not str_to_bool(element.text)
 
                 elif match_tag(element, "scaling_order"):
                     if not match_text(element, "measurements"):
@@ -153,7 +159,11 @@ class OsimConfigurationParser:
         else:
             for element in self.marker_placer:
 
-                if match_tag(element, "apply"):
+                if isinstance(element, etree._Comment):
+                    # Skipping comments
+                    continue
+
+                elif match_tag(element, "apply"):
                     if match_text(element, "False"):
                         raise NotImplementedError(
                             "The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments."
@@ -219,12 +229,15 @@ class OsimConfigurationParser:
     def set_scaling_segment(
         self, segment_name: str, marker_pair_set: list[list[str, str]], body_scale_set: Translations
     ):
-        self.scale_tool.scaling_segments.append(
+        self.scale_tool.add_scaling_segment(
             SegmentScaling(
-                name=segment_name, scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set)
+                name=segment_name,
+                scaling_type=SegmentWiseScaling(
+                    segment_name=segment_name, axis=body_scale_set, marker_pairs=marker_pair_set
+                ),
             )
         )
 
     def set_marker_weights(self, marker_name: str, apply: bool = True, weight: float = 1):
         if apply:
-            self.scale_tool.marker_weightings[marker_name] = weight
+            self.scale_tool.marker_weights[marker_name] = weight

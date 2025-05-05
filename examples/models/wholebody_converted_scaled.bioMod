@@ -1,0 +1,4978 @@
+version 4
+
+
+// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/scaled.osim on the 2025-04-29 14:10
+
+// Original file publication : Whole body model that consists of 23 bodies, 42 degrees of freedom and 30 muscles. The whole-body geometric model and the lower limbs, pelvis and upper limbs anthropometry are based on the running model of Hammer et al. 2010 which consists of 12 segments and 29 degrees of freedom. Extra segments and degrees of freedom were later added based on Dumas et al. 2007. Muscles Each lower extremity had seven degrees-of-freedom; the hip was modeled as a ball-and-socket joint (3 dofs), the knee was modeled as a revolute joint with 1 dof, the ankle was modeled as 2 revolute joints and feet toes with one revolute joint. The pelvis joint was model as a free flyer joint (6 dofs) to allow the model to translate and rotate in the 3D space, the lumbar motion was modeled as a ball-and-socket joint (3 dofs) (Anderson and Pandy, 1999) and the neck joint was modeled as a ball-and-socket joint (3 dofs). Mass properties of the torso and head (including the neck) segments were estimated from Dumas et al., 2007. Each arm consisted of 8 degrees-of-freedom; the shoulder was modeled as a ball-and-socket joint (3 dofs), the elbow and forearm rotation were each modeled with revolute joints (1 dof) (Holzbaur et al., 2005), the wrist flexion and deviation were each modeled with revolute joints and the hand fingers were modeled with 1 revolute joint. Mass properties for the arms were estimated from 1 and de Leva, 1996. The model also include 30 superficial muscles of the whole body..
+
+// Original file credit : Delp S.L., Loan J.P., Hoy M.G., Zajac F.E., Topp E.L., Rosen J.M., Thelen D.G., Anderson F.C., Seth A., Hamner S.R.
+
+// Force units : N
+
+// Length units : meters
+
+
+gravity	0.0	-9.80665	0.0
+
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	ground
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_parent_offset
+	parent	ground
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_translation
+	parent	pelvis_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	translations	xyz
+	rangesQ 
+		-10.000000	10.000000
+		-6.000000	6.000000
+		-5.000000	5.000000
+
+endsegment
+
+
+
+segment	pelvis_rotation_transform
+	parent	pelvis_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-3.141600	3.141600
+		-3.141600	3.141600
+		-3.141600	3.141600
+
+endsegment
+
+
+
+segment	pelvis_reset_axis
+	parent	pelvis_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_geom_2
+	parent	pelvis_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/pelvis.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.88366772740691	0.88366772740691	0.88366772740691
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	pelvis_geom_3
+	parent	pelvis_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/l_pelvis.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.88366772740691	0.88366772740691	0.88366772740691
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	pelvis
+	parent	pelvis_geom_3
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	6.891020778193859
+	CenterOfMass	-0.062475	0.000000	0.000000
+	inertia
+		0.046970	0.000000	0.000000
+		0.000000	0.039797	0.000000
+		0.000000	0.000000	0.026455
+	meshfile	Geometry_cleaned/sacrum.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.88366772740691	0.88366772740691	0.88366772740691
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RASIS
+	parent	pelvis
+	position	-0.00430714	0.02728261	0.13542773
+	technical	1
+	anatomical	0
+endmarker
+marker	LASIS
+	parent	pelvis
+	position	0.00207867	0.03677210	-0.12024431
+	technical	1
+	anatomical	0
+endmarker
+marker	LPSIS
+	parent	pelvis
+	position	-0.19331144	0.03969829	-0.02305161
+	technical	1
+	anatomical	0
+endmarker
+marker	RPSIS
+	parent	pelvis
+	position	-0.19096215	0.03887491	0.03827578
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	femur_r_parent_offset
+	parent	pelvis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.062475
+		0.000000	1.000000	0.000000	-0.058410
+		0.000000	0.000000	1.000000	0.073786
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r_translation
+	parent	femur_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r_rotation_transform
+	parent	femur_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
+
+endsegment
+
+
+
+segment	femur_r_reset_axis
+	parent	femur_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r
+	parent	femur_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	10.714196912254414
+	CenterOfMass	0.000000	-0.188275	0.000000
+	inertia
+		0.189181	0.000000	0.000000
+		0.000000	0.049591	0.000000
+		0.000000	0.000000	0.199495
+	meshfile	Geometry_cleaned/femur_r.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.1074984669531958	1.1074984669531958	1.1074984669531958
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RLFE
+	parent	femur_r
+	position	0.00490122	-0.43343533	0.06567068
+	technical	1
+	anatomical	0
+endmarker
+marker	RMFE
+	parent	femur_r
+	position	0.00160180	-0.44563968	-0.05045578
+	technical	1
+	anatomical	0
+endmarker
+marker	RGT
+	parent	femur_r
+	position	0.01209605	-0.00551726	0.11887849
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	tibia_r_parent_offset
+	parent	femur_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	-0.431924
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_translation
+	parent	tibia_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_rotation_transform
+	parent	tibia_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-3.141600	0.349100
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	tibia_r_reset_axis
+	parent	tibia_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_geom_2
+	parent	tibia_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/fibula_r.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0035230291939012	1.0035230291939012	1.0035230291939012
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	tibia_r
+	parent	tibia_r_geom_2
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	3.177203928774432
+	CenterOfMass	0.000000	-0.187358	0.000000
+	inertia
+		0.043496	0.000000	0.000000
+		0.000000	0.004401	0.000000
+		0.000000	0.000000	0.044100
+	meshfile	Geometry_cleaned/tibia_r.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0035230291939012	1.0035230291939012	1.0035230291939012
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RATT
+	parent	tibia_r
+	position	0.04675586	-0.06439652	0.03363107
+	technical	1
+	anatomical	0
+endmarker
+marker	RLM
+	parent	tibia_r
+	position	-0.01837136	-0.44466198	0.03795943
+	technical	1
+	anatomical	0
+endmarker
+marker	RSPH
+	parent	tibia_r
+	position	0.01684222	-0.43164342	-0.03693593
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	talus_r_parent_offset
+	parent	tibia_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	-0.431515
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_r_translation
+	parent	talus_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_r_ankle_angle_r
+	parent	talus_r_translation
+	RTinMatrix	1
+	RT
+		-0.105014	0.373088	-0.921834	0.000000
+		-0.174022	0.905762	0.386408	0.000000
+		0.979126	0.200998	-0.030192	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	talus_r_rotation_1
+	parent	talus_r_ankle_angle_r
+	RTinMatrix	1
+	RT
+		0.145270	-0.174022	0.973968	0.000000
+		0.411715	0.905762	0.100427	0.000000
+		-0.899660	0.386408	0.203228	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_r_rotation_2
+	parent	talus_r_rotation_1
+	RTinMatrix	1
+	RT
+		-0.121826	0.083192	0.989059	0.000000
+		0.563934	0.825820	0.000000	0.000000
+		-0.816784	0.557764	-0.147521	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_r_reset_axis
+	parent	talus_r_rotation_2
+	RTinMatrix	1
+	RT
+		0.088066	0.563934	-0.821110	0.000000
+		-0.060138	0.825820	0.560719	0.000000
+		0.994298	-0.000000	0.106641	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_r
+	parent	talus_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.07541853407059777
+	CenterOfMass	0.000000	0.000000	0.000000
+	inertia
+		0.000697	0.000000	0.000000
+		0.000000	0.000697	0.000000
+		0.000000	0.000000	0.000697
+	meshfile	Geometry_cleaned/talus_rv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9616832719696813	0.9616832719696813	0.9616832719696813
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	calcn_r_parent_offset
+	parent	talus_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.046901
+		0.000000	1.000000	0.000000	-0.040343
+		0.000000	0.000000	1.000000	0.007617
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_r_translation
+	parent	calcn_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_r_subtalar_angle_r
+	parent	calcn_r_translation
+	RTinMatrix	1
+	RT
+		0.787180	0.316267	0.529456	0.000000
+		0.604747	-0.227475	-0.763240	0.000000
+		-0.120949	0.920994	-0.370325	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	calcn_r_rotation_1
+	parent	calcn_r_subtalar_angle_r
+	RTinMatrix	1
+	RT
+		0.743238	0.604747	-0.286142	0.000000
+		0.505515	-0.227475	0.832292	0.000000
+		0.438236	-0.763240	-0.474777	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_r_rotation_2
+	parent	calcn_r_rotation_1
+	RTinMatrix	1
+	RT
+		-0.885189	0.295557	-0.359286	0.000000
+		0.316705	0.948524	0.000000	0.000000
+		0.340792	-0.113788	-0.933227	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_r_reset_axis
+	parent	calcn_r_rotation_2
+	RTinMatrix	1
+	RT
+		-0.937522	0.316705	0.144050	0.000000
+		0.313031	0.948524	-0.048097	0.000000
+		-0.151867	-0.000000	-0.988401	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_r
+	parent	calcn_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	1.2590216853608056
+	CenterOfMass	0.105904	0.031771	0.000000
+	inertia
+		0.001582	0.000000	0.000000
+		0.000000	0.004406	0.000000
+		0.000000	0.000000	0.004632
+	meshfile	Geometry_cleaned/foot.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0590434178809196	1.0590434178809196	1.0590434178809196
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RCAL
+	parent	calcn_r
+	position	-0.00401007	-0.01920109	-0.03415414
+	technical	1
+	anatomical	0
+endmarker
+marker	RMFH1
+	parent	calcn_r
+	position	0.19758722	0.01661394	-0.04022360
+	technical	1
+	anatomical	0
+endmarker
+marker	RMFH5
+	parent	calcn_r
+	position	0.16375018	-0.02427190	0.06007867
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	toes_r_parent_offset
+	parent	calcn_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.189357
+		0.000000	1.000000	0.000000	-0.002118
+		0.000000	0.000000	1.000000	0.001144
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_r_translation
+	parent	toes_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_r_rotation_transform
+	parent	toes_r_translation
+	RTinMatrix	1
+	RT
+		-0.580954	0.000000	0.813936	0.000000
+		0.000000	1.000000	-0.000000	0.000000
+		0.813936	0.000000	0.580954	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570796	1.570796
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	toes_r_reset_axis
+	parent	toes_r_rotation_transform
+	RTinMatrix	1
+	RT
+		-0.580954	0.000000	0.813936	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.813936	0.000000	0.580954	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_r
+	parent	toes_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.18325572941735324
+	CenterOfMass	0.034574	0.005995	-0.017487
+	inertia
+		0.000084	0.000000	0.000000
+		0.000000	0.000169	0.000000
+		0.000000	0.000000	0.000845
+	meshfile	Geometry_cleaned/bofoot.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9992459636227149	0.9992459636227149	0.9992459636227149
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RTT2
+	parent	toes_r
+	position	0.05665871	0.01219325	0.01740141
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	femur_l_parent_offset
+	parent	pelvis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.062475
+		0.000000	1.000000	0.000000	-0.058410
+		0.000000	0.000000	1.000000	-0.073786
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_l_translation
+	parent	femur_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_l_rotation_transform
+	parent	femur_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	-1.000000	0.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
+
+endsegment
+
+
+
+segment	femur_l_reset_axis
+	parent	femur_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		-1.000000	-0.000000	-0.000000	0.000000
+		-0.000000	-1.000000	-0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_l
+	parent	femur_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	9.688378117365515
+	CenterOfMass	0.000000	-0.182063	0.000000
+	inertia
+		0.159967	0.000000	0.000000
+		0.000000	0.041933	0.000000
+		0.000000	0.000000	0.168688
+	meshfile	Geometry_cleaned/femur_l.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.070960909347887	1.070960909347887	1.070960909347887
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LGT
+	parent	femur_l
+	position	0.01162396	-0.02636962	-0.12085766
+	technical	1
+	anatomical	0
+endmarker
+marker	LLFE
+	parent	femur_l
+	position	0.00976279	-0.41599047	-0.06611904
+	technical	1
+	anatomical	0
+endmarker
+marker	LMFE
+	parent	femur_l
+	position	-0.00332951	-0.44456375	0.04995846
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	tibia_l_parent_offset
+	parent	femur_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	-0.417675
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_l_translation
+	parent	tibia_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_l_rotation_transform
+	parent	tibia_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-3.141600	0.349100
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	tibia_l_reset_axis
+	parent	tibia_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_l_geom_2
+	parent	tibia_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/fibula_l.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0083750777362963	1.0083750777362963	1.0083750777362963
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	tibia_l
+	parent	tibia_l_geom_2
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	3.223512594450639
+	CenterOfMass	0.000000	-0.188264	0.000000
+	inertia
+		0.044558	0.000000	0.000000
+		0.000000	0.004509	0.000000
+		0.000000	0.000000	0.045177
+	meshfile	Geometry_cleaned/tibia_l.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0083750777362963	1.0083750777362963	1.0083750777362963
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LATT
+	parent	tibia_l
+	position	0.04408199	-0.07894713	-0.02836395
+	technical	1
+	anatomical	0
+endmarker
+marker	LLM
+	parent	tibia_l
+	position	-0.01162306	-0.46500154	-0.03755912
+	technical	1
+	anatomical	0
+endmarker
+marker	LSPH
+	parent	tibia_l
+	position	0.01340717	-0.43682488	0.04087090
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	talus_l_parent_offset
+	parent	tibia_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	-0.433601
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_l_translation
+	parent	talus_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_l_ankle_angle_l
+	parent	talus_l_translation
+	RTinMatrix	1
+	RT
+		0.105014	0.890274	-0.443153	0.000000
+		0.174022	0.422290	0.889599	0.000000
+		0.979126	-0.170539	-0.110581	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.047198	1.047198
+
+endsegment
+
+
+
+segment	talus_l_rotation_1
+	parent	talus_l_ankle_angle_l
+	RTinMatrix	1
+	RT
+		0.952409	0.174022	0.250266	0.000000
+		0.157413	0.422290	-0.892688	0.000000
+		-0.261033	0.889599	0.374800	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_l_rotation_2
+	parent	talus_l_rotation_1
+	RTinMatrix	1
+	RT
+		-0.922536	0.290411	0.254144	0.000000
+		0.300270	0.953854	-0.000000	0.000000
+		-0.242416	0.076312	-0.967166	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_l_reset_axis
+	parent	talus_l_rotation_2
+	RTinMatrix	1
+	RT
+		-0.101720	0.300270	-0.948415	0.000000
+		0.032021	0.953854	0.298558	0.000000
+		0.994298	0.000000	-0.106641	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	talus_l
+	parent	talus_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.08075801823244276
+	CenterOfMass	0.000000	0.000000	0.000000
+	inertia
+		0.000782	0.000000	0.000000
+		0.000000	0.000782	0.000000
+		0.000000	0.000000	0.000782
+	meshfile	Geometry_cleaned/talus_lv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9838628990785211	0.9838628990785211	0.9838628990785211
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	calcn_l_parent_offset
+	parent	talus_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.047983
+		0.000000	1.000000	0.000000	-0.041273
+		0.000000	0.000000	1.000000	-0.007792
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_l_translation
+	parent	calcn_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_l_subtalar_angle_l
+	parent	calcn_l_translation
+	RTinMatrix	1
+	RT
+		-0.787180	-0.556102	0.266643	0.000000
+		-0.604747	0.780811	-0.156893	0.000000
+		-0.120949	-0.284755	-0.950939	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	calcn_l_rotation_1
+	parent	calcn_l_subtalar_angle_l
+	RTinMatrix	1
+	RT
+		-0.795582	-0.604747	-0.036456	0.000000
+		-0.583258	0.780811	-0.223932	0.000000
+		0.163887	-0.156893	-0.973923	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_l_rotation_2
+	parent	calcn_l_rotation_1
+	RTinMatrix	1
+	RT
+		0.672504	0.738677	-0.045774	0.000000
+		-0.739452	0.673209	-0.000000	0.000000
+		0.030816	0.033848	0.998952	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_l_reset_axis
+	parent	calcn_l_rotation_2
+	RTinMatrix	1
+	RT
+		0.665401	-0.739452	0.102238	0.000000
+		0.730875	0.673209	0.112298	0.000000
+		-0.151867	-0.000000	0.988401	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	calcn_l
+	parent	calcn_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	1.2282999026891168
+	CenterOfMass	0.105036	0.031511	0.000000
+	inertia
+		0.001518	0.000000	0.000000
+		0.000000	0.004228	0.000000
+		0.000000	0.000000	0.004445
+	meshfile	Geometry_cleaned/l_foot.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0503583711263644	1.0503583711263644	1.0503583711263644
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LCAL
+	parent	calcn_l
+	position	-0.00077285	-0.03460464	0.02392452
+	technical	1
+	anatomical	0
+endmarker
+marker	LMFH1
+	parent	calcn_l
+	position	0.20329429	0.01556758	0.04342916
+	technical	1
+	anatomical	0
+endmarker
+marker	LMFH5
+	parent	calcn_l
+	position	0.16396129	-0.03295330	-0.05939517
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	toes_l_parent_offset
+	parent	calcn_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.187804
+		0.000000	1.000000	0.000000	-0.002101
+		0.000000	0.000000	1.000000	-0.001134
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_l_translation
+	parent	toes_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_l_rotation_transform
+	parent	toes_l_translation
+	RTinMatrix	1
+	RT
+		0.580954	0.000000	0.813936	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.813936	0.000000	-0.580954	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.047198	1.047198
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	toes_l_reset_axis
+	parent	toes_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.580954	0.000000	0.813936	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.813936	0.000000	-0.580954	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	toes_l
+	parent	toes_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.19766592522604137
+	CenterOfMass	0.035457	0.006149	0.017934
+	inertia
+		0.000096	0.000000	0.000000
+		0.000000	0.000192	0.000000
+		0.000000	0.000000	0.000958
+	meshfile	Geometry_cleaned/l_bofoot.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.024779632740642	1.024779632740642	1.024779632740642
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LTT2
+	parent	toes_l
+	position	0.05722718	0.01344599	-0.02459335
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	torso_parent_offset
+	parent	pelvis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.088985
+		0.000000	1.000000	0.000000	0.072019
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	torso_translation
+	parent	torso_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	torso_rotation_transform
+	parent	torso_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-1.570796	1.570796
+		-1.570796	1.570796
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	torso_reset_axis
+	parent	torso_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	torso_geom_2
+	parent	torso_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/hat_ribs_scap.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0409412995025165	1.0409412995025165	1.0409412995025165
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	torso
+	parent	torso_geom_2
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	20.35317860731281
+	CenterOfMass	0.003123	0.256072	0.000000
+	inertia
+		0.650319	0.000000	0.000000
+		0.000000	0.650319	0.000000
+		0.000000	0.000000	0.876334
+	meshfile	Geometry_cleaned/hat_spine.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0409412995025165	1.0409412995025165	1.0409412995025165
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	STR
+	parent	torso
+	position	0.12025178	0.27451877	0.00370814
+	technical	1
+	anatomical	0
+endmarker
+marker	RA
+	parent	torso
+	position	-0.04574213	0.45615276	0.17345974
+	technical	1
+	anatomical	0
+endmarker
+marker	LA
+	parent	torso
+	position	-0.04301324	0.46029862	-0.17387538
+	technical	1
+	anatomical	0
+endmarker
+marker	C7
+	parent	torso
+	position	-0.07585998	0.47590736	-0.00153922
+	technical	1
+	anatomical	0
+endmarker
+marker	T10
+	parent	torso
+	position	-0.10219629	0.26405613	0.00042165
+	technical	1
+	anatomical	0
+endmarker
+marker	SUP
+	parent	torso
+	position	0.06394965	0.43532175	-0.00240398
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	head_and_neck_parent_offset
+	parent	torso
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.010409
+		0.000000	1.000000	0.000000	0.463219
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	head_and_neck_translation
+	parent	head_and_neck_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	head_and_neck_rotation_transform
+	parent	head_and_neck_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-1.745330	1.047198
+		-0.600000	0.600000
+		-1.221700	1.221700
+
+endsegment
+
+
+
+segment	head_and_neck_reset_axis
+	parent	head_and_neck_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	head_and_neck_geom_2
+	parent	head_and_neck_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.061523
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/skull.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0253870911936593	1.0253870911936593	1.0253870911936593
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	head_and_neck
+	parent	head_and_neck_geom_2
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	4.2876396778956565
+	CenterOfMass	-0.006152	0.152783	0.000000
+	inertia
+		0.025793	0.000217	0.000242
+		0.000217	0.016775	0.000107
+		0.000242	0.000107	0.025889
+	meshfile	Geometry_cleaned/jaw.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0253870911936593	1.0253870911936593	1.0253870911936593
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	SEL
+	parent	head_and_neck
+	position	0.13831270	0.21910226	0.00016369
+	technical	1
+	anatomical	0
+endmarker
+marker	OCC
+	parent	head_and_neck
+	position	-0.08396811	0.14417036	-0.00904334
+	technical	1
+	anatomical	0
+endmarker
+marker	RTEMP
+	parent	head_and_neck
+	position	0.02774800	0.19634609	0.09076178
+	technical	1
+	anatomical	0
+endmarker
+marker	LTEMP
+	parent	head_and_neck
+	position	0.02166637	0.19572389	-0.08992920
+	technical	1
+	anatomical	0
+endmarker
+marker	HV
+	parent	head_and_neck
+	position	0.00226678	0.29702735	0.00906276
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	humerus_r_parent_offset
+	parent	torso
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.003284
+		0.000000	1.000000	0.000000	0.386710
+		0.000000	0.000000	1.000000	0.176960
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_r_translation
+	parent	humerus_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_r_rotation_transform
+	parent	humerus_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-1.570796	3.141600
+		-3.839700	1.570796
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	humerus_r_reset_axis
+	parent	humerus_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_r
+	parent	humerus_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	1.7504004146279784
+	CenterOfMass	0.000000	-0.165353	0.000000
+	inertia
+		0.010395	0.000000	0.000000
+		0.000000	0.003586	0.000000
+		0.000000	0.000000	0.011668
+	meshfile	Geometry_cleaned/humerus_rv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0051749352861719	1.0051749352861719	1.0051749352861719
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RLHE
+	parent	humerus_r
+	position	0.01263186	-0.29058709	0.03167705
+	technical	1
+	anatomical	0
+endmarker
+marker	RMHE
+	parent	humerus_r
+	position	-0.01614394	-0.29470290	-0.04413475
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	ulna_r_parent_offset
+	parent	humerus_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.013212
+		0.000000	1.000000	0.000000	-0.287754
+		0.000000	0.000000	1.000000	-0.009645
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_r_translation
+	parent	ulna_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_r_elbow_flex_r
+	parent	ulna_r_translation
+	RTinMatrix	1
+	RT
+		0.226047	0.842954	-0.488192	0.000000
+		0.022269	0.496561	0.867716	0.000000
+		0.973862	-0.207016	0.093474	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		0.000000	3.141600
+
+endsegment
+
+
+
+segment	ulna_r_rotation_1
+	parent	ulna_r_elbow_flex_r
+	RTinMatrix	1
+	RT
+		0.878053	0.022269	0.478044	0.000000
+		0.405298	0.496561	-0.767568	0.000000
+		-0.254471	0.867716	0.426981	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_r_rotation_2
+	parent	ulna_r_rotation_1
+	RTinMatrix	1
+	RT
+		-0.844467	0.241321	0.478163	0.000000
+		0.274768	0.961511	0.000000	0.000000
+		-0.459759	0.131384	-0.878271	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_r_reset_axis
+	parent	ulna_r_rotation_2
+	RTinMatrix	1
+	RT
+		-0.217400	0.274768	-0.936611	0.000000
+		0.062126	0.961511	0.267652	0.000000
+		0.974103	0.000000	-0.226103	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_r
+	parent	ulna_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.7358641400605913
+	CenterOfMass	0.000000	-0.135738	0.000000
+	inertia
+		0.004551	0.000000	0.000000
+		0.000000	0.000949	0.000000
+		0.000000	0.000000	0.004936
+	meshfile	Geometry_cleaned/ulna_rv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.1262197833571737	1.1262197833571737	1.1262197833571737
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	radius_r_parent_offset
+	parent	ulna_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.007576
+		0.000000	1.000000	0.000000	-0.014649
+		0.000000	0.000000	1.000000	0.029375
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_r_translation
+	parent	radius_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_r_pro_sup_r
+	parent	radius_r_translation
+	RTinMatrix	1
+	RT
+		0.056398	0.777028	0.626934	0.000000
+		0.998406	-0.045120	-0.033893	0.000000
+		0.001952	0.627846	-0.778335	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-3.141600	3.141600
+
+endsegment
+
+
+
+segment	radius_r_rotation_1
+	parent	radius_r_pro_sup_r
+	RTinMatrix	1
+	RT
+		0.029401	0.998406	-0.048168	0.000000
+		0.928541	-0.045121	-0.368478	0.000000
+		-0.370064	-0.033892	-0.928388	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_r_rotation_2
+	parent	radius_r_rotation_1
+	RTinMatrix	1
+	RT
+		-0.395501	0.339143	-0.853558	0.000000
+		0.650948	0.759122	-0.000000	0.000000
+		0.647955	-0.555622	-0.520998	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_r_reset_axis
+	parent	radius_r_rotation_2
+	RTinMatrix	1
+	RT
+		-0.758668	0.650948	-0.026264	0.000000
+		0.650558	0.759122	0.022521	0.000000
+		0.034598	-0.000000	-0.999401	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_r
+	parent	radius_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.5933757664159284
+	CenterOfMass	0.000000	-0.126341	0.000000
+	inertia
+		0.003179	0.000000	0.000000
+		0.000000	0.000663	0.000000
+		0.000000	0.000000	0.003448
+	meshfile	Geometry_cleaned/radius_rv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0482556390285376	1.0482556390285376	1.0482556390285376
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RUS
+	parent	radius_r
+	position	-0.03084585	-0.25449429	-0.01754694
+	technical	1
+	anatomical	0
+endmarker
+marker	RRS
+	parent	radius_r
+	position	0.00482448	-0.25131006	0.05156163
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	lunate_r_parent_offset
+	parent	radius_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.009222
+		0.000000	0.995004	-0.099833	-0.247222
+		0.000000	0.099833	0.995004	0.014267
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_r_translation
+	parent	lunate_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_r_rotation_transform
+	parent	lunate_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570800	1.570800
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	lunate_r_reset_axis
+	parent	lunate_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_r
+	parent	lunate_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.012179841509421408
+	CenterOfMass	0.000000	0.000000	0.000000
+	inertia
+		0.000016	0.000000	0.000000
+		0.000000	0.000016	0.000000
+		0.000000	0.000000	0.000016
+	meshfile	Geometry_cleaned/lunate_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9590446734776367	0.9590446734776367	0.9590446734776367
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_parent_offset
+	parent	lunate_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_r_translation
+	parent	hand_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_r_rotation_transform
+	parent	hand_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	y
+	rangesQ 
+		-6.283185	6.283185
+		-0.436332	0.610865
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	hand_r_reset_axis
+	parent	hand_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_r_geom_2
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/scaphoid_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_3
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/triquetrum_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_4
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/hamate_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_5
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/capitate_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_6
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/trapezoid_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_7
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/trapezium_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_8
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal2_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_9
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal3_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_10
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal4_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_11
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal5_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_12
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal1_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_13
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/thumb_proximal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r_geom_14
+	parent	hand_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/thumb_distal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_r
+	parent	hand_r_geom_14
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.6529902146680888
+	CenterOfMass	0.000000	-0.081002	0.000000
+	inertia
+		0.001802	0.000000	0.000000
+		0.000000	0.001105	0.000000
+		0.000000	0.000000	0.002706
+	meshfile	Geometry_cleaned/pisiform_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0111063010964276	1.0111063010964276	1.0111063010964276
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RHMH5
+	parent	hand_r
+	position	0.00494103	-0.09364532	-0.05276969
+	technical	1
+	anatomical	0
+endmarker
+marker	RHMH2
+	parent	hand_r
+	position	-0.00492480	-0.11251939	0.04141218
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	fingers_r_parent_offset
+	parent	hand_r
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.091594
+		0.000000	0.000000	1.000000	-0.011895
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_r_translation
+	parent	fingers_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_r_rotation_transform
+	parent	fingers_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570800	1.570800
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	fingers_r_reset_axis
+	parent	fingers_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_r_geom_2
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/index_medial_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_3
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/index_distal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_4
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_proximal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_5
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_medial_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_6
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_distal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_7
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_proximal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_8
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_medial_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_9
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_distal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_10
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_proximal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_11
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_medial_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r_geom_12
+	parent	fingers_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.113695
+		0.000000	0.000000	1.000000	0.012633
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_distal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_r
+	parent	fingers_r_geom_12
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.1709516678235058
+	CenterOfMass	0.000000	-0.086023	0.000000
+	inertia
+		0.002728	0.000000	0.000000
+		0.000000	0.002728	0.000000
+		0.000000	0.000000	0.002728
+	meshfile	Geometry_cleaned/index_proximal_rvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.073781884086119	1.073781884086119	1.073781884086119
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RFT3
+	parent	fingers_r
+	position	0.04484855	-0.10530222	-0.00524589
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	humerus_l_parent_offset
+	parent	torso
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.003284
+		0.000000	1.000000	0.000000	0.386710
+		0.000000	0.000000	1.000000	-0.176960
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_l_translation
+	parent	humerus_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_l_rotation_transform
+	parent	humerus_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	-1.000000	0.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-1.570796	3.141600
+		-3.839700	1.570796
+		-1.570796	1.570796
+
+endsegment
+
+
+
+segment	humerus_l_reset_axis
+	parent	humerus_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		-1.000000	-0.000000	-0.000000	0.000000
+		-0.000000	-1.000000	-0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	humerus_l
+	parent	humerus_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	1.748056709652128
+	CenterOfMass	0.000000	-0.165279	0.000000
+	inertia
+		0.010372	0.000000	0.000000
+		0.000000	0.003578	0.000000
+		0.000000	0.000000	0.011642
+	meshfile	Geometry_cleaned/humerus_lv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0047261073663492	1.0047261073663492	1.0047261073663492
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LLHE
+	parent	humerus_l
+	position	0.01483484	-0.29044109	-0.03170098
+	technical	1
+	anatomical	0
+endmarker
+marker	LMHE
+	parent	humerus_l
+	position	-0.01315533	-0.28951570	0.04055181
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	ulna_l_parent_offset
+	parent	humerus_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.013206
+		0.000000	1.000000	0.000000	-0.287626
+		0.000000	0.000000	1.000000	0.009640
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_l_translation
+	parent	ulna_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_l_elbow_flex_l
+	parent	ulna_l_translation
+	RTinMatrix	1
+	RT
+		-0.226047	0.529189	-0.817840	0.000000
+		-0.022269	0.836544	0.547447	0.000000
+		0.973862	0.141961	-0.177314	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		0.000000	3.141600
+
+endsegment
+
+
+
+segment	ulna_l_rotation_1
+	parent	ulna_l_elbow_flex_l
+	RTinMatrix	1
+	RT
+		0.717547	-0.022269	0.696154	0.000000
+		0.394670	0.836544	-0.380039	0.000000
+		-0.573900	0.547447	0.609049	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_l_rotation_2
+	parent	ulna_l_rotation_1
+	RTinMatrix	1
+	RT
+		-0.253299	0.671542	0.696326	0.000000
+		0.935654	0.352920	0.000000	0.000000
+		-0.245747	0.651520	-0.717725	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_l_reset_axis
+	parent	ulna_l_rotation_2
+	RTinMatrix	1
+	RT
+		0.079796	0.935654	-0.343780	0.000000
+		-0.211554	0.352920	0.911423	0.000000
+		0.974103	0.000000	0.226103	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna_l
+	parent	ulna_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.7822036806927009
+	CenterOfMass	0.000000	-0.138529	0.000000
+	inertia
+		0.005038	0.000000	0.000000
+		0.000000	0.001051	0.000000
+		0.000000	0.000000	0.005465
+	meshfile	Geometry_cleaned/ulna_lv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.1493806740277313	1.1493806740277313	1.1493806740277313
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	radius_l_parent_offset
+	parent	ulna_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.007732
+		0.000000	1.000000	0.000000	-0.014950
+		0.000000	0.000000	1.000000	-0.029979
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_l_translation
+	parent	radius_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_l_pro_sup_l
+	parent	radius_l_translation
+	RTinMatrix	1
+	RT
+		-0.056398	0.530133	-0.846037	0.000000
+		-0.998406	-0.028289	0.048829	0.000000
+		0.001952	0.847442	0.530884	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-3.141600	3.141600
+
+endsegment
+
+
+
+segment	radius_l_rotation_1
+	parent	radius_l_pro_sup_l
+	RTinMatrix	1
+	RT
+		-0.048939	-0.998406	0.028098	0.000000
+		0.864877	-0.028289	0.501186	0.000000
+		-0.499593	0.048829	0.864883	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_l_rotation_2
+	parent	radius_l_rotation_1
+	RTinMatrix	1
+	RT
+		0.536953	0.681006	0.497908	0.000000
+		-0.785266	0.619158	-0.000000	0.000000
+		-0.308284	-0.390990	0.867230	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_l_reset_axis
+	parent	radius_l_rotation_2
+	RTinMatrix	1
+	RT
+		0.618788	-0.785266	-0.021417	0.000000
+		0.784796	0.619158	-0.027163	0.000000
+		0.034590	0.000000	0.999402	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius_l
+	parent	radius_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.6244978804580152
+	CenterOfMass	0.000000	-0.128512	0.000000
+	inertia
+		0.003462	0.000000	0.000000
+		0.000000	0.000722	0.000000
+		0.000000	0.000000	0.003755
+	meshfile	Geometry_cleaned/radius_lv.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0662709936684336	1.0662709936684336	1.0662709936684336
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LUS
+	parent	radius_l
+	position	-0.03067343	-0.25796672	0.01529420
+	technical	1
+	anatomical	0
+endmarker
+marker	LRS
+	parent	radius_l
+	position	0.00798747	-0.24955339	-0.05031837
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	lunate_l_parent_offset
+	parent	radius_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.009380
+		0.000000	1.000000	0.000000	-0.251470
+		0.000000	0.000000	1.000000	-0.014512
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_l_translation
+	parent	lunate_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_l_rotation_transform
+	parent	lunate_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	-1.000000	0.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570800	1.570800
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	lunate_l_reset_axis
+	parent	lunate_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		-1.000000	-0.000000	-0.000000	0.000000
+		-0.000000	-1.000000	-0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	lunate_l
+	parent	lunate_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.01160973886000203
+	CenterOfMass	0.000000	0.000000	0.000000
+	inertia
+		0.000014	0.000000	0.000000
+		0.000000	0.000014	0.000000
+		0.000000	0.000000	0.000014
+	meshfile	Geometry_cleaned/lunate_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9438415868373053	0.9438415868373053	0.9438415868373053
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_parent_offset
+	parent	lunate_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_l_translation
+	parent	hand_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_l_rotation_transform
+	parent	hand_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	-1.000000	0.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	y
+	rangesQ 
+		-6.283185	6.283185
+		-0.436332	0.610865
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	hand_l_reset_axis
+	parent	hand_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		-1.000000	-0.000000	-0.000000	0.000000
+		-0.000000	-1.000000	-0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	hand_l_geom_2
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/scaphoid_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_3
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/triquetrum_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_4
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/hamate_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_5
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/capitate_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_6
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/trapezoid_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_7
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/trapezium_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_8
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal2_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_9
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal3_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_10
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal4_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_11
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal5_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_12
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/metacarpal1_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_13
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/thumb_proximal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l_geom_14
+	parent	hand_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/thumb_distal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	hand_l
+	parent	hand_l_geom_14
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.6148281538742141
+	CenterOfMass	0.000000	-0.079392	0.000000
+	inertia
+		0.001629	0.000000	0.000000
+		0.000000	0.000999	0.000000
+		0.000000	0.000000	0.002448
+	meshfile	Geometry_cleaned/pisiform_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.991012596088345	0.991012596088345	0.991012596088345
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LHMH2
+	parent	hand_l
+	position	-0.00751202	-0.10764314	-0.03608903
+	technical	1
+	anatomical	0
+endmarker
+marker	LHMH5
+	parent	hand_l
+	position	0.00626582	-0.09155787	0.05689467
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	fingers_l_parent_offset
+	parent	hand_l
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.089774
+		0.000000	0.000000	1.000000	0.011659
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_l_translation
+	parent	fingers_l_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_l_rotation_transform
+	parent	fingers_l_translation
+	RTinMatrix	1
+	RT
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-1.570800	1.570800
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	fingers_l_reset_axis
+	parent	fingers_l_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	fingers_l_geom_2
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/index_medial_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_3
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/index_distal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_4
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_proximal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_5
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_medial_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_6
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/middle_distal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_7
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_proximal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_8
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_medial_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_9
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/ring_distal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_10
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_proximal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_11
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_medial_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l_geom_12
+	parent	fingers_l_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.107248
+		0.000000	0.000000	1.000000	-0.011916
+		0.000000	0.000000	0.000000	1.000000
+	meshfile	Geometry_cleaned/little_distal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	fingers_l
+	parent	fingers_l_geom_12
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.14349138011374196
+	CenterOfMass	0.000000	-0.081145	0.000000
+	inertia
+		0.002038	0.000000	0.000000
+		0.000000	0.002038	0.000000
+		0.000000	0.000000	0.002038
+	meshfile	Geometry_cleaned/index_proximal_lvs.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0129007580482943	1.0129007580482943	1.0129007580482943
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	LFT3
+	parent	fingers_l
+	position	0.04077085	-0.09801924	0.00031475
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+// --------------------------------------------------------------
+// MUSCLE GROUPS
+// --------------------------------------------------------------
+
+musclegroup	humerus_r_to_torso
+	OriginParent	humerus_r
+	InsertionParent	torso
+endmusclegroup
+
+musclegroup	humerus_l_to_torso
+	OriginParent	humerus_l
+	InsertionParent	torso
+endmusclegroup
+
+musclegroup	pelvis_to_femur_r
+	OriginParent	pelvis
+	InsertionParent	femur_r
+endmusclegroup
+
+musclegroup	pelvis_to_tibia_r
+	OriginParent	pelvis
+	InsertionParent	tibia_r
+endmusclegroup
+
+musclegroup	femur_r_to_tibia_r
+	OriginParent	femur_r
+	InsertionParent	tibia_r
+endmusclegroup
+
+musclegroup	tibia_r_to_calcn_r
+	OriginParent	tibia_r
+	InsertionParent	calcn_r
+endmusclegroup
+
+musclegroup	pelvis_to_femur_l
+	OriginParent	pelvis
+	InsertionParent	femur_l
+endmusclegroup
+
+musclegroup	pelvis_to_tibia_l
+	OriginParent	pelvis
+	InsertionParent	tibia_l
+endmusclegroup
+
+musclegroup	femur_l_to_tibia_l
+	OriginParent	femur_l
+	InsertionParent	tibia_l
+endmusclegroup
+
+musclegroup	tibia_l_to_calcn_l
+	OriginParent	tibia_l
+	InsertionParent	calcn_l
+endmusclegroup
+
+musclegroup	pelvis_to_torso
+	OriginParent	pelvis
+	InsertionParent	torso
+endmusclegroup
+
+musclegroup	torso_to_head_and_neck
+	OriginParent	torso
+	InsertionParent	head_and_neck
+endmusclegroup
+
+musclegroup	torso_to_ulna_r
+	OriginParent	torso
+	InsertionParent	ulna_r
+endmusclegroup
+
+musclegroup	torso_to_ulna_l
+	OriginParent	torso
+	InsertionParent	ulna_l
+endmusclegroup
+
+musclegroup	humerus_r_to_ulna_r
+	OriginParent	humerus_r
+	InsertionParent	ulna_r
+endmusclegroup
+
+musclegroup	humerus_l_to_ulna_l
+	OriginParent	humerus_l
+	InsertionParent	ulna_l
+endmusclegroup
+
+musclegroup	torso_to_radius_r
+	OriginParent	torso
+	InsertionParent	radius_r
+endmusclegroup
+
+musclegroup	torso_to_radius_l
+	OriginParent	torso
+	InsertionParent	radius_l
+endmusclegroup
+
+musclegroup	humerus_r_to_radius_r
+	OriginParent	humerus_r
+	InsertionParent	radius_r
+endmusclegroup
+
+musclegroup	humerus_l_to_radius_l
+	OriginParent	humerus_l
+	InsertionParent	radius_l
+endmusclegroup
+
+musclegroup	humerus_r_to_hand_r
+	OriginParent	humerus_r
+	InsertionParent	hand_r
+endmusclegroup
+
+musclegroup	humerus_l_to_hand_l
+	OriginParent	humerus_l
+	InsertionParent	hand_l
+endmusclegroup
+
+
+
+
+// --------------------------------------------------------------
+// MUSCLES
+// --------------------------------------------------------------
+
+muscle	ant_delt_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_torso
+	originposition	0.009	-0.1194	0.0059
+	insertionposition	0.0208	0.406	0.0729
+	optimallength	0.0994
+	maximalforce	1142.6000
+	tendonslacklength	0.0947
+	pennationangle	0.3840
+endmuscle
+
+
+
+muscle	ant_delt_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_torso
+	originposition	0.009	-0.1194	-0.0059
+	insertionposition	0.0208	0.406	-0.0729
+	optimallength	0.0993
+	maximalforce	1142.6000
+	tendonslacklength	0.0946
+	pennationangle	0.3840
+endmuscle
+
+
+
+muscle	medial_delt_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_torso
+	originposition	0.009	-0.1194	-0.0059
+	insertionposition	0.0208	0.4268	-0.1405
+	optimallength	0.0988
+	maximalforce	1142.6000
+	tendonslacklength	0.0941
+	pennationangle	0.3840
+endmuscle
+
+
+
+muscle	post_delt_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_torso
+	originposition	0.009	-0.1194	0.0059
+	insertionposition	-0.0729	0.3643	0.1041
+	optimallength	0.1402
+	maximalforce	259.8800
+	tendonslacklength	0.0390
+	pennationangle	0.3142
+endmuscle
+
+
+
+muscle	post_delt_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_torso
+	originposition	0.009	-0.1194	-0.0059
+	insertionposition	-0.0729	0.3643	-0.1041
+	optimallength	0.1402
+	maximalforce	259.8800
+	tendonslacklength	0.0390
+	pennationangle	0.3142
+endmuscle
+
+
+
+muscle	medial_delt_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_torso
+	originposition	0.009	-0.1194	0.0059
+	insertionposition	0.0208	0.4268	0.1405
+	optimallength	0.0988
+	maximalforce	1142.6000
+	tendonslacklength	0.0941
+	pennationangle	0.3840
+endmuscle
+
+
+
+muscle	glut_med1_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_femur_r
+	originposition	-0.0361	0.0269	0.1068
+	insertionposition	-0.0241	-0.013	0.0615
+	optimallength	0.0503
+	maximalforce	819.0000
+	tendonslacklength	0.0734
+	pennationangle	0.1396
+endmuscle
+
+
+
+muscle	semiten_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_r
+	originposition	-0.1117	-0.0971	0.0534
+	insertionposition	0.0027	-0.0959	-0.0194
+	optimallength	0.2217
+	maximalforce	410.0000
+	tendonslacklength	0.2819
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	bifemlh_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_r
+	originposition	-0.1113	-0.0906	0.0614
+	insertionposition	-0.0235	-0.0565	0.0344
+	optimallength	0.1210
+	maximalforce	896.0000
+	tendonslacklength	0.3618
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	sar_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_r
+	originposition	-0.0135	-0.0011	0.1098
+	insertionposition	0.0244	-0.0843	-0.0253
+	optimallength	0.5508
+	maximalforce	156.0000
+	tendonslacklength	0.1059
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	tfl_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_r
+	originposition	-0.0275	0.0189	0.1097
+	insertionposition	0.006	-0.0489	0.0298
+	optimallength	0.1011
+	maximalforce	233.0000
+	tendonslacklength	0.4524
+	pennationangle	0.0524
+endmuscle
+
+
+
+muscle	vas_med_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_r_to_tibia_r
+	originposition	0.0155	-0.2325	0.0208
+	insertionposition	0.0394	-0.3067	0.001
+	optimallength	0.0990
+	maximalforce	1294.0000
+	tendonslacklength	0.1402
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	vas_lat_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_r_to_tibia_r
+	originposition	0.0053	-0.2053	0.0387
+	insertionposition	0.0298	-0.287	0.0453
+	optimallength	0.0933
+	maximalforce	1871.0000
+	tendonslacklength	0.1744
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	soleus_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_r_to_calcn_r
+	originposition	-0.0024	-0.1538	0.0071
+	insertionposition	0.0	0.0328	-0.0056
+	optimallength	0.0495
+	maximalforce	3549.0000
+	tendonslacklength	0.2477
+	pennationangle	0.4363
+endmuscle
+
+
+
+muscle	tib_post_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_r_to_calcn_r
+	originposition	-0.0094	-0.1353	0.0019
+	insertionposition	0.0818	0.0168	-0.0298
+	optimallength	0.0311
+	maximalforce	1588.0000
+	tendonslacklength	0.3110
+	pennationangle	0.2094
+endmuscle
+
+
+
+muscle	tib_ant_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_r_to_calcn_r
+	originposition	0.018	-0.163	0.0115
+	insertionposition	0.1235	0.0189	-0.0323
+	optimallength	0.0992
+	maximalforce	905.0000
+	tendonslacklength	0.2257
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	per_long_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_r_to_calcn_r
+	originposition	0.0005	-0.1574	0.0363
+	insertionposition	0.1274	0.009	-0.0195
+	optimallength	0.0499
+	maximalforce	943.0000
+	tendonslacklength	0.3516
+	pennationangle	0.1745
+endmuscle
+
+
+
+muscle	glut_med1_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_femur_l
+	originposition	-0.0361	0.0269	-0.1068
+	insertionposition	-0.0233	-0.0125	-0.0594
+	optimallength	0.0498
+	maximalforce	819.0000
+	tendonslacklength	0.0726
+	pennationangle	0.1396
+endmuscle
+
+
+
+muscle	semiten_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_l
+	originposition	-0.1117	-0.0971	-0.0534
+	insertionposition	0.0027	-0.0964	0.0195
+	optimallength	0.2157
+	maximalforce	410.0000
+	tendonslacklength	0.2742
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	bifemlh_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_l
+	originposition	-0.1113	-0.0906	-0.0614
+	insertionposition	-0.0236	-0.0568	-0.0346
+	optimallength	0.1173
+	maximalforce	896.0000
+	tendonslacklength	0.3509
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	sar_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_l
+	originposition	-0.0135	-0.0011	-0.1098
+	insertionposition	0.0245	-0.0847	0.0254
+	optimallength	0.5380
+	maximalforce	156.0000
+	tendonslacklength	0.1035
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	tfl_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_tibia_l
+	originposition	-0.0275	0.0189	-0.1097
+	insertionposition	0.0061	-0.0491	-0.0299
+	optimallength	0.0985
+	maximalforce	233.0000
+	tendonslacklength	0.4406
+	pennationangle	0.0524
+endmuscle
+
+
+
+muscle	vas_med_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_l_to_tibia_l
+	originposition	0.015	-0.2248	-0.0201
+	insertionposition	0.0381	-0.2965	-0.001
+	optimallength	0.0956
+	maximalforce	1294.0000
+	tendonslacklength	0.1353
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	vas_lat_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_l_to_tibia_l
+	originposition	0.0051	-0.1986	-0.0374
+	insertionposition	0.0288	-0.2775	-0.0438
+	optimallength	0.0901
+	maximalforce	1871.0000
+	tendonslacklength	0.1684
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	soleus_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_l_to_calcn_l
+	originposition	-0.0024	-0.1546	-0.0072
+	insertionposition	0.0	0.0326	0.0056
+	optimallength	0.0500
+	maximalforce	3549.0000
+	tendonslacklength	0.2500
+	pennationangle	0.4363
+endmuscle
+
+
+
+muscle	tib_post_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_l_to_calcn_l
+	originposition	-0.0095	-0.1359	-0.0019
+	insertionposition	0.0811	0.0167	0.0295
+	optimallength	0.0313
+	maximalforce	1588.0000
+	tendonslacklength	0.3126
+	pennationangle	0.2094
+endmuscle
+
+
+
+muscle	tib_ant_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_l_to_calcn_l
+	originposition	0.018	-0.1638	-0.0116
+	insertionposition	0.1225	0.0187	0.032
+	optimallength	0.0995
+	maximalforce	905.0000
+	tendonslacklength	0.2263
+	pennationangle	0.0873
+endmuscle
+
+
+
+muscle	per_long_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	tibia_l_to_calcn_l
+	originposition	0.0005	-0.1581	-0.0365
+	insertionposition	0.1264	0.0089	0.0193
+	optimallength	0.0500
+	maximalforce	943.0000
+	tendonslacklength	0.3518
+	pennationangle	0.1745
+endmuscle
+
+
+
+muscle	ercspn_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_torso
+	originposition	-0.1237	0.0388	0.0385
+	insertionposition	-0.0573	0.1145	0.0251
+	optimallength	0.1203
+	maximalforce	2500.0000
+	tendonslacklength	0.0301
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	ercspn_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_torso
+	originposition	-0.1237	0.0388	-0.0385
+	insertionposition	-0.0573	0.1145	-0.0251
+	optimallength	0.1203
+	maximalforce	2500.0000
+	tendonslacklength	0.0301
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	rect_abd_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_torso
+	originposition	-0.0367	-0.0707	0.0094
+	insertionposition	0.0917	0.2317	0.0359
+	optimallength	0.2189
+	maximalforce	263.0000
+	tendonslacklength	0.0166
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	rect_abd_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	pelvis_to_torso
+	originposition	-0.0367	-0.0707	-0.0094
+	insertionposition	0.0917	0.2317	-0.0359
+	optimallength	0.2189
+	maximalforce	263.0000
+	tendonslacklength	0.0166
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	r_stern_mast
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_head_and_neck
+	originposition	0.0312	0.4018	0.01
+	insertionposition	0.0	0.0872	0.0659
+	optimallength	0.1114
+	maximalforce	68.9500
+	tendonslacklength	0.0579
+	pennationangle	0.2618
+endmuscle
+
+
+
+muscle	l_stern_mast
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_head_and_neck
+	originposition	0.0312	0.4018	-0.01
+	insertionposition	0.0	0.0872	-0.0659
+	optimallength	0.1114
+	maximalforce	68.9500
+	tendonslacklength	0.0579
+	pennationangle	0.2618
+endmuscle
+
+
+
+muscle	TRIlong
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_ulna_r
+	originposition	-0.0208	0.3956	0.1561
+	insertionposition	-0.0247	0.0118	-0.0009
+	optimallength	0.1336
+	maximalforce	798.5200
+	tendonslacklength	0.1426
+	pennationangle	0.2094
+endmuscle
+
+
+
+muscle	TRIlong_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_ulna_l
+	originposition	-0.0208	0.3956	-0.1561
+	insertionposition	-0.0252	0.012	0.0009
+	optimallength	0.1333
+	maximalforce	798.5200
+	tendonslacklength	0.1423
+	pennationangle	0.2094
+endmuscle
+
+
+
+muscle	TRIlat
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_ulna_r
+	originposition	-0.006	-0.1271	0.0043
+	insertionposition	-0.0247	0.0118	-0.0009
+	optimallength	0.1125
+	maximalforce	624.3000
+	tendonslacklength	0.0969
+	pennationangle	0.1571
+endmuscle
+
+
+
+muscle	TRIlat_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_ulna_l
+	originposition	-0.006	-0.1271	-0.0043
+	insertionposition	-0.0252	0.012	0.0009
+	optimallength	0.1121
+	maximalforce	624.3000
+	tendonslacklength	0.0965
+	pennationangle	0.1571
+endmuscle
+
+
+
+muscle	BIClong
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_radius_r
+	originposition	0.0312	0.3851	0.1561
+	insertionposition	-0.0021	-0.0393	-0.0021
+	optimallength	0.1178
+	maximalforce	624.3000
+	tendonslacklength	0.2772
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	BIClong_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	torso_to_radius_l
+	originposition	0.0312	0.3851	-0.1561
+	insertionposition	-0.0021	-0.04	0.0021
+	optimallength	0.1180
+	maximalforce	624.3000
+	tendonslacklength	0.2778
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	BRD
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_radius_r
+	originposition	0.0101	-0.201	0.0022
+	insertionposition	-0.0	-0.2411	0.0419
+	optimallength	0.1803
+	maximalforce	261.3300
+	tendonslacklength	0.1389
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	BRD_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_radius_l
+	originposition	0.01	-0.2009	-0.0022
+	insertionposition	-0.0	-0.2452	-0.0427
+	optimallength	0.1828
+	maximalforce	261.3300
+	tendonslacklength	0.1409
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	FCR
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_hand_r
+	originposition	0.0076	-0.2795	-0.0372
+	insertionposition	0.0036	-0.0238	0.0238
+	optimallength	0.0668
+	maximalforce	73.9600
+	tendonslacklength	0.2594
+	pennationangle	0.0541
+endmuscle
+
+
+
+muscle	FCR_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_hand_l
+	originposition	0.0076	-0.2794	0.0372
+	insertionposition	0.0035	-0.0233	-0.0233
+	optimallength	0.0676
+	maximalforce	73.9600
+	tendonslacklength	0.2628
+	pennationangle	0.0541
+endmuscle
+
+
+
+muscle	ECRL
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_hand_r
+	originposition	-0.0073	-0.2623	0.0201
+	insertionposition	-0.0036	-0.0238	0.0238
+	optimallength	0.0857
+	maximalforce	304.8900
+	tendonslacklength	0.2370
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	ECRL_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_hand_l
+	originposition	-0.0073	-0.2621	-0.0201
+	insertionposition	-0.0035	-0.0233	-0.0233
+	optimallength	0.0869
+	maximalforce	304.8900
+	tendonslacklength	0.2403
+	pennationangle	0.0000
+endmuscle
+
+
+
+muscle	PT
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_radius_r
+	originposition	0.0036	-0.2773	-0.0367
+	insertionposition	-0.0262	-0.1363	0.0314
+	optimallength	0.1040
+	maximalforce	566.2200
+	tendonslacklength	0.2377
+	pennationangle	0.1745
+endmuscle
+
+
+
+muscle	PT_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_radius_l
+	originposition	0.0036	-0.2772	0.0362
+	insertionposition	-0.0267	-0.1386	-0.032
+	optimallength	0.1057
+	maximalforce	566.2200
+	tendonslacklength	0.2417
+	pennationangle	0.1745
+endmuscle
+
+
+
+muscle	LAT2
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_torso
+	originposition	-0.005	-0.0409	-0.006
+	insertionposition	-0.0748	0.1874	0.0083
+	optimallength	0.2425
+	maximalforce	389.1000
+	tendonslacklength	0.1842
+	pennationangle	0.3316
+endmuscle
+
+
+
+muscle	LAT2_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_torso
+	originposition	-0.005	-0.0409	0.006
+	insertionposition	-0.0748	0.1874	-0.0083
+	optimallength	0.2425
+	maximalforce	389.1000
+	tendonslacklength	0.1842
+	pennationangle	0.3316
+endmuscle
+
+
+
+muscle	PECM2
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_r_to_torso
+	originposition	0.0128	-0.0432	-0.008
+	insertionposition	0.0288	0.3331	0.0239
+	optimallength	0.1446
+	maximalforce	515.4100
+	tendonslacklength	0.0929
+	pennationangle	0.4363
+endmuscle
+
+
+
+muscle	PECM2_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_l_to_torso
+	originposition	0.0128	-0.0432	0.008
+	insertionposition	0.0288	0.3331	-0.0239
+	optimallength	0.1446
+	maximalforce	515.4100
+	tendonslacklength	0.0929
+	pennationangle	0.4363
+endmuscle
+
+
+
+// --------------------------------------------------------------
+// MUSCLES VIA POINTS
+// --------------------------------------------------------------
+
+viapoint	ant_delt_r-DELT1-P2
+	parent	humerus_r
+	muscle	ant_delt_r
+	musclegroup	humerus_r_to_torso
+	position	0.016314	-0.110901	0.004141
+endviapoint
+
+
+
+viapoint	ant_delt_r-DELT1-P3
+	parent	humerus_r
+	muscle	ant_delt_r
+	musclegroup	humerus_r_to_torso
+	position	0.050259	0.020103	0.0
+endviapoint
+
+
+
+viapoint	ant_delt_l-DELT1-P2
+	parent	humerus_l
+	muscle	ant_delt_l
+	musclegroup	humerus_l_to_torso
+	position	0.016307	-0.110851	0.004139
+endviapoint
+
+
+
+viapoint	ant_delt_l-DELT1-P3
+	parent	humerus_l
+	muscle	ant_delt_l
+	musclegroup	humerus_l_to_torso
+	position	0.050236	0.020095	0.0
+endviapoint
+
+
+
+viapoint	medial_delt_l-DELT1-P2
+	parent	humerus_l
+	muscle	medial_delt_l
+	musclegroup	humerus_l_to_torso
+	position	0.016076	0.025118	-0.030142
+endviapoint
+
+
+
+viapoint	post_delt_r-DELT1-P2
+	parent	humerus_r
+	muscle	post_delt_r
+	musclegroup	humerus_r_to_torso
+	position	-0.016314	-0.110901	0.004141
+endviapoint
+
+
+
+viapoint	post_delt_r-DELT1-P3
+	parent	torso
+	muscle	post_delt_r
+	musclegroup	humerus_r_to_torso
+	position	-0.072866	0.312282	0.156141
+endviapoint
+
+
+
+viapoint	post_delt_l-DELT1-P2
+	parent	humerus_l
+	muscle	post_delt_l
+	musclegroup	humerus_l_to_torso
+	position	-0.016307	-0.110851	-0.004139
+endviapoint
+
+
+
+viapoint	post_delt_l-DELT1-P3
+	parent	torso
+	muscle	post_delt_l
+	musclegroup	humerus_l_to_torso
+	position	-0.072866	0.312282	-0.156141
+endviapoint
+
+
+
+viapoint	medial_delt_r-DELT1-P2
+	parent	humerus_r
+	muscle	medial_delt_r
+	musclegroup	humerus_r_to_torso
+	position	0.016083	0.025129	0.030155
+endviapoint
+
+
+
+viapoint	semiten_r-semiten_r-P3
+	parent	tibia_r
+	muscle	semiten_r
+	musclegroup	pelvis_to_tibia_r
+	position	-0.033337	-0.053006	-0.022961
+endviapoint
+
+
+
+viapoint	semiten_r-semiten_r-P4
+	parent	tibia_r
+	muscle	semiten_r
+	musclegroup	pelvis_to_tibia_r
+	position	-0.01134	-0.074863	-0.024586
+endviapoint
+
+
+
+viapoint	bifemlh_r-bifemlh_r-P2
+	parent	tibia_r
+	muscle	bifemlh_r
+	musclegroup	pelvis_to_tibia_r
+	position	-0.030206	-0.036127	0.029534
+endviapoint
+
+
+
+viapoint	sar_r-sar_r-P2
+	parent	femur_r
+	muscle	sar_r
+	musclegroup	pelvis_to_tibia_r
+	position	-0.003322	-0.395155	-0.046626
+endviapoint
+
+
+
+viapoint	sar_r-sar_r-P3
+	parent	tibia_r
+	muscle	sar_r
+	musclegroup	pelvis_to_tibia_r
+	position	-0.00562	-0.042048	-0.040041
+endviapoint
+
+
+
+viapoint	sar_r-sar_r-P4
+	parent	tibia_r
+	muscle	sar_r
+	musclegroup	pelvis_to_tibia_r
+	position	0.006021	-0.059108	-0.038435
+endviapoint
+
+
+
+viapoint	tfl_r-tfl_r-P2
+	parent	femur_r
+	muscle	tfl_r
+	musclegroup	pelvis_to_tibia_r
+	position	0.03256	-0.110196	0.066118
+endviapoint
+
+
+
+viapoint	tfl_r-tfl_r-P3
+	parent	femur_r
+	muscle	tfl_r
+	musclegroup	pelvis_to_tibia_r
+	position	0.00598	-0.448426	0.039538
+endviapoint
+
+
+
+viapoint	tib_post_r-tib_post_r-P2
+	parent	tibia_r
+	muscle	tib_post_r
+	musclegroup	tibia_r_to_calcn_r
+	position	-0.014451	-0.406527	-0.022981
+endviapoint
+
+
+
+viapoint	tib_post_r-tib_post_r-P3
+	parent	calcn_r
+	muscle	tib_post_r
+	musclegroup	tibia_r_to_calcn_r
+	position	0.044162	0.035372	-0.030289
+endviapoint
+
+
+
+viapoint	tib_ant_r-tib_ant_r-P2
+	parent	tibia_r
+	muscle	tib_ant_r
+	musclegroup	tibia_r_to_calcn_r
+	position	0.033016	-0.396492	-0.017762
+endviapoint
+
+
+
+viapoint	per_long_r-per_long_r-P2
+	parent	tibia_r
+	muscle	per_long_r
+	musclegroup	tibia_r_to_calcn_r
+	position	-0.020773	-0.421981	0.028701
+endviapoint
+
+
+
+viapoint	per_long_r-per_long_r-P3
+	parent	tibia_r
+	muscle	per_long_r
+	musclegroup	tibia_r_to_calcn_r
+	position	-0.016257	-0.433422	0.029002
+endviapoint
+
+
+
+viapoint	per_long_r-per_long_r-P4
+	parent	calcn_r
+	muscle	per_long_r
+	musclegroup	tibia_r_to_calcn_r
+	position	0.046386	0.024358	0.023405
+endviapoint
+
+
+
+viapoint	per_long_r-per_long_r-P5
+	parent	calcn_r
+	muscle	per_long_r
+	musclegroup	tibia_r_to_calcn_r
+	position	0.072121	0.011226	0.030077
+endviapoint
+
+
+
+viapoint	per_long_r-per_long_r-P6
+	parent	calcn_r
+	muscle	per_long_r
+	musclegroup	tibia_r_to_calcn_r
+	position	0.09023	0.007307	0.012497
+endviapoint
+
+
+
+viapoint	semiten_l-semiten_l-P3
+	parent	tibia_l
+	muscle	semiten_l
+	musclegroup	pelvis_to_tibia_l
+	position	-0.033498	-0.053262	0.023072
+endviapoint
+
+
+
+viapoint	semiten_l-semiten_l-P4
+	parent	tibia_l
+	muscle	semiten_l
+	musclegroup	pelvis_to_tibia_l
+	position	-0.011395	-0.075225	0.024705
+endviapoint
+
+
+
+viapoint	bifemlh_l-bifemlh_l-P2
+	parent	tibia_l
+	muscle	bifemlh_l
+	musclegroup	pelvis_to_tibia_l
+	position	-0.030352	-0.036302	-0.029676
+endviapoint
+
+
+
+viapoint	sar_l-sar_l-P2
+	parent	femur_l
+	muscle	sar_l
+	musclegroup	pelvis_to_tibia_l
+	position	-0.003213	-0.382119	0.045087
+endviapoint
+
+
+
+viapoint	sar_l-sar_l-P3
+	parent	tibia_l
+	muscle	sar_l
+	musclegroup	pelvis_to_tibia_l
+	position	-0.005647	-0.042251	0.040234
+endviapoint
+
+
+
+viapoint	sar_l-sar_l-P4
+	parent	tibia_l
+	muscle	sar_l
+	musclegroup	pelvis_to_tibia_l
+	position	0.00605	-0.059393	0.038621
+endviapoint
+
+
+
+viapoint	tfl_l-tfl_l-P2
+	parent	femur_l
+	muscle	tfl_l
+	musclegroup	pelvis_to_tibia_l
+	position	0.031486	-0.106561	-0.063936
+endviapoint
+
+
+
+viapoint	tfl_l-tfl_l-P3
+	parent	femur_l
+	muscle	tfl_l
+	musclegroup	pelvis_to_tibia_l
+	position	0.005783	-0.433632	-0.038233
+endviapoint
+
+
+
+viapoint	tib_post_l-tib_post_l-P2
+	parent	tibia_l
+	muscle	tib_post_l
+	musclegroup	tibia_l_to_calcn_l
+	position	-0.014521	-0.408493	0.023092
+endviapoint
+
+
+
+viapoint	tib_post_l-tib_post_l-P3
+	parent	calcn_l
+	muscle	tib_post_l
+	musclegroup	tibia_l_to_calcn_l
+	position	0.0438	0.035082	0.03004
+endviapoint
+
+
+
+viapoint	tib_ant_l-tib_ant_l-P2
+	parent	tibia_l
+	muscle	tib_ant_l
+	musclegroup	tibia_l_to_calcn_l
+	position	0.033176	-0.398409	0.017848
+endviapoint
+
+
+
+viapoint	per_long_l-per_long_l-P2
+	parent	tibia_l
+	muscle	per_long_l
+	musclegroup	tibia_l_to_calcn_l
+	position	-0.020873	-0.424022	-0.02884
+endviapoint
+
+
+
+viapoint	per_long_l-per_long_l-P3
+	parent	tibia_l
+	muscle	per_long_l
+	musclegroup	tibia_l_to_calcn_l
+	position	-0.016336	-0.435517	-0.029142
+endviapoint
+
+
+
+viapoint	per_long_l-per_long_l-P4
+	parent	calcn_l
+	muscle	per_long_l
+	musclegroup	tibia_l_to_calcn_l
+	position	0.046006	0.024158	-0.023213
+endviapoint
+
+
+
+viapoint	per_long_l-per_long_l-P5
+	parent	calcn_l
+	muscle	per_long_l
+	musclegroup	tibia_l_to_calcn_l
+	position	0.071529	0.011134	-0.02983
+endviapoint
+
+
+
+viapoint	per_long_l-per_long_l-P6
+	parent	calcn_l
+	muscle	per_long_l
+	musclegroup	tibia_l_to_calcn_l
+	position	0.089491	0.007247	-0.012394
+endviapoint
+
+
+
+viapoint	TRIlong-TRIlong-P2
+	parent	humerus_r
+	muscle	TRIlong
+	musclegroup	torso_to_ulna_r
+	position	-0.02728	-0.115002	-0.006674
+endviapoint
+
+
+
+viapoint	TRIlong-TRIlong-P3
+	parent	humerus_r
+	muscle	TRIlong
+	musclegroup	torso_to_ulna_r
+	position	-0.032005	-0.227541	-0.012233
+endviapoint
+
+
+
+viapoint	TRIlong-TRIlong-P4
+	parent	humerus_r
+	muscle	TRIlong
+	musclegroup	torso_to_ulna_r
+	position	-0.01752	-0.268955	-0.012143
+endviapoint
+
+
+
+viapoint	TRIlong_l-TRIlong-P2
+	parent	humerus_l
+	muscle	TRIlong_l
+	musclegroup	torso_to_ulna_l
+	position	-0.027268	-0.114951	0.006671
+endviapoint
+
+
+
+viapoint	TRIlong_l-TRIlong-P3
+	parent	humerus_l
+	muscle	TRIlong_l
+	musclegroup	torso_to_ulna_l
+	position	-0.03199	-0.22744	0.012228
+endviapoint
+
+
+
+viapoint	TRIlong_l-TRIlong-P4
+	parent	humerus_l
+	muscle	TRIlong_l
+	musclegroup	torso_to_ulna_l
+	position	-0.017512	-0.268835	0.012137
+endviapoint
+
+
+
+viapoint	TRIlat-TRIlat-P2
+	parent	humerus_r
+	muscle	TRIlat
+	musclegroup	humerus_r_to_ulna_r
+	position	-0.023561	-0.146032	0.009328
+endviapoint
+
+
+
+viapoint	TRIlat-TRIlat-P3
+	parent	humerus_r
+	muscle	TRIlat
+	musclegroup	humerus_r_to_ulna_r
+	position	-0.032005	-0.227541	-0.012233
+endviapoint
+
+
+
+viapoint	TRIlat-TRIlat-P4
+	parent	humerus_r
+	muscle	TRIlat
+	musclegroup	humerus_r_to_ulna_r
+	position	-0.01752	-0.268955	-0.012143
+endviapoint
+
+
+
+viapoint	TRIlat_l-TRIlat_l-P2
+	parent	humerus_l
+	muscle	TRIlat_l
+	musclegroup	humerus_l_to_ulna_l
+	position	-0.023551	-0.145967	-0.009324
+endviapoint
+
+
+
+viapoint	TRIlat_l-TRIlat_l-P3
+	parent	humerus_l
+	muscle	TRIlat_l
+	musclegroup	humerus_l_to_ulna_l
+	position	-0.03199	-0.22744	0.012228
+endviapoint
+
+
+
+viapoint	TRIlat_l-TRIlat_l-P4
+	parent	humerus_l
+	muscle	TRIlat_l
+	musclegroup	humerus_l_to_ulna_l
+	position	-0.017512	-0.268835	0.012137
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P2
+	parent	torso
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.031228	0.400762	0.166551
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P3
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.02142	0.018093	0.010052
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P4
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.023903	-0.005136	0.012072
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P5
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.016083	-0.028145	0.001367
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P6
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.013067	-0.077398	-0.001659
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P7
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.017118	-0.121877	0.000241
+endviapoint
+
+
+
+viapoint	BIClong-BIClong-P8
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.022918	-0.176308	-0.006333
+endviapoint
+
+
+
+viapoint	BIClong-BIClong_l-P9
+	parent	humerus_r
+	muscle	BIClong
+	musclegroup	torso_to_radius_r
+	position	0.035181	-0.281449	-0.006031
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P2
+	parent	torso
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.031228	0.400762	-0.166551
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P3
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.021411	0.018085	-0.010047
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P4
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.023892	-0.005134	-0.012067
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P5
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.016076	-0.028132	-0.001366
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P6
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.013061	-0.077364	0.001658
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P7
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.01711	-0.121823	-0.000241
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P8
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.022908	-0.176229	0.00633
+endviapoint
+
+
+
+viapoint	BIClong_l-BIClong_l-P9
+	parent	humerus_l
+	muscle	BIClong_l
+	musclegroup	torso_to_radius_l
+	position	0.035165	-0.281323	0.006028
+endviapoint
+
+
+
+viapoint	BRD-BRD-P2
+	parent	radius_r
+	muscle	BRD
+	musclegroup	humerus_r_to_radius_r
+	position	-0.0	0.020965	0.02411
+endviapoint
+
+
+
+viapoint	BRD_l-BRD_l-P2
+	parent	radius_l
+	muscle	BRD_l
+	musclegroup	humerus_l_to_radius_l
+	position	-0.0	0.021325	-0.024524
+endviapoint
+
+
+
+viapoint	FCR-FCR-P2
+	parent	radius_r
+	muscle	FCR
+	musclegroup	humerus_r_to_hand_r
+	position	0.004193	-0.251581	0.020965
+endviapoint
+
+
+
+viapoint	FCR_l-FCR_l-P2
+	parent	radius_l
+	muscle	FCR_l
+	musclegroup	humerus_l_to_hand_l
+	position	0.004265	-0.255905	-0.021325
+endviapoint
+
+
+
+viapoint	ECRL-ECRL-P2
+	parent	radius_r
+	muscle	ECRL
+	musclegroup	humerus_r_to_hand_r
+	position	-0.031448	-0.141127	0.029351
+endviapoint
+
+
+
+viapoint	ECRL-ECRL-P3
+	parent	radius_r
+	muscle	ECRL
+	musclegroup	humerus_r_to_hand_r
+	position	-0.020965	-0.248437	0.037737
+endviapoint
+
+
+
+viapoint	ECRL_l-ECRL_l-P2
+	parent	radius_l
+	muscle	ECRL_l
+	musclegroup	humerus_l_to_hand_l
+	position	-0.031988	-0.143552	-0.029856
+endviapoint
+
+
+
+viapoint	ECRL_l-ECRL_l-P3
+	parent	radius_l
+	muscle	ECRL_l
+	musclegroup	humerus_l_to_hand_l
+	position	-0.021325	-0.252706	-0.038386
+endviapoint
+
+
+
+viapoint	PT-PT-P2
+	parent	ulna_r
+	muscle	PT
+	musclegroup	humerus_r_to_radius_r
+	position	0.0	-0.039418	-0.015767
+endviapoint
+
+
+
+viapoint	PT-PT-P3
+	parent	radius_r
+	muscle	PT
+	musclegroup	humerus_r_to_radius_r
+	position	0.010483	-0.094343	0.026206
+endviapoint
+
+
+
+viapoint	PT_l-PT_l-P2
+	parent	ulna_l
+	muscle	PT_l
+	musclegroup	humerus_l_to_radius_l
+	position	0.0	-0.040228	0.016091
+endviapoint
+
+
+
+viapoint	PT_l-PT_l-P3
+	parent	radius_l
+	muscle	PT_l
+	musclegroup	humerus_l_to_radius_l
+	position	0.010663	-0.095964	-0.026657
+endviapoint
+
+
+
+viapoint	LAT2-LAT2-P2
+	parent	torso
+	muscle	LAT2
+	musclegroup	humerus_r_to_torso
+	position	-0.124913	0.291464	0.135322
+endviapoint
+
+
+
+viapoint	LAT2-LAT2-P3
+	parent	torso
+	muscle	LAT2
+	musclegroup	humerus_r_to_torso
+	position	-0.114504	0.249826	0.052047
+endviapoint
+
+
+
+viapoint	LAT2_l-LAT2_l-P2
+	parent	torso
+	muscle	LAT2_l
+	musclegroup	humerus_l_to_torso
+	position	-0.124913	0.291464	-0.135322
+endviapoint
+
+
+
+viapoint	LAT2_l-LAT2_l-P3
+	parent	torso
+	muscle	LAT2_l
+	musclegroup	humerus_l_to_torso
+	position	-0.114504	0.249826	-0.052047
+endviapoint
+
+
+
+viapoint	PECM2-PECM2-P2
+	parent	torso
+	muscle	PECM2
+	musclegroup	humerus_r_to_torso
+	position	0.08848	0.333101	0.104094
+endviapoint
+
+
+
+viapoint	PECM2-PECM2-P3
+	parent	torso
+	muscle	PECM2
+	musclegroup	humerus_r_to_torso
+	position	0.08848	0.333101	0.052047
+endviapoint
+
+
+
+viapoint	PECM2_l-PECM2-P2_l
+	parent	torso
+	muscle	PECM2_l
+	musclegroup	humerus_l_to_torso
+	position	0.08848	0.333101	-0.104094
+endviapoint
+
+
+
+viapoint	PECM2_l-PECM2-P3_l
+	parent	torso
+	muscle	PECM2_l
+	musclegroup	humerus_l_to_torso
+	position	0.08848	0.333101	-0.052047
+endviapoint
+
+
+
+
+/*-------------- WARNINGS---------------
+
+Some conditional path points were present for the semiten_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_med_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_med_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_lat_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_lat_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the med_gas_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the lat_gas_r muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the semiten_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_med_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_med_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the vas_lat_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some moving path points were present for the vas_lat_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the med_gas_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Some conditional path points were present for the lat_gas_l muscle. This feature is not implemented in biorbd yet so it will be ignored.
+Failed to convert muscle med_gas_r: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle lat_gas_r: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle med_gas_l: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle lat_gas_l: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle r_trap_acr: The origin and insertion parent names cannot be the same.. Muscle skipped.
+Failed to convert muscle l_trap_acr: The origin and insertion parent names cannot be the same.. Muscle skipped.*/
