@@ -3,6 +3,8 @@ from .aliases import Point, Points, point_to_array
 import numpy as np
 
 
+# TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
+
 def rot_x_matrix(angle):
     """
     Rotation matrix around the x-axis
@@ -106,13 +108,13 @@ def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     return mean_matrix
 
 
-def to_euler(rt, sequence: str) -> np.ndarray:
-    if sequence == "xyz":
-        rx = np.arctan2(-rt[1, 2, :], rt[2, 2, :])
-        ry = np.arcsin(rt[0, 2, :])
-        rz = np.arctan2(-rt[0, 1, :], rt[0, 0, :])
+def to_euler(rt, angle_sequence: str) -> np.ndarray:
+    if angle_sequence == "xyz":
+        rx = np.arctan2(-rt[1, 2], rt[2, 2])
+        ry = np.arcsin(rt[0, 2])
+        rz = np.arctan2(-rt[0, 1], rt[0, 0])
     else:
-        raise NotImplementedError("This sequence is not implemented yet")
+        raise NotImplementedError("This angle_sequence is not implemented yet")
 
     return np.array([rx, ry, rz])
 
@@ -336,13 +338,13 @@ def get_rt_aligning_markers_in_global(
 
 def point_from_global_to_local(point_in_global: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
     rt_matrix = RotoTransMatrix()
-    rt_matrix.rt_matrix = jcs_in_global
+    rt_matrix.from_rt_matrix(jcs_in_global)
     return rt_matrix.inverse @ point_to_array(point=point_in_global)
 
 
 def point_from_local_to_global(point_in_local: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
     rt_matrix = RotoTransMatrix()
-    rt_matrix.rt_matrix = jcs_in_global
+    rt_matrix.from_rt_matrix(jcs_in_global)
     return rt_matrix.rt_matrix @ point_to_array(point=point_in_local)
 
 
@@ -389,41 +391,104 @@ class OrthoMatrix:
     def has_no_transformation(self):
         return np.all(self.get_matrix() == np.identity(4))
 
+class RotoTransMatrixTimeSeries:
+    def __init__(self):
+        self._rt_time_series = []
+
+    def __getitem__(self, index: int):
+        return self._rt_time_series[index]
+
+    def __setitem__(self, index: int, value: "RotoTransMatrix"):
+        self._rt_time_series[index] = value
+
+    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+        if len(rotation_matrix.shape) != 3 or len(translation) != 3:
+            raise ValueError(f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}")
+
+        rt_time_series = []
+        for i_frame in range(rotation_matrix.shape[2]):
+            rt_time_series += [RotoTransMatrix().from_rotation_matrix_and_translation(rotation_matrix[:, :, i_frame], translation[:, i_frame])]
+
+        self._rt_time_series = rt_time_series
+
+    def from_rt_matrix(self, rt: np.ndarray):
+        if len(rt.shape) != 3:
+            raise ValueError(
+                f"The rt and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}")
+
+        rt_time_series = []
+        for i_frame in range(rt.shape[2]):
+            rt_time_series += [RotoTransMatrix().from_rt_matrix(rt[:, :, i_frame])]
+
+        self._rt_time_series = rt_time_series
+
 
 class RotoTransMatrix:
     def __init__(self):
         self._rt = None
 
-    def from_rotation_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+        if rotation_matrix.shape != (3, 3):
+            raise ValueError(
+                f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}")
+        if translation.shape != (3,):
+            raise ValueError(
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}")
+
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
         rt_matrix[:3, 3] = translation
         rt_matrix[3, 3] = 1.0
         self._rt = rt_matrix
 
+    def from_euler_angles_and_translation(self, angle_sequence: str, angles: np.ndarray, translation: np.ndarray):
+        if len(angles.shape) > 1:
+            raise ValueError(
+                f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}")
+        if translation.shape != (3,):
+            raise ValueError(
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}")
+        if len(angle_sequence) != angles.shape[0]:
+            raise ValueError(
+                f"The number of angles and the length of the angle_sequence must match. You have {angles.shape} and {angle_sequence}")
+
+        matrix = {
+            "x": rot_x_matrix,
+            "y": rot_y_matrix,
+            "z": rot_z_matrix,
+        }
+
+        rt_matrix = np.identity(4)
+        for angle, axis in zip(angles, angle_sequence):
+            rt_matrix[:3, :3] = rt_matrix[:3, :3] @ matrix[axis](angle)
+        rt_matrix[:3, 3] = translation[:3]
+        self._rt = rt_matrix
+
+    def from_rt_matrix(self, rt: np.ndarray):
+        if rt.shape != (4, 4):
+            raise ValueError(
+                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}")
+        self._rt = rt
+
     @property
     def rt_matrix(self) -> np.ndarray:
         return self._rt
-
-    @rt_matrix.setter
-    def rt_matrix(self, value: np.ndarray):
-        self._rt = value
 
     @property
     def translation(self) -> np.ndarray:
         return self._rt[:3, 3]
 
     @translation.setter
-    def translation(self, value: np.ndarray):
-        self._rt[:3, 3] = value
+    def translation(self, trans: np.ndarray):
+        self._rt[:3, 3] = trans
 
     @property
     def rotation_matrix(self) -> np.ndarray:
         return self._rt[:3, :3]
 
     @rotation_matrix.setter
-    def rotation_matrix(self, value: np.ndarray):
-        self._rt[:3, :3] = value
+    def rotation_matrix(self, rot: np.ndarray):
+        self._rt[:3, :3] = rot
 
     @property
     def inverse(self) -> np.ndarray:
@@ -439,3 +504,6 @@ class RotoTransMatrix:
         rt_matrix[3, 3] = 1.0
 
         return rt_matrix
+
+    def euler_angles(self, angle_sequence: str) -> np.ndarray:
+        return to_euler(self.rotation_matrix, angle_sequence)

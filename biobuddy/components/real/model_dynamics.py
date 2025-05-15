@@ -55,7 +55,7 @@ class ModelDynamics:
 
             parent_name = self.segments[segment_name].parent_name
             parent_scs = RotoTransMatrix()
-            parent_scs.rt_matrix = self.segment_coordinate_system_in_global(segment_name=parent_name)
+            parent_scs.from_rt_matrix(self.segment_coordinate_system_in_global(segment_name=parent_name))
             inv_parent_scs = parent_scs.inverse
             scs_in_local = inv_parent_scs @ self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
             return get_closest_rt_matrix(scs_in_local)[:, :, np.newaxis]
@@ -115,7 +115,7 @@ class ModelDynamics:
             parent_name = self.segments[parent_name].parent_name
 
         out_rt = RotoTransMatrix()
-        out_rt.rt_matrix = rt
+        out_rt.from_rt_matrix(rt)
         return out_rt
 
     @staticmethod
