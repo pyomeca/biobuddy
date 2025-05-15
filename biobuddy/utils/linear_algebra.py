@@ -407,7 +407,9 @@ class RotoTransMatrixTimeSeries:
 
         rt_time_series = []
         for i_frame in range(rotation_matrix.shape[2]):
-            rt_time_series += [RotoTransMatrix().from_rotation_matrix_and_translation(rotation_matrix[:, :, i_frame], translation[:, i_frame])]
+            rt_matrix = RotoTransMatrix()
+            rt_matrix.from_rotation_matrix_and_translation(rotation_matrix[:, :, i_frame], translation[:, i_frame])
+            rt_time_series += [rt_matrix]
 
         self._rt_time_series = rt_time_series
 
@@ -418,7 +420,9 @@ class RotoTransMatrixTimeSeries:
 
         rt_time_series = []
         for i_frame in range(rt.shape[2]):
-            rt_time_series += [RotoTransMatrix().from_rt_matrix(rt[:, :, i_frame])]
+            rt_matrix = RotoTransMatrix()
+            rt_matrix.from_rt_matrix(rt[:, :, i_frame])
+            rt_time_series += [rt_matrix]
 
         self._rt_time_series = rt_time_series
 
