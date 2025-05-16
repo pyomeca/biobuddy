@@ -193,13 +193,7 @@ class RigidSegmentIdentification:
         joint_model.add_segment(
             SegmentReal(
                 name="ground",
-                # segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True)
-                segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.array([
-                    [1, 0, 0,  0],
-                    [0, 0, -1, 0],
-                    [0, 1, 0,  0],
-                    [0, 0, 0,  1],
-                ]), is_scs_local=True),
+                segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
             )
         )
         setup_segments_for_animation(self.parent_name)
@@ -217,21 +211,8 @@ class RigidSegmentIdentification:
         rt_child_instance.from_rt_matrix(rt_child)
 
         for i_frame in range(nb_frames):
-            # parent_trans[:, i_frame] = rt_parent[:3, 3, i_frame]
-            # rot_mat = biorbd.Rotation(rt_parent[0, 0, i_frame], rt_parent[0, 1, i_frame], rt_parent[0, 2, i_frame],
-            #                           rt_parent[1, 0, i_frame], rt_parent[1, 1, i_frame], rt_parent[1, 2, i_frame],
-            #                           rt_parent[2, 0, i_frame], rt_parent[2, 1, i_frame], rt_parent[2, 2, i_frame])
-            # parent_rot[:, i_frame] = biorbd.Rotation.toEulerAngles(rot_mat, "xyz").to_array()
-
-            # child_trans[:, i_frame] = rt_child[:3, 3, i_frame]
-            # rot_mat = biorbd.Rotation(rt_child[0, 0, i_frame], rt_child[0, 1, i_frame], rt_child[0, 2, i_frame],
-            #                           rt_child[1, 0, i_frame], rt_child[1, 1, i_frame], rt_child[1, 2, i_frame],
-            #                           rt_child[2, 0, i_frame], rt_child[2, 1, i_frame], rt_child[2, 2, i_frame])
-            # child_rot[:, i_frame] = biorbd.Rotation.toEulerAngles(rot_mat, "xyz").to_array()
-
             parent_trans[:, i_frame] = rt_parent_instance[i_frame].translation
             parent_rot[:, i_frame] = rt_parent_instance[i_frame].euler_angles("xyz")
-
             child_trans[:, i_frame] = rt_child_instance[i_frame].translation
             child_rot[:, i_frame] = rt_child_instance[i_frame].euler_angles("xyz")
 
@@ -244,14 +225,13 @@ class RigidSegmentIdentification:
             raise ImportError("Please install pyorerun and pyomeca to visualize the segment reconstruction.")
 
         # Visualization
-        # nb_frames = self.parent_markers_global.shape[2]
         t = np.linspace(0, 1, nb_frames)
 
         # Add the experimental markers from the static trial
         if not without_exp_markers:
             pyomarkers = Markers(
                 data=np.concatenate(
-                    (self.parent_markers_global[:, :, :nb_frames], self.child_markers_global[:, :, :nb_frames]), axis=1
+                    (self.parent_markers_global, self.child_markers_global), axis=1
                 ),
                 channels=self.parent_marker_names + self.child_marker_names,
             )
@@ -714,7 +694,7 @@ class RigidSegmentIdentification:
         rt_optimal = np.zeros((4, 4, nb_frames))
         for i_frame in range(nb_frames):
             init = np.eye(4)
-            init[:, :] = rt_init.reshape(4, 4)
+            init[:, :] = rt_init[:, :, i_frame].reshape(4, 4)
             init = init.flatten()
 
             lbx = np.ones((4, 4)) * -5
@@ -737,7 +717,7 @@ class RigidSegmentIdentification:
             )
             if sol.success:
                 rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                rt_init = rt_optimal[:, :, i_frame]
+                # rt_init = rt_optimal[:, :, i_frame]
             else:
                 rt_optimal[:, :, i_frame] = np.nan
                 print(f"The optimization failed: {sol.message}")
@@ -1203,13 +1183,15 @@ class Sara(RigidSegmentIdentification):
                     rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
                 )
         else:
+            child_offset_rt = RotoTransMatrix()
+            child_offset_rt.from_rt_matrix(np.identity(4))
             rt_child_functional_offsetted = rt_child_functional
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
                 original_model,
-                np.concatenate((rt_parent_static, rt_parent_functional_offsetted[:, :, :-1]), axis=2),
-                np.concatenate((rt_child_static, rt_child_functional_offsetted[:, :, :-1]), axis=2),
+                rt_parent_functional_offsetted,
+                rt_child_functional_offsetted,
             )
 
         # Identify the approximate longitudinal axis of the segments
@@ -1245,7 +1227,7 @@ class Sara(RigidSegmentIdentification):
 
 
 class JointCenterTool:
-    def __init__(self, original_model: BiomechanicalModelReal):
+    def __init__(self, original_model: BiomechanicalModelReal, animate_reconstruction: bool = False):
 
         # Make sure that the scs ar in lical before starting
         for segment in original_model.segments:
@@ -1257,6 +1239,7 @@ class JointCenterTool:
 
         # Original attributes
         self.original_model = original_model
+        self.animate_reconstruction = animate_reconstruction
 
         # Extended attributes to be filled
         self.joint_center_tasks = []  # Not a NamedList because nothing in BioBuddy refer to joints (only segments)
@@ -1298,10 +1281,9 @@ class JointCenterTool:
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
-            nb_frames = 500
             # Reconstruct first frame to get an initial rt
             q_init = self.original_model.inverse_kinematics(
-                marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :nb_frames],
+                marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
                 marker_names=self.original_model.marker_names,
                 marker_weights=marker_weights,
             )
@@ -1309,11 +1291,11 @@ class JointCenterTool:
             import pyorerun
             from pyomeca import Markers
 
-            t = np.linspace(0, 1, nb_frames)
+            t = np.linspace(0, 1, task.c3d_data.nb_frames)
             viz = pyorerun.PhaseRerun(t)
 
             pyomarkers = Markers(
-                data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :nb_frames],
+                data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
                 channels=self.original_model.marker_names,
             )
             self.original_model.to_biomod("../models/ech_tempo.biomod")
@@ -1328,14 +1310,6 @@ class JointCenterTool:
             child_rt_init = segment_rt_in_global[task.child_name]
             # parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
             # child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
-
-            # TODO: remove
-            task.animate_the_segment_reconstruction(
-                self.original_model,
-                parent_rt_init,
-                child_rt_init,
-                without_exp_markers=True,
-            )
 
             # Marker positions in the global from the static trial
             task.parent_static_markers_in_global = static_markers_in_global[
@@ -1361,12 +1335,12 @@ class JointCenterTool:
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
             task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
 
-            # TODO: remove
-            task.animate_the_segment_reconstruction(
-                self.original_model,
-                parent_rt_init,
-                child_rt_init,
-            )
+            if self.animate_reconstruction:
+                task.animate_the_segment_reconstruction(
+                    self.original_model,
+                    parent_rt_init,
+                    child_rt_init,
+                )
 
             # Replace the joint center in the new model
             task.check_marker_positions()

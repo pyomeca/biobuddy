@@ -469,7 +469,9 @@ class RotoTransMatrix:
         self._rt = rt_matrix
 
     def from_rt_matrix(self, rt: np.ndarray):
-        if rt.shape != (4, 4):
+        if rt.shape == (4, 4, 1):
+            rt = rt[:, :, 0]
+        elif rt.shape != (4, 4):
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}")
         self._rt = rt
