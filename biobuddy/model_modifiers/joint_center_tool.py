@@ -17,6 +17,7 @@ from ..utils.linear_algebra import (
     quaternion_to_rotation_matrix,
     get_closest_rt_matrix,
     mean_homogenous_matrix,
+    mean_unit_vector,
     compute_matrix_rotation,
     rot2eul,
     to_euler,
@@ -1007,6 +1008,7 @@ class Sara(RigidSegmentIdentification):
         last_frame: int,
         joint_center_markers: list[str],
         distal_markers: list[str],
+        is_longitudinal_axis_from_jcs_to_distal_markers: bool,
         method: str = "numerical",
         animate_rt: bool = False,
     ):
@@ -1025,6 +1027,7 @@ class Sara(RigidSegmentIdentification):
 
         self.joint_center_markers = joint_center_markers
         self.distal_markers = distal_markers
+        self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
 
     def _sara_algorithm(self, rt_parent: np.ndarray, rt_child: np.ndarray) -> np.ndarray:
         """
@@ -1086,74 +1089,129 @@ class Sara(RigidSegmentIdentification):
 
         return aor_global
 
-    def _longitudinal_axis(self) -> tuple[np.ndarray, np.ndarray]:
+    def _longitudinal_axis(self, original_model: BiomechanicalModelReal) -> tuple[np.ndarray, np.ndarray]:
         """
         Estimate the longitudinal axis of the segment and the joint center.
         """
-        nb_frames = self.c3d_data.nb_frames
+        segment_rt_in_global = original_model.forward_kinematics()
+        parent_jcs_in_global = RotoTransMatrix()
+        parent_jcs_in_global.from_rt_matrix(segment_rt_in_global[self.parent_name])
+        
+        joint_center_marker_index = original_model.markers_indices(self.joint_center_markers)
+        joint_center_markers_in_global = original_model.markers_in_global()[:, joint_center_marker_index]
+        joint_center_global = np.mean(joint_center_markers_in_global, axis=1)
+        joint_center_local = parent_jcs_in_global.inverse @ joint_center_global
 
-        joint_center_markers = self.c3d_data.get_position(self.joint_center_markers)
-        distal_markers = self.c3d_data.get_position(self.distal_markers)
-        joint_center_global = np.ones((4, nb_frames))
-        longitudinal_axis_global = np.ones((4, nb_frames))
-        for i_frame in range(nb_frames):
-            # Get the joint center at each frame in the global reference frame
-            if np.any(np.isnan(joint_center_markers[:, :, i_frame])):
-                joint_center_global[:, i_frame] = np.nan
-            else:
-                joint_center_global[:, i_frame] = np.mean(joint_center_markers[:, :, i_frame], axis=1)
-                # Get the longitudinal axis in the global reference frame
-                if np.any(np.isnan(distal_markers[:, :, i_frame])):
-                    longitudinal_axis_global[:, i_frame] = np.nan
-                else:
-                    longitudinal_axis_global[:, i_frame] = (
-                        np.mean(distal_markers[:, :, i_frame], axis=1) - joint_center_global[:, i_frame]
-                    )
-                    longitudinal_axis_global[:3, i_frame] /= np.linalg.norm(longitudinal_axis_global[:3, i_frame])
+        distal_marker_index = original_model.markers_indices(self.distal_markers)
+        distal_markers_in_global = original_model.markers_in_global()[:, distal_marker_index]
+        distal_center_global = np.mean(distal_markers_in_global, axis=1)
+        distal_center_in_local = parent_jcs_in_global.inverse @ distal_center_global
+        
+        longitudinal_axis_local = distal_center_in_local - joint_center_local
+        longitudinal_axis_local[:3] *= self.longitudinal_axis_sign
+        longitudinal_axis_local[:3] /= np.linalg.norm(longitudinal_axis_local[:3])
+        longitudinal_axis_local[3] = 1
 
-        return joint_center_global, longitudinal_axis_global
+        return joint_center_local, longitudinal_axis_local
+
+    def get_rotation_index(self, original_model):
+        rot = original_model.segments[self.child_name].rotations.value
+        if len(rot) != 1:
+            raise RuntimeError(f"The Sara algorithm is meant to be used with a one DoF joint, you have defined rotations {original_model.segments[self.child_name].rotations} for segment {self.child_name}.")
+        elif rot == "x":
+            aor_index = 0
+            perpendicular_index = 1
+            longitudinal_index = 2
+        elif rot == "y":
+            raise NotImplementedError("This axis combination has not been tested yet. Please make sure that the cross product make sense (correct order and correct sign).")
+            aor_index = 1
+            perpendicular_index = 0
+            longitudinal_index = 2
+        elif rot == "z":
+            aor_index = 2
+            perpendicular_index = 0
+            longitudinal_index = 1
+        return aor_index, perpendicular_index, longitudinal_index
 
     def _extract_scs_from_axis(
         self,
-        aor_global: np.ndarray,
-        joint_center_global: np.ndarray,
-        longitudinal_axis_global: np.ndarray,
-        rt_parent_functional: np.ndarray,
+        original_model: BiomechanicalModelReal,
+        aor_local: np.ndarray,
+        joint_center_local: np.ndarray,
+        longitudinal_axis_local: np.ndarray,
     ) -> np.ndarray:
         """
         Extract the segment coordinate system (SCS) from the axis of rotation.
-        This implementation assumes that the rotation axis is the X rotation.
+        """
+        if original_model.has_parent_offset(self.child_name):
+            raise NotImplementedError("Please implement generalization for ghost segments!")
+
+        aor_index, perpendicular_index, longitudinal_index = self.get_rotation_index(original_model)
+
+        # Extract an orthonormal basis
+        perpendicular_axis = np.cross(aor_local[:3], longitudinal_axis_local[:3, 0])
+        perpendicular_axis /= np.linalg.norm(perpendicular_axis)
+        accurate_longitudinal_axis = np.cross(perpendicular_axis, aor_local[:3])
+        accurate_longitudinal_axis /= np.linalg.norm(accurate_longitudinal_axis)
+
+        scs_of_child_in_local = np.identity(4)
+        scs_of_child_in_local[:3, aor_index] = aor_local[:3]
+        scs_of_child_in_local[:3, perpendicular_index] = -perpendicular_axis
+        scs_of_child_in_local[:3, longitudinal_index] = accurate_longitudinal_axis
+        scs_of_child_in_local[:3, 3] = joint_center_local[:3, 0]
+        scs_of_child_in_local[3, 3] = 1
+
+        return scs_of_child_in_local
+
+    def _check_aor(self, original_model: BiomechanicalModelReal, aor_global: np.ndarray) -> np.ndarray:
+
+        def compute_angle_difference():
+            angles = np.zeros((nb_frames,))
+            for i_frame in range(nb_frames):
+                angles[i_frame] = np.arccos(
+                    np.dot(aor_global[:3, i_frame], original_axis[:3])
+                    / (np.linalg.norm(aor_global[:3, i_frame]) * np.linalg.norm(original_axis[:3]))
+                )
+            return angles
+
+        aor_index, _, _ = self.get_rotation_index(original_model)
+        original_axis = original_model.forward_kinematics()[self.child_name][:, aor_index, 0]
+
+        if aor_global.shape[0] == 3:
+            aor_global = np.vstack((aor_global, np.ones((aor_global.shape[1]))))
+
+        nb_frames = aor_global.shape[1]
+        angles = compute_angle_difference()
+        if np.abs(np.nanmean(angles) - np.pi) * 180 / np.pi < 30:
+            aor_global[:3, :] = -aor_global[:3, :]
+            angles = compute_angle_difference()
+        if np.abs(np.nanmean(angles)) * 180 / np.pi > 30:
+            raise RuntimeError(
+                f"The optimal axis of rotation is more than 30° appart from the original axis. This is suspicious, please check the markers used for the sara algorithm."
+            )
+        if np.nanstd(angles) * 180 / np.pi > 30:
+            raise RuntimeError(
+                f"The optimal axis of rotation is not stable over time. This is suspicious, please check the markers used for the sara algorithm."
+            )
+        return aor_global
+
+    def _get_aor_local(self, aor_global: np.ndarray, rt_parent_functional: np.ndarray) -> np.ndarray:
+        """
+        This function computes the axis of rotation in the local frame of the parent segment.
+        It assumes that the axis or rotation does not move much over time in the local reference frame of the parent.
         """
         nb_frames = self.c3d_data.nb_frames
-        scs_of_child_in_global = np.zeros((4, 4, nb_frames))
-        scs_of_child_in_local = np.zeros((4, 4, nb_frames))
+        aor_in_local = np.ones((4, self.c3d_data.nb_frames))
         for i_frame in range(nb_frames):
-            if np.any(np.isnan(joint_center_global[:, i_frame])) or np.any(
-                np.isnan(longitudinal_axis_global[:, i_frame])
-            ):
-                scs_of_child_in_global[:, :, i_frame] = np.nan
+            if np.any(np.isnan(aor_global[:, i_frame])):
+                aor_in_local[:, i_frame] = np.nan
             else:
-                # Extract an orthonormal basis
-                perpendicular_axis = np.cross(aor_global[:, i_frame], longitudinal_axis_global[:3, i_frame])
-                perpendicular_axis /= np.linalg.norm(perpendicular_axis)
-                accurate_longitudinal_axis = np.cross(perpendicular_axis, aor_global[:, i_frame])
-                accurate_longitudinal_axis /= np.linalg.norm(accurate_longitudinal_axis)
-
-                scs_of_child_in_global[:3, :3, i_frame] = np.column_stack(
-                    (aor_global[:, i_frame], -perpendicular_axis, accurate_longitudinal_axis)
-                )
-                scs_of_child_in_global[:3, 3, i_frame] = joint_center_global[:3, i_frame]
-                scs_of_child_in_global[3, 3, i_frame] = 1
-
-                # Transform to local frame
+                # Extract the axis of rotation in local frame
                 parent_rt = RotoTransMatrix()
                 parent_rt.from_rt_matrix(rt_parent_functional[:, :, i_frame])
-                scs_of_child_in_local[:, :, i_frame] = parent_rt.inverse @ scs_of_child_in_global[:, :, i_frame]
-
-        # Compute the mean SCS of the child in local frame
-        mean_scs_of_child_in_local = mean_homogenous_matrix(scs_of_child_in_local)
-
-        return mean_scs_of_child_in_local
+                aor_in_local[:3, i_frame] = parent_rt.inverse[:3, :3] @ aor_global[:3, i_frame]
+        mean_aor_in_local = mean_unit_vector(aor_in_local)
+        return mean_aor_in_local
 
     def perform_task(
         self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal, parent_rt_init, child_rt_init
@@ -1195,14 +1253,19 @@ class Sara(RigidSegmentIdentification):
             )
 
         # Identify the approximate longitudinal axis of the segments
-        joint_center_global, longitudinal_axis_global = self._longitudinal_axis()
+        joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
         aor_global = self._sara_algorithm(rt_parent_functional_offsetted, rt_child_functional_offsetted)
+        aor_global = self._check_aor(original_model, aor_global)
+        aor_local = self._get_aor_local(aor_global, rt_parent_functional_offsetted)
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
-            aor_global, joint_center_global, longitudinal_axis_global, rt_parent_functional
+            original_model=original_model,
+            aor_local=aor_local,
+            joint_center_local=joint_center_local,
+            longitudinal_axis_local=longitudinal_axis_local,
         )
         # Remove parent offset
         mean_scs_of_child_in_local = child_offset_rt.inverse @ mean_scs_of_child_in_local @ child_offset_rt.rt_matrix
@@ -1229,7 +1292,7 @@ class Sara(RigidSegmentIdentification):
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal, animate_reconstruction: bool = False):
 
-        # Make sure that the scs ar in lical before starting
+        # Make sure that the scs ar in local before starting
         for segment in original_model.segments:
             if segment.segment_coordinate_system.is_in_global:
                 segment.segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -1287,23 +1350,6 @@ class JointCenterTool:
                 marker_names=self.original_model.marker_names,
                 marker_weights=marker_weights,
             )
-
-            import pyorerun
-            from pyomeca import Markers
-
-            t = np.linspace(0, 1, task.c3d_data.nb_frames)
-            viz = pyorerun.PhaseRerun(t)
-
-            pyomarkers = Markers(
-                data=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
-                channels=self.original_model.marker_names,
-            )
-            self.original_model.to_biomod("../models/ech_tempo.biomod")
-            viz_biomod_model = pyorerun.BiorbdModel("../models/ech_tempo.biomod")
-            viz_biomod_model.options.transparent_mesh = False
-            viz_biomod_model.options.show_gravity = True
-            viz.add_animated_model(viz_biomod_model, q_init, tracked_markers=pyomarkers)
-            viz.rerun_by_frame("Model output")
 
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]

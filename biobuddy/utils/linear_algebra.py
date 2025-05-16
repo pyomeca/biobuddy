@@ -85,7 +85,7 @@ def euler_and_translation_to_matrix(
     return rt
 
 
-def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
+def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:
     """
     Computes the closest homogenous matrix that approximates all the homogenous matrices
 
@@ -99,13 +99,25 @@ def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     mean_matrix = np.identity(4)
 
     # Perform an Arithmetic mean of each element
-    arithmetic_mean_scs = np.nanmean(matrix, axis=2)
+    arithmetic_mean_scs = np.nanmean(matrices, axis=2)
     mean_matrix[:3, 3] = arithmetic_mean_scs[:3, 3]
 
     # Get minimized rotation matrix from the svd decomposition
     u, s, v = np.linalg.svd(arithmetic_mean_scs[:3, :3])
     mean_matrix[:3, :3] = u @ v
     return mean_matrix
+
+def mean_unit_vector(vectors: np.ndarray) -> np.ndarray:
+    """
+    Computes the mean unit vector from a set of unit vectors
+    """
+    if vectors.shape[0] != 4 or len(vectors.shape) != 2:
+        raise RuntimeError("The vectors must be of shape (4, n). Only the three first components will be averaged (the last component is a 1).")
+
+    mean_vector = np.ones((4, ))
+    mean_vector[:3] = np.nanmean(vectors[:3, :], axis=1)
+    mean_vector[:3] /= np.linalg.norm(mean_vector[:3])
+    return mean_vector
 
 
 def to_euler(rt, angle_sequence: str) -> np.ndarray:
