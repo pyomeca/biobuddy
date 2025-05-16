@@ -5,6 +5,7 @@ import numpy as np
 
 # TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
 
+
 def rot_x_matrix(angle):
     """
     Rotation matrix around the x-axis
@@ -107,14 +108,17 @@ def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:
     mean_matrix[:3, :3] = u @ v
     return mean_matrix
 
+
 def mean_unit_vector(vectors: np.ndarray) -> np.ndarray:
     """
     Computes the mean unit vector from a set of unit vectors
     """
     if vectors.shape[0] != 4 or len(vectors.shape) != 2:
-        raise RuntimeError("The vectors must be of shape (4, n). Only the three first components will be averaged (the last component is a 1).")
+        raise RuntimeError(
+            "The vectors must be of shape (4, n). Only the three first components will be averaged (the last component is a 1)."
+        )
 
-    mean_vector = np.ones((4, ))
+    mean_vector = np.ones((4,))
     mean_vector[:3] = np.nanmean(vectors[:3, :], axis=1)
     mean_vector[:3] /= np.linalg.norm(mean_vector[:3])
     return mean_vector
@@ -403,6 +407,7 @@ class OrthoMatrix:
     def has_no_transformation(self):
         return np.all(self.get_matrix() == np.identity(4))
 
+
 class RotoTransMatrixTimeSeries:
     def __init__(self):
         self._rt_time_series = []
@@ -415,7 +420,9 @@ class RotoTransMatrixTimeSeries:
 
     def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
         if len(rotation_matrix.shape) != 3 or len(translation) != 3:
-            raise ValueError(f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}")
+            raise ValueError(
+                f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
+            )
 
         rt_time_series = []
         for i_frame in range(rotation_matrix.shape[2]):
@@ -428,7 +435,8 @@ class RotoTransMatrixTimeSeries:
     def from_rt_matrix(self, rt: np.ndarray):
         if len(rt.shape) != 3:
             raise ValueError(
-                f"The rt and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}")
+                f"The rt and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
+            )
 
         rt_time_series = []
         for i_frame in range(rt.shape[2]):
@@ -446,10 +454,12 @@ class RotoTransMatrix:
     def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
         if rotation_matrix.shape != (3, 3):
             raise ValueError(
-                f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}")
+                f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
+            )
         if translation.shape != (3,):
             raise ValueError(
-                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}")
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+            )
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
@@ -460,13 +470,16 @@ class RotoTransMatrix:
     def from_euler_angles_and_translation(self, angle_sequence: str, angles: np.ndarray, translation: np.ndarray):
         if len(angles.shape) > 1:
             raise ValueError(
-                f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}")
+                f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}"
+            )
         if translation.shape != (3,):
             raise ValueError(
-                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}")
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+            )
         if len(angle_sequence) != angles.shape[0]:
             raise ValueError(
-                f"The number of angles and the length of the angle_sequence must match. You have {angles.shape} and {angle_sequence}")
+                f"The number of angles and the length of the angle_sequence must match. You have {angles.shape} and {angle_sequence}"
+            )
 
         matrix = {
             "x": rot_x_matrix,
@@ -485,7 +498,8 @@ class RotoTransMatrix:
             rt = rt[:, :, 0]
         elif rt.shape != (4, 4):
             raise ValueError(
-                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}")
+                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
+            )
         self._rt = rt
 
     @property

@@ -34,7 +34,9 @@ def test_rt():
 
             # TODO: Leave this section though
             rt_biobuddy = RotoTransMatrix()
-            rt_biobuddy.from_euler_angles_and_translation(angles=angles, angle_sequence=angle_sequence.value, translation=translations)
+            rt_biobuddy.from_euler_angles_and_translation(
+                angles=angles, angle_sequence=angle_sequence.value, translation=translations
+            )
 
             rot_biobuddy = rt_biobuddy.rotation_matrix
 
@@ -59,4 +61,3 @@ def test_rt():
             else:
                 with pytest.raises(NotImplementedError, match="This angle_sequence is not implemented yet"):
                     angles_biobuddy = rt_biobuddy.euler_angles(angle_sequence=angle_sequence.value)
-

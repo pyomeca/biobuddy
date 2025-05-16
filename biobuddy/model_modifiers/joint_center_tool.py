@@ -123,7 +123,9 @@ class RigidSegmentIdentification:
                 f"Please check the trial again."
             )
 
-    def remove_offset_from_optimal_rt(self, original_model: BiomechanicalModelReal, rt_parent_functional: np.ndarray, rt_child_functional: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def remove_offset_from_optimal_rt(
+        self, original_model: BiomechanicalModelReal, rt_parent_functional: np.ndarray, rt_child_functional: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
         if original_model.has_parent_offset(self.parent_name):
             parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
@@ -253,9 +255,7 @@ class RigidSegmentIdentification:
         # Add the experimental markers from the static trial
         if not without_exp_markers:
             pyomarkers = Markers(
-                data=np.concatenate(
-                    (self.parent_markers_global, self.child_markers_global), axis=1
-                ),
+                data=np.concatenate((self.parent_markers_global, self.child_markers_global), axis=1),
                 channels=self.parent_marker_names + self.child_marker_names,
             )
 
@@ -919,9 +919,13 @@ class Score(RigidSegmentIdentification):
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(original_model, parent_rt_init, child_rt_init)
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
+            original_model, parent_rt_init, child_rt_init
+        )
 
-        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
+        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
+            self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
+        )
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
@@ -931,7 +935,9 @@ class Score(RigidSegmentIdentification):
             )
 
         # Identify center of rotation
-        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(rt_parent_functional_offsetted, rt_child_functional_offsetted, recursive_outlier_removal=True)
+        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(
+            rt_parent_functional_offsetted, rt_child_functional_offsetted, recursive_outlier_removal=True
+        )
 
         scs_of_child_in_local = np.identity(4)
         scs_of_child_in_local[:3, :3] = rt_child_static[:3, :3]
@@ -944,9 +950,9 @@ class Score(RigidSegmentIdentification):
         if self.child_name + "_parent_offset" in new_model.segment_names:
             segment_to_move_rt_from = self.child_name + "_parent_offset"
             if self.child_name + "_reset_axis" in new_model.segment_names:
-                reset_axis_rt.from_rt_matrix(deepcopy(
-                    new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs
-                ))
+                reset_axis_rt.from_rt_matrix(
+                    deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
+                )
         else:
             segment_to_move_rt_from = self.child_name
 
@@ -1057,7 +1063,7 @@ class Sara(RigidSegmentIdentification):
         segment_rt_in_global = original_model.forward_kinematics()
         parent_jcs_in_global = RotoTransMatrix()
         parent_jcs_in_global.from_rt_matrix(segment_rt_in_global[self.parent_name])
-        
+
         joint_center_marker_index = original_model.markers_indices(self.joint_center_markers)
         joint_center_markers_in_global = original_model.markers_in_global()[:, joint_center_marker_index]
         joint_center_global = np.mean(joint_center_markers_in_global, axis=1)
@@ -1067,7 +1073,7 @@ class Sara(RigidSegmentIdentification):
         distal_markers_in_global = original_model.markers_in_global()[:, distal_marker_index]
         distal_center_global = np.mean(distal_markers_in_global, axis=1)
         distal_center_in_local = parent_jcs_in_global.inverse @ distal_center_global
-        
+
         longitudinal_axis_local = distal_center_in_local - joint_center_local
         longitudinal_axis_local[:3] *= self.longitudinal_axis_sign
         longitudinal_axis_local[:3] /= np.linalg.norm(longitudinal_axis_local[:3])
@@ -1078,13 +1084,17 @@ class Sara(RigidSegmentIdentification):
     def get_rotation_index(self, original_model):
         rot = original_model.segments[self.child_name].rotations.value
         if len(rot) != 1:
-            raise RuntimeError(f"The Sara algorithm is meant to be used with a one DoF joint, you have defined rotations {original_model.segments[self.child_name].rotations} for segment {self.child_name}.")
+            raise RuntimeError(
+                f"The Sara algorithm is meant to be used with a one DoF joint, you have defined rotations {original_model.segments[self.child_name].rotations} for segment {self.child_name}."
+            )
         elif rot == "x":
             aor_index = 0
             perpendicular_index = 1
             longitudinal_index = 2
         elif rot == "y":
-            raise NotImplementedError("This axis combination has not been tested yet. Please make sure that the cross product make sense (correct order and correct sign).")
+            raise NotImplementedError(
+                "This axis combination has not been tested yet. Please make sure that the cross product make sense (correct order and correct sign)."
+            )
             aor_index = 1
             perpendicular_index = 0
             longitudinal_index = 2
@@ -1183,7 +1193,9 @@ class Sara(RigidSegmentIdentification):
             original_model, parent_rt_init, child_rt_init
         )
 
-        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
+        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
+            self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
+        )
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
@@ -1216,9 +1228,9 @@ class Sara(RigidSegmentIdentification):
         if self.child_name + "_parent_offset" in new_model.segment_names:
             segment_to_move_rt_from = self.child_name + "_parent_offset"
             if self.child_name + "_reset_axis" in new_model.segment_names:
-                reset_axis_rt.from_rt_matrix(deepcopy(
-                    new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs
-                ))
+                reset_axis_rt.from_rt_matrix(
+                    deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
+                )
         else:
             segment_to_move_rt_from = self.child_name
 
