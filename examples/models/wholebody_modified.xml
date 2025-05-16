@@ -39,6 +39,22 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LPSIS RPSIS</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RASIS RPSIS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LASIS LPSIS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LASIS RPSIS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RASIS LPSIS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -71,6 +87,14 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RMFE RGT</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RASIS RLFE</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFE RASIS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -93,11 +117,11 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RLM RATT</markers>
+									<markers> RLM RLFE</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RSPH RATT</markers>
+									<markers> RSPH RMFE</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
@@ -131,6 +155,18 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RMFH5 RCAL</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RTT2 RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RTT2</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -153,11 +189,23 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RCAL RSPH</markers>
+									<markers> RCAL RMFH1</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RCAL RLM</markers>
+									<markers> RMFH5 RCAL</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RTT2 RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RTT2</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -181,7 +229,19 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RMFH1 RTT2</markers>
+									<markers> RCAL RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RCAL</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMFH5 RMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RTT2 RMFH1</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
@@ -223,6 +283,30 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> SUP C7</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RASIS RA</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LASIS LA</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RPSIS RA</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LPSIS LA</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RA LA</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RASIS LASIS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -243,10 +327,6 @@
 						<!--Set of marker pairs used to determine the scale factors.-->
 						<MarkerPairSet>
 							<objects>
-								<MarkerPair>
-									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> HV C7</markers>
-								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LTEMP RTEMP</markers>
@@ -283,6 +363,10 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RA RMHE</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RLHE RMHE</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -305,7 +389,15 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RLHE RRS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RMHE RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RRS RUS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -331,6 +423,14 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RLHE RRS</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMHE RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RRS RUS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -353,7 +453,15 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RUS RRS</markers>
+									<markers> RLHE RRS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RMHE RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RRS RUS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -391,6 +499,14 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> RRS RHMH2</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RFT3 RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RFT3 RRS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -398,6 +514,50 @@
 						<BodyScaleSet>
 							<objects>
 								<BodyScale name="hand_r">
+									<!--Axes (X Y Z) along which to scale a body. For example, 'X Y Z' scales along all three axes, and 'Y' scales just along the Y axis.-->
+									<axes> X Y Z</axes>
+								</BodyScale>
+							</objects>
+							<groups />
+						</BodyScaleSet>
+					</Measurement>
+					<Measurement name="fingers_r">
+						<!--Flag to turn on and off scaling for this measurement.-->
+						<apply>true</apply>
+						<!--Set of marker pairs used to determine the scale factors.-->
+						<MarkerPairSet>
+							<objects>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RRS RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RHMH5 RHMH2</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RUS RHMH5</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RRS RHMH2</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RFT3 RUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> RFT3 RRS</markers>
+								</MarkerPair>
+							</objects>
+							<groups />
+						</MarkerPairSet>
+						<!--Set of bodies to be scaled by this measurement.-->
+						<BodyScaleSet>
+							<objects>
+								<BodyScale name="fingers_r">
 									<!--Axes (X Y Z) along which to scale a body. For example, 'X Y Z' scales along all three axes, and 'Y' scales just along the Y axis.-->
 									<axes> X Y Z</axes>
 								</BodyScale>
@@ -417,11 +577,19 @@
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LLFE LMFE</markers>
+									<markers> LMFE LLFE</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LMFE LGT</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LASIS LLFE</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMFE LASIS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -445,11 +613,11 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LLM LATT</markers>
+									<markers> LLM LLFE</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LSPH LATT</markers>
+									<markers> LSPH LMFE</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
@@ -509,7 +677,19 @@
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LCAL LMFH5</markers>
+									<markers> LMFH5 LCAL</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMFH5 LMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LTT2 LMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMFH5 LTT2</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -533,7 +713,19 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LMFH1 LTT2</markers>
+									<markers> LCAL LMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMFH5 LCAL</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMFH5 LMFH1</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LTT2 LMFH1</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
@@ -567,6 +759,10 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LA LMHE</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LLHE LMHE</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -589,7 +785,15 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LLHE LRS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LMHE LUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LRS LUS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -615,6 +819,14 @@
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LLHE LRS</markers>
 								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMHE LUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LRS LUS</markers>
+								</MarkerPair>
 							</objects>
 							<groups />
 						</MarkerPairSet>
@@ -635,6 +847,14 @@
 						<!--Set of marker pairs used to determine the scale factors.-->
 						<MarkerPairSet>
 							<objects>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LLHE LRS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LMHE LUS</markers>
+								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LRS LUS</markers>
@@ -661,11 +881,11 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LUS LRS</markers>
+									<markers> LRS LUS</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LHMH2 LHMH5</markers>
+									<markers> LHMH5 LHMH2</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
@@ -674,6 +894,14 @@
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
 									<markers> LRS LHMH2</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LFT3 LUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LFT3 LRS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -689,34 +917,6 @@
 							<groups />
 						</BodyScaleSet>
 					</Measurement>
-					<Measurement name="fingers_r">
-						<!--Flag to turn on and off scaling for this measurement.-->
-						<apply>true</apply>
-						<!--Set of marker pairs used to determine the scale factors.-->
-						<MarkerPairSet>
-							<objects>
-								<MarkerPair>
-									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RHMH2 RFT3</markers>
-								</MarkerPair>
-								<MarkerPair>
-									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> RHMH5 RFT3</markers>
-								</MarkerPair>
-							</objects>
-							<groups />
-						</MarkerPairSet>
-						<!--Set of bodies to be scaled by this measurement.-->
-						<BodyScaleSet>
-							<objects>
-								<BodyScale name="fingers_r">
-									<!--Axes (X Y Z) along which to scale a body. For example, 'X Y Z' scales along all three axes, and 'Y' scales just along the Y axis.-->
-									<axes> X Y Z</axes>
-								</BodyScale>
-							</objects>
-							<groups />
-						</BodyScaleSet>
-					</Measurement>
 					<Measurement name="fingers_l">
 						<!--Flag to turn on and off scaling for this measurement.-->
 						<apply>true</apply>
@@ -725,11 +925,27 @@
 							<objects>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LHMH2 LFT3</markers>
+									<markers> LRS LUS</markers>
 								</MarkerPair>
 								<MarkerPair>
 									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
-									<markers> LHMH5 LFT3</markers>
+									<markers> LHMH5 LHMH2</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LUS LHMH5</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LRS LHMH2</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LFT3 LUS</markers>
+								</MarkerPair>
+								<MarkerPair>
+									<!--Names of two markers, the distance between which is used to compute a body scale factor.-->
+									<markers> LFT3 LRS</markers>
 								</MarkerPair>
 							</objects>
 							<groups />
@@ -775,49 +991,49 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.1</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RA">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LA">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="C7">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="T10">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="SUP">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.3</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RLHE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RMHE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RUS">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -835,25 +1051,25 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RHMH2">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LLHE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LMHE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LUS">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -871,13 +1087,13 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LHMH5">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RASIS">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -895,13 +1111,13 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RPSIS">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RLFE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -919,7 +1135,7 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RLM">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -937,31 +1153,31 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.8</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RMFH1">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RMFH5">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RGT">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.1</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LGT">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.1</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LLFE">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -979,7 +1195,7 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LLM">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -997,25 +1213,25 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.8</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LMFH1">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LMFH5">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="SEL">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="OCC">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
@@ -1027,43 +1243,43 @@
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LTEMP">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RTT2">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LTT2">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="RFT3">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="LFT3">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>0.5</weight>
 					</IKMarkerTask>
 					<IKMarkerTask name="HV">
 						<!--Whether or not this task will be used during inverse kinematics solve, default is true.-->
 						<apply>true</apply>
 						<!--Weight given to the task when solving inverse kinematics problems, default is 0.-->
-						<weight>1</weight>
+						<weight>1.0</weight>
 					</IKMarkerTask>
 				</objects>
 				<groups />

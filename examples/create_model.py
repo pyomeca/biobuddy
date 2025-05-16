@@ -31,7 +31,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     Please note that this model is not a human, it is only used to show the functionalities of the model creation module.
     """
 
-    kinematic_model_file_path = "temporary_complex.bioMod"
+    kinematic_model_filepath = "temporary_complex.bioMod"
 
     # Create a model holder
     bio_model = BiomechanicalModel()
@@ -103,9 +103,9 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     real_model = bio_model.to_real({})
 
     # Pprint it to a bioMod file
-    real_model.to_biomod(kinematic_model_file_path)
+    real_model.to_biomod(kinematic_model_filepath)
 
-    model = biorbd.Model(kinematic_model_file_path)
+    model = biorbd.Model(kinematic_model_filepath)
     assert model.nbQ() == 4
     assert model.nbSegment() == 2
     assert model.nbMarkers() == 0
@@ -114,7 +114,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     assert model.nbContacts() == 3
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
+        os.remove(kinematic_model_filepath)
 
 
 def main():

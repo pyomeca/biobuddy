@@ -27,10 +27,10 @@ class MeshReal:
 
     @positions.setter
     def positions(self, value: Points):
-        self._positions = points_to_array(name="positions", points=value)
+        self._positions = points_to_array(points=value, name="positions")
 
     def add_positions(self, value: Points):
-        self._positions = np.hstack((self._positions, points_to_array(name="positions", points=value)))
+        self._positions = np.hstack((self._positions, points_to_array(points=value, name="positions")))
 
     @staticmethod
     def from_data(
@@ -57,9 +57,9 @@ class MeshReal:
         """
 
         # Get the position of the all the mesh points and do some sanity checks
-        all_p = points_to_array("mesh_real", points=None)
+        all_p = points_to_array(points=None, name="mesh_real")
         for f in functions:
-            p = point_to_array(name="mesh function", point=f(data.values, model))
+            p = point_to_array(point=f(data.values, model), name="mesh function")
             p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
             projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
             if np.isnan(projected_p).all():

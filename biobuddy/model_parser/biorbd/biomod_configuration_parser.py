@@ -79,16 +79,18 @@ class BiomodConfigurationParser:
 
                 elif isinstance(current_component, SegmentScaling):
                     if token == "endscalingsegment":
-                        self.scale_tool.scaling_segments.append(current_component)
+                        self.scale_tool.add_scaling_segment(current_component)
                         current_component = None
 
                     elif token == "scalingtype":
                         scaling_type = read_str(next_token=next_token)
                         if scaling_type.lower() == "segmentwisescaling":
-                            current_component.scaling_type = SegmentWiseScaling(axis=None, marker_pairs=[])
+                            current_component.scaling_type = SegmentWiseScaling(
+                                segment_name="", axis=None, marker_pairs=[]
+                            )
                         elif scaling_type.lower() == "axiswisescaling":
                             current_component.scaling_type = AxisWiseScaling(
-                                axis=None, x_marker_pairs=[], y_marker_pairs=[], z_marker_pairs=[]
+                                segment_name="", axis=None, x_marker_pairs=[], y_marker_pairs=[], z_marker_pairs=[]
                             )
                         else:
                             raise NotImplementedError(f"Scaling type {scaling_type} not implemented yet.")
