@@ -16,11 +16,7 @@ from ..utils.linear_algebra import (
     unit_vector,
     quaternion_to_rotation_matrix,
     get_closest_rt_matrix,
-    mean_homogenous_matrix,
     mean_unit_vector,
-    compute_matrix_rotation,
-    rot2eul,
-    to_euler,
     RotoTransMatrixTimeSeries,
     point_from_local_to_global,
 )
@@ -126,6 +122,32 @@ class RigidSegmentIdentification:
                 f"The markers {self.parent_marker_names + self.child_marker_names} are not moving in the functional trial (markers std = {std}). "
                 f"Please check the trial again."
             )
+
+    def remove_offset_from_optimal_rt(self, original_model: BiomechanicalModelReal, rt_parent_functional: np.ndarray, rt_child_functional: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+
+        if original_model.has_parent_offset(self.parent_name):
+            parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
+            rt_parent_functional_offsetted = np.zeros_like(rt_parent_functional)
+            for i_frame in range(rt_parent_functional.shape[2]):
+                rt_parent_functional_offsetted[:, :, i_frame] = (
+                    rt_parent_functional[:, :, i_frame] @ parent_offset_rt.inverse
+                )
+        else:
+            rt_parent_functional_offsetted = rt_parent_functional
+
+        if original_model.has_parent_offset(self.child_name):
+            child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
+            rt_child_functional_offsetted = np.zeros_like(rt_child_functional)
+            for i_frame in range(rt_parent_functional.shape[2]):
+                rt_child_functional_offsetted[:, :, i_frame] = (
+                    rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
+                )
+        else:
+            child_offset_rt = RotoTransMatrix()
+            child_offset_rt.from_rt_matrix(np.identity(4))
+            rt_child_functional_offsetted = rt_child_functional
+
+        return rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt
 
     def animate_the_segment_reconstruction(
         self,
@@ -718,7 +740,7 @@ class RigidSegmentIdentification:
             )
             if sol.success:
                 rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                # rt_init = rt_optimal[:, :, i_frame]
+                # rt_init = rt_optimal[:, :, i_frame] # TODO: check if we can just use the last frame (or reallt need the whole kinemnatic reconstruction)
             else:
                 rt_optimal[:, :, i_frame] = np.nan
                 print(f"The optimization failed: {sol.message}")
@@ -763,18 +785,6 @@ class RigidSegmentIdentification:
                 marker_names=self.child_marker_names,
             )
         elif self.method == "optimization":
-            # RT coincide with the old model RT and are in the global
-            # TODO: remove these debugging lines
-            # rotation_between_static_and_functional = np.array([
-            #     [-1.0, 0.0, 0.0, 0.0],
-            #     [0.0, -1.0, 0.0, 0.0],
-            #     [0.0, 0.0, 1.0, 0.0],
-            #     [0.0, 0.0, 0.0, 1.0],
-            # ])
-            # rot_parent_static = rotation_between_static_and_functional[:3, :3] @ original_model.segment_coordinate_system_in_global(self.parent_name)[:3, :3, 0]
-            # rot_child_static = rotation_between_static_and_functional[:3, :3] @ original_model.segment_coordinate_system_in_global(self.child_name)[:3, :3, 0]
-            # rt_parent_static = rot_parent_static
-            # rt_child_static = rot_child_static
 
             rt_parent_functional = self.scipy_optimal_rt(
                 markers_in_global=self.parent_markers_global,
@@ -813,26 +823,26 @@ class RigidSegmentIdentification:
 class Score(RigidSegmentIdentification):
 
     def _score_algorithm(
-        self, parent_rt: np.ndarray, child_rt: np.ndarray, recursive_outlier_removal: bool = True
+        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
         Parameters
         ----------
-        parent_rt : np.ndarray, shape (4, 4, N)
+        rt_parent : np.ndarray, shape (4, 4, N)
             Homogeneous transformations of the parent segment (e.g., pelvis)
-        child_rt : np.ndarray, shape (4, 4, N)
+        rt_child : np.ndarray, shape (4, 4, N)
             Homogeneous transformations of the child segment (e.g., femur)
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the center.
 
         Returns
         -------
-        CoR_global : np.ndarray, shape (3,)
+        cor_global : np.ndarray, shape (3,)
             Estimated global position of the center of rotation.
         """
-        nb_frames = parent_rt.shape[2]
+        nb_frames = rt_parent.shape[2]
 
         # Build linear system A x = b to solve for CoR positions in child and parent segment frames
         A = np.zeros((3 * nb_frames, 6))
@@ -841,10 +851,10 @@ class Score(RigidSegmentIdentification):
         b[:] = np.nan
 
         for i_frame in range(nb_frames):
-            parent_rot = parent_rt[:3, :3, i_frame]
-            child_rot = child_rt[:3, :3, i_frame]
-            parent_trans = parent_rt[:3, 3, i_frame]
-            child_trans = child_rt[:3, 3, i_frame]
+            parent_rot = rt_parent[:3, :3, i_frame]
+            child_rot = rt_child[:3, :3, i_frame]
+            parent_trans = rt_parent[:3, 3, i_frame]
+            child_trans = rt_child[:3, 3, i_frame]
 
             A[3 * i_frame : 3 * (i_frame + 1), 0:3] = child_rot
             A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -parent_rot
@@ -866,11 +876,11 @@ class Score(RigidSegmentIdentification):
         cor_parent_local = CoR[3:]
 
         # Compute transformed CoR positions in global frame
-        cor_parent_global = np.zeros((4, parent_rt.shape[2]))
-        cor_child_global = np.zeros((4, child_rt.shape[2]))
-        for i_frame in range(parent_rt.shape[2]):
-            cor_parent_global[:, i_frame] = parent_rt[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
-            cor_child_global[:, i_frame] = child_rt[:, :, i_frame] @ np.hstack((cor_child_local, 1))
+        cor_parent_global = np.zeros((4, rt_parent.shape[2]))
+        cor_child_global = np.zeros((4, rt_child.shape[2]))
+        for i_frame in range(rt_parent.shape[2]):
+            cor_parent_global[:, i_frame] = rt_parent[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
+            cor_child_global[:, i_frame] = rt_child[:, :, i_frame] @ np.hstack((cor_child_local, 1))
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
@@ -881,7 +891,7 @@ class Score(RigidSegmentIdentification):
             if np.sum(valid) < nb_frames:
                 _logger.info(f"\nRemoving {nb_frames - np.sum(valid)} frames")
                 return self._score_algorithm(
-                    parent_rt[:, :, valid], child_rt[:, :, valid], recursive_outlier_removal=False
+                    rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False
                 )
 
         # Final output
@@ -890,75 +900,43 @@ class Score(RigidSegmentIdentification):
         _logger.info(
             f"\nThere is a residual distance between the parent's and the child's CoR position of : {np.nanmean(residuals)} +- {np.nanstd(residuals)}"
         )
-        return cor_mean_global, cor_parent_local, cor_child_local, parent_rt, child_rt
+        return cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child
+
+    # def _get_cor_local(self, cor_global: np.ndarray, rt_parent_functional: np.ndarray) -> np.ndarray:
+    #     nb_frames = self.c3d_data.nb_frames
+    #     cor_in_local = np.ones((4, self.c3d_data.nb_frames))
+    #     for i_frame in range(nb_frames):
+    #         if np.any(np.isnan(cor_global[:, i_frame])):
+    #             cor_in_local[:, i_frame] = np.nan
+    #         else:
+    #             # Extract the center of rotation in local frame
+    #             parent_rt = RotoTransMatrix()
+    #             parent_rt.from_rt_matrix(rt_parent_functional[:, :, i_frame])
+    #             cor_in_local[:3, i_frame] = parent_rt.inverse[:3, :3] @ cor_global[:3, i_frame]
+    #     mean_cor_in_local = mean_unit_vector(cor_in_local)
+    #     return mean_cor_in_local
 
     def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial()
-        # Remove the parent offset from the optimal rt position
-        parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
-        child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
-        rt_parent_functional = parent_offset_rt.inverse @ rt_parent_functional
-        rt_child_functional = child_offset_rt.inverse @ rt_child_functional
+        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(original_model, parent_rt_init, child_rt_init)
 
-        cor_in_global, cor_in_parent, cor_in_child, associated_parent_rt, associated_child_rt = self._score_algorithm(
-            rt_parent_functional, rt_child_functional
-        )
-        print("Difference in CoR position between parent and child is large !!!!")
-        print(
-            "associated_parent_rt[:, :, 0] @ np.hstack((cor_in_parent, 1)) : ",
-            associated_parent_rt[:, :, 0] @ np.hstack((cor_in_parent, 1)),
-        )
-        print(
-            "associated_child_rt[:, :, 0] @ np.hstack((cor_in_child, 1)) : ",
-            associated_child_rt[:, :, 0] @ np.hstack((cor_in_child, 1)),
-        )
+        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
 
-        a = 0.5 * (
-            rt_parent_static[:, :, 0] @ np.hstack((cor_in_parent, 1))
-            + rt_child_static[:, :, 0] @ np.hstack((cor_in_child, 1))
-        )
-
-        nb_frames = associated_parent_rt.shape[2]
-        b = np.zeros((4, nb_frames))
-        c = np.zeros((4, nb_frames))
-        d = np.zeros((4, nb_frames))
-        for i_frame in range(nb_frames):
-            b[:, i_frame] = 0.5 * (
-                associated_parent_rt[:, :, i_frame] @ np.hstack((cor_in_parent, 1))
-                + associated_child_rt[:, :, i_frame] @ np.hstack((cor_in_child, 1))
+        if self.animate_rt:
+            self.animate_the_segment_reconstruction(
+                original_model,
+                rt_parent_functional_offsetted,
+                rt_child_functional_offsetted,
             )
 
-            parent_functional = RotoTransMatrix()
-            parent_functional.from_rt_matrix(associated_parent_rt[:, :, i_frame])
-            rt_functional_to_static_parent = RotoTransMatrix()
-            rt_functional_to_static_parent.from_rt_matrix(parent_functional.inverse @ rt_parent_static[:, :, 0])
+        # Identify center of rotation
+        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(rt_parent_functional_offsetted, rt_child_functional_offsetted, recursive_outlier_removal=True)
 
-            child_functional = RotoTransMatrix()
-            child_functional.from_rt_matrix(associated_child_rt[:, :, i_frame])
-            rt_functional_to_static_child = RotoTransMatrix()
-            rt_functional_to_static_child.from_rt_matrix(child_functional.inverse @ rt_child_static[:, :, 0])
-
-            c[:, i_frame] = rt_functional_to_static_parent.rt_matrix @ np.hstack((cor_in_parent, 1))
-            d[:, i_frame] = rt_functional_to_static_child.rt_matrix @ np.hstack((cor_in_child, 1))
-
-        print(f"a = {a}")
-        print(f"b = {np.mean(b, axis=1)}")
-        print(f"c = {np.mean(c, axis=1)}")
-        print(f"d = {np.mean(d, axis=1)}")
-
-        # Replace the model components in the new local reference frame
-        parent_jcs_in_global = RotoTransMatrix()
-        parent_jcs_in_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.parent_name))
-
-        if (
-            new_model.segments[self.child_name].segment_coordinate_system is None
-            or new_model.segments[self.child_name].segment_coordinate_system.is_in_global
-        ):
-            raise RuntimeError(
-                "The child segment is not in local reference frame. Please set it to local before using the SCoRE algorithm."
-            )
+        scs_of_child_in_local = np.identity(4)
+        scs_of_child_in_local[:3, :3] = rt_child_static[:3, :3]
+        scs_of_child_in_local[:3, 3] = cor_parent_local[:3]
+        scs_of_child_in_local = child_offset_rt.inverse @ scs_of_child_in_local @ child_offset_rt.rt_matrix
 
         # Segment RT
         reset_axis_rt = RotoTransMatrix()
@@ -971,29 +949,12 @@ class Score(RigidSegmentIdentification):
                 ))
         else:
             segment_to_move_rt_from = self.child_name
-        scs_in_local = deepcopy(new_model.segments[segment_to_move_rt_from].segment_coordinate_system.scs)
-        scs_in_local[:, 3, 0] = parent_jcs_in_global.inverse @ cor_global_static
+
         new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=scs_in_local,
+            scs=scs_of_child_in_local,
             is_scs_local=True,
         )
-
-        # New position of the child jsc after replacing the parent_offset segment
-        new_child_jcs_in_global = RotoTransMatrix()
-        new_child_jcs_in_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.child_name))
-
-        # Markers
-        marker_positions = original_model.markers_in_global()
-        for i_marker, marker in enumerate(new_model.segments[self.child_name].markers):
-            marker_index = original_model.markers_indices([marker.name])
-            marker.position = new_child_jcs_in_global.inverse @ marker_positions[:, marker_index, 0]
-        # Contacts
-        contact_positions = original_model.contacts_in_global()
-        for i_contact, contact in enumerate(new_model.segments[self.child_name].contacts):
-            contact_index = original_model.markers_indices([contact.name])
-            contact.position = new_child_jcs_in_global.inverse @ contact_positions[:, contact_index, 0]
-        # IMUs
-        # Muscles origin, insertion, via points
+        self.replace_components_in_new_jcs(original_model, new_model)
 
 
 class Sara(RigidSegmentIdentification):
@@ -1222,28 +1183,7 @@ class Sara(RigidSegmentIdentification):
             original_model, parent_rt_init, child_rt_init
         )
 
-        # Remove the parent offset from the optimal rt position
-        if original_model.has_parent_offset(self.parent_name):
-            parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
-            rt_parent_functional_offsetted = np.zeros_like(rt_parent_functional)
-            for i_frame in range(rt_parent_functional.shape[2]):
-                rt_parent_functional_offsetted[:, :, i_frame] = (
-                    rt_parent_functional[:, :, i_frame] @ parent_offset_rt.inverse
-                )
-        else:
-            rt_parent_functional_offsetted = rt_parent_functional
-
-        if original_model.has_parent_offset(self.child_name):
-            child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
-            rt_child_functional_offsetted = np.zeros_like(rt_child_functional)
-            for i_frame in range(rt_parent_functional.shape[2]):
-                rt_child_functional_offsetted[:, :, i_frame] = (
-                    rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
-                )
-        else:
-            child_offset_rt = RotoTransMatrix()
-            child_offset_rt.from_rt_matrix(np.identity(4))
-            rt_child_functional_offsetted = rt_child_functional
+        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
