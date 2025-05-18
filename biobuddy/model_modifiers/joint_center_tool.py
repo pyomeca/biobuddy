@@ -125,7 +125,7 @@ class RigidSegmentIdentification:
 
     def remove_offset_from_optimal_rt(
         self, original_model: BiomechanicalModelReal, rt_parent_functional: np.ndarray, rt_child_functional: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, RotoTransMatrix]:
 
         if original_model.has_parent_offset(self.parent_name):
             parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
@@ -307,9 +307,9 @@ class RigidSegmentIdentification:
                 @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
             )
 
-        # Mesh files  # TODO: go up the hierarchy to find the mesh file
-        if original_model.segments[self.child_name].mesh_file is not None:
-            new_model.segments[self.child_name].mesh_file = None  # skipping this for now
+        # # Mesh files  # TODO: go up the hierarchy to find the mesh file
+        # if original_model.segments[self.child_name].mesh_file is not None:
+        #     new_model.segments[self.child_name].mesh_file = None  # skipping this for now
         #     mesh_file = original_model.segments[self.child_name].mesh_file
         #
         #     # Construct transformation from mesh file's local frame to global
@@ -463,12 +463,11 @@ class RigidSegmentIdentification:
             out[2, 1] = x[0]
             return out
 
-        markers = markers[:3, :, :]
-        static_markers_in_global = static_markers_in_global[:3, :, :]
         nb_markers, nb_frames, static_centered = self.check_optimal_rt_inputs(
             markers, static_markers_in_global, marker_names
         )
 
+        markers = markers[:3, :, :]
         mean_markers = np.mean(np.nanmean(markers, axis=1), axis=1)
         functional_centered = markers - mean_markers[:, np.newaxis, np.newaxis]
 
@@ -610,14 +609,14 @@ class RigidSegmentIdentification:
         if len(marker_names) != nb_markers:
             raise RuntimeError(f"The marker_names {marker_names} do not match the number of markers {nb_markers}.")
 
-        mean_static_markers = np.mean(static_markers, axis=1, keepdims=True)
-        static_centered = static_markers - mean_static_markers
+        mean_static_markers = np.mean(static_markers[:3, :], axis=1, keepdims=True)
+        static_centered = static_markers[:3, :] - mean_static_markers
 
-        functional_mean_markers_each_frame = np.nanmean(markers, axis=1)
+        functional_mean_markers_each_frame = np.nanmean(markers[:3, :, :], axis=1)
         for i_marker, marker_name in enumerate(marker_names):
             for i_frame in range(nb_frames):
                 current_functional_marker_centered = (
-                    markers[:, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
+                    markers[:3, i_marker, i_frame] - functional_mean_markers_each_frame[:, i_frame]
                 )
                 if (
                     np.abs(
@@ -629,7 +628,7 @@ class RigidSegmentIdentification:
                     raise RuntimeError(
                         f"The marker {marker_name} seem to move during the functional trial."
                         f"The distance between the center and this marker is "
-                        f"{np.linalg.norm(static_centered)} during the static trial and "
+                        f"{np.linalg.norm(static_centered[:, i_marker])} during the static trial and "
                         f"{np.linalg.norm(current_functional_marker_centered)} during the functional trial."
                     )
             return nb_markers, nb_frames, static_centered
@@ -711,7 +710,7 @@ class RigidSegmentIdentification:
     ):
 
         nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(
-            markers_in_global, static_markers_in_local[:3, :], marker_names
+            markers_in_global, static_markers_in_local, marker_names
         )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
@@ -916,10 +915,10 @@ class Score(RigidSegmentIdentification):
     #     mean_cor_in_local = mean_unit_vector(cor_in_local)
     #     return mean_cor_in_local
 
-    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
+    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal, parent_rt_init: np.ndarray, child_rt_init: np.ndarray):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
+        rt_parent_functional, rt_child_functional, _, _ = self.rt_from_trial(
             original_model, parent_rt_init, child_rt_init
         )
 
@@ -939,11 +938,15 @@ class Score(RigidSegmentIdentification):
             rt_parent_functional_offsetted, rt_child_functional_offsetted, recursive_outlier_removal=True
         )
 
-        scs_of_child_in_local = np.identity(4)
-        scs_of_child_in_local[:3, :3] = rt_child_static[:3, :3]
+        scs_child_static = new_model.segments[self.child_name].segment_coordinate_system
+        if scs_child_static.is_in_global:
+            raise RuntimeError("Something went wrong, the scs of the child segment in the new_model is in the global reference frame.")
+
+        scs_of_child_in_local = scs_child_static.scs[:, :, 0]
         scs_of_child_in_local[:3, 3] = cor_parent_local[:3]
         scs_of_child_in_local = child_offset_rt.inverse @ scs_of_child_in_local @ child_offset_rt.rt_matrix
 
+        # TODO: generalize + verify
         # Segment RT
         reset_axis_rt = RotoTransMatrix()
         reset_axis_rt.from_rt_matrix(np.eye(4))
@@ -1343,6 +1346,6 @@ class JointCenterTool:
             # Replace the joint center in the new model
             task.check_marker_positions()
             task.perform_task(self.original_model, self.new_model, parent_rt_init, child_rt_init)
+            self.new_model.segments_rt_to_local()
 
-        self.new_model.segments_rt_to_local()
         return self.new_model
