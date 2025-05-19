@@ -23,20 +23,24 @@ class EndOfFileReached(Exception):
 
 
 class BiomodConfigurationParser:
-    def __init__(self, filepath: str):
-        tokens = tokenize_biomod(filepath=filepath)
+    def __init__(self, filepath: str, original_model: "BiomechanicalModelReal"):
 
         # Initial attributes
         self.filepath = filepath
 
         # Initialize the scaling configuration
-        self.scale_tool = ScaleTool()
+        self.scale_tool = ScaleTool(original_model)  # TODO: this is weird !
+        self._read()
+
+    def _read(self):
         self.header = (
             "This scaling configuration was created by BioBuddy on "
             + strftime("%Y-%m-%d %H:%M:%S")
-            + f"\nIt is based on the original file {filepath}.\n"
+            + f"\nIt is based on the original file {self.filepath}.\n"
         )
         self.warnings = ""
+
+        tokens = tokenize_biomod(filepath=self.filepath)
 
         def next_token():
             nonlocal token_index
@@ -161,3 +165,18 @@ class BiomodConfigurationParser:
 
         except EndOfFileReached:
             pass
+
+"""
+example:
+
+scalingsegment pelvis
+	scalingtype	segmentwisescaling
+	axis	xyz
+	markerpair	RASIS LASIS
+	markerpair	LPSIS RPSIS
+	markerpair	RASIS RPSIS
+	markerpair	LASIS LPSIS
+	markerpair	LASIS RPSIS
+	markerpair	RASIS LPSIS
+endscalingsegment
+"""

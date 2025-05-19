@@ -672,7 +672,8 @@ class ScaleTool:
         """
         from ..model_parser.biorbd import BiomodConfigurationParser
 
-        return BiomodConfigurationParser(filepath=filepath)
+        configuration = BiomodConfigurationParser(filepath=filepath, original_model=self.original_model)
+        return configuration.scale_tool
 
     def from_xml(
         self,

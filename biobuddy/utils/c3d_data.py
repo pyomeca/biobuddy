@@ -10,6 +10,7 @@ class C3dData:
     def __init__(self, c3d_path, first_frame: int = 0, last_frame: int = -1):
         self.first_frame = first_frame
         self.last_frame = last_frame
+        self.c3d_path = c3d_path
         self.ezc3d_data = ezc3d.c3d(c3d_path)
         self.marker_names = self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"]
 
