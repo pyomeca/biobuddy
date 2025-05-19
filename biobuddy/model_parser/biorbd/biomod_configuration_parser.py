@@ -166,6 +166,7 @@ class BiomodConfigurationParser:
         except EndOfFileReached:
             pass
 
+
 """
 example:
 

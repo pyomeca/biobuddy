@@ -747,7 +747,7 @@ class RigidSegmentIdentification:
                 rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
                 if initialize_whole_trial_reconstruction:
                     # Use the rt from the reconstruction of the whole trial at the current frame
-                    frame = i_frame+1 if i_frame+1 < nb_frames else i_frame
+                    frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
                     init = rt_init[:, :, frame].reshape(4, 4)
                 else:
                     # Use the optimal rt of the previous frame
@@ -758,9 +758,7 @@ class RigidSegmentIdentification:
 
         return rt_optimal
 
-    def rt_from_trial(
-        self, parent_rt_init, child_rt_init
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def rt_from_trial(self, parent_rt_init, child_rt_init) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
         """
@@ -927,12 +925,16 @@ class Score(RigidSegmentIdentification):
     #     mean_cor_in_local = mean_unit_vector(cor_in_local)
     #     return mean_cor_in_local
 
-    def perform_task(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal, parent_rt_init: np.ndarray, child_rt_init: np.ndarray):
+    def perform_task(
+        self,
+        original_model: BiomechanicalModelReal,
+        new_model: BiomechanicalModelReal,
+        parent_rt_init: np.ndarray,
+        child_rt_init: np.ndarray,
+    ):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional, _, _ = self.rt_from_trial(
-            parent_rt_init, child_rt_init
-        )
+        rt_parent_functional, rt_child_functional, _, _ = self.rt_from_trial(parent_rt_init, child_rt_init)
 
         rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
             self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
@@ -952,7 +954,9 @@ class Score(RigidSegmentIdentification):
 
         scs_child_static = new_model.segments[self.child_name].segment_coordinate_system
         if scs_child_static.is_in_global:
-            raise RuntimeError("Something went wrong, the scs of the child segment in the new_model is in the global reference frame.")
+            raise RuntimeError(
+                "Something went wrong, the scs of the child segment in the new_model is in the global reference frame."
+            )
 
         scs_of_child_in_local = scs_child_static.scs[:, :, 0]
         scs_of_child_in_local[:3, 3] = cor_parent_local[:3]

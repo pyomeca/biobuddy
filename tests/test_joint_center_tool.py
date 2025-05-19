@@ -1,4 +1,3 @@
-
 import os
 import pytest
 import numpy as np
@@ -14,11 +13,12 @@ from biobuddy import (
 
 
 def visualize_modified_model_output(
-        original_model_filepath: str,
-        new_model_filepath: str,
-        original_q: np.ndarray,
-        new_q: np.ndarray,
-        pyomarkers: "Markers"):
+    original_model_filepath: str,
+    new_model_filepath: str,
+    original_q: np.ndarray,
+    new_q: np.ndarray,
+    pyomarkers: "Markers",
+):
     """
     Only for debugging purposes.
     """
@@ -48,10 +48,13 @@ def visualize_modified_model_output(
     viz.rerun_by_frame("Joint Center Comparison")
 
 
-@pytest.mark.parametrize("rt_method", [
-    "optimization",
-    # "numerical",
-])
+@pytest.mark.parametrize(
+    "rt_method",
+    [
+        "optimization",
+        # "numerical",
+    ],
+)
 @pytest.mark.parametrize("initialize_whole_trial_reconstruction", [True, False])
 def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial_reconstruction):
 
@@ -64,7 +67,9 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
 
     hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
-    hip_c3d = C3dData(hip_functional_trial_path, first_frame=1, last_frame=500)  # Marker inversion happening after the 500th frame in the example data!
+    hip_c3d = C3dData(
+        hip_functional_trial_path, first_frame=1, last_frame=500
+    )  # Marker inversion happening after the 500th frame in the example data!
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
 
     # Read the .bioMod file
@@ -72,23 +77,23 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
         filepath=leg_model_filepath,
     )
     marker_weights = {
-        'RASIS': 1.0,
-        'LASIS': 1.0,
-        'LPSIS': 0.5,
-        'RPSIS': 0.5,
-        'RLFE': 1.0,
-        'RMFE': 1.0,
-        'RGT': 0.1,
-        'RTHI1': 5.0,
-        'RTHI2': 5.0,
-        'RTHI3': 5.0,
-        'RATT': 0.5,
-        'RLM': 1.0,
-        'RSPH': 1.0,
-        'RLEG1': 5.0,
-        'RLEG2': 5.0,
-        'RLEG3': 5.0,
-        }
+        "RASIS": 1.0,
+        "LASIS": 1.0,
+        "LPSIS": 0.5,
+        "RPSIS": 0.5,
+        "RLFE": 1.0,
+        "RMFE": 1.0,
+        "RGT": 0.1,
+        "RTHI1": 5.0,
+        "RTHI2": 5.0,
+        "RTHI3": 5.0,
+        "RATT": 0.5,
+        "RLM": 1.0,
+        "RSPH": 1.0,
+        "RLEG1": 5.0,
+        "RLEG2": 5.0,
+        "RLEG3": 5.0,
+    }
 
     joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
     # Hip Right
@@ -132,50 +137,95 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     # Test the joints' new RT
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
-                                np.array([[0.941067, 0.334883, 0.047408, -0.07076823],  # The rotation part did not change, only the translation part was modified
-                                          [-0.335537, 0.906752, 0.255373, -0.02166063],
-                                          [0.042533, -0.25623, 0.96568, 0.09724843],
-                                          [0., 0., 0., 1.]]))
+        npt.assert_almost_equal(
+            score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+            np.array(
+                [
+                    [
+                        0.941067,
+                        0.334883,
+                        0.047408,
+                        -0.07076823,
+                    ],  # The rotation part did not change, only the translation part was modified
+                    [-0.335537, 0.906752, 0.255373, -0.02166063],
+                    [0.042533, -0.25623, 0.96568, 0.09724843],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        )
     elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
-                                np.array([[ 0.941067  ,  0.334883  ,  0.047408  , -0.07167634],
-                                           [-0.335537  ,  0.906752  ,  0.255373  , -0.0227917 ],
-                                           [ 0.042533  , -0.25623   ,  0.96568   ,  0.09659206],
-                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+        npt.assert_almost_equal(
+            score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+            np.array(
+                [
+                    [0.941067, 0.334883, 0.047408, -0.07167634],
+                    [-0.335537, 0.906752, 0.255373, -0.0227917],
+                    [0.042533, -0.25623, 0.96568, 0.09659206],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        )
     else:
-        raise RuntimeError('mmmmm')
+        raise RuntimeError("mmmmm")
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-                                np.array([[ 0.9707138 ,  0.03806727, -0.23720369,  0.02107151],  # Both rotation and translation parts were modified
-                                           [-0.0608903 ,  0.99411079, -0.08964436, -0.40854713],
-                                           [ 0.23239424,  0.10146242,  0.96731499, -0.03015543],
-                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+        npt.assert_almost_equal(
+            score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+            np.array(
+                [
+                    [
+                        0.9707138,
+                        0.03806727,
+                        -0.23720369,
+                        0.02107151,
+                    ],  # Both rotation and translation parts were modified
+                    [-0.0608903, 0.99411079, -0.08964436, -0.40854713],
+                    [0.23239424, 0.10146242, 0.96731499, -0.03015543],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        )
     elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-                                np.array([[ 0.96988145,  0.03936066, -0.2403762 ,  0.02157451],
-                                           [-0.0607774 ,  0.99474922, -0.0823413 , -0.40738561],
-                                           [ 0.23587303,  0.09447074,  0.96718105, -0.02918969],
-                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+        npt.assert_almost_equal(
+            score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+            np.array(
+                [
+                    [0.96988145, 0.03936066, -0.2403762, 0.02157451],
+                    [-0.0607774, 0.99474922, -0.0823413, -0.40738561],
+                    [0.23587303, 0.09447074, 0.96718105, -0.02918969],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        )
     else:
-        raise RuntimeError('mmmmm')
+        raise RuntimeError("mmmmm")
 
     # Test that the original model did not change
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
-                            np.array([[ 0.941067,  0.334883,  0.047408, -0.067759],
-                                       [-0.335537,  0.906752,  0.255373, -0.06335 ],
-                                       [ 0.042533, -0.25623 ,  0.96568 ,  0.080026],
-                                       [ 0.      ,  0.      ,  0.      ,  1.      ]]))
+    npt.assert_almost_equal(
+        scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+        np.array(
+            [
+                [0.941067, 0.334883, 0.047408, -0.067759],
+                [-0.335537, 0.906752, 0.255373, -0.06335],
+                [0.042533, -0.25623, 0.96568, 0.080026],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
     assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-                            np.array([[ 0.998166,  0.06054 , -0.      ,  0.      ],
-                                       [-0.06054 ,  0.998166,  0.      , -0.387741],
-                                       [-0.      ,  0.      ,  1.      ,  0.      ],
-                                       [ 0.      ,  0.      ,  0.      ,  1.      ]]))
-
+    npt.assert_almost_equal(
+        scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+        np.array(
+            [
+                [0.998166, 0.06054, -0.0, 0.0],
+                [-0.06054, 0.998166, 0.0, -0.387741],
+                [-0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
 
     # Test the reconstruction for the original model and the output model with the functional joint centers
     # Hip
@@ -251,4 +301,3 @@ def test_score_and_sara_with_ghost_segments():
 
     example.main(False)
     # TODO !
-
