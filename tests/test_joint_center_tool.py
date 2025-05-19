@@ -1,166 +1,248 @@
 
 import os
 import pytest
-import opensim as osim
-import shutil
-
-import ezc3d
-import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
+from biobuddy import (
+    BiomechanicalModelReal,
+    JointCenterTool,
+    Score,
+    Sara,
+    C3dData,
+)
 
 
-def visualize_modified_model_output(old_model_filepath: str, new_model_filepath: str, q):
+def visualize_modified_model_output(
+        original_model_filepath: str,
+        new_model_filepath: str,
+        original_q: np.ndarray,
+        new_q: np.ndarray,
+        pyomarkers: "Markers"):
     """
     Only for debugging purposes.
     """
     import pyorerun
 
     # Compare the result visually
-    t = np.linspace(0, 1, 10)
+    t = np.linspace(0, 1, original_q.shape[1])
     viz = pyorerun.PhaseRerun(t)
 
     # Model scaled in BioBuddy
-    viz_biomod_model = pyorerun.BiorbdModel(old_model_filepath)
+    viz_biomod_model = pyorerun.BiorbdModel(original_model_filepath)
     viz_biomod_model.options.transparent_mesh = False
     viz_biomod_model.options.show_gravity = True
-    viz.add_animated_model(viz_biomod_model, q)
+    viz_biomod_model.options.show_marker_labels = False
+    viz_biomod_model.options.show_center_of_mass_labels = False
+    viz.add_animated_model(viz_biomod_model, original_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
 
     # Model scaled in OpenSim
     viz_scaled_model = pyorerun.BiorbdModel(new_model_filepath)
     viz_scaled_model.options.transparent_mesh = False
     viz_scaled_model.options.show_gravity = True
-    viz.add_animated_model(viz_scaled_model, q)
+    viz_scaled_model.options.show_marker_labels = False
+    viz_scaled_model.options.show_center_of_mass_labels = False
+    viz.add_animated_model(viz_scaled_model, new_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
 
     # Animate
-    viz.rerun_by_frame("Scaling comparison")
+    viz.rerun_by_frame("Joint Center Comparison")
 
 
-def test_score_and_sara_without_ghost_segments():
+@pytest.mark.parametrize("rt_method", [
+    "optimization",
+    # "numerical",
+])
+@pytest.mark.parametrize("initialize_whole_trial_reconstruction", [True, False])
+def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial_reconstruction):
 
     np.random.seed(42)
 
     # --- Paths --- #
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cleaned_relative_path = "Geometry_cleaned"
-    osim_filepath = parent_path + "/examples/models/wholebody.osim"
-    xml_filepath = parent_path + "/examples/models/wholebody.xml"
-    scaled_biomod_filepath = parent_path + "/examples/models/wholebody_scaled.bioMod"
-    converted_scaled_osim_filepath = parent_path + "/examples/models/wholebody_converted_scaled.bioMod"
-    static_filepath = parent_path + "/examples/data/static.c3d"
-    trc_file_path = parent_path + "/examples/data/static.trc"
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    score_biomod_filepath = parent_path + "/examples/models/leg_without_ghost_parents_score.bioMod"
 
+    hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    hip_c3d = C3dData(hip_functional_trial_path, first_frame=1, last_frame=500)  # Marker inversion happening after the 500th frame in the example data!
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
 
-    static_c3d = ezc3d.c3d(static_filepath, extract_forceplat_data=True)
-    summed_force = static_c3d["data"]["platform"][0]["force"] + static_c3d["data"]["platform"][0]["force"]
-    mass = np.median(np.linalg.norm(summed_force[:, 2000:9000], axis=0)) / 9.81
-    rt_method = "optimization"  # "numerical"  #
-
-    # # Convert the vtp files
-    # mesh = MeshParser(geometry_folder=geometry_path)
-    # mesh.process_meshes(fail_on_error=False)
-    # mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
-
-    # Read the .osim file
-    original_osim_model = BiomechanicalModelReal.from_osim(
-        filepath=osim_filepath,
-        muscle_type=MuscleType.HILL_DE_GROOTE,
-        muscle_state_type=MuscleStateType.DEGROOTE,
-        mesh_dir="Geometry_cleaned",
+    # Read the .bioMod file
+    scaled_model = BiomechanicalModelReal.from_biomod(
+        filepath=leg_model_filepath,
     )
-    original_osim_model.segments["ground"].segment_coordinate_system.scs = np.array(
-        [
-            [1.000000, 0.000000, 0.000000, 0.000000],
-            [0.000000, 0.000000, -1.00000, 0.000000],
-            [0.000000, 1.000000, 0.000000, 0.000000],
-            [0.000000, 0.000000, 0.000000, 1.000000],
-        ]  # Reset the ground to the upward Z axis + standing in the same orientation as the subject
-    )
-    original_osim_model.to_biomod(biomod_filepath)
+    marker_weights = {
+        'RASIS': 1.0,
+        'LASIS': 1.0,
+        'LPSIS': 0.5,
+        'RPSIS': 0.5,
+        'RLFE': 1.0,
+        'RMFE': 1.0,
+        'RGT': 0.1,
+        'RTHI1': 5.0,
+        'RTHI2': 5.0,
+        'RTHI3': 5.0,
+        'RATT': 0.5,
+        'RLM': 1.0,
+        'RSPH': 1.0,
+        'RLEG1': 5.0,
+        'RLEG2': 5.0,
+        'RLEG3': 5.0,
+        }
 
-    # Scale the model
-    scale_tool = ScaleTool(original_model=original_osim_model).from_xml(filepath=xml_filepath)
-    scaled_model = scale_tool.scale(
-        filepath=static_filepath,
-        first_frame=500,
-        last_frame=600,
-        mass=mass,
-        q_regularization_weight=0.01,
-        make_static_pose_the_models_zero=True,
-        visualize_optimal_static_pose=False,
-    )
-    marker_weights = scale_tool.marker_weights
-
-    # Add to the model the new technical markers that will be used to identify the joint centers
-    technical_marker_to_add = {
-        "femur_r": ["RTHI1", "RTHI2", "RTHI3"],
-        "femur_l": ["LTHI1", "LTHI2", "LTHI3"],
-        "tibia_r": ["RLEG1", "RLEG2", "RLEG3"],
-        "tibia_l": ["LLEG1", "LLEG2", "LLEG3"],
-        "humerus_r": ["RAMR1", "RARM2", "RARM3"],
-        "radius_r": ["RFARM1", "RFARM2", "RFARM3"],
-        "humerus_l": ["LARM1", "LARM2", "LARM3"],
-        "radius_l": ["LFARM1", "LFARM2", "LFARM3"],
-    }
-
-    jcs_in_global = scaled_model.forward_kinematics()
-    c3d_data = C3dData(static_filepath, first_frame=500, last_frame=600)
-    for segment_name in technical_marker_to_add.keys():
-        for marker in technical_marker_to_add[segment_name]:
-            position_in_global = c3d_data.mean_marker_position(marker)
-            rt = RotoTransMatrix()
-            rt.from_rt_matrix(jcs_in_global[segment_name])
-            position_in_local = rt.inverse @ position_in_global
-            scaled_model.segments[segment_name].add_marker(
-                MarkerReal(
-                    name=marker,
-                    parent_name=segment_name,
-                    position=position_in_local,
-                    is_anatomical=False,
-                    is_technical=True,
-                )
-            )
-            marker_weights[marker] = 5.0
-
-    # ---------- ECH ---------- #
-    # Move the model's joint centers
-    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=True)
+    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
     # Hip Right
     joint_center_tool.add(
         Score(
-            filepath=f"{score_directory}/right_hip.c3d",
+            filepath=hip_c3d.c3d_path,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
-            child_marker_names=["RLFE", "RMFE"] + technical_marker_to_add["femur_r"],
-            first_frame=1,
-            last_frame=500,  # Marker inversion happening after this frame in the example data!
+            child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
+            first_frame=hip_c3d.first_frame,
+            last_frame=hip_c3d.last_frame,
             method=rt_method,
+            initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=f"{score_directory}/right_knee.c3d",
+            filepath=knee_c3d.c3d_path,
             parent_name="femur_r",
             child_name="tibia_r",
-            parent_marker_names=["RGT"] + technical_marker_to_add["femur_r"],
-            child_marker_names=["RATT", "RLM", "RSPH"] + technical_marker_to_add["tibia_r"],
+            parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+            child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=300,
-            last_frame=922 - 100,
+            first_frame=knee_c3d.first_frame,
+            last_frame=knee_c3d.last_frame,
             method=rt_method,
+            initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
     )
-    # ... add all other joints that you want to modify based on the functional trials
 
     score_model = joint_center_tool.replace_joint_centers(marker_weights)
+
+    # Test that the model created is valid
     score_model.to_biomod(score_biomod_filepath)
+
+    # Test the joints' new RT
+    assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
+    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+                                np.array([[0.941067, 0.334883, 0.047408, -0.07076823],  # The rotation part did not change, only the translation part was modified
+                                          [-0.335537, 0.906752, 0.255373, -0.02166063],
+                                          [0.042533, -0.25623, 0.96568, 0.09724843],
+                                          [0., 0., 0., 1.]]))
+    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+                                np.array([[ 0.941067  ,  0.334883  ,  0.047408  , -0.07167634],
+                                           [-0.335537  ,  0.906752  ,  0.255373  , -0.0227917 ],
+                                           [ 0.042533  , -0.25623   ,  0.96568   ,  0.09659206],
+                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+    else:
+        raise RuntimeError('mmmmm')
+
+    assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
+    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+                                np.array([[ 0.9707138 ,  0.03806727, -0.23720369,  0.02107151],  # Both rotation and translation parts were modified
+                                           [-0.0608903 ,  0.99411079, -0.08964436, -0.40854713],
+                                           [ 0.23239424,  0.10146242,  0.96731499, -0.03015543],
+                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+                                np.array([[ 0.96988145,  0.03936066, -0.2403762 ,  0.02157451],
+                                           [-0.0607774 ,  0.99474922, -0.0823413 , -0.40738561],
+                                           [ 0.23587303,  0.09447074,  0.96718105, -0.02918969],
+                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+    else:
+        raise RuntimeError('mmmmm')
+
+    # Test that the original model did not change
+    assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
+    npt.assert_almost_equal(scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+                            np.array([[ 0.941067,  0.334883,  0.047408, -0.067759],
+                                       [-0.335537,  0.906752,  0.255373, -0.06335 ],
+                                       [ 0.042533, -0.25623 ,  0.96568 ,  0.080026],
+                                       [ 0.      ,  0.      ,  0.      ,  1.      ]]))
+    assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
+    npt.assert_almost_equal(scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+                            np.array([[ 0.998166,  0.06054 , -0.      ,  0.      ],
+                                       [-0.06054 ,  0.998166,  0.      , -0.387741],
+                                       [-0.      ,  0.      ,  1.      ,  0.      ],
+                                       [ 0.      ,  0.      ,  0.      ,  1.      ]]))
+
+
+    # Test the reconstruction for the original model and the output model with the functional joint centers
+    # Hip
+    original_optimal_q = scaled_model.inverse_kinematics(
+        marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
+        marker_names=list(marker_weights.keys()),
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)
+    original_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
+    original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
+
+    new_optimal_q = score_model.inverse_kinematics(
+        marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
+        marker_names=list(marker_weights.keys()),
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)
+    new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
+
+    npt.assert_almost_equal(original_marker_tracking_error, 533.102574733437)
+    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 525.8549943947243)
+    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 525.7368893500334)
+    npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
+
+    # # For debugging purposes
+    # from pyomeca import Markers
+    # pyomarkers = Markers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()))
+    # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
+
+    # Knee
+    original_optimal_q = scaled_model.inverse_kinematics(
+        marker_positions=knee_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
+        marker_names=list(marker_weights.keys()),
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)
+    original_marker_position_diff = knee_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
+    original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
+
+    new_optimal_q = score_model.inverse_kinematics(
+        marker_positions=knee_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
+        marker_names=list(marker_weights.keys()),
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)
+    new_marker_position_diff = knee_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
+
+    npt.assert_almost_equal(original_marker_tracking_error, 180.01863630416997)
+    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 213.72993165984846)
+    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 212.07964002193367)
+    # npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)  # TODO: check how to identify the joint center functionally
+
+    # # For debugging purposes
+    # from pyomeca import Markers
+    # pyomarkers = Markers(data=knee_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()))
+    # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
 
 def test_score_and_sara_with_ghost_segments():

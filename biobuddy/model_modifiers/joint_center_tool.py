@@ -35,6 +35,7 @@ class RigidSegmentIdentification:
         first_frame: int,
         last_frame: int,
         method: str = "numerical",
+        initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
         """
@@ -56,7 +57,9 @@ class RigidSegmentIdentification:
             The last frame to consider in the functional trial.
         method: "numerical" or "optimization"
             If the segments' rt should be estimated using constrained optimization or linear algebra
-        animate_rt: bool
+        initialize_whole_trial_reconstruction
+            If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
+        animate_rt
             If True, it animates the segment rt reconstruction using pyomeca and pyorerun.
         """
 
@@ -69,6 +72,7 @@ class RigidSegmentIdentification:
         self.first_frame = first_frame
         self.last_frame = last_frame
         self.method = method
+        self.initialize_whole_trial_reconstruction = initialize_whole_trial_reconstruction
         self.animate_rt = animate_rt
 
         # Extended attributes
@@ -289,11 +293,13 @@ class RigidSegmentIdentification:
         local_scs_transform.from_rt_matrix(get_closest_rt_matrix(original_local_scs.inverse @ new_local_scs.rt_matrix))
 
         # Next JCS position
-        next_child_name = original_model.children_segment_names(self.child_name)[0]
-        new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=original_model.segment_coordinate_system_in_global(next_child_name),
-            is_scs_local=False,
-        )
+        child_names = original_model.children_segment_names(self.child_name)
+        if len(child_names) > 0:
+            next_child_name = child_names[0]
+            new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=original_model.segment_coordinate_system_in_global(next_child_name),
+                is_scs_local=False,
+            )
 
         if original_model.segments[self.child_name].segment_coordinate_system.is_in_local:
             global_jcs = original_model.segment_coordinate_system_in_global(self.child_name)[:, :, 0]
@@ -709,14 +715,14 @@ class RigidSegmentIdentification:
         marker_names: list[str],
     ):
 
+        initialize_whole_trial_reconstruction = False if rt_init.shape[2] == 1 else True
         nb_markers, nb_frames, _ = self.check_optimal_rt_inputs(
             markers_in_global, static_markers_in_local, marker_names
         )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
+        init = rt_init[:, :, 0].reshape(4, 4)  # Initailize with the first frame
         for i_frame in range(nb_frames):
-            init = np.eye(4)
-            init[:, :] = rt_init[:, :, i_frame].reshape(4, 4)
             init = init.flatten()
 
             lbx = np.ones((4, 4)) * -5
@@ -739,15 +745,21 @@ class RigidSegmentIdentification:
             )
             if sol.success:
                 rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                # rt_init = rt_optimal[:, :, i_frame] # TODO: check if we can just use the last frame (or reallt need the whole kinemnatic reconstruction)
+                if initialize_whole_trial_reconstruction:
+                    # Use the rt from the reconstruction of the whole trial at the current frame
+                    frame = i_frame+1 if i_frame+1 < nb_frames else i_frame
+                    init = rt_init[:, :, frame].reshape(4, 4)
+                else:
+                    # Use the optimal rt of the previous frame
+                    init = rt_optimal[:, :, i_frame]
             else:
-                rt_optimal[:, :, i_frame] = np.nan
+                init = np.nan
                 print(f"The optimization failed: {sol.message}")
 
         return rt_optimal
 
     def rt_from_trial(
-        self, original_model: BiomechanicalModelReal, parent_rt_init, child_rt_init
+        self, parent_rt_init, child_rt_init
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
@@ -919,7 +931,7 @@ class Score(RigidSegmentIdentification):
 
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional, _, _ = self.rt_from_trial(
-            original_model, parent_rt_init, child_rt_init
+            parent_rt_init, child_rt_init
         )
 
         rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
@@ -980,6 +992,7 @@ class Sara(RigidSegmentIdentification):
         distal_markers: list[str],
         is_longitudinal_axis_from_jcs_to_distal_markers: bool,
         method: str = "numerical",
+        initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
 
@@ -993,6 +1006,7 @@ class Sara(RigidSegmentIdentification):
             last_frame=last_frame,
             method=method,
             animate_rt=animate_rt,
+            initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
         )
 
         self.joint_center_markers = joint_center_markers
@@ -1193,7 +1207,7 @@ class Sara(RigidSegmentIdentification):
 
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional, rt_parent_static, rt_child_static = self.rt_from_trial(
-            original_model, parent_rt_init, child_rt_init
+            parent_rt_init, child_rt_init
         )
 
         rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
@@ -1299,13 +1313,20 @@ class JointCenterTool:
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
-            # Reconstruct first frame to get an initial rt
-            q_init = self.original_model.inverse_kinematics(
-                marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
-                marker_names=self.original_model.marker_names,
-                marker_weights=marker_weights,
-            )
-
+            if task.initialize_whole_trial_reconstruction:
+                # Reconstruct the whole trial to get a good initial rt for each frame
+                q_init = self.original_model.inverse_kinematics(
+                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
+                    marker_names=self.original_model.marker_names,
+                    marker_weights=marker_weights,
+                )
+            else:
+                # Reconstruct first frame to get an initial rt
+                q_init = self.original_model.inverse_kinematics(
+                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, 0],
+                    marker_names=self.original_model.marker_names,
+                    marker_weights=marker_weights,
+                )
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]
             child_rt_init = segment_rt_in_global[task.child_name]
