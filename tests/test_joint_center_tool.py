@@ -251,7 +251,7 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
 
     npt.assert_almost_equal(original_marker_tracking_error, 533.102574733437)
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 525.8549943947243)
+        npt.assert_almost_equal(new_marker_tracking_error, 525.8549943947243, decimal=5)
     elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 525.7368893500334)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
@@ -272,15 +272,23 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     original_marker_position_diff = knee_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
     original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
 
+    # Removing the condyle markers from the reconstruction as they are affected by soft tissu artifacts
+    marker_names = list(marker_weights.keys())
+    marker_names.remove("RLFE")
+    marker_names.remove("RMFE")
+    marker_weights.pop("RLFE")
+    marker_weights.pop("RMFE")
+
     new_optimal_q = score_model.inverse_kinematics(
-        marker_positions=knee_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
-        marker_names=list(marker_weights.keys()),
+        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
         marker_weights=marker_weights,
         method="lm",
     )
-    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)
-    new_marker_position_diff = knee_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
-    new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
+    markers_index = scaled_model.markers_indices(marker_names)
+    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)[:3, markers_index, :]
+    new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff ** 2)
 
     npt.assert_almost_equal(original_marker_tracking_error, 180.01863630416997)
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:

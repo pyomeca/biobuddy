@@ -167,7 +167,7 @@ class ModelDynamics:
         with_biorbd: bool,
     ) -> np.ndarray:
         nb_q = q.shape[0]
-        nb_markers = model.nbMarkers() if with_biorbd else model.nb_markers
+        nb_markers = marker_weights_reordered.shape[0]
         vec_jacobian = np.zeros((3 * nb_markers + nb_q, nb_q))
 
         if with_biorbd:
@@ -236,7 +236,7 @@ class ModelDynamics:
             )
 
         nb_q = self.nb_q
-        nb_markers = len(self.marker_names)
+        nb_markers = len(marker_names)
         if len(marker_positions.shape) == 2:
             marker_positions = marker_positions[:, :, np.newaxis]
         elif len(marker_positions.shape) == 1 or marker_positions.shape[0] > 3:
@@ -246,13 +246,13 @@ class ModelDynamics:
 
         nb_frames = marker_positions.shape[2]
 
-        marker_indices = [marker_names.index(m) for m in self.marker_names]
+        marker_indices = [marker_names.index(m) for m in marker_names]
         markers_real = marker_positions[:, marker_indices, :]
 
         if marker_weights is None:
             marker_weights = {marker_name: 1.0 for marker_name in marker_names}
         else:
-            for marker_name in self.marker_names:
+            for marker_name in marker_names:
                 if marker_name not in marker_weights:
                     raise ValueError(
                         f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
@@ -260,7 +260,7 @@ class ModelDynamics:
 
         marker_weights_reordered = np.zeros((nb_markers,))
         for i_marker in range(nb_markers):
-            marker_weights_reordered[i_marker] = marker_weights[self.marker_names[i_marker]]
+            marker_weights_reordered[i_marker] = marker_weights[marker_names[i_marker]]
 
         init = np.ones((nb_q,)) * 0.0001
         if q_target is not None:
