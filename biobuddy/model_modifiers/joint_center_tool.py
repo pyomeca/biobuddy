@@ -158,59 +158,59 @@ class RigidSegmentIdentification:
     ):
 
         def setup_segments_for_animation(segment_name: str):
-            if original_model.has_parent_offset(segment_name):
+            # if original_model.has_parent_offset(segment_name):
+            #
+            #     segment_list = original_model.get_chain_between_segments(segment_name + "_parent_offset", segment_name)
+            #
+            #     # Set rotations and translations to the parent offset
+            #     parent_offset = original_model.segments[segment_list[0]]
+            #     joint_model.add_segment(
+            #         SegmentReal(
+            #             name=parent_offset.name,
+            #             parent_name="ground",
+            #             segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
+            #             translations=Translations.XYZ,
+            #             rotations=Rotations.XYZ,
+            #             mesh_file=original_model.segments[parent_offset.name].mesh_file,
+            #         )
+            #     )
+            #
+            #     for i_segment, segment_name in enumerate(segment_list[1:]):
+            #         joint_model.add_segment(
+            #             SegmentReal(
+            #                 name=segment_name,
+            #                 parent_name=segment_list[i_segment],
+            #                 segment_coordinate_system=deepcopy(
+            #                     original_model.segments[segment_name].segment_coordinate_system
+            #                 ),
+            #                 mesh_file=deepcopy(original_model.segments[segment_name].mesh_file),
+            #             )
+            #         )
+            #
+            #         # Modify the markers from the real segment to leave only the functional trial markers
+            #         for marker in original_model.segments[segment_name].markers:
+            #             if marker.name in self.parent_marker_names + self.child_marker_names:
+            #                 joint_model.segments[segment_name].add_marker(marker)
+            #
+            # else:
+            # if original_model.segments[segment_name].parent_name.startswith(segment_name):
+            #     raise NotImplementedError(
+            #         "The parent segment does not have a parent offset, but has other ghost segments as parent. This is not implemented yet."
+            #     )
 
-                segment_list = original_model.get_chain_between_segments(segment_name + "_parent_offset", segment_name)
-
-                # Set rotations and translations to the parent offset
-                parent_offset = original_model.segments[segment_list[0]]
-                joint_model.add_segment(
-                    SegmentReal(
-                        name=parent_offset.name,
-                        parent_name="ground",
-                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
-                        translations=Translations.XYZ,
-                        rotations=Rotations.XYZ,
-                        mesh_file=original_model.segments[parent_offset.name].mesh_file,
-                    )
+            joint_model.add_segment(
+                SegmentReal(
+                    name=segment_name,
+                    parent_name="ground",
+                    segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
+                    translations=Translations.XYZ,
+                    rotations=Rotations.XYZ,
+                    mesh_file=original_model.segments[segment_name].mesh_file,
                 )
-
-                for i_segment, segment_name in enumerate(segment_list[1:]):
-                    joint_model.add_segment(
-                        SegmentReal(
-                            name=segment_name,
-                            parent_name=segment_list[i_segment],
-                            segment_coordinate_system=deepcopy(
-                                original_model.segments[segment_name].segment_coordinate_system
-                            ),
-                            mesh_file=deepcopy(original_model.segments[segment_name].mesh_file),
-                        )
-                    )
-
-                    # Modify the markers from the real segment to leave only the functional trial markers
-                    for marker in original_model.segments[segment_name].markers:
-                        if marker.name in self.parent_marker_names + self.child_marker_names:
-                            joint_model.segments[segment_name].add_marker(marker)
-
-            else:
-                if original_model.segments[segment_name].parent_name.startswith(segment_name):
-                    raise NotImplementedError(
-                        "The parent segment does not have a parent offset, but has other ghost segments as parent. This is not implemented yet."
-                    )
-
-                joint_model.add_segment(
-                    SegmentReal(
-                        name=segment_name,
-                        parent_name="ground",
-                        segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
-                        translations=Translations.XYZ,
-                        rotations=Rotations.XYZ,
-                        mesh_file=original_model.segments[segment_name].mesh_file,
-                    )
-                )
-                for marker in original_model.segments[segment_name].markers:
-                    if marker.name in self.parent_marker_names + self.child_marker_names:
-                        joint_model.segments[segment_name].add_marker(marker)
+            )
+            for marker in original_model.segments[segment_name].markers:
+                if marker.name in self.parent_marker_names + self.child_marker_names:
+                    joint_model.segments[segment_name].add_marker(marker)
 
         joint_model = BiomechanicalModelReal()
         joint_model.add_segment(
@@ -274,17 +274,30 @@ class RigidSegmentIdentification:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
 
-    def replace_components_in_new_jcs(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
+    def replace_components_in_new_jcs(
+            self,
+            original_model: BiomechanicalModelReal,
+            new_model: BiomechanicalModelReal):
         """
         Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
         TODO: Verify that this also works with non orthonormal rotation axes.
         """
+        # if new_model.has_parent_offset(self.parent_name):
+        #     parent_name_to_replace = self.parent_name + "_parent_offset"
+        # else:
+        #     parent_name_to_replace = self.parent_name
+        # if new_model.has_parent_offset(self.child_name):
+        #     child_name_to_replace = self.child_name + "_parent_offset"
+        # else:
+        #     child_name_to_replace = self.child_name
+
         # New position of the child jsc after replacing the parent_offset segment
         new_child_jcs_in_global = RotoTransMatrix()
         new_child_jcs_in_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.child_name))
 
         original_local_scs = RotoTransMatrix()
         original_local_scs.from_rt_matrix(original_model.segment_coordinate_system_in_local(self.child_name))
+
         new_local_scs = RotoTransMatrix()
         new_local_scs.from_rt_matrix(new_model.segment_coordinate_system_in_local(self.child_name))
         local_scs_transform = RotoTransMatrix()  # The transformation between the old local and the new local jcs
@@ -653,27 +666,55 @@ class Score(RigidSegmentIdentification):
                 "Something went wrong, the scs of the child segment in the new_model is in the global reference frame."
             )
 
-        scs_of_child_in_local = scs_child_static.scs[:, :, 0]
-        scs_of_child_in_local[:3, 3] = cor_parent_local[:3]
-        scs_of_child_in_local = child_offset_rt.inverse @ scs_of_child_in_local @ child_offset_rt.rt_matrix
+        # scs_of_child_in_local = scs_child_static.scs[:, :, 0]
+        # scs_of_child_in_local[:3, 3] = cor_parent_local[:3]
+        # scs_of_child_in_local = child_offset_rt.inverse @ scs_of_child_in_local @ child_offset_rt.rt_matrix
+        #
+        # # TODO: generalize + verify
+        # # Segment RT
+        # reset_axis_rt = RotoTransMatrix()
+        # reset_axis_rt.from_rt_matrix(np.eye(4))
+        # if self.child_name + "_parent_offset" in new_model.segment_names:
+        #     segment_to_move_rt_from = self.child_name + "_parent_offset"
+        #     if self.child_name + "_reset_axis" in new_model.segment_names:
+        #         reset_axis_rt.from_rt_matrix(
+        #             deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
+        #         )
+        # else:
+        #     segment_to_move_rt_from = self.child_name
+        #
+        # new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
+        #     scs=scs_of_child_in_local,
+        #     is_scs_local=True,
+        # )
 
-        # TODO: generalize + verify
-        # Segment RT
-        reset_axis_rt = RotoTransMatrix()
-        reset_axis_rt.from_rt_matrix(np.eye(4))
-        if self.child_name + "_parent_offset" in new_model.segment_names:
-            segment_to_move_rt_from = self.child_name + "_parent_offset"
-            if self.child_name + "_reset_axis" in new_model.segment_names:
-                reset_axis_rt.from_rt_matrix(
-                    deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
-                )
+        # child_in_static_global = RotoTransMatrix()
+        # child_in_static_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.child_name)[:, :, 0])
+
+        # scs_of_cor_is_static_global = RotoTransMatrix()
+        # scs_of_cor_is_static_global.from_rt_matrix(child_in_static_global.rt_matrix @ scs_of_cor_in_local)
+
+        # offset_in_static_global = RotoTransMatrix()
+        # offset_in_static_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.child_name + "_parent_offset")[:, :, 0])
+
+        # offset_in_static_global.rt_matrix @ new_model.segment_coordinate_system_in_global(self.child_name + "_parent_offset")[:, :, 0]
+
+
+        scs_of_cor_in_local = RotoTransMatrix()
+        scs_of_cor_in_local.from_rt_matrix(scs_child_static.scs[:, :, 0])
+        scs_of_cor_in_local.rt_matrix[:3, 3] = cor_parent_local[:3]
+
+        if new_model.has_parent_offset(self.child_name):
+            offset_modified_in_local = new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0] @ scs_of_cor_in_local.inverse
+            new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=offset_modified_in_local,
+                is_scs_local=True,
+            )
         else:
-            segment_to_move_rt_from = self.child_name
-
-        new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=scs_of_child_in_local,
-            is_scs_local=True,
-        )
+            new_model.segments[self.child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=scs_of_cor_in_local.rt_matrix,
+                is_scs_local=True,
+            )
         self.replace_components_in_new_jcs(original_model, new_model)
 
 
@@ -929,25 +970,24 @@ class Sara(RigidSegmentIdentification):
             joint_center_local=joint_center_local,
             longitudinal_axis_local=longitudinal_axis_local,
         )
-        # Remove parent offset
-        mean_scs_of_child_in_local = child_offset_rt.inverse @ mean_scs_of_child_in_local @ child_offset_rt.rt_matrix
 
-        # Segment RT
-        reset_axis_rt = RotoTransMatrix()
-        reset_axis_rt.from_rt_matrix(np.eye(4))
-        if self.child_name + "_parent_offset" in new_model.segment_names:
-            segment_to_move_rt_from = self.child_name + "_parent_offset"
-            if self.child_name + "_reset_axis" in new_model.segment_names:
-                reset_axis_rt.from_rt_matrix(
-                    deepcopy(new_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs)
-                )
+        scs_of_cor_in_local = RotoTransMatrix()
+        scs_of_cor_in_local.from_rt_matrix(mean_scs_of_child_in_local)
+
+        if new_model.has_parent_offset(self.child_name):
+            offset_modified_in_local = new_model.segments[
+                                           self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :,
+                                       0] @ scs_of_cor_in_local.inverse
+            new_model.segments[
+                self.child_name + "_parent_offset"].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=offset_modified_in_local,
+                is_scs_local=True,
+            )
         else:
-            segment_to_move_rt_from = self.child_name
-
-        new_model.segments[segment_to_move_rt_from].segment_coordinate_system = SegmentCoordinateSystemReal(
-            scs=mean_scs_of_child_in_local,
-            is_scs_local=True,
-        )
+            new_model.segments[self.child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=scs_of_cor_in_local.rt_matrix,
+                is_scs_local=True,
+            )
         self.replace_components_in_new_jcs(original_model, new_model)
 
 
@@ -1021,40 +1061,45 @@ class JointCenterTool:
                     marker_weights=marker_weights,
                 )
 
-            import pyorerun
-            nb_frames = q_init.shape[1]
-            t = np.linspace(0, 1, nb_frames)
-            viz = pyorerun.PhaseRerun(t)
+            # import pyorerun
+            # nb_frames = q_init.shape[1]
+            # t = np.linspace(0, 1, nb_frames)
+            # viz = pyorerun.PhaseRerun(t)
+            #
+            # q = q_init
+            # self.original_model.to_biomod("models/aaa.bioMod")
+            #
+            # # SCoRE model
+            # viz_scaled_model = pyorerun.BiorbdModel("models/aaa.bioMod")
+            # viz_scaled_model.options.transparent_mesh = False
+            # viz_scaled_model.options.show_gravity = True
+            # viz_scaled_model.options.show_marker_labels = False
+            # viz_scaled_model.options.show_center_of_mass_labels = False
+            # viz.add_animated_model(viz_scaled_model, q)
+            #
+            # # Animate
+            # viz.rerun_by_frame("Model output")
+            #
+            # segment_rt_in_global = self.original_model.forward_kinematics(q_init)
+            # rt_from_offset_to_parent = RotoTransMatrix()
+            # rt_from_offset_to_parent.from_rt_matrix(np.identity(4))
+            # if self.original_model.has_parent_offset(task.parent_name):
+            #     parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
+            #     rt_from_offset_to_parent = self.original_model.rt_from_parent_offset_to_real_segment(task.parent_name)
+            # else:
+            #     parent_rt_init = segment_rt_in_global[task.parent_name]
+            # rt_from_offset_to_child = RotoTransMatrix()
+            # rt_from_offset_to_child.from_rt_matrix(np.identity(4))
+            # if self.original_model.has_parent_offset(task.child_name):
+            #     child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
+            #     rt_from_offset_to_child = self.original_model.rt_from_parent_offset_to_real_segment(task.child_name)
+            # else:
+            #     child_rt_init = segment_rt_in_global[task.child_name]
 
-            q = np.zeros((self.original_model.nb_q, nb_frames))  # q_init
-            self.original_model.to_biomod("models/aaa.bioMod")
-
-            # SCoRE model
-            viz_scaled_model = pyorerun.BiorbdModel("models/aaa.bioMod")
-            viz_scaled_model.options.transparent_mesh = False
-            viz_scaled_model.options.show_gravity = True
-            viz_scaled_model.options.show_marker_labels = False
-            viz_scaled_model.options.show_center_of_mass_labels = False
-            viz.add_animated_model(viz_scaled_model, q)
-
-            # Animate
-            viz.rerun_by_frame("Model output")
 
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
-            rt_from_offset_to_parent = RotoTransMatrix()
-            rt_from_offset_to_parent.from_rt_matrix(np.identity(4))
-            if self.original_model.has_parent_offset(task.parent_name):
-                parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
-                rt_from_offset_to_parent = self.original_model.rt_from_parent_offset_to_real_segment(task.parent_name)
-            else:
-                parent_rt_init = segment_rt_in_global[task.parent_name]
-            rt_from_offset_to_child = RotoTransMatrix()
-            rt_from_offset_to_child.from_rt_matrix(np.identity(4))
-            if self.original_model.has_parent_offset(task.child_name):
-                child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
-                rt_from_offset_to_parent = self.original_model.rt_from_parent_offset_to_real_segment(task.child_name)
-            else:
-                child_rt_init = segment_rt_in_global[task.child_name]
+            parent_rt_init = segment_rt_in_global[task.parent_name]
+            child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
             task.parent_static_markers_in_global = static_markers_in_global[
@@ -1067,16 +1112,18 @@ class JointCenterTool:
             # Marker positions in the local from the static trial
             task.parent_static_markers_in_local = np.zeros((4, len(task.parent_marker_names)))
             for i_marker, marker_name in enumerate(task.parent_marker_names):
-                task.parent_static_markers_in_local[:, i_marker] = rt_from_offset_to_parent.inverse @ self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
+                # task.parent_static_markers_in_local[:, i_marker] = rt_from_offset_to_parent.rt_matrix @ self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
+                task.parent_static_markers_in_local[:, i_marker] = self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
             task.child_static_markers_in_local = np.zeros((4, len(task.child_marker_names)))
             for i_marker, marker_name in enumerate(task.child_marker_names):
-                task.child_static_markers_in_local[:, i_marker] = rt_from_offset_to_child.inverse @ self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
+                # task.child_static_markers_in_local[:, i_marker] = rt_from_offset_to_child.rt_matrix @ self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
+                task.child_static_markers_in_local[:, i_marker] = self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
 
             # Marker positions in the global from this functional trial
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
             task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
 
-            if self.animate_reconstruction:
+            if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:
                 task.animate_the_segment_reconstruction(
                     self.original_model,
                     parent_rt_init,

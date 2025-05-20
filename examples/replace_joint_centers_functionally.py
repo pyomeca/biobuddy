@@ -131,8 +131,8 @@ def main(visualization):
             child_marker_names=["RLFE", "RMFE"] + technical_marker_to_add["femur_r"],
             first_frame=1,
             last_frame=500,  # Marker inversion happening after this frame in the example data!
-            initialize_whole_trial_reconstruction=True,
-            animate_rt=True,
+            initialize_whole_trial_reconstruction=False,  # True,
+            animate_rt=False,
         )
     )
     joint_center_tool.add(
@@ -148,7 +148,7 @@ def main(visualization):
             first_frame=300,
             last_frame=922 - 100,
             initialize_whole_trial_reconstruction=False,
-            animate_rt=True,
+            animate_rt=False,
         )
     )
     # ... add all other joints that you want to modify based on the functional trials
@@ -172,8 +172,6 @@ def main(visualization):
 
         # Animate
         viz.rerun_by_frame("Model output")
-
-        # TODO: show thaht the marker tracking error was reduced
 
 
 if __name__ == "__main__":
