@@ -124,6 +124,7 @@ class ModelDynamics:
         q_regularization_weight: float,
         q_target: np.ndarray,
         q: np.ndarray,
+        marker_names: list[str],
         experimental_markers: np.ndarray,
         marker_weights_reordered: np.ndarray,
         with_biorbd: bool,
@@ -135,7 +136,8 @@ class ModelDynamics:
         if with_biorbd:
             markers_model = np.zeros((3, nb_markers, 1))
             for i_marker in range(nb_markers):
-                markers_model[:, i_marker, 0] = model.marker(q, i_marker, True).to_array()
+                if model.markerNames()[i_marker].to_string() in marker_names:
+                    markers_model[:, i_marker, 0] = model.marker(q, i_marker, True).to_array()
         else:
             markers_model = np.array(model.markers_in_global(q))
 
@@ -163,6 +165,7 @@ class ModelDynamics:
         model: "BiomechanicalModelReal" or "biorbd.Model",
         q_regularization_weight: float,
         q: np.ndarray,
+        marker_names: list[str],
         marker_weights_reordered: np.ndarray,
         with_biorbd: bool,
     ) -> np.ndarray:
@@ -173,14 +176,21 @@ class ModelDynamics:
         if with_biorbd:
             jacobian_matrix = np.zeros((3, nb_markers, nb_q))
             for i_marker in range(nb_markers):
-                jacobian_matrix[:, i_marker, :] = (
-                    model.markersJacobian(q)[i_marker].to_array() * marker_weights_reordered[i_marker]
-                )
+                if model.markerNames()[i_marker].to_string() in marker_names:
+                    jacobian_matrix[:, i_marker, :] = (
+                        model.markersJacobian(q)[i_marker].to_array() * marker_weights_reordered[i_marker]
+                    )
         else:
             jacobian_matrix = np.array(model.markers_jacobian(q)) * marker_weights_reordered
 
         for i_marker in range(nb_markers):
-            vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+            if with_biorbd:
+                if model.markerNames()[i_marker].to_string() in marker_names:
+                    vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+            else:
+                if with_biorbd:
+                    if model.marker_names[i_marker] in marker_names:
+                        vec_jacobian[i_marker * 3: (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
         for i_q in range(nb_q):
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
@@ -246,13 +256,18 @@ class ModelDynamics:
 
         nb_frames = marker_positions.shape[2]
 
-        marker_indices = [marker_names.index(m) for m in marker_names]
+        marker_indices = []
+        marker_names_reordered = []
+        for m in self.marker_names:
+            if m in marker_names:
+                marker_indices += [marker_names.index(m)]
+                marker_names_reordered += [m]
         markers_real = marker_positions[:, marker_indices, :]
 
         if marker_weights is None:
-            marker_weights = {marker_name: 1.0 for marker_name in marker_names}
+            marker_weights = {marker_name: 1.0 for marker_name in marker_names_reordered}
         else:
-            for marker_name in marker_names:
+            for marker_name in marker_names_reordered:
                 if marker_name not in marker_weights:
                     raise ValueError(
                         f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
@@ -260,7 +275,7 @@ class ModelDynamics:
 
         marker_weights_reordered = np.zeros((nb_markers,))
         for i_marker in range(nb_markers):
-            marker_weights_reordered[i_marker] = marker_weights[marker_names[i_marker]]
+            marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]]
 
         init = np.ones((nb_q,)) * 0.0001
         if q_target is not None:
@@ -279,12 +294,18 @@ class ModelDynamics:
                     q_regularization_weight,
                     q_target,
                     q,
+                    marker_names_reordered,
                     markers_real[:, :, i_frame],
                     marker_weights_reordered,
                     with_biorbd,
                 ),
                 jac=lambda q: self._marker_jacobian(
-                    model_to_use, q_regularization_weight, q, marker_weights_reordered, with_biorbd
+                    model_to_use,
+                    q_regularization_weight,
+                    q,
+                    marker_names_reordered,
+                    marker_weights_reordered,
+                    with_biorbd
                 ),
                 x0=init,
                 method=method,

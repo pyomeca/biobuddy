@@ -2,7 +2,7 @@ import biorbd
 from copy import deepcopy
 import logging
 import numpy as np
-import itertools
+import os
 from scipy import optimize
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
@@ -13,8 +13,6 @@ from ..utils.rotations import Rotations
 from ..utils.c3d_data import C3dData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
-    unit_vector,
-    quaternion_to_rotation_matrix,
     get_closest_rt_matrix,
     mean_unit_vector,
     RotoTransMatrixTimeSeries,
@@ -259,11 +257,15 @@ class RigidSegmentIdentification:
                 channels=self.parent_marker_names + self.child_marker_names,
             )
 
-        joint_model.to_biomod("../models/temporary_rt.bioMod")
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        temporary_model_path = current_path + "/../examples/models/temporary_rt.bioMod"
+        joint_model.to_biomod(temporary_model_path)
 
-        viz_biomod_model = pyorerun.BiorbdModel("../models/temporary_rt.bioMod")
+        viz_biomod_model = pyorerun.BiorbdModel(temporary_model_path)
         viz_biomod_model.options.transparent_mesh = False
         viz_biomod_model.options.show_gravity = True
+        viz_biomod_model.options.show_marker_labels = False
+        viz_biomod_model.options.show_center_of_mass_labels = False
 
         viz = pyorerun.PhaseRerun(t)
         if not without_exp_markers:
@@ -633,20 +635,16 @@ class Score(RigidSegmentIdentification):
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
 
-        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
-            self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
-        )
-
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
                 original_model,
-                rt_parent_functional_offsetted,
-                rt_child_functional_offsetted,
+                rt_parent_functional,
+                rt_child_functional,
             )
 
         # Identify center of rotation
         cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(
-            rt_parent_functional_offsetted, rt_child_functional_offsetted, recursive_outlier_removal=True
+            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
 
         scs_child_static = new_model.segments[self.child_name].segment_coordinate_system
@@ -909,24 +907,20 @@ class Sara(RigidSegmentIdentification):
             parent_rt_init, child_rt_init
         )
 
-        rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt = (
-            self.remove_offset_from_optimal_rt(original_model, rt_parent_functional, rt_child_functional)
-        )
-
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
                 original_model,
-                rt_parent_functional_offsetted,
-                rt_child_functional_offsetted,
+                rt_parent_functional,
+                rt_child_functional,
             )
 
         # Identify the approximate longitudinal axis of the segments
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global = self._sara_algorithm(rt_parent_functional_offsetted, rt_child_functional_offsetted)
+        aor_global = self._sara_algorithm(rt_parent_functional, rt_child_functional)
         aor_global = self._check_aor(original_model, aor_global)
-        aor_local = self._get_aor_local(aor_global, rt_parent_functional_offsetted)
+        aor_local = self._get_aor_local(aor_global, rt_parent_functional)
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
@@ -1026,11 +1020,41 @@ class JointCenterTool:
                     marker_names=self.original_model.marker_names,
                     marker_weights=marker_weights,
                 )
+
+            import pyorerun
+            nb_frames = q_init.shape[1]
+            t = np.linspace(0, 1, nb_frames)
+            viz = pyorerun.PhaseRerun(t)
+
+            q = np.zeros((self.original_model.nb_q, nb_frames))  # q_init
+            self.original_model.to_biomod("models/aaa.bioMod")
+
+            # SCoRE model
+            viz_scaled_model = pyorerun.BiorbdModel("models/aaa.bioMod")
+            viz_scaled_model.options.transparent_mesh = False
+            viz_scaled_model.options.show_gravity = True
+            viz_scaled_model.options.show_marker_labels = False
+            viz_scaled_model.options.show_center_of_mass_labels = False
+            viz.add_animated_model(viz_scaled_model, q)
+
+            # Animate
+            viz.rerun_by_frame("Model output")
+
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
-            parent_rt_init = segment_rt_in_global[task.parent_name]
-            child_rt_init = segment_rt_in_global[task.child_name]
-            # parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
-            # child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
+            rt_from_offset_to_parent = RotoTransMatrix()
+            rt_from_offset_to_parent.from_rt_matrix(np.identity(4))
+            if self.original_model.has_parent_offset(task.parent_name):
+                parent_rt_init = segment_rt_in_global[task.parent_name + "_parent_offset"]
+                rt_from_offset_to_parent = self.original_model.rt_from_parent_offset_to_real_segment(task.parent_name)
+            else:
+                parent_rt_init = segment_rt_in_global[task.parent_name]
+            rt_from_offset_to_child = RotoTransMatrix()
+            rt_from_offset_to_child.from_rt_matrix(np.identity(4))
+            if self.original_model.has_parent_offset(task.child_name):
+                child_rt_init = segment_rt_in_global[task.child_name + "_parent_offset"]
+                rt_from_offset_to_parent = self.original_model.rt_from_parent_offset_to_real_segment(task.child_name)
+            else:
+                child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
             task.parent_static_markers_in_global = static_markers_in_global[
@@ -1043,14 +1067,10 @@ class JointCenterTool:
             # Marker positions in the local from the static trial
             task.parent_static_markers_in_local = np.zeros((4, len(task.parent_marker_names)))
             for i_marker, marker_name in enumerate(task.parent_marker_names):
-                task.parent_static_markers_in_local[:, i_marker] = (
-                    self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
-                )
+                task.parent_static_markers_in_local[:, i_marker] = rt_from_offset_to_parent.inverse @ self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
             task.child_static_markers_in_local = np.zeros((4, len(task.child_marker_names)))
             for i_marker, marker_name in enumerate(task.child_marker_names):
-                task.child_static_markers_in_local[:, i_marker] = (
-                    self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
-                )
+                task.child_static_markers_in_local[:, i_marker] = rt_from_offset_to_child.inverse @ self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
 
             # Marker positions in the global from this functional trial
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)

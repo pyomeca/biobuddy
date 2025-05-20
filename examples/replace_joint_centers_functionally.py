@@ -40,12 +40,11 @@ def main(visualization):
 
     # Paths
     current_path_file = Path(__file__).parent
-    osim_filepath = f"{current_path_file}/../models/wholebody.osim"
-    biomod_filepath = f"{current_path_file}/../models/wholebody_rotated.bioMod"
+    osim_filepath = f"{current_path_file}/models/wholebody.osim"
     geometry_path = f"{current_path_file}/../../external/opensim-models/Geometry"
-    geometry_cleaned_path = f"{current_path_file}/../models/Geometry_cleaned"
-    xml_filepath = f"{current_path_file}/../models/wholebody_modified.xml"
-    score_biomod_filepath = f"{current_path_file}/../models/wholebody_score_ECH.bioMod"
+    geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
+    xml_filepath = f"{current_path_file}/models/wholebody_modified.xml"
+    score_biomod_filepath = f"{current_path_file}/models/wholebody_score_ECH.bioMod"
     static_filepath = f"{current_path_file}/data/anat_pose_ECH.c3d"
     score_directory = f"{current_path_file}/data/functional_trials"
 
@@ -66,15 +65,14 @@ def main(visualization):
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
-    original_osim_model.segments["ground"].segment_coordinate_system.scs = np.array(
-        [
-            [1.000000, 0.000000, 0.000000, 0.000000],
-            [0.000000, 0.000000, -1.00000, 0.000000],
-            [0.000000, 1.000000, 0.000000, 0.000000],
-            [0.000000, 0.000000, 0.000000, 1.000000],
-        ]  # Reset the ground to the upward Z axis + standing in the same orientation as the subject
-    )
-    original_osim_model.to_biomod(biomod_filepath)
+    # original_osim_model.segments["ground"].segment_coordinate_system.scs = np.array(
+    #     [
+    #         [1.000000, 0.000000, 0.000000, 0.000000],
+    #         [0.000000, 0.000000, -1.00000, 0.000000],
+    #         [0.000000, 1.000000, 0.000000, 0.000000],
+    #         [0.000000, 0.000000, 0.000000, 1.000000],
+    #     ]  # Reset the ground to the upward Z axis + standing in the same orientation as the subject
+    # )
 
     # Scale the model
     scale_tool = ScaleTool(original_model=original_osim_model).from_xml(filepath=xml_filepath)
@@ -133,8 +131,8 @@ def main(visualization):
             child_marker_names=["RLFE", "RMFE"] + technical_marker_to_add["femur_r"],
             first_frame=1,
             last_frame=500,  # Marker inversion happening after this frame in the example data!
-            method=rt_method,
-            animate_rt=False,
+            initialize_whole_trial_reconstruction=True,
+            animate_rt=True,
         )
     )
     joint_center_tool.add(
@@ -149,8 +147,8 @@ def main(visualization):
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             first_frame=300,
             last_frame=922 - 100,
-            method=rt_method,
-            animate_rt=False,
+            initialize_whole_trial_reconstruction=False,
+            animate_rt=True,
         )
     )
     # ... add all other joints that you want to modify based on the functional trials
@@ -168,6 +166,8 @@ def main(visualization):
         viz_scaled_model = pyorerun.BiorbdModel(score_biomod_filepath)
         viz_scaled_model.options.transparent_mesh = False
         viz_scaled_model.options.show_gravity = True
+        viz_scaled_model.options.show_marker_labels = False
+        viz_scaled_model.options.show_center_of_mass_labels = False
         viz.add_animated_model(viz_scaled_model, q)
 
         # Animate

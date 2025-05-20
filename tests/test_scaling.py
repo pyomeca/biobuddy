@@ -68,12 +68,16 @@ def visualize_model_scaling_output(scaled_biomod_filepath: str, converted_scaled
     viz_biomod_model = pyorerun.BiorbdModel(scaled_biomod_filepath)
     viz_biomod_model.options.transparent_mesh = False
     viz_biomod_model.options.show_gravity = True
+    viz_biomod_model.options.show_marker_labels = False
+    viz_biomod_model.options.show_center_of_mass_labels = False
     viz.add_animated_model(viz_biomod_model, q)
 
     # Model scaled in OpenSim
     viz_scaled_model = pyorerun.BiorbdModel(converted_scaled_osim_filepath)
     viz_scaled_model.options.transparent_mesh = False
     viz_scaled_model.options.show_gravity = True
+    viz_scaled_model.options.show_marker_labels = False
+    viz_scaled_model.options.show_center_of_mass_labels = False
     viz.add_animated_model(viz_scaled_model, q)
 
     # Animate

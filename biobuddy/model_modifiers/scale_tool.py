@@ -103,13 +103,16 @@ class ScaleTool:
         if filepath.endswith(".c3d"):
             # Load the c3d file
             c3d_data = C3dData(filepath, first_frame, last_frame)
-            marker_names = c3d_data.marker_names
-            marker_positions = c3d_data.all_marker_positions[:3, :, :]
+            exp_marker_names = c3d_data.marker_names
+            exp_marker_positions = c3d_data.all_marker_positions[:3, :, :]
         else:
             if filepath.endswith(".trc"):
                 raise NotImplementedError(".trc files cannot be read yet.")
             else:
                 raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
+        marker_indices = [idx for idx, m in enumerate(exp_marker_names) if m in self.original_model.marker_names]
+        marker_names = [exp_marker_names[idx] for idx in marker_indices]
+        marker_positions = exp_marker_positions[:, marker_indices, :]
 
         # Check the weights
         for marker in self.marker_weights:
@@ -563,6 +566,8 @@ class ScaleTool:
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
+            viz_biomod_model.options.show_marker_labels = False
+            viz_biomod_model.options.show_center_of_mass_labels = False
             viz.add_animated_model(viz_biomod_model, optimal_q)
 
             model_marker_names = self.scaled_model.marker_names

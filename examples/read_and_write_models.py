@@ -78,6 +78,8 @@ def main():
         model = pyorerun.BiorbdModel(biomod_filepath)
         model.options.transparent_mesh = False
         model.options.show_gravity = True
+        model.options.show_marker_labels = False
+        model.options.show_center_of_mass_labels = False
         q = np.zeros((model.nb_q, 10))
         viz.add_animated_model(model, q)
 
@@ -85,6 +87,8 @@ def main():
         reference_model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_reference.bioMod"))
         reference_model.options.transparent_mesh = False
         reference_model.options.show_gravity = True
+        reference_model.options.show_marker_labels = False
+        reference_model.options.show_center_of_mass_labels = False
         q_ref = np.zeros((reference_model.nb_q, 10))
         q_ref[0, :] = 0.5
         viz.add_animated_model(reference_model, q_ref)
