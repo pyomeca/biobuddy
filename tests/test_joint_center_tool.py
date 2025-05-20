@@ -48,15 +48,8 @@ def visualize_modified_model_output(
     viz.rerun_by_frame("Joint Center Comparison")
 
 
-@pytest.mark.parametrize(
-    "rt_method",
-    [
-        "optimization",
-        # "numerical",
-    ],
-)
 @pytest.mark.parametrize("initialize_whole_trial_reconstruction", [True, False])
-def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial_reconstruction):
+def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruction):
 
     np.random.seed(42)
 
@@ -106,7 +99,6 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
             child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
             first_frame=hip_c3d.first_frame,
             last_frame=hip_c3d.last_frame,
-            method=rt_method,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -123,7 +115,6 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             first_frame=knee_c3d.first_frame,
             last_frame=knee_c3d.last_frame,
-            method=rt_method,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -136,7 +127,7 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
 
     # Test the joints' new RT
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
-    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+    if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
             np.array(
@@ -153,7 +144,7 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
                 ]
             ),
         )
-    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+    else:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
             np.array(
@@ -165,11 +156,9 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
                 ]
             ),
         )
-    else:
-        raise RuntimeError("mmmmm")
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
-    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+    if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
             np.array(
@@ -186,7 +175,7 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
                 ]
             ),
         )
-    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+    else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
             np.array(
@@ -198,8 +187,6 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
                 ]
             ),
         )
-    else:
-        raise RuntimeError("mmmmm")
 
     # Test that the original model did not change
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
@@ -250,9 +237,9 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
     npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687)
-    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+    if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
-    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+    else:
         npt.assert_almost_equal(new_marker_tracking_error, 0.8563361750437755)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
@@ -292,9 +279,9 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
-    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+    if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364)
-    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+    else:
         npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
