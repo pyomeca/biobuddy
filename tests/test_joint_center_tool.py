@@ -245,15 +245,15 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
         marker_weights=marker_weights,
         method="lm",
     )
-    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)
+    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)
     new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 533.102574733437)
+    npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687)
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 525.8549943947243, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
     elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 525.7368893500334)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8563361750437755)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
@@ -262,46 +262,41 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
     # Knee
+    marker_names = list(marker_weights.keys())
     original_optimal_q = scaled_model.inverse_kinematics(
-        marker_positions=knee_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
-        marker_names=list(marker_weights.keys()),
+        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
         marker_weights=marker_weights,
         method="lm",
     )
-    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)
-    original_marker_position_diff = knee_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
-    original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
-
-    # Removing the condyle markers from the reconstruction as they are affected by soft tissu artifacts
-    marker_names = list(marker_weights.keys())
-    marker_names.remove("RLFE")
-    marker_names.remove("RMFE")
-    marker_weights.pop("RLFE")
-    marker_weights.pop("RMFE")
-
     new_optimal_q = score_model.inverse_kinematics(
         marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
         marker_names=marker_names,
         marker_weights=marker_weights,
         method="lm",
     )
-    markers_index = scaled_model.markers_indices(marker_names)
-    new_markers_reconstructed = scaled_model.markers_in_global(new_optimal_q)[:3, markers_index, :]
-    new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
-    new_marker_tracking_error = np.sum(new_marker_position_diff ** 2)
-
-    npt.assert_almost_equal(original_marker_tracking_error, 180.01863630416997)
-    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 213.72993165984846)
-    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 212.07964002193367)
-    # npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)  # TODO: check how to identify the joint center functionally
 
     # # For debugging purposes
     # from pyomeca import Markers
-    # pyomarkers = Markers(data=knee_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()))
+    # pyomarkers = Markers(data=knee_c3d.get_position(marker_names), channels=marker_names)
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
+    markers_index = scaled_model.markers_indices(marker_names)
+
+    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)[:3, markers_index, :]
+    original_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - original_markers_reconstructed
+    original_marker_tracking_error = np.sum(original_marker_position_diff ** 2)
+
+    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)[:3, markers_index, :]
+    new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff ** 2)
+
+    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
+    if rt_method == "optimization" and initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364)
+    elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
+        npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282)
+    npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
 def test_score_and_sara_with_ghost_segments():
 
