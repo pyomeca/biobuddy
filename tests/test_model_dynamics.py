@@ -70,32 +70,35 @@ def test_biomechanics_model_real_utils_functions():
     leg_model_biorbd = biorbd.Model(leg_filepath)
 
     nb_q = leg_model.nb_q
-    assert nb_q == 12
+    assert nb_q == 10
     nb_markers = leg_model.nb_markers
-    assert nb_markers == 19
+    assert nb_markers == 16
     nb_segments = leg_model.nb_segments
-    assert nb_segments == 7
+    assert nb_segments == 3
 
-    q_random = np.random.rand(nb_q)
+    nb_frames = 5
+    q_random = np.random.rand(nb_q, nb_frames)
 
     # Forward kinematics
     jcs_biobuddy = leg_model.forward_kinematics(q_random)
-    for i_segment in range(nb_segments):
-        jcs_biorbd = leg_model_biorbd.globalJCS(q_random, i_segment).to_array()
-        npt.assert_array_almost_equal(
-            jcs_biobuddy[leg_model.segments[i_segment].name][:, :, 0],
-            jcs_biorbd,
-            decimal=5,
-        )
+    for i_frame in range(nb_frames):
+        for i_segment in range(nb_segments):
+            jcs_biorbd = leg_model_biorbd.globalJCS(q_random[:, i_frame], i_segment).to_array()
+            npt.assert_array_almost_equal(
+                jcs_biobuddy[leg_model.segments[i_segment].name][:, :, i_frame],
+                jcs_biorbd,
+                decimal=5,
+            )
 
     # Markers position in global
     markers_biobuddy = leg_model.markers_in_global(q_random)
-    for i_marker in range(nb_markers):
-        markers_biorbd = leg_model_biorbd.markers(q_random)[i_marker].to_array()
-        npt.assert_array_almost_equal(
-            markers_biobuddy[:3, i_marker].reshape(
-                3,
-            ),
-            markers_biorbd,
-            decimal=4,
-        )
+    for i_frame in range(nb_frames):
+        for i_marker in range(nb_markers):
+            markers_biorbd = leg_model_biorbd.markers(q_random[:, i_frame])[i_marker].to_array()
+            npt.assert_array_almost_equal(
+                markers_biobuddy[:3, i_marker, i_frame].reshape(
+                    3,
+                ),
+                markers_biorbd,
+                decimal=4,
+            )
