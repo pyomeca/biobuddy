@@ -357,7 +357,9 @@ class ModelDynamics:
                     marker_in_global = point_from_local_to_global(
                         point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
                     )
-                    marker_positions[:, i_marker, i_frame] = marker_in_global.reshape(-1, )
+                    marker_positions[:, i_marker, i_frame] = marker_in_global.reshape(
+                        -1,
+                    )
                     i_marker += 1
 
         return marker_positions

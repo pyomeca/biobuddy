@@ -285,11 +285,11 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
 
     original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)[:3, markers_index, :]
     original_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - original_markers_reconstructed
-    original_marker_tracking_error = np.sum(original_marker_position_diff ** 2)
+    original_marker_tracking_error = np.sum(original_marker_position_diff**2)
 
     new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)[:3, markers_index, :]
     new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
-    new_marker_tracking_error = np.sum(new_marker_position_diff ** 2)
+    new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
     if rt_method == "optimization" and initialize_whole_trial_reconstruction:
@@ -297,6 +297,7 @@ def test_score_and_sara_without_ghost_segments(rt_method, initialize_whole_trial
     elif rt_method == "optimization" and not initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
+
 
 def test_score_and_sara_with_ghost_segments():
 
