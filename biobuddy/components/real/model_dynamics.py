@@ -190,7 +190,7 @@ class ModelDynamics:
             else:
                 if with_biorbd:
                     if model.marker_names[i_marker] in marker_names:
-                        vec_jacobian[i_marker * 3: (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+                        vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
         for i_q in range(nb_q):
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
@@ -305,7 +305,7 @@ class ModelDynamics:
                     q,
                     marker_names_reordered,
                     marker_weights_reordered,
-                    with_biorbd
+                    with_biorbd,
                 ),
                 x0=init,
                 method=method,

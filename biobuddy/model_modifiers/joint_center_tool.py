@@ -274,10 +274,7 @@ class RigidSegmentIdentification:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
 
-    def replace_components_in_new_jcs(
-            self,
-            original_model: BiomechanicalModelReal,
-            new_model: BiomechanicalModelReal):
+    def replace_components_in_new_jcs(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
         """
         Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
         TODO: Verify that this also works with non orthonormal rotation axes.
@@ -699,16 +696,20 @@ class Score(RigidSegmentIdentification):
 
         # offset_in_static_global.rt_matrix @ new_model.segment_coordinate_system_in_global(self.child_name + "_parent_offset")[:, :, 0]
 
-
         scs_of_cor_in_local = RotoTransMatrix()
         scs_of_cor_in_local.from_rt_matrix(scs_child_static.scs[:, :, 0])
         scs_of_cor_in_local.rt_matrix[:3, 3] = cor_parent_local[:3]
 
         if new_model.has_parent_offset(self.child_name):
-            offset_modified_in_local = new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0] @ scs_of_cor_in_local.inverse
-            new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=offset_modified_in_local,
-                is_scs_local=True,
+            offset_modified_in_local = (
+                new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0]
+                @ scs_of_cor_in_local.inverse
+            )
+            new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system = (
+                SegmentCoordinateSystemReal(
+                    scs=offset_modified_in_local,
+                    is_scs_local=True,
+                )
             )
         else:
             new_model.segments[self.child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -944,9 +945,7 @@ class Sara(RigidSegmentIdentification):
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
-        rt_parent_functional, rt_child_functional = self.rt_from_trial(
-            parent_rt_init, child_rt_init
-        )
+        rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
 
         if self.animate_rt:
             self.animate_the_segment_reconstruction(
@@ -975,13 +974,15 @@ class Sara(RigidSegmentIdentification):
         scs_of_cor_in_local.from_rt_matrix(mean_scs_of_child_in_local)
 
         if new_model.has_parent_offset(self.child_name):
-            offset_modified_in_local = new_model.segments[
-                                           self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :,
-                                       0] @ scs_of_cor_in_local.inverse
-            new_model.segments[
-                self.child_name + "_parent_offset"].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=offset_modified_in_local,
-                is_scs_local=True,
+            offset_modified_in_local = (
+                new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system.scs[:, :, 0]
+                @ scs_of_cor_in_local.inverse
+            )
+            new_model.segments[self.child_name + "_parent_offset"].segment_coordinate_system = (
+                SegmentCoordinateSystemReal(
+                    scs=offset_modified_in_local,
+                    is_scs_local=True,
+                )
             )
         else:
             new_model.segments[self.child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -1096,7 +1097,6 @@ class JointCenterTool:
             # else:
             #     child_rt_init = segment_rt_in_global[task.child_name]
 
-
             segment_rt_in_global = self.original_model.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]
             child_rt_init = segment_rt_in_global[task.child_name]
@@ -1113,11 +1113,15 @@ class JointCenterTool:
             task.parent_static_markers_in_local = np.zeros((4, len(task.parent_marker_names)))
             for i_marker, marker_name in enumerate(task.parent_marker_names):
                 # task.parent_static_markers_in_local[:, i_marker] = rt_from_offset_to_parent.rt_matrix @ self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
-                task.parent_static_markers_in_local[:, i_marker] = self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
+                task.parent_static_markers_in_local[:, i_marker] = (
+                    self.original_model.segments[task.parent_name].markers[marker_name].position[:, 0]
+                )
             task.child_static_markers_in_local = np.zeros((4, len(task.child_marker_names)))
             for i_marker, marker_name in enumerate(task.child_marker_names):
                 # task.child_static_markers_in_local[:, i_marker] = rt_from_offset_to_child.rt_matrix @ self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
-                task.child_static_markers_in_local[:, i_marker] = self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
+                task.child_static_markers_in_local[:, i_marker] = (
+                    self.original_model.segments[task.child_name].markers[marker_name].position[:, 0]
+                )
 
             # Marker positions in the global from this functional trial
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
