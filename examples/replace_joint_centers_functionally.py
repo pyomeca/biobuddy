@@ -52,7 +52,7 @@ def main(visualization):
     static_c3d = ezc3d.c3d(static_filepath, extract_forceplat_data=True)
     summed_force = static_c3d["data"]["platform"][0]["force"] + static_c3d["data"]["platform"][0]["force"]
     mass = np.median(np.linalg.norm(summed_force[:, 2000:9000], axis=0)) / 9.81
-    rt_method = "optimization"  # "numerical"  #
+    rt_method = "optimization"
 
     # # Convert the vtp files
     # mesh = MeshParser(geometry_folder=geometry_path)
