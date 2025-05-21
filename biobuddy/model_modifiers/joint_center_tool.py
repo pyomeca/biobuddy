@@ -1,4 +1,3 @@
-
 from copy import deepcopy
 import logging
 import numpy as np
@@ -271,18 +270,23 @@ class RigidSegmentIdentification:
 
         # Meshes
         if original_model.segments[self.child_name].mesh is not None:
-            raise NotImplementedError("The transformation of meshes was not tested. Please try the code below and make a PR if it is fine.")
+            raise NotImplementedError(
+                "The transformation of meshes was not tested. Please try the code below and make a PR if it is fine."
+            )
             new_model.segments[self.child_name].mesh.positions = (
                 new_child_jcs_in_global.inverse
                 @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
             )
 
         # Mesh files
-        if not original_model.has_parent_offset(self.child_name) and original_model.segments[self.child_name].mesh_file is not None:
+        if (
+            not original_model.has_parent_offset(self.child_name)
+            and original_model.segments[self.child_name].mesh_file is not None
+        ):
             mesh_file = original_model.segments[segment_name].mesh_file
 
             if mesh_file.mesh_translation is None:
-                mesh_translation = np.zeros((3, ))
+                mesh_translation = np.zeros((3,))
             else:
                 mesh_translation = mesh_file.mesh_translation
 
@@ -313,7 +317,9 @@ class RigidSegmentIdentification:
 
         # IMUs
         for imu in new_model.segments[self.child_name].imus:
-            raise NotImplementedError("The transformation of imu was not tested. Please try the code below and make a PR if it is fine.")
+            raise NotImplementedError(
+                "The transformation of imu was not tested. Please try the code below and make a PR if it is fine."
+            )
             imu.scs = local_scs_transform.inverse @ imu.scs
 
         # Muscles (origin and insertion)
@@ -336,7 +342,8 @@ class RigidSegmentIdentification:
             )
 
     @staticmethod
-    def check_optimal_rt_inputs(markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
+    def check_optimal_rt_inputs(
+        markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
     ) -> tuple[int, int, np.ndarray] | None:
 
         nb_markers = markers.shape[1]
@@ -413,7 +420,7 @@ class RigidSegmentIdentification:
         functional_markers_in_global: np.ndarray,
     ) -> np.float64:
         nb_markers = static_markers_in_local.shape[1]
-        vect_pos_markers = np.zeros((4 * nb_markers, ))
+        vect_pos_markers = np.zeros((4 * nb_markers,))
         rt_matrix = optimal_rt.reshape(4, 4)
         for i_marker in range(nb_markers):
             vect_pos_markers[i_marker * 4 : (i_marker + 1) * 4] = (
@@ -766,10 +773,15 @@ class Sara(RigidSegmentIdentification):
             rot = original_model.segments[self.child_name + "_rotation_transform"].rotations.value
             if self.child_name + "_reset_axis" in original_model.segments.keys():
                 rotation_vector = get_rotation_vector_from_sequence(sequence=rot)
-                rotation_vector = original_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs[:3, :3, 0] @ rotation_vector
+                rotation_vector = (
+                    original_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs[:3, :3, 0]
+                    @ rotation_vector
+                )
                 rot = get_sequence_from_rotation_vector(rotation_vector)
             else:
-                NotImplementedError("Your model has a _rotation_transform segment without a _reset_axis segment, which is not implemented yet.")
+                NotImplementedError(
+                    "Your model has a _rotation_transform segment without a _reset_axis segment, which is not implemented yet."
+                )
         else:
             rot = original_model.segments[self.child_name].rotations.value
 
@@ -905,11 +917,9 @@ class Sara(RigidSegmentIdentification):
             segment_name = self.child_name + "_parent_offset"
         else:
             segment_name = self.child_name
-        new_model.segments[segment_name].segment_coordinate_system = (
-            SegmentCoordinateSystemReal(
-                scs=mean_scs_of_child_in_local,
-                is_scs_local=True,
-            )
+        new_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+            scs=mean_scs_of_child_in_local,
+            is_scs_local=True,
         )
         self.replace_components_in_new_jcs(original_model, new_model)
 
