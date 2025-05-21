@@ -44,6 +44,7 @@ def main(visualization):
     geometry_path = f"{current_path_file}/../../external/opensim-models/Geometry"
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
     xml_filepath = f"{current_path_file}/models/wholebody_modified.xml"
+    scaled_biomod_filepath = f"{current_path_file}/models/wholebody_scaled_ECH.bioMod"
     score_biomod_filepath = f"{current_path_file}/models/wholebody_score_ECH.bioMod"
     static_filepath = f"{current_path_file}/data/anat_pose_ECH.c3d"
     score_directory = f"{current_path_file}/data/functional_trials"
@@ -117,6 +118,7 @@ def main(visualization):
                 )
             )
             marker_weights[marker] = 5.0
+    scaled_model.to_biomod(scaled_biomod_filepath)
 
     # ---------- ECH ---------- #
     # Move the model's joint centers
@@ -172,6 +174,8 @@ def main(visualization):
 
         # Animate
         viz.rerun_by_frame("Model output")
+
+    return marker_weights
 
 
 if __name__ == "__main__":

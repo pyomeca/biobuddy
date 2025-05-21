@@ -288,7 +288,116 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
 def test_score_and_sara_with_ghost_segments():
 
+    np.random.seed(42)
+
     from examples import replace_joint_centers_functionally as example
 
-    example.main(False)
-    # TODO !
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    score_biomod_filepath = parent_path + "/examples/models/wholebody_score_ECH.bioMod"
+    scaled_biomod_filepath = parent_path + "/examples/models/wholebody_scaled_ECH.bioMod"
+
+    hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    hip_c3d = C3dData(
+        hip_functional_trial_path, first_frame=1, last_frame=500
+    )  # Marker inversion happening after the 500th frame in the example data!
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
+
+    # Delete the biomod file so we are sure to create it
+    if os.path.exists(score_biomod_filepath):
+        os.remove(score_biomod_filepath)
+    if os.path.exists(scaled_biomod_filepath):
+        os.remove(scaled_biomod_filepath)
+
+    marker_weights = example.main(False)  # Creates the score .bioMod
+
+    score_model = BiomechanicalModelReal.from_biomod(score_biomod_filepath)
+    scaled_model = BiomechanicalModelReal.from_biomod(scaled_biomod_filepath)
+
+    # Test the joints' new RT
+    assert score_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local
+    npt.assert_almost_equal(
+        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        np.array([[ 1.      ,  0.      , -0.      , -0.021374],
+               [ 0.      ,  1.      , -0.      , -0.038696],
+               [-0.      , -0.      ,  1.      , -0.008465],
+               [ 0.      ,  0.      ,  0.      ,  1.      ]]),
+    )
+
+    assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
+    npt.assert_almost_equal(
+        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        np.array([[ 0.940872,  0.141004, -0.308023,  0.005224],
+                   [-0.158438,  0.986843, -0.032208, -0.38261 ],
+                   [ 0.299429,  0.079106,  0.950834, -0.008499],
+                   [ 0.      ,  0.      ,  0.      ,  1.      ]]),
+    )
+
+    marker_names = scaled_model.marker_names
+    # Test the reconstruction for the original model and the output model with the functional joint centers
+    # Hip
+    original_optimal_q = scaled_model.inverse_kinematics(
+        marker_positions=hip_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)
+    original_marker_position_diff = hip_c3d.get_position(marker_names) - original_markers_reconstructed
+    original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
+    mean_original_marker_tracking_error = np.mean(np.linalg.norm(original_marker_position_diff[:3, :, :], axis=0))
+
+    new_optimal_q = score_model.inverse_kinematics(
+        marker_positions=hip_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)
+    new_marker_position_diff = hip_c3d.get_position(marker_names) - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
+    mean_new_marker_tracking_error = np.mean(np.linalg.norm(new_marker_position_diff[:3, :, :], axis=0))
+
+    npt.assert_almost_equal(original_marker_tracking_error, 23.181411655329025)
+    npt.assert_almost_equal(new_marker_tracking_error, 23.20060783130701)
+    npt.assert_array_less(mean_new_marker_tracking_error, mean_original_marker_tracking_error)
+
+    # # For debugging purposes
+    # from pyomeca import Markers
+    # pyomarkers = Markers(data=hip_c3d.get_position(marker_names), channels=marker_names)
+    # visualize_modified_model_output(scaled_biomod_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
+
+    # Knee
+    original_optimal_q = scaled_model.inverse_kinematics(
+        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
+        marker_weights=marker_weights,
+        method="lm",
+    )
+    new_optimal_q = score_model.inverse_kinematics(
+        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
+        marker_names=marker_names,
+        marker_weights=marker_weights,
+        method="lm",
+    )
+
+    # # For debugging purposes
+    # from pyomeca import Markers
+    # pyomarkers = Markers(data=knee_c3d.get_position(marker_names), channels=marker_names)
+    # visualize_modified_model_output(scaled_biomod_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
+
+    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)[:3, :, :]
+    original_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - original_markers_reconstructed
+    original_marker_tracking_error = np.sum(original_marker_position_diff**2)
+    # mean_original_marker_tracking_error = np.mean(np.linalg.norm(original_marker_position_diff[:3, :, :], axis=0))
+
+    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)[:3, :, :]
+    new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
+    new_marker_tracking_error = np.sum(new_marker_position_diff**2)
+    # mean_new_marker_tracking_error = np.mean(np.linalg.norm(new_marker_position_diff[:3, :, :], axis=0))
+
+    # TODO: This could probably be improved by replacing the joint center using SCoRE and/or leaving a little room for 3D rotations of the knee
+    npt.assert_almost_equal(original_marker_tracking_error, 142.90088155680664)
+    npt.assert_almost_equal(new_marker_tracking_error, 161.50293188072646)
+    # npt.assert_array_less(mean_new_marker_tracking_error, mean_original_marker_tracking_error)
+

@@ -1,4 +1,4 @@
-from .aliases import Point, Points, point_to_array
+from .aliases import point_to_array
 
 import numpy as np
 
@@ -44,6 +44,27 @@ def rot_z_matrix(angle):
         ]
     )
 
+def get_rotation_vector_from_sequence(sequence: str):
+    if sequence == "x":
+        rotation_vector = np.array([1, 0, 0])
+    elif sequence == "y":
+        rotation_vector = np.array([0, 1, 0])
+    elif sequence == "z":
+        rotation_vector = np.array([0, 0, 1])
+    else:
+        raise RuntimeError(f"Rotation sequence {sequence} not recognized. Please use 'x', 'y', or 'z'.")
+    return rotation_vector
+
+def get_sequence_from_rotation_vector(rotation_vector: np.ndarray):
+    if np.all(np.abs(rotation_vector[:3] - np.array([1, 0, 0])) < 1e-6):
+        sequence = "x"
+    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 1, 0])) < 1e-6):
+        sequence = "y"
+    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 0, 1])) < 1e-6):
+        sequence = "z"
+    else:
+        raise RuntimeError(f"Rotation vector {rotation_vector} not recognized. Please use np.array([1, 0, 0]), np.array([0, 1, 0]), or np.array([0, 0, 1]).")
+    return sequence
 
 def euler_and_translation_to_matrix(
     angles: np.ndarray,
@@ -472,7 +493,7 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}"
             )
-        if translation.shape != (3,):
+        if translation.shape != (3, ):
             raise ValueError(
                 f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
             )

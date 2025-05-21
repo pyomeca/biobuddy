@@ -22,7 +22,7 @@ class MuscleGroup:
             raise ValueError("The name of the origin parent segment must be a string.")
         if not isinstance(insertion_parent_name, str):
             raise ValueError("The name of the insertion parent segment must be a string.")
-        if origin_parent_name == insertion_parent_name:
+        if origin_parent_name == insertion_parent_name and origin_parent_name != "":
             raise ValueError("The origin and insertion parent names cannot be the same.")
 
         self.name = name
