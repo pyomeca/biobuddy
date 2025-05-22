@@ -36,7 +36,7 @@ from biobuddy import (
 from test_utils import destroy_model
 
 
-def test_model_creation_from_static():
+def test_model_creation_from_static(remove_temporary: bool = True):
     """
     Produces a model from real data
     """
@@ -255,7 +255,7 @@ def test_model_creation_from_static():
     assert bio_model.segment_names == []
     assert bio_model.marker_names == []
 
-    if os.path.exists(kinematic_model_filepath):
+    if os.path.exists(kinematic_model_filepath) and remove_temporary:
         os.remove(kinematic_model_filepath)
 
 
@@ -280,7 +280,7 @@ def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
     c3d_filepath = "temporary.c3d"
-    test_model_creation_from_static()
+    test_model_creation_from_static(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
     model = Model(kinematic_model_filepath)

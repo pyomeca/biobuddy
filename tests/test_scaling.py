@@ -121,7 +121,7 @@ def test_scaling_wholebody():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
     )
-    osim_model_scaled.to_biomod(converted_scaled_osim_filepath)
+    osim_model_scaled.to_biomod(converted_scaled_osim_filepath, with_mesh=False)
     scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
 
     # --- Scale in BioBuddy --- #
@@ -141,7 +141,7 @@ def test_scaling_wholebody():
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=False,
     )
-    scaled_model.to_biomod(scaled_biomod_filepath)
+    scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
     q_zeros = np.zeros((42, 10))
@@ -298,7 +298,7 @@ def test_scaling_wholebody():
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=True,
     )
-    scaled_model.to_biomod(scaled_biomod_filepath)
+    scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
     exp_markers = scale_tool.mean_experimental_markers[:, :]
