@@ -304,3 +304,5 @@ def test_scaling_wholebody():
     for i_marker in range(exp_markers.shape[1]):
         biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros[:, 0])[i_marker].to_array()
         npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_scaled_marker, decimal=5)
+
+    os.remove(scaled_biomod_filepath)

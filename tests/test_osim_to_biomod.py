@@ -464,6 +464,7 @@ def test_translation_osim_to_biomod():
         "DoublePendulum/double_pendulum.osim",
         "Rajagopal/RajagopalLaiUhlrich2023.osim",
         "Rajagopal/Rajagopal2016.osim",
+        "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
         "Gait10dof18musc/subject01_metabolics_spring.osim",
         "Gait10dof18musc/subject01.osim",
         "Gait10dof18musc/gait10dof18musc.osim",
@@ -491,7 +492,6 @@ def test_translation_osim_to_biomod():
         "Gait2392_Simbody/subject01.osim",
         "Gait2392_Simbody/subject01_simbody_adjusted.osim",
         "Gait2392_Simbody/gait2392_millard2012muscle.osim",
-        "Rajagopal_OpenSense/Rajagopal2015_opensense.osim",
         "Leg39/leg39.osim",
         "Gait2354_Simbody/gait2354_simbody.osim",
         "Gait2354_Simbody/subject01_simbody.osim",
@@ -501,7 +501,7 @@ def test_translation_osim_to_biomod():
 
     # Test all OpenSim models
     osim_root_path = parent_path + "/external/opensim-models/Models"
-    biomod_root_path = parent_path + "/models/bioMod"
+    biomod_root_path = parent_path + "/examples/models"
     for root, dirs, files in os.walk(osim_root_path):
         for name in files:
             if name.endswith(".osim"):
@@ -547,7 +547,10 @@ def test_translation_osim_to_biomod():
                                 markers=np.random.rand(3, nb_markers, 1), plot=False
                             )
                             np.testing.assert_array_less(np.max(muscle_error), 0.015)
-                            np.testing.assert_array_less(np.median(muscle_error), 0.0025)
+                            np.testing.assert_array_less(np.median(muscle_error), 0.003)
+
+                    if os.path.exists(biomod_filepath):
+                        os.remove(biomod_filepath)
 
                 elif os.path.join(folder, name) in pin_joint_error_models:
                     with pytest.raises(

@@ -207,7 +207,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=np.array([0, 1, 1])))
 
     # Put the model together, print it and print it to a bioMod file
-    bio_model.to_biomod(kinematic_model_filepath)
+    bio_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
@@ -220,10 +220,38 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert bio_model.segment_names == []
-    assert bio_model.marker_names == []
+    assert bio_model.segment_names == ['TRUNK', 'HEAD', 'UPPER_ARM', 'LOWER_ARM', 'HAND', 'THIGH', 'SHANK', 'FOOT']
+    assert bio_model.marker_names == ['PELVIS',
+                                     'BOTTOM_HEAD',
+                                     'TOP_HEAD',
+                                     'HEAD_Z',
+                                     'HEAD_XZ',
+                                     'SHOULDER',
+                                     'SHOULDER_X',
+                                     'SHOULDER_XY',
+                                     'ELBOW',
+                                     'ELBOW_Y',
+                                     'ELBOW_XY',
+                                     'WRIST',
+                                     'FINGER',
+                                     'HAND_Y',
+                                     'HAND_YZ',
+                                     'THIGH_ORIGIN',
+                                     'THIGH_X',
+                                     'THIGH_Y',
+                                     'KNEE',
+                                     'KNEE_Z',
+                                     'KNEE_XZ',
+                                     'ANKLE',
+                                     'TOE',
+                                     'ANKLE_Z',
+                                     'ANKLE_YZ']
 
     destroy_model(bio_model)
+
+    # Test the attributes of the model
+    assert bio_model.segment_names == []
+    assert bio_model.marker_names == []
 
     if remove_temporary:
         os.remove(kinematic_model_filepath)
@@ -239,6 +267,7 @@ def write_markers_to_c3d(save_path: str, model):
     # Fill it with random data
     c3d["parameters"]["POINT"]["RATE"]["value"] = [100]
     c3d["parameters"]["POINT"]["LABELS"]["value"] = marker_names
+    c3d["parameters"]["POINT"]["UNITS"]["value"] = ["m"]
     c3d["data"]["points"] = marker_positions
 
     # Write the data
@@ -416,7 +445,7 @@ def test_model_creation_from_data(remove_temporary: bool = True):
     real_model = model.to_real(C3dData(c3d_filepath))
 
     # print it to a bioMod file
-    real_model.to_biomod(kinematic_model_filepath)
+    real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
@@ -522,7 +551,7 @@ def test_complex_model(remove_temporary: bool = True):
     real_model = bio_model.to_real({})
 
     # Print it to a bioMod file
-    real_model.to_biomod(kinematic_model_filepath)
+    real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 4

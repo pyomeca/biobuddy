@@ -195,4 +195,5 @@ class BiomechanicalModel:
 
             model.add_via_point(via_point.to_via_point(data, model))
 
+        model.segments_rt_to_local()
         return model

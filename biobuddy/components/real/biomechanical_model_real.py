@@ -424,6 +424,7 @@ class BiomechanicalModelReal(ModelDynamics):
         from ...model_writer.biorbd.biorbd_model_writer import BiorbdModelWriter
 
         writer = BiorbdModelWriter(filepath=filepath, with_mesh=with_mesh)
+        self.segments_rt_to_local()
         writer.write(self)
 
     def to_osim(self, filepath: str, with_mesh: bool = False) -> None:
@@ -433,4 +434,5 @@ class BiomechanicalModelReal(ModelDynamics):
         from ...model_writer.opensim.opensim_model_writer import OpensimModelWriter
 
         writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
+        self.segments_rt_to_local()
         writer.write(self)
