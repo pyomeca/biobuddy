@@ -242,17 +242,23 @@ class RigidSegmentIdentification:
         TODO: Verify that this also works with non orthonormal rotation axes.
         """
 
-        # New position of the child jsc after replacing the parent_offset segment
+        original_child_jcs_in_global = RotoTransMatrix()
+        original_child_jcs_in_global.from_rt_matrix(original_model.segment_coordinate_system_in_global(self.child_name))
+
         new_child_jcs_in_global = RotoTransMatrix()
         new_child_jcs_in_global.from_rt_matrix(new_model.segment_coordinate_system_in_global(self.child_name))
 
-        original_local_scs = RotoTransMatrix()
-        original_local_scs.from_rt_matrix(original_model.segment_coordinate_system_in_local(self.child_name))
+        # Center of mass
+        # CoM stays at the same place in the global reference frame
+        com_position_global = original_model.com_in_global(self.child_name)
+        new_model.segments[self.child_name].inertia_parameters.center_of_mass = new_child_jcs_in_global.inverse @ com_position_global
 
-        new_local_scs = RotoTransMatrix()
-        new_local_scs.from_rt_matrix(new_model.segment_coordinate_system_in_local(self.child_name))
-        local_scs_transform = RotoTransMatrix()  # The transformation between the old local and the new local jcs
-        local_scs_transform.from_rt_matrix(get_closest_rt_matrix(original_local_scs.inverse @ new_local_scs.rt_matrix))
+        # Inertia  TODO: @pariterre could you confirm this one please?
+        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a change in length of the segments due to the displacement of the jcs.
+        inertia = original_model.segments[self.child_name].inertia_parameters.inertia[:3, :3]
+        rotation_transform = new_child_jcs_in_global.inverse[:3, :3] @ original_child_jcs_in_global.rt_matrix[:3, :3]
+        new_inertia = rotation_transform @ inertia @ rotation_transform.T
+        new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
 
         # Next JCS position
         child_names = original_model.children_segment_names(self.child_name)
@@ -279,29 +285,33 @@ class RigidSegmentIdentification:
             )
 
         # Mesh files
-        if (
-            not original_model.has_parent_offset(self.child_name)
-            and original_model.segments[self.child_name].mesh_file is not None
-        ):
-            mesh_file = original_model.segments[segment_name].mesh_file
+        rotation_translation_transform = RotoTransMatrix()
+        rotation_translation_transform.from_rt_matrix(
+            new_child_jcs_in_global.inverse @ original_child_jcs_in_global.rt_matrix
+        )
 
-            if mesh_file.mesh_translation is None:
-                mesh_translation = np.zeros((3,))
-            else:
-                mesh_translation = mesh_file.mesh_translation
+        segment_list = original_model.get_chain_between_segments(self.parent_name, self.child_name)[1:]
+        for segment_name in segment_list:
+            if original_model.segments[segment_name].mesh_file is not None:
+                mesh_file = original_model.segments[segment_name].mesh_file
 
-            if mesh_file.mesh_rotation is None:
-                mesh_rotation = np.zeros((4, 1))
-            else:
-                mesh_rotation = mesh_file.mesh_rotation
+                if mesh_file.mesh_translation is None:
+                    mesh_translation = np.zeros((3,))
+                else:
+                    mesh_translation = mesh_file.mesh_translation
 
-            mesh_rt = RotoTransMatrix()
-            mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
-            new_rt = local_scs_transform.rt_matrix @ mesh_rt.rt_matrix
+                if mesh_file.mesh_rotation is None:
+                    mesh_rotation = np.zeros((4, 1))
+                else:
+                    mesh_rotation = mesh_file.mesh_rotation
 
-            # Update mesh file's local rotation and translation
-            new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
-            new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
+                mesh_rt = RotoTransMatrix()
+                mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
+                new_rt = rotation_translation_transform.rt_matrix @ mesh_rt.rt_matrix
+
+                # Update mesh file's local rotation and translation
+                new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
+                new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
 
         # Markers
         marker_positions = original_model.markers_in_global()
@@ -320,7 +330,7 @@ class RigidSegmentIdentification:
             raise NotImplementedError(
                 "The transformation of imu was not tested. Please try the code below and make a PR if it is fine."
             )
-            imu.scs = local_scs_transform.inverse @ imu.scs
+            imu.scs = rotation_translation_transform.rt_matrix @ imu.scs
 
         # Muscles (origin and insertion)
         for muscle_name in new_model.muscle_origin_on_this_segment(self.child_name):

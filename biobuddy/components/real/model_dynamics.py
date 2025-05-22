@@ -411,6 +411,33 @@ class ModelDynamics:
 
         return contact_positions
 
+
+    @requires_initialization
+    def com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
+        """
+        TODO: to be tested ?
+        """
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        if self.segments[segment_name].inertia_parameters is None:
+            return None
+        else:
+            com_position = np.ones((4, nb_frames))
+            jcs_in_global = self.forward_kinematics(q)
+            for i_frame in range(nb_frames):
+                com_in_global = point_from_local_to_global(
+                    point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass, jcs_in_global=jcs_in_global[segment_name][:, :, i_frame]
+                )
+                com_position[:, i_frame] = com_in_global.reshape(-1, )
+
+        return com_position
+
     @requires_initialization
     def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.0001) -> np.ndarray:
         """

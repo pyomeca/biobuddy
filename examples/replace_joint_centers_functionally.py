@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import ezc3d
+from pyomeca import Markers
 
 from biobuddy import (
     BiomechanicalModelReal,
@@ -164,13 +165,18 @@ def main(visualization):
         viz = pyorerun.PhaseRerun(t)
         q = np.zeros((42, 10))
 
+        # Add the experimental markers from the static trial
+        static_exp_markers = C3dData(static_filepath, first_frame=500, last_frame=510)
+        static_marker_positions = static_exp_markers.get_position(scaled_model.marker_names)
+        pyomarkers = Markers(data=static_marker_positions, channels=scaled_model.marker_names)
+
         # SCoRE model
         viz_scaled_model = pyorerun.BiorbdModel(score_biomod_filepath)
         viz_scaled_model.options.transparent_mesh = False
         viz_scaled_model.options.show_gravity = True
         viz_scaled_model.options.show_marker_labels = False
         viz_scaled_model.options.show_center_of_mass_labels = False
-        viz.add_animated_model(viz_scaled_model, q)
+        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
 
         # Animate
         viz.rerun_by_frame("Model output")

@@ -262,7 +262,10 @@ class BiomechanicalModelReal(ModelDynamics):
     def nb_q(self) -> int:
         return sum(segment.nb_q for segment in self.segments)
 
-    def dof_indices(self, segment_name) -> list[int]:
+    def segment_index(self, segment_name: str) -> int:
+        return list(self.segments.keys()).index(segment_name)
+
+    def dof_indices(self, segment_name: str) -> list[int]:
         """
         Get the indices of the degrees of freedom from the model
 
