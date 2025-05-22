@@ -36,7 +36,7 @@ from biobuddy import (
 from test_utils import destroy_model
 
 
-def test_model_creation_from_static(remove_temporary: bool = True):
+def test_model_creation_from_static():
     """
     Produces a model from real data
     """
@@ -255,7 +255,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     assert bio_model.segment_names == []
     assert bio_model.marker_names == []
 
-    if remove_temporary:
+    if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
 
 
@@ -276,16 +276,17 @@ def write_markers_to_c3d(save_path: str, model):
     c3d.write(save_path)
 
 
-def test_model_creation_from_data(remove_temporary: bool = True):
+def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
     c3d_filepath = "temporary.c3d"
-    test_model_creation_from_static(remove_temporary=False)
+    test_model_creation_from_static()
 
     # Prepare a fake model and a fake static from the previous test
     model = Model(kinematic_model_filepath)
     write_markers_to_c3d(c3d_filepath, model)
-    os.remove(kinematic_model_filepath)
+    if os.path.exists(kinematic_model_filepath):
+        os.remove(kinematic_model_filepath)
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
@@ -458,12 +459,13 @@ def test_model_creation_from_data(remove_temporary: bool = True):
 
     # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
 
-    if remove_temporary:
+    if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
+    if os.path.exists(c3d_filepath):
         os.remove(c3d_filepath)
 
 
-def test_complex_model(remove_temporary: bool = True):
+def test_complex_model():
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
     kinematic_model_filepath = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
@@ -571,5 +573,5 @@ def test_complex_model(remove_temporary: bool = True):
 
     destroy_model(real_model)
 
-    if remove_temporary:
+    if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
