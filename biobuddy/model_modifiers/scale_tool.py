@@ -560,7 +560,7 @@ class ScaleTool:
             viz = pyorerun.PhaseRerun(t)
 
             debugging_model_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "../../examples/models/temporary_model.bioMod")
+                os.path.join(os.path.dirname(__file__), "../../examples/models/temporary.bioMod")
             )
             self.scaled_model.to_biomod(debugging_model_path)
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)

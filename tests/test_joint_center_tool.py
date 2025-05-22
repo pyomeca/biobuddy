@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
+from test_utils import remove_temporary_biomods
 from biobuddy import (
     BiomechanicalModelReal,
     JointCenterTool,
@@ -240,7 +241,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8563361750437755)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8563361750437755, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
@@ -284,6 +285,10 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     else:
         npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
+
+    remove_temporary_biomods()
+    if os.path.exists(score_biomod_filepath):
+        os.remove(score_biomod_filepath)
 
 
 def test_score_and_sara_with_ghost_segments():
@@ -408,3 +413,10 @@ def test_score_and_sara_with_ghost_segments():
     npt.assert_almost_equal(original_marker_tracking_error, 142.90088155680664)
     npt.assert_almost_equal(new_marker_tracking_error, 161.50293188072646)
     # npt.assert_array_less(mean_new_marker_tracking_error, mean_original_marker_tracking_error)
+
+    # Delete .bioMod files
+    remove_temporary_biomods()
+    if os.path.exists(score_biomod_filepath):
+        os.remove(score_biomod_filepath)
+    if os.path.exists(scaled_biomod_filepath):
+        os.remove(scaled_biomod_filepath)

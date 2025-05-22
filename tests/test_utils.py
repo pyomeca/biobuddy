@@ -1,3 +1,4 @@
+import os
 from biobuddy import BiomechanicalModelReal
 
 
@@ -49,3 +50,17 @@ def destroy_model(bio_model: BiomechanicalModelReal):
         bio_model.remove_via_point(via_point_name)
     assert bio_model.nb_via_points == 0
     assert bio_model.via_point_names == []
+
+
+def remove_temporary_biomods():
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    file_names_to_remove = ["temporary.bioMod", "temporary_rt.bioMod"]
+
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        for filename in filenames:
+            if filename in file_names_to_remove:
+                full_path = os.path.join(dirpath, filename)
+                try:
+                    os.remove(full_path)
+                except:
+                    print(f"File {full_path} could not be deleted.")
