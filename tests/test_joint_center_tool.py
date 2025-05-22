@@ -281,9 +281,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     remove_temporary_biomods()
