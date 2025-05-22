@@ -313,4 +313,3 @@ def test_scaling_wholebody():
     os.remove("wholebody.osim")
     os.remove(parent_path + "/examples/models/scaled.osim")
     remove_temporary_biomods()
-
