@@ -181,4 +181,6 @@ examples/*.bioMod
 
 *.vtp
 
+examples/models/scaled.osim
+
 docs/BioBuddy_images/

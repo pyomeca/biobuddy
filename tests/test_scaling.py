@@ -12,6 +12,7 @@ import biorbd
 import numpy as np
 import numpy.testing as npt
 
+from test_utils import remove_temporary_biomods
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
 
 
@@ -306,3 +307,10 @@ def test_scaling_wholebody():
         npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_scaled_marker, decimal=5)
 
     os.remove(scaled_biomod_filepath)
+    os.remove(converted_scaled_osim_filepath)
+    os.remove(parent_path + "/examples/models/static.trc")
+    os.remove("wholebody.xml")
+    os.remove("wholebody.osim")
+    os.remove(parent_path + "/examples/models/scaled.osim")
+    remove_temporary_biomods()
+

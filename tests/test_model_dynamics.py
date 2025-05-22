@@ -102,3 +102,5 @@ def test_biomechanics_model_real_utils_functions():
                 markers_biorbd,
                 decimal=4,
             )
+
+    os.remove(wholebody_biorbd_filepath)

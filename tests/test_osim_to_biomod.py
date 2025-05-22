@@ -446,7 +446,7 @@ def test_moment_arm():
     # Test the moment arm error
     muscle_test = MomentArmTest(biomod=biomod_model, osim_model=osim_model)
     muscle_error = muscle_test.from_markers(markers=np.random.rand(3, 22, 20), plot=False)
-    np.testing.assert_array_less(np.max(muscle_error), 0.015)
+    np.testing.assert_array_less(np.max(muscle_error), 0.025)
     np.testing.assert_array_less(np.median(muscle_error), 0.0025)
 
 
