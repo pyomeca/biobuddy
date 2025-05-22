@@ -411,7 +411,6 @@ class ModelDynamics:
 
         return contact_positions
 
-
     @requires_initialization
     def com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
         """
@@ -432,9 +431,12 @@ class ModelDynamics:
             jcs_in_global = self.forward_kinematics(q)
             for i_frame in range(nb_frames):
                 com_in_global = point_from_local_to_global(
-                    point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass, jcs_in_global=jcs_in_global[segment_name][:, :, i_frame]
+                    point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass,
+                    jcs_in_global=jcs_in_global[segment_name][:, :, i_frame],
                 )
-                com_position[:, i_frame] = com_in_global.reshape(-1, )
+                com_position[:, i_frame] = com_in_global.reshape(
+                    -1,
+                )
 
         return com_position
 
