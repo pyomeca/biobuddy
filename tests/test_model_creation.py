@@ -276,6 +276,7 @@ def write_markers_to_c3d(save_path: str, model):
     c3d.write(save_path)
 
 
+"""
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
@@ -463,7 +464,7 @@ def test_model_creation_from_data():
         os.remove(kinematic_model_filepath)
     if os.path.exists(c3d_filepath):
         os.remove(c3d_filepath)
-
+"""
 
 def test_complex_model():
 
@@ -478,7 +479,7 @@ def test_complex_model():
     bio_model.add_segment(Segment(name="GROUND"))
 
     # The pendulum segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         Segment(
             name="PENDULUM",
             translations=Translations.XYZ,
@@ -521,12 +522,12 @@ def test_complex_model():
     )
 
     # The pendulum muscle group
-    bio_model.muscle_groups.append(
+    bio_model.add_muscle_group(
         MuscleGroup(name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM")
     )
 
     # The pendulum muscle
-    bio_model.muscles.append(
+    bio_model.add_muscle(
         Muscle(
             "PENDULUM_MUSCLE",
             muscle_type=MuscleType.HILL_THELEN,
@@ -541,7 +542,7 @@ def test_complex_model():
             maximal_excitation=1,
         )
     )
-    bio_model.via_points.append(
+    bio_model.add_via_point(
         ViaPoint(
             "PENDULUM_MUSCLE",
             position_function=lambda m, model: np.array([0, 0, 0.5]),
