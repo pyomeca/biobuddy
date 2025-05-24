@@ -1,12 +1,80 @@
-from .aliases import Point, Points, point_to_array, points_to_array
+from .aliases import point_to_array
 
 import numpy as np
 
 
+# TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
+
+
+def rot_x_matrix(angle):
+    """
+    Rotation matrix around the x-axis
+    """
+    return np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(angle), -np.sin(angle)],
+            [0, np.sin(angle), np.cos(angle)],
+        ]
+    )
+
+
+def rot_y_matrix(angle):
+    """
+    Rotation matrix around the y-axis
+    """
+    return np.array(
+        [
+            [np.cos(angle), 0, np.sin(angle)],
+            [0, 1, 0],
+            [-np.sin(angle), 0, np.cos(angle)],
+        ]
+    )
+
+
+def rot_z_matrix(angle):
+    """
+    Rotation matrix around the z-axis
+    """
+    return np.array(
+        [
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ]
+    )
+
+
+def get_rotation_vector_from_sequence(sequence: str):
+    if sequence == "x":
+        rotation_vector = np.array([1, 0, 0])
+    elif sequence == "y":
+        rotation_vector = np.array([0, 1, 0])
+    elif sequence == "z":
+        rotation_vector = np.array([0, 0, 1])
+    else:
+        raise RuntimeError(f"Rotation sequence {sequence} not recognized. Please use 'x', 'y', or 'z'.")
+    return rotation_vector
+
+
+def get_sequence_from_rotation_vector(rotation_vector: np.ndarray):
+    if np.all(np.abs(rotation_vector[:3] - np.array([1, 0, 0])) < 1e-6):
+        sequence = "x"
+    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 1, 0])) < 1e-6):
+        sequence = "y"
+    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 0, 1])) < 1e-6):
+        sequence = "z"
+    else:
+        raise RuntimeError(
+            f"Rotation vector {rotation_vector} not recognized. Please use np.array([1, 0, 0]), np.array([0, 1, 0]), or np.array([0, 0, 1])."
+        )
+    return sequence
+
+
 def euler_and_translation_to_matrix(
-    angles: Points,
+    angles: np.ndarray,
     angle_sequence: str,
-    translations: Point,
+    translations: np.ndarray,
 ) -> np.ndarray:
     """
     Construct a SegmentCoordinateSystemReal from angles and translations
@@ -24,13 +92,17 @@ def euler_and_translation_to_matrix(
         is in parent's local reference frame
     """
 
-    angles = point_to_array(name="angles", point=angles).reshape((4,))
-    translations = point_to_array(name="translations", point=translations).reshape((4,))
+    if len(angles.shape) > 1 and angles.shape[1] != 1:
+        raise RuntimeError("The angles must be a vector of size (number or rotations x 1).")
+    if len(angle_sequence) != angles.shape[0]:
+        raise RuntimeError("The number of angles must be equal to the number of angles in the sequence.")
+    if len(translations.shape) > 1 and translations.shape[1] != 1:
+        raise RuntimeError("The translations must be a vector of size (number or translations x 1).")
 
     matrix = {
-        "x": lambda x: np.array([[1, 0, 0], [0, np.cos(x), -np.sin(x)], [0, np.sin(x), np.cos(x)]]),
-        "y": lambda y: np.array([[np.cos(y), 0, np.sin(y)], [0, 1, 0], [-np.sin(y), 0, np.cos(y)]]),
-        "z": lambda z: np.array([[np.cos(z), -np.sin(z), 0], [np.sin(z), np.cos(z), 0], [0, 0, 1]]),
+        "x": rot_x_matrix,
+        "y": rot_y_matrix,
+        "z": rot_z_matrix,
     }
     rt = np.identity(4)
     for angle, axis in zip(angles, angle_sequence):
@@ -40,7 +112,7 @@ def euler_and_translation_to_matrix(
     return rt
 
 
-def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
+def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:
     """
     Computes the closest homogenous matrix that approximates all the homogenous matrices
 
@@ -54,7 +126,7 @@ def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     mean_matrix = np.identity(4)
 
     # Perform an Arithmetic mean of each element
-    arithmetic_mean_scs = np.nanmean(matrix, axis=2)
+    arithmetic_mean_scs = np.nanmean(matrices, axis=2)
     mean_matrix[:3, 3] = arithmetic_mean_scs[:3, 3]
 
     # Get minimized rotation matrix from the svd decomposition
@@ -63,13 +135,28 @@ def mean_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     return mean_matrix
 
 
-def to_euler(rt, sequence: str) -> np.ndarray:
-    if sequence == "xyz":
-        rx = np.arctan2(-rt[1, 2, :], rt[2, 2, :])
-        ry = np.arcsin(rt[0, 2, :])
-        rz = np.arctan2(-rt[0, 1, :], rt[0, 0, :])
+def mean_unit_vector(vectors: np.ndarray) -> np.ndarray:
+    """
+    Computes the mean unit vector from a set of unit vectors
+    """
+    if vectors.shape[0] != 4 or len(vectors.shape) != 2:
+        raise RuntimeError(
+            "The vectors must be of shape (4, n). Only the three first components will be averaged (the last component is a 1)."
+        )
+
+    mean_vector = np.ones((4,))
+    mean_vector[:3] = np.nanmean(vectors[:3, :], axis=1)
+    mean_vector[:3] /= np.linalg.norm(mean_vector[:3])
+    return mean_vector
+
+
+def to_euler(rt, angle_sequence: str) -> np.ndarray:
+    if angle_sequence == "xyz":
+        rx = np.arctan2(-rt[1, 2], rt[2, 2])
+        ry = np.arcsin(rt[0, 2])
+        rz = np.arctan2(-rt[0, 1], rt[0, 0])
     else:
-        raise NotImplementedError("This sequence is not implemented yet")
+        raise NotImplementedError("This angle_sequence is not implemented yet")
 
     return np.array([rx, ry, rz])
 
@@ -93,6 +180,11 @@ def multiply_homogeneous_matrix(self: np.ndarray, other: np.ndarray) -> np.ndarr
 def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
+
+
+def unit_vector(x):
+    """Returns a unit vector"""
+    return x / np.linalg.norm(x)
 
 
 def compute_matrix_rotation(_rot_value) -> np.ndarray:
@@ -130,15 +222,20 @@ def rot2eul(rot) -> np.ndarray:
     return np.array((alpha, beta, gamma))
 
 
-def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
+def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     """
     Projects a rotation matrix to the closest rotation matrix using Singular Value Decomposition (SVD).
     """
+    if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) > 0.1:
+        raise RuntimeError(f"The rotation matrix {rt_matrix[:3, :3]} is far from SO(3).")
+    if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
+        raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
+
     if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) < 1e-6:
         return rt_matrix
 
     else:
-        output_rt = np.eye(4)
+        output_rt = np.identity(4)
         output_rt[:3, 3] = rt_matrix[:3, 3]
 
         u, _, vt = np.linalg.svd(rt_matrix[:3, :3])
@@ -151,6 +248,39 @@ def get_closest_rotation_matrix(rt_matrix: np.ndarray) -> np.ndarray:
 
         output_rt[:3, :3] = projected_rot_matrix
         return output_rt
+
+
+def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -> np.ndarray:
+    """
+    Convert a unit quaternion to a 4x4 homogeneous rotation matrix.
+
+    Parameters
+    ----------
+    quat_scalar
+        The real part of the quaternion
+    quat_vector: shape (3, )
+    The imaginary vertor of the quaternion
+
+    Returns
+    -------
+    rt_matrix : ndarray, shape (4, 4)
+        Homogeneous transformation matrix (rotation only, no translation)
+    """
+    qw = quat_scalar
+    qx, qy, qz = quat_vector
+
+    rot_matrix = np.array(
+        [
+            [1.0 - 2.0 * qy**2 - 2.0 * qz**2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
+            [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx**2 - 2.0 * qz**2, 2.0 * qy * qz - 2.0 * qx * qw],
+            [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx**2 - 2.0 * qy**2],
+        ]
+    )
+
+    if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
+        raise RuntimeError("Something went wrong, the rotation matrix computed does not lie in SO(3).")
+
+    return rot_matrix
 
 
 def coord_sys(axis) -> tuple[list[np.ndarray], str]:
@@ -217,6 +347,49 @@ def is_ortho_basis(basis) -> bool:
     )
 
 
+def get_rt_aligning_markers_in_global(
+    markers_in_global: np.ndarray, local_centered: np.ndarray, local_centroid: np.ndarray
+) -> np.ndarray:
+
+    markers_in_global = markers_in_global[:3, :]
+    local_centered = local_centered[:3, :]
+    local_centroid = local_centroid[:3]
+
+    global_centroid = np.mean(markers_in_global, axis=1, keepdims=True)
+    global_centered = markers_in_global - global_centroid
+
+    # Cross-covariance matrix
+    H = global_centered @ local_centered.T
+
+    # SVD decomposition
+    U, _, Vt = np.linalg.svd(H)
+    rotation = U @ Vt
+    if np.linalg.det(rotation) < 0:
+        # Reflection correction
+        Vt[-1, :] *= -1
+        rotation = U @ Vt
+
+    translation = global_centroid.squeeze() - rotation @ local_centroid.squeeze()
+
+    rt_matrix = np.identity(4)
+    rt_matrix[:3, :3] = rotation[:3, :3]
+    rt_matrix[:3, 3] = translation[:3]
+
+    return rt_matrix
+
+
+def point_from_global_to_local(point_in_global: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_rt_matrix(jcs_in_global)
+    return rt_matrix.inverse @ point_to_array(point=point_in_global)
+
+
+def point_from_local_to_global(point_in_local: np.ndarray, jcs_in_global: np.ndarray) -> np.ndarray:
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_rt_matrix(jcs_in_global)
+    return rt_matrix.rt_matrix @ point_to_array(point=point_in_local)
+
+
 class OrthoMatrix:
     def __init__(self, translation=(0, 0, 0), rotation_1=(0, 0, 0), rotation_2=(0, 0, 0), rotation_3=(0, 0, 0)):
         self.trans = np.transpose(np.array([translation]))
@@ -258,30 +431,122 @@ class OrthoMatrix:
         return coord_sys(self.axe_1)[1] + coord_sys(self.axe_2)[1] + coord_sys(self.axe_3)[1]
 
     def has_no_transformation(self):
-        return np.all(self.get_matrix() == np.eye(4))
+        return np.all(self.get_matrix() == np.identity(4))
+
+
+class RotoTransMatrixTimeSeries:
+    def __init__(self):
+        self._rt_time_series = []
+
+    def __getitem__(self, index: int):
+        return self._rt_time_series[index]
+
+    def __setitem__(self, index: int, value: "RotoTransMatrix"):
+        self._rt_time_series[index] = value
+
+    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+        if len(rotation_matrix.shape) != 3 or len(translation) != 3:
+            raise ValueError(
+                f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
+            )
+
+        rt_time_series = []
+        for i_frame in range(rotation_matrix.shape[2]):
+            rt_matrix = RotoTransMatrix()
+            rt_matrix.from_rotation_matrix_and_translation(rotation_matrix[:, :, i_frame], translation[:, i_frame])
+            rt_time_series += [rt_matrix]
+
+        self._rt_time_series = rt_time_series
+
+    def from_rt_matrix(self, rt: np.ndarray):
+        if len(rt.shape) != 3:
+            raise ValueError(
+                f"The rt and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
+            )
+
+        rt_time_series = []
+        for i_frame in range(rt.shape[2]):
+            rt_matrix = RotoTransMatrix()
+            rt_matrix.from_rt_matrix(rt[:, :, i_frame])
+            rt_time_series += [rt_matrix]
+
+        self._rt_time_series = rt_time_series
 
 
 class RotoTransMatrix:
     def __init__(self):
-        self.rt_matrix = None
+        self._rt = None
 
-    def from_rotation_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+        if rotation_matrix.shape != (3, 3):
+            raise ValueError(
+                f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
+            )
+        if translation.shape != (3,):
+            raise ValueError(
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+            )
+
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
         rt_matrix[:3, 3] = translation
         rt_matrix[3, 3] = 1.0
-        self.rt_matrix = rt_matrix
+        self._rt = rt_matrix
 
-    def from_rt_matrix(self, rt_matrix: np.ndarray):
-        self.rt_matrix = rt_matrix
+    def from_euler_angles_and_translation(self, angle_sequence: str, angles: np.ndarray, translation: np.ndarray):
+        if len(angles.shape) > 1:
+            raise ValueError(
+                f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}"
+            )
+        if translation.shape != (3,):
+            raise ValueError(
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+            )
+        if len(angle_sequence) != angles.shape[0]:
+            raise ValueError(
+                f"The number of angles and the length of the angle_sequence must match. You have {angles.shape} and {angle_sequence}"
+            )
+
+        matrix = {
+            "x": rot_x_matrix,
+            "y": rot_y_matrix,
+            "z": rot_z_matrix,
+        }
+
+        rt_matrix = np.identity(4)
+        for angle, axis in zip(angles, angle_sequence):
+            rt_matrix[:3, :3] = rt_matrix[:3, :3] @ matrix[axis](angle)
+        rt_matrix[:3, 3] = translation[:3]
+        self._rt = rt_matrix
+
+    def from_rt_matrix(self, rt: np.ndarray):
+        if rt.shape == (4, 4, 1):
+            rt = rt[:, :, 0]
+        elif rt.shape != (4, 4):
+            raise ValueError(
+                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
+            )
+        self._rt = rt
 
     @property
-    def translation(self):
-        return self.rt_matrix[:3, 3]
+    def rt_matrix(self) -> np.ndarray:
+        return self._rt
 
     @property
-    def rotation_matrix(self):
-        return self.rt_matrix[:3, :3]
+    def translation(self) -> np.ndarray:
+        return self._rt[:3, 3]
+
+    @translation.setter
+    def translation(self, trans: np.ndarray):
+        self._rt[:3, 3] = trans
+
+    @property
+    def rotation_matrix(self) -> np.ndarray:
+        return self._rt[:3, :3]
+
+    @rotation_matrix.setter
+    def rotation_matrix(self, rot: np.ndarray):
+        self._rt[:3, :3] = rot
 
     @property
     def inverse(self) -> np.ndarray:
@@ -297,3 +562,6 @@ class RotoTransMatrix:
         rt_matrix[3, 3] = 1.0
 
         return rt_matrix
+
+    def euler_angles(self, angle_sequence: str) -> np.ndarray:
+        return to_euler(self.rotation_matrix, angle_sequence)

@@ -45,13 +45,13 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
         # Write the data
         c3d.write(save_path)
 
-    kinematic_model_file_path = "temporary.bioMod"
-    c3d_file_path = "temporary.c3d"
+    kinematic_model_filepath = "temporary.bioMod"
+    c3d_filepath = "temporary.c3d"
 
     # Prepare a fake model and a fake static from the previous test
-    model = biorbd.Model(kinematic_model_file_path)
-    write_markers_to_c3d(c3d_file_path, model)
-    os.remove(kinematic_model_file_path)
+    model = biorbd.Model(kinematic_model_filepath)
+    write_markers_to_c3d(c3d_filepath, model)
+    os.remove(kinematic_model_filepath)
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
@@ -195,17 +195,17 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together, print it and print it to a bioMod file
-    model.to_biomod(kinematic_model_file_path, C3dData(c3d_file_path))
+    model.to_biomod(kinematic_model_filepath, C3dData(c3d_filepath))
 
-    model = biorbd.Model(kinematic_model_file_path)
+    model = biorbd.Model(kinematic_model_filepath)
     assert model.nbQ() == 7
     assert model.nbSegment() == 8
     assert model.nbMarkers() == 25
     np.testing.assert_almost_equal(model.markers(np.zeros((model.nbQ(),)))[-3].to_array(), [0, 0.25, -0.85], decimal=4)
 
     if remove_temporary:
-        os.remove(kinematic_model_file_path)
-        os.remove(c3d_file_path)
+        os.remove(kinematic_model_filepath)
+        os.remove(c3d_filepath)
 
 
 def main():

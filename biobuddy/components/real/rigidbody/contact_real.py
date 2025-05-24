@@ -54,7 +54,7 @@ class ContactReal:
 
     @position.setter
     def position(self, value: Point):
-        self._position = point_to_array(name="position", point=value)
+        self._position = point_to_array(point=value, name="position")
 
     @property
     def axis(self) -> Translations:
@@ -91,7 +91,7 @@ class ContactReal:
         """
 
         # Get the position of the contact points and do some sanity checks
-        p = points_to_array(name=f"contact real function", points=function(data.values))
+        p = points_to_array(points=function(data.values), name=f"contact real function")
         return ContactReal(name, parent_name, p, axis)
 
     def to_biomod(self):

@@ -1,3 +1,5 @@
+import numpy as np
+
 from .contact_real import ContactReal
 from .inertial_measurement_unit_real import InertialMeasurementUnitReal
 from .inertia_parameters_real import InertiaParametersReal
@@ -6,6 +8,7 @@ from .mesh_file_real import MeshFileReal
 from .mesh_real import MeshReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
+from ....utils.linear_algebra import RotoTransMatrix, euler_and_translation_to_matrix
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 from ....utils.named_list import NamedList
@@ -92,6 +95,28 @@ class SegmentReal:
         self._qdot_ranges = value
 
     @property
+    def marker_names(self):
+        return [marker.name for marker in self.markers]
+
+    @property
+    def contact_names(self):
+        return [contact.name for contact in self.contacts]
+
+    @property
+    def imu_names(self):
+        return [imu.name for imu in self.imus]
+
+    @property
+    def nb_q(self):
+        nb_translations = 0
+        if self.translations is not None and self.translations != Translations.NONE:
+            nb_translations = len(self.translations.value)
+        nb_rotations = 0
+        if self.rotations is not None and self.rotations != Rotations.NONE:
+            nb_rotations = len(self.rotations.value)
+        return nb_translations + nb_rotations
+
+    @property
     def markers(self) -> NamedList[MarkerReal]:
         return self._markers
 
@@ -100,6 +125,10 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._markers = value
+
+    @property
+    def nb_markers(self):
+        return len(self.markers)
 
     @property
     def contacts(self) -> NamedList[ContactReal]:
@@ -112,6 +141,10 @@ class SegmentReal:
         self._contacts = value
 
     @property
+    def nb_contacts(self):
+        return len(self.contacts)
+
+    @property
     def imus(self) -> NamedList[InertialMeasurementUnitReal]:
         return self._imus
 
@@ -120,6 +153,10 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._imus = value
+
+    @property
+    def nb_imus(self):
+        return len(self.imus)
 
     @property
     def segment_coordinate_system(self) -> SegmentCoordinateSystemReal:
@@ -166,6 +203,37 @@ class SegmentReal:
 
     def remove_imu(self, imu: InertialMeasurementUnitReal):
         self.imus.remove(imu)
+
+    def rt_from_local_q(self, local_q: np.ndarray) -> np.ndarray:
+
+        if local_q.shape[0] != self.nb_q:
+            raise RuntimeError(
+                f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
+            )
+        rt = np.identity(4)
+
+        if self.nb_q != 0:
+            # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
+            # TODO: make the order trans, rot dynamic
+            q_counter = 0
+            translations = np.zeros((3,))
+            rotations = np.zeros((3,))
+            angle_sequence = "xyz"
+            if self.translations != Translations.NONE:
+                for i_trans, trans in enumerate(["X", "Y", "Z"]):
+                    if trans in self.translations.value.upper():
+                        translations[i_trans] = local_q[q_counter]
+                        q_counter += 1
+
+            if self.rotations != Rotations.NONE:
+                rotations = local_q[q_counter:]
+                angle_sequence = self.rotations.value
+
+            rt = euler_and_translation_to_matrix(
+                angles=rotations, angle_sequence=angle_sequence, translations=translations
+            )
+
+        return rt
 
     def to_biomod(self, with_mesh):
         # Define the print function, so it automatically formats things in the file properly

@@ -6,7 +6,7 @@ Point: TypeAlias = np.ndarray | Iterable[float]
 Points: TypeAlias = np.ndarray | Iterable[Point]
 
 
-def point_to_array(name: str, point: Point) -> np.ndarray:
+def point_to_array(point: Point, name: str = "unknown") -> np.ndarray:
     """
     Convert a point to a numpy array
 
@@ -14,6 +14,8 @@ def point_to_array(name: str, point: Point) -> np.ndarray:
     ----------
     point
         The point to convert
+    name
+        The name of the point tu use in the error message is needed
 
     Returns
     -------
@@ -46,16 +48,16 @@ def point_to_array(name: str, point: Point) -> np.ndarray:
     return point
 
 
-def points_to_array(name: str, points: Points) -> np.ndarray:
+def points_to_array(points: Points, name: str) -> np.ndarray:
     """
     Convert a list of points to a numpy array
 
     Parameters
     ----------
-    name
-        The name of the variable
     points
         The points to convert
+    name
+        The name of the points to use in the error message if needed
 
     Returns
     -------

@@ -9,7 +9,7 @@ def find_in_tree(element: etree.ElementTree, string: str):
 
 
 def is_element_empty(element):
-    if element:
+    if element is not None:
         if not element[0].text:
             return True
         else:

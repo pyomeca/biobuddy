@@ -1,8 +1,6 @@
 import numpy as np
 from typing import TypeAlias
 
-import biorbd
-
 from .marker_real import MarkerReal
 from ....utils.translations import Translations
 
@@ -43,13 +41,15 @@ class ScaleFactor:
 
 
 class AxisWiseScaling:
-    def __init__(self, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
+    def __init__(self, segment_name: str, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
 
         Parameters
         ----------
+        segment_name
+            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -78,14 +78,18 @@ class AxisWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
+        self,
+        segment_name: str,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
         # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
 
 
 class SegmentWiseScaling:
-    def __init__(self, axis: Translations, marker_pairs: list[list[str, str]]):
+    def __init__(self, segment_name: str, axis: Translations, marker_pairs: list[list[str, str]]):
         """
         One scaling factor is applied per segment.
         This method is equivalent to OpenSim's method.
@@ -93,6 +97,8 @@ class SegmentWiseScaling:
 
         Parameters
         ----------
+        segment_name
+            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -110,11 +116,16 @@ class SegmentWiseScaling:
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
+        self,
+        segment_name: str,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
 
-        original_marker_names = [m.to_string() for m in original_model_biorbd.markerNames()]
-        q_zeros = np.zeros((original_model_biorbd.nbQ(),))
+        original_marker_names = original_model.marker_names
+        q_zeros = np.zeros((original_model.nb_q, 1))
+        markers = original_model.markers_in_global(q_zeros)
 
         scale_factor = []
         for marker_pair in self.marker_pairs:
@@ -127,12 +138,8 @@ class SegmentWiseScaling:
             )
 
             # Distance between the marker pairs in the original model
-            marker1_position_original = original_model_biorbd.markers(q_zeros)[
-                original_marker_names.index(marker_pair[0])
-            ].to_array()
-            marker2_position_original = original_model_biorbd.markers(q_zeros)[
-                original_marker_names.index(marker_pair[1])
-            ].to_array()
+            marker1_position_original = markers[:3, original_marker_names.index(marker_pair[0]), 0]
+            marker2_position_original = markers[:3, original_marker_names.index(marker_pair[1]), 0]
             distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
 
             scale_factor += [mean_distance_subject / distance_original]
@@ -165,7 +172,11 @@ class BodyWiseScaling:
         self.height = height
 
     def compute_scale_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
+        self,
+        segment_name: str,
+        original_model: "BiomechanicalModelReal",
+        marker_positions: np.ndarray,
+        marker_names: list[str],
     ) -> ScaleFactor:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 
@@ -204,9 +215,9 @@ class SegmentScaling:
         self._scaling_type = value
 
     def compute_scaling_factors(
-        self, marker_positions: np.ndarray, marker_names: list[str], original_model_biorbd: biorbd.Model
+        self, original_model: "BiomechanicalModelReal", marker_positions: np.ndarray, marker_names: list[str]
     ) -> ScaleFactor:
-        return self.scaling_type.compute_scale_factors(marker_positions, marker_names, original_model_biorbd)
+        return self.scaling_type.compute_scale_factors(self.name, original_model, marker_positions, marker_names)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

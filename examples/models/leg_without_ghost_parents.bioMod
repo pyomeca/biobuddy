@@ -1,0 +1,190 @@
+version 4
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	pelvis
+	parent	base
+	RTinMatrix	1
+	RT
+		0.967836	-0.251580	0.000927	0.696711
+		-0.017311	-0.070272	-0.997378	0.525061
+		0.250985	0.965282	-0.072367	0.924524
+		0.000000	0.000000	0.000000	1.000000
+	translations	xyz
+	rotations	xyz
+	rangesQ 
+		-10.000000	10.000000
+		-6.000000	6.000000
+		-5.000000	5.000000
+		-3.141600	3.141600
+		-3.141600	3.141600
+		-3.141600	3.141600
+
+	mass	10.162591635502052
+	CenterOfMass	-0.067759	0.000000	0.000000
+	inertia
+		0.081481	0.000000	0.000000
+		0.000000	0.069037	0.000000
+		0.000000	0.000000	0.045892
+	meshfile	Geometry_cleaned/sacrum.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9583984662072161	0.9583984662072161	0.9583984662072161
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RASIS
+	parent	pelvis
+	position	0.00887831	0.04913899	0.10269088
+	technical	1
+	anatomical	0
+endmarker
+marker	LASIS
+	parent	pelvis
+	position	0.00316547	0.03747435	-0.11576616
+	technical	1
+	anatomical	0
+endmarker
+marker	LPSIS
+	parent	pelvis
+	position	-0.18736832	0.08997668	-0.05485164
+	technical	1
+	anatomical	0
+endmarker
+marker	RPSIS
+	parent	pelvis
+	position	-0.18120518	0.10012386	0.05037804
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	femur_r
+	parent	pelvis
+	RTinMatrix	1
+	RT
+		0.941067	0.334883	0.047408	-0.067759
+		-0.335537	0.906752	0.255373	-0.063350
+		0.042533	-0.256230	0.965680	0.080026
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
+
+	mass	8.326253574723046
+	CenterOfMass	0.000000	-0.169016	0.000000
+	inertia
+		0.118478	0.000000	0.000000
+		0.000000	0.031057	0.000000
+		0.000000	0.000000	0.124937
+	meshfile	Geometry_cleaned/femur_r.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9942088443895388	0.9942088443895388	0.9942088443895388
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RLFE
+	parent	femur_r
+	position	0.01496553	-0.37442715	0.04357063
+	technical	1
+	anatomical	0
+endmarker
+marker	RMFE
+	parent	femur_r
+	position	-0.00499806	-0.37790524	-0.04961183
+	technical	1
+	anatomical	0
+endmarker
+marker	RGT
+	parent	femur_r
+	position	-0.08069458	0.00212527	0.10374315
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI1
+	parent	femur_r
+	position	-0.08087801	-0.20666007	0.07385740
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI2
+	parent	femur_r
+	position	0.01319985	-0.26365332	0.06918138
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI3
+	parent	femur_r
+	position	0.00251443	-0.08432373	0.11250771
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	tibia_r
+	parent	femur_r
+	RTinMatrix	1
+	RT
+		0.998166	0.060540	-0.000000	0.000000
+		-0.060540	0.998166	0.000000	-0.387741
+		-0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	z
+	rangesQ 
+		-6.283185	6.283185
+
+	mass	3.112963117092842
+	CenterOfMass	0.000000	-0.174106	0.000000
+	inertia
+		0.036801	0.000000	0.000000
+		0.000000	0.003724	0.000000
+		0.000000	0.000000	0.037312
+	meshfile	Geometry_cleaned/tibia_r.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	0.9325435569816505	0.9325435569816505	0.9325435569816505
+	meshrt	0.0	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+marker	RATT
+	parent	tibia_r
+	position	0.02890202	-0.06542545	0.00223288
+	technical	1
+	anatomical	0
+endmarker
+marker	RLM
+	parent	tibia_r
+	position	-0.00171444	-0.40356908	0.04360793
+	technical	1
+	anatomical	0
+endmarker
+marker	RSPH
+	parent	tibia_r
+	position	0.00532076	-0.39597677	-0.03609478
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG1
+	parent	tibia_r
+	position	-0.00924370	-0.27910316	0.05780065
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG2
+	parent	tibia_r
+	position	0.03216843	-0.17248221	0.02294613
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG3
+	parent	tibia_r
+	position	-0.06756252	-0.21358984	0.05892235
+	technical	1
+	anatomical	0
+endmarker
+
+

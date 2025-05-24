@@ -49,12 +49,26 @@ class Muscle:
             applied = element.find("appliesForce").text == "true"
 
         # TODO: add type hints to general lists
+        path_points = []
         via_points = []
         for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("PathPoint"):
             via_point = PathPoint.from_element(path_point_elt)
             via_point.muscle = name
             via_points.append(via_point)
-        group = [via_points[0].body, via_points[-1].body]
+            path_points.append(via_point)
+
+        # Not implemented in the model, but used to determine the muscle group
+        for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("ConditionalPathPoint"):
+            conditional_path_point = PathPoint.from_element(path_point_elt)
+            conditional_path_point.muscle = name
+            path_points.append(conditional_path_point)
+
+        for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("MovingPathPoint"):
+            moving_path_point = PathPoint.from_element(path_point_elt)
+            moving_path_point.muscle = name
+            path_points.append(moving_path_point)
+
+        group = [path_points[0].body, path_points[-1].body]
         for i in range(len(via_points)):
             via_points[i].muscle_group = f"{group[0]}_to_{group[1]}"
 
