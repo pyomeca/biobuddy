@@ -62,12 +62,14 @@ def test_biomechanics_model_real_utils_functions():
 
     # --- leg_without_ghost_parents.bioMod --- #
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    leg_filepath_without_mesh = leg_filepath.replace(".bioMod", "_without_mesh.bioMod")
 
     # Define models
     leg_model = BiomechanicalModelReal.from_biomod(
         filepath=leg_filepath,
     )
-    leg_model_biorbd = biorbd.Model(leg_filepath)
+    leg_filepath.to_biomod(leg_filepath_without_mesh, with_mesh=False)
+    leg_model_biorbd = biorbd.Model(leg_filepath_without_mesh)
 
     nb_q = leg_model.nb_q
     assert nb_q == 10
