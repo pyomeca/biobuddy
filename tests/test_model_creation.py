@@ -466,6 +466,7 @@ def test_model_creation_from_data():
         os.remove(c3d_filepath)
 """
 
+
 def test_complex_model():
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
