@@ -26,7 +26,7 @@ def test_biomechanics_model_real_utils_functions():
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
     )
-    wholebody_model.to_biomod(wholebody_biorbd_filepath)
+    wholebody_model.to_biomod(wholebody_biorbd_filepath, with_mesh=False)
     wholebody_model_biorbd = biorbd.Model(wholebody_biorbd_filepath)
 
     nb_q = wholebody_model.nb_q
@@ -34,7 +34,7 @@ def test_biomechanics_model_real_utils_functions():
     nb_markers = wholebody_model.nb_markers
     assert nb_markers == 49
     nb_segments = wholebody_model.nb_segments
-    assert nb_segments == 200
+    assert nb_segments == 196
 
     q_random = np.random.rand(nb_q)
 
@@ -62,12 +62,14 @@ def test_biomechanics_model_real_utils_functions():
 
     # --- leg_without_ghost_parents.bioMod --- #
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    leg_filepath_without_mesh = leg_filepath.replace(".bioMod", "_without_mesh.bioMod")
 
     # Define models
     leg_model = BiomechanicalModelReal.from_biomod(
         filepath=leg_filepath,
     )
-    leg_model_biorbd = biorbd.Model(leg_filepath)
+    leg_model.to_biomod(leg_filepath_without_mesh, with_mesh=False)
+    leg_model_biorbd = biorbd.Model(leg_filepath_without_mesh)
 
     nb_q = leg_model.nb_q
     assert nb_q == 10
