@@ -245,9 +245,9 @@ class SegmentScaling:
 
     def to_biomod(self):
         out_string = ""
-        out_string += f"segmentscaling\t{self.name}\n"
+        out_string += f"scalingsegment\t{self.name}\n"
         out_string += self.scaling_type.to_biomod()
-        out_string += f"endsegmentscaling\n\n\n"
+        out_string += f"endscalingsegment\n\n\n"
         return out_string
 
     def to_xml(self, objects: ET.Element):

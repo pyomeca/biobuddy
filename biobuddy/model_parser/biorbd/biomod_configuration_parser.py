@@ -211,7 +211,7 @@ class BiomodConfigurationParser:
                         current_component.scaling_type.marker_pairs += [marker_pair]
 
                     else:
-                        raise ValueError(f"Unknown information type {token} in segmentscaling")
+                        raise ValueError(f"Unknown information type {token} in scalingsegment")
 
                 elif (
                     isinstance(current_component, ViaPointReal)
