@@ -30,6 +30,8 @@ class BiomechanicalModelReal(ModelDynamics):
         self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
+        self.filepath = None  # The path to the file from which the model was read, if any
+
     def add_segment(self, segment: "SegmentReal") -> None:
         """
         Add a segment to the model
@@ -370,19 +372,19 @@ class BiomechanicalModelReal(ModelDynamics):
         """
         return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
 
-    @staticmethod
     def from_biomod(
+        self,
         filepath: str,
     ) -> "Self":
         """
         Create a biomechanical model from a biorbd model
         """
         from ...model_parser.biorbd import BiomodModelParser
-
+        self.filepath = filepath
         return BiomodModelParser(filepath=filepath).to_real()
 
-    @staticmethod
     def from_osim(
+        self,
         filepath: str,
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
@@ -403,7 +405,7 @@ class BiomechanicalModelReal(ModelDynamics):
             The directory where the meshes are located
         """
         from ...model_parser.opensim import OsimModelParser
-
+        self.filepath = filepath
         model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()

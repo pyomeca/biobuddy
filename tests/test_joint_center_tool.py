@@ -68,7 +68,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
 
     # Read the .bioMod file
-    scaled_model = BiomechanicalModelReal.from_biomod(
+    scaled_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_model_filepath,
     )
     marker_weights = {
@@ -320,8 +320,8 @@ def test_score_and_sara_with_ghost_segments():
 
     marker_weights = example.main(False)  # Creates the score .bioMod
 
-    score_model = BiomechanicalModelReal.from_biomod(score_biomod_filepath)
-    scaled_model = BiomechanicalModelReal.from_biomod(scaled_biomod_filepath)
+    score_model = BiomechanicalModelReal().from_biomod(score_biomod_filepath)
+    scaled_model = BiomechanicalModelReal().from_biomod(scaled_biomod_filepath)
 
     # Test the joints' new RT
     assert score_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local

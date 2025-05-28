@@ -5,6 +5,7 @@ from lxml import etree
 from biobuddy import BiomechanicalModelReal
 from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
+from ...components.real.rigidbody.marker_weight import MarkerWeight
 from ...model_modifiers.scale_tool import ScaleTool
 from ...utils.translations import Translations
 
@@ -240,4 +241,4 @@ class OsimConfigurationParser:
 
     def set_marker_weights(self, marker_name: str, apply: bool = True, weight: float = 1):
         if apply:
-            self.scale_tool.marker_weights[marker_name] = weight
+            self.scale_tool.add_marker_weight(MarkerWeight(marker_name, weight))

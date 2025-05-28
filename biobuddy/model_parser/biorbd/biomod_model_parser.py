@@ -17,7 +17,6 @@ from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, Muscle
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal
-from ...components.real.rigidbody.segment_scaling import SegmentScaling
 from ...utils.named_list import NamedList
 from .utils import (
     tokenize_biomod,
@@ -28,6 +27,11 @@ from .utils import (
     read_bool,
     read_float_vector,
 )
+
+
+TOKENS_TO_IGNORE_NO_COMPONENTS =  ["endscalingsegment"]
+TOKENS_TO_IGNORE_ONE_COMPONENTS = ["scalingsegment", "scalingtype", "axis"]
+TOKENS_TO_IGNORE_TWO_COMPONENTS = ["markerpair", "xmarkerpair", "ymarkerpair", "zmarkerpair", "markerweight"]
 
 
 class EndOfFileReached(Exception):
@@ -130,8 +134,12 @@ class BiomodModelParser:
                             muscle_group="",
                             position=None,
                         )
-                    elif token in ["mass", "scalingsegment"]:
+                    elif token in TOKENS_TO_IGNORE_NO_COMPONENTS:
                         continue
+                    elif token in TOKENS_TO_IGNORE_ONE_COMPONENTS:
+                        token_index += 1
+                    elif token in TOKENS_TO_IGNORE_TWO_COMPONENTS:
+                        token_index += 2
                     else:
                         raise ValueError(f"Unknown component {token}")
 
@@ -320,11 +328,6 @@ class BiomodModelParser:
                         current_component.muscle_group = read_str(next_token=next_token)
                     elif token == "position":
                         current_component.position = read_float_vector(next_token=next_token, length=3)
-
-                elif isinstance(current_component, SegmentScaling):
-                    # Segment scaling is read by biomod_configuration_parser
-                    continue
-
                 else:
                     raise ValueError(f"Unknown component {type(current_component)}")
         except EndOfFileReached:

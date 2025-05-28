@@ -65,7 +65,7 @@ def test_biomechanics_model_real_utils_functions():
     leg_filepath_without_mesh = leg_filepath.replace(".bioMod", "_without_mesh.bioMod")
 
     # Define models
-    leg_model = BiomechanicalModelReal.from_biomod(
+    leg_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_filepath,
     )
     leg_model.to_biomod(leg_filepath_without_mesh, with_mesh=False)

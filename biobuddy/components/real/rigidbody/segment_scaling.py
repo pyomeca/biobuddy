@@ -1,3 +1,4 @@
+import xml.etree.cElementTree as ET
 import numpy as np
 from typing import TypeAlias
 
@@ -87,6 +88,14 @@ class AxisWiseScaling:
         raise NotImplementedError("AxisWiseScaling is not implemented yet.")
         # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
 
+    def to_biomod(self):
+        out_string = ""
+        out_string += "scalingtype\taxiswisescaling\n"
+        out_string += f"\taxis\t{self.axis.value}\n"
+        for i_ax, ax in enumerate(self.axis.value):
+            for marker_pair in self.marker_pairs[i_ax]:
+                out_string += f"\t{ax}markerpair\t{marker_pair[0]}\t{marker_pair[1]}\n"
+        return out_string
 
 class SegmentWiseScaling:
     def __init__(self, segment_name: str, axis: Translations, marker_pairs: list[list[str, str]]):
@@ -157,6 +166,19 @@ class SegmentWiseScaling:
 
         return scale_factor_per_axis
 
+    def to_biomod(self):
+        out_string = ""
+        out_string += "\tscalingtype\tsegmentwisescaling\n"
+        out_string += f"\taxis\t{self.axis.value}\n"
+        for marker_pair in self.marker_pairs:
+            out_string += f"\tmarkerpair\t{marker_pair[0]}\t{marker_pair[1]}\n"
+        return out_string
+
+    def to_xml(self, marker_objects: ET.Element):
+        for marker_pair in self.marker_pairs:
+            pair = ET.SubElement(marker_objects, "MarkerPair")
+            ET.SubElement(pair, "markers").text = f" {marker_pair[0]} {marker_pair[1]}"
+
 
 class BodyWiseScaling:
     def __init__(self, height: float):
@@ -180,6 +202,8 @@ class BodyWiseScaling:
     ) -> ScaleFactor:
         raise NotImplementedError("BodyWiseScaling is not implemented yet.")
 
+    def to_biomod(self):
+        raise NotImplementedError("BodyWiseScaling to_biomod is not implemented yet.")
 
 ScalingType: TypeAlias = AxisWiseScaling | SegmentWiseScaling | BodyWiseScaling
 
@@ -192,7 +216,7 @@ class SegmentScaling:
     ):
 
         # Checks for scaling_type
-        if not isinstance(scaling_type, SegmentWiseScaling):
+        if scaling_type is not None and not isinstance(scaling_type, SegmentWiseScaling):
             raise NotImplementedError("Only the SegmentWiseScaling scaling is implemented yet.")
 
         self.name = name
@@ -220,9 +244,27 @@ class SegmentScaling:
         return self.scaling_type.compute_scale_factors(self.name, original_model, marker_positions, marker_names)
 
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
-        raise NotImplementedError("TODO: implement SegmentScaling.to_biomod()")
+        out_string = ""
+        out_string += f"segmentscaling\t{self.name}\n"
+        out_string += self.scaling_type.to_biomod()
+        out_string += f"endsegmentscaling\n\n\n"
+        return out_string
 
-    def to_xml(self):
-        # Define the print function, so it automatically formats things in the file properly
-        raise NotImplementedError("TODO: implement SegmentScaling.to_xml()")
+    def to_xml(self, objects: ET.Element):
+
+        # Create the Measurement element for "pelvis"
+        measurement = ET.SubElement(objects, "Measurement", name=self.name)
+        ET.SubElement(measurement, "apply").text = "true"
+
+        # Create the MarkerPairSet element and its MarkerPair elements
+        marker_pair_set = ET.SubElement(measurement, "MarkerPairSet")
+        marker_objects = ET.SubElement(marker_pair_set, "objects")
+
+        self.scaling_type.to_xml(marker_objects)
+
+        # Create the BodyScaleSet element and its BodyScale element
+        body_scale_set = ET.SubElement(measurement, "BodyScaleSet")
+        body_scale_objects = ET.SubElement(body_scale_set, "objects")
+        body_scale = ET.SubElement(body_scale_objects, "BodyScale", name=self.name)
+        ET.SubElement(body_scale, "axes").text = " ".join(f"{self.scaling_type.axis.value.upper()[i]}" for i in range(3))
+

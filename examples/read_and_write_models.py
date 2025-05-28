@@ -98,9 +98,7 @@ def main():
 
     # --- Reading an .bioMod model and translating it to a .osim model --- #
     # Read a .bioMod file
-    model = BiomechanicalModelReal.from_biomod(
-        filepath=biomod_filepath,
-    )
+    model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # TODO
     # And convert it to an .osim file
