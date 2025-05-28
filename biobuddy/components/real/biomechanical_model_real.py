@@ -380,6 +380,7 @@ class BiomechanicalModelReal(ModelDynamics):
         Create a biomechanical model from a biorbd model
         """
         from ...model_parser.biorbd import BiomodModelParser
+
         self.filepath = filepath
         return BiomodModelParser(filepath=filepath).to_real()
 
@@ -405,6 +406,7 @@ class BiomechanicalModelReal(ModelDynamics):
             The directory where the meshes are located
         """
         from ...model_parser.opensim import OsimModelParser
+
         self.filepath = filepath
         model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir

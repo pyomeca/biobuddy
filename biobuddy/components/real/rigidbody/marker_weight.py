@@ -1,5 +1,3 @@
-
-
 class MarkerWeight:
     def __init__(self, name: str, weight: float):
         """

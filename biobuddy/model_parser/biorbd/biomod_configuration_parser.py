@@ -19,55 +19,59 @@ from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.translations import Translations
 
 
-TOKENS_TO_IGNORE_NO_COMPONENTS = ["endsegment",
-                                  "endimu",
-                                  "endmarker",
-                                  "endmusclegroup",
-                                  "endmuscle",
-                                  "endviapoint",
-                                  ]
-TOKENS_TO_IGNORE_ONE_COMPONENTS = ["version",
-                                   "segment",
-                                   "imu",
-                                   "marker",
-                                   "musclegroup",
-                                   "muscle",
-                                   "viapoint",
-                                   "parent",
-                                   "rtinmatrix",
-                                   "translations",
-                                   "rotations",
-                                   "meshfile",
-                                   "technical",
-                                   "anatomical",
-                                   "insertionparent",
-                                   "originparent",
-                                   "type",
-                                   "statetype"]
+TOKENS_TO_IGNORE_NO_COMPONENTS = [
+    "endsegment",
+    "endimu",
+    "endmarker",
+    "endmusclegroup",
+    "endmuscle",
+    "endviapoint",
+]
+TOKENS_TO_IGNORE_ONE_COMPONENTS = [
+    "version",
+    "segment",
+    "imu",
+    "marker",
+    "musclegroup",
+    "muscle",
+    "viapoint",
+    "parent",
+    "rtinmatrix",
+    "translations",
+    "rotations",
+    "meshfile",
+    "technical",
+    "anatomical",
+    "insertionparent",
+    "originparent",
+    "type",
+    "statetype",
+]
 TOKENS_TO_IGNORE_THREE_COMPONENTS = []
-TOKENS_TO_IGNORE_NUMBERS = ["gravity",
-                            "rt",
-                            "rangesq",
-                            "rangesqdot",
-                            "mass",
-                            "com",
-                            "centerofmass",
-                            "inertia",
-                            "inertia_xxyyzz",
-                            "mesh",
-                            "meshcolor",
-                            "meshscale",
-                            "meshrt",
-                            "position",
-                            "originposition",
-                            "insertionposition",
-                            "optimallength",
-                            "maximalforce",
-                            "tendonslacklength",
-                            "pennationangle",
-                            "maximal_excitation",
-                            "maxvelocity"
-                            ]
+TOKENS_TO_IGNORE_NUMBERS = [
+    "gravity",
+    "rt",
+    "rangesq",
+    "rangesqdot",
+    "mass",
+    "com",
+    "centerofmass",
+    "inertia",
+    "inertia_xxyyzz",
+    "mesh",
+    "meshcolor",
+    "meshscale",
+    "meshrt",
+    "position",
+    "originposition",
+    "insertionposition",
+    "optimallength",
+    "maximalforce",
+    "tendonslacklength",
+    "pennationangle",
+    "maximal_excitation",
+    "maxvelocity",
+]
 
 
 class EndOfFileReached(Exception):
@@ -158,7 +162,7 @@ class BiomodConfigurationParser:
                             )
                         elif scaling_type.lower() == "axiswisescaling":
                             current_component.scaling_type = AxisWiseScaling(
-                                segment_name="", axis=None,  marker_pairs=[]
+                                segment_name="", axis=None, marker_pairs=[]
                             )
                         else:
                             raise NotImplementedError(f"Scaling type {scaling_type} not implemented yet.")

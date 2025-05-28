@@ -97,6 +97,7 @@ class AxisWiseScaling:
                 out_string += f"\t{ax}markerpair\t{marker_pair[0]}\t{marker_pair[1]}\n"
         return out_string
 
+
 class SegmentWiseScaling:
     def __init__(self, segment_name: str, axis: Translations, marker_pairs: list[list[str, str]]):
         """
@@ -205,6 +206,7 @@ class BodyWiseScaling:
     def to_biomod(self):
         raise NotImplementedError("BodyWiseScaling to_biomod is not implemented yet.")
 
+
 ScalingType: TypeAlias = AxisWiseScaling | SegmentWiseScaling | BodyWiseScaling
 
 
@@ -266,5 +268,6 @@ class SegmentScaling:
         body_scale_set = ET.SubElement(measurement, "BodyScaleSet")
         body_scale_objects = ET.SubElement(body_scale_set, "objects")
         body_scale = ET.SubElement(body_scale_objects, "BodyScale", name=self.name)
-        ET.SubElement(body_scale, "axes").text = " ".join(f"{self.scaling_type.axis.value.upper()[i]}" for i in range(3))
-
+        ET.SubElement(body_scale, "axes").text = " ".join(
+            f"{self.scaling_type.axis.value.upper()[i]}" for i in range(3)
+        )

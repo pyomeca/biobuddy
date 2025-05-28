@@ -29,7 +29,7 @@ from .utils import (
 )
 
 
-TOKENS_TO_IGNORE_NO_COMPONENTS =  ["endscalingsegment"]
+TOKENS_TO_IGNORE_NO_COMPONENTS = ["endscalingsegment"]
 TOKENS_TO_IGNORE_ONE_COMPONENTS = ["scalingsegment", "scalingtype", "axis"]
 TOKENS_TO_IGNORE_TWO_COMPONENTS = ["markerpair", "xmarkerpair", "ymarkerpair", "zmarkerpair", "markerweight"]
 

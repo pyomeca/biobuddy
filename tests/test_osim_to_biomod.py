@@ -582,6 +582,7 @@ def test_translation_osim_to_biomod():
                     if os.path.join(folder, name) not in skipped:
                         raise RuntimeError("OpenSim added a new model to their repository. Please check the model.")
 
+
 def test_translation_of_scaling_configuration():
 
     # Paths
@@ -602,17 +603,13 @@ def test_translation_of_scaling_configuration():
     scaling_configuration.to_xml(osim_config_filepath)
 
     # Read the .xml file back
-    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(
-        filepath=osim_config_filepath
-    )
+    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(filepath=osim_config_filepath)
 
     # Rewrite it into a .bioMod to compare with the original one
     new_xml_scaling_configuration.to_biomod(biomod_config_filepath_new, append=False)
 
     # Reread the .biomod configuration we just printed
-    new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(
-        filepath=biomod_config_filepath_new
-    )
+    new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
 
     diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
 

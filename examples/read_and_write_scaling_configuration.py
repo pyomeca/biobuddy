@@ -43,13 +43,10 @@ def main():
     scaling_configuration.to_xml(osim_config_filepath)
 
     # Read the .xml file back
-    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(
-        filepath=osim_config_filepath
-    )
+    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(filepath=osim_config_filepath)
 
     # Rewrite it into a .bioMod to compare with the original one
     new_xml_scaling_configuration.to_biomod(biomod_config_filepath_new, append=False)
-
 
     os.remove(osim_config_filepath)
     os.remove(biomod_config_filepath_new)

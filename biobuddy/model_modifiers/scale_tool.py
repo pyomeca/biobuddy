@@ -770,7 +770,5 @@ class ScaleTool:
 
         # Write the XML string to a file with the usual indentation
         with open(filepath, "w", encoding="UTF-8") as f:
-            xml_str = minidom.parseString(ET.tostring(root, 'utf-8')).toprettyxml(indent="    ")
+            xml_str = minidom.parseString(ET.tostring(root, "utf-8")).toprettyxml(indent="    ")
             f.write(xml_str)
-
-
