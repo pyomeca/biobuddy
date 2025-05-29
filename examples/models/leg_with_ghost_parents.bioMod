@@ -1,0 +1,379 @@
+version 4
+
+
+gravity	0.0	-9.80665	0.0
+// Model scaled using Biobuddy.
+
+
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	ground
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_parent_offset
+	parent	ground
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_translation
+	parent	pelvis_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.669880
+		0.000000	1.000000	0.000000	0.525860
+		0.000000	0.000000	1.000000	0.899888
+		0.000000	0.000000	0.000000	1.000000
+	translations	xyz
+	rangesQ 
+		-10.000000	10.000000
+		-6.000000	6.000000
+		-5.000000	5.000000
+
+endsegment
+
+
+
+segment	pelvis_rotation_transform
+	parent	pelvis_translation
+	RTinMatrix	1
+	RT
+		0.096520	0.995179	-0.017384	0.000000
+		-0.994680	0.097074	0.034470	0.000000
+		0.035992	0.013964	0.999255	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-3.141600	3.141600
+		-3.141600	3.141600
+		-3.141600	3.141600
+
+endsegment
+
+
+
+segment	pelvis_reset_axis
+	parent	pelvis_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_geom_2
+	parent	pelvis_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis_geom_3
+	parent	pelvis_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	pelvis
+	parent	pelvis_geom_3
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	10.162591897495313
+	CenterOfMass	-0.067759	0.000000	0.000000
+	inertia
+		0.081481	0.000000	0.000000
+		0.000000	0.069037	0.000000
+		0.000000	0.000000	0.045892
+endsegment
+
+marker	RASIS
+	parent	pelvis
+	position	0.01360887	0.06273086	0.11090076
+	technical	1
+	anatomical	0
+endmarker
+marker	LASIS
+	parent	pelvis
+	position	0.03210879	0.07343496	-0.10689583
+	technical	1
+	anatomical	0
+endmarker
+marker	LPSIS
+	parent	pelvis
+	position	-0.17045365	0.07321290	-0.06519926
+	technical	1
+	anatomical	0
+endmarker
+marker	RPSIS
+	parent	pelvis
+	position	-0.17717671	0.07322965	0.04048440
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	femur_r_parent_offset
+	parent	pelvis
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	-0.067759
+		0.000000	1.000000	0.000000	-0.063350
+		0.000000	0.000000	1.000000	0.080026
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r_translation
+	parent	femur_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r_rotation_transform
+	parent	femur_r_translation
+	RTinMatrix	1
+	RT
+		-0.044828	0.998838	0.017684	0.000000
+		0.128259	-0.011801	0.991670	0.000000
+		0.990727	0.046723	-0.127581	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	xyz
+	rangesQ 
+		-2.618000	2.094395
+		-2.094395	2.094395
+		-2.094395	2.094395
+
+endsegment
+
+
+
+segment	femur_r_reset_axis
+	parent	femur_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	femur_r
+	parent	femur_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	8.326253789375214
+	CenterOfMass	0.000000	-0.169016	0.000000
+	inertia
+		0.118478	0.000000	0.000000
+		0.000000	0.031057	0.000000
+		0.000000	0.000000	0.124937
+endsegment
+
+marker	RLFE
+	parent	femur_r
+	position	0.00777469	-0.36881937	0.04053321
+	technical	1
+	anatomical	0
+endmarker
+marker	RMFE
+	parent	femur_r
+	position	-0.00626456	-0.37259153	-0.05371266
+	technical	1
+	anatomical	0
+endmarker
+marker	RGT
+	parent	femur_r
+	position	-0.05014263	0.01727011	0.08683456
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI1
+	parent	femur_r
+	position	-0.07105055	-0.19100753	0.06099284
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI2
+	parent	femur_r
+	position	0.01637699	-0.25785827	0.06384639
+	technical	1
+	anatomical	0
+endmarker
+marker	RTHI3
+	parent	femur_r
+	position	0.02241664	-0.07733754	0.10291350
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	tibia_r_parent_offset
+	parent	femur_r
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	-0.387741
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_translation
+	parent	tibia_r_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	-0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_rotation_transform
+	parent	tibia_r_translation
+	RTinMatrix	1
+	RT
+		0.000000	0.190237	0.981738	-0.000000
+		0.000000	0.981738	-0.190237	0.000000
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	x
+	rangesQ 
+		-3.141600	0.349100
+		-6.283185	6.283185
+		-6.283185	6.283185
+
+endsegment
+
+
+
+segment	tibia_r_reset_axis
+	parent	tibia_r_rotation_transform
+	RTinMatrix	1
+	RT
+		0.000000	0.000000	1.000000	0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		1.000000	-0.000000	0.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r_geom_2
+	parent	tibia_r_reset_axis
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	tibia_r
+	parent	tibia_r_geom_2
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	-0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	3.1129631973455356
+	CenterOfMass	0.000000	-0.174106	0.000000
+	inertia
+		0.036801	0.000000	0.000000
+		0.000000	0.003724	0.000000
+		0.000000	0.000000	0.037312
+endsegment
+
+marker	RATT
+	parent	tibia_r
+	position	0.02339824	-0.05974881	0.00151050
+	technical	1
+	anatomical	0
+endmarker
+marker	RLM
+	parent	tibia_r
+	position	-0.00257447	-0.39792578	0.04569351
+	technical	1
+	anatomical	0
+endmarker
+marker	RSPH
+	parent	tibia_r
+	position	0.00983043	-0.39123654	-0.03343317
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG1
+	parent	tibia_r
+	position	-0.01381364	-0.27348789	0.05747408
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG2
+	parent	tibia_r
+	position	0.02756947	-0.16641655	0.02399280
+	technical	1
+	anatomical	0
+endmarker
+marker	RLEG3
+	parent	tibia_r
+	position	-0.07349722	-0.20932427	0.05357054
+	technical	1
+	anatomical	0
+endmarker
+
