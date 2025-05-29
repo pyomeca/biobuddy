@@ -15,7 +15,7 @@ description = "A generic interface to generate a virtual buddy"
 dynamic = ["version"]
 authors = [
     {name = "Pariterre", email = "pariterre@hotmail.com"},
-    {name = "EveCharbie", email = "eve.charbonneau.1@umontreal.ca"},
+    {name = "EveCharbie", email = "eve.charbonneau@univ-reunion.fr"},
 ]
 readme = "README.md"
 classifiers = [
@@ -36,7 +36,8 @@ test = [
     "black",
     "opensim",
     "biorbd",
-    "pyorerun"
+    "pyorerun",
+    "deepdiff"
 ]
 
 [project.urls]
