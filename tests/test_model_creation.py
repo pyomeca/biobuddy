@@ -276,6 +276,7 @@ def write_markers_to_c3d(save_path: str, model):
     c3d.write(save_path)
 
 
+# TODO: @pariterre could you determine if this tests is worth to keep ?
 """
 def test_model_creation_from_data():
 

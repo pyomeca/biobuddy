@@ -23,6 +23,21 @@ jobs:
           # - os: windows-latest
           #   label: win-64
           #   prefix: C:\Miniconda3\envs\biobuddy
+          #
+          # Removed Windows due to the following error:
+          # ________________ ERROR collecting tests/test_osim_to_biomod.py ________________
+          #ImportError while importing test module 'D:\a\biobuddy\biobuddy\tests\test_osim_to_biomod.py'.
+          #Hint: make sure your test modules/packages have valid Python names.
+          #Traceback:
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\importlib\__init__.py:126: in import_module
+          #    return _bootstrap._gcd_import(name[level:], package, level)
+          #tests\test_osim_to_biomod.py:7: in <module>
+          #    import opensim as osim
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\opensim\__init__.py:19: in <module>
+          #    from .common import *
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\opensim\common.py:10: in <module>
+          #    from . import _common
+          #E   ImportError: DLL load failed while importing _common: The specified procedure could not be found.
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:

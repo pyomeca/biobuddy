@@ -5,6 +5,7 @@ requires = [
     "numpy", 
     "ezc3d",
     "lxml",
+    "scipy",
 ]
 build-backend = "setuptools.build_meta"
 
