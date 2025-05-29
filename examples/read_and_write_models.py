@@ -30,8 +30,8 @@ def main():
 
     # Paths
     current_path_file = Path(__file__).parent
-    biomod_file_path = f"{current_path_file}/models/wholebody.bioMod"
-    osim_file_path = f"{current_path_file}/models/wholebody.osim"
+    biomod_filepath = f"{current_path_file}/models/wholebody.bioMod"
+    osim_filepath = f"{current_path_file}/models/wholebody.osim"
     geometry_path = f"{current_path_file}/../external/opensim-models/Geometry"
     geometry_cleaned_path = f"{current_path_file}/models/Geometry_cleaned"
 
@@ -43,20 +43,20 @@ def main():
     # --- Reading an .osim model and translating it to a .bioMod model --- #
     # Read an .osim file
     model = BiomechanicalModelReal.from_osim(
-        filepath=osim_file_path,
+        filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
 
     # And convert it to a .bioMod file
-    model.to_biomod(biomod_file_path, with_mesh=visualization_flag)
+    model.to_biomod(biomod_filepath, with_mesh=visualization_flag)
 
     # Test that the model created is valid
     try:
         import biorbd
 
-        biorbd.Model(biomod_file_path)
+        biorbd.Model(biomod_filepath)
     except ImportError:
         _logger.warning("You must install biorbd to load the model with biorbd")
 
@@ -75,16 +75,20 @@ def main():
         viz = pyorerun.PhaseRerun(t)
 
         # Model output
-        model = pyorerun.BiorbdModel(biomod_file_path)
+        model = pyorerun.BiorbdModel(biomod_filepath)
         model.options.transparent_mesh = False
         model.options.show_gravity = True
+        model.options.show_marker_labels = False
+        model.options.show_center_of_mass_labels = False
         q = np.zeros((model.nb_q, 10))
         viz.add_animated_model(model, q)
 
         # Model reference
-        reference_model = pyorerun.BiorbdModel(biomod_file_path.replace(".bioMod", "_reference.bioMod"))
+        reference_model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_reference.bioMod"))
         reference_model.options.transparent_mesh = False
         reference_model.options.show_gravity = True
+        reference_model.options.show_marker_labels = False
+        reference_model.options.show_center_of_mass_labels = False
         q_ref = np.zeros((reference_model.nb_q, 10))
         q_ref[0, :] = 0.5
         viz.add_animated_model(reference_model, q_ref)
@@ -95,18 +99,18 @@ def main():
     # --- Reading an .bioMod model and translating it to a .osim model --- #
     # Read a .bioMod file
     model = BiomechanicalModelReal.from_biomod(
-        filepath=biomod_file_path,
+        filepath=biomod_filepath,
     )
 
     # TODO
     # And convert it to an .osim file
-    # model.to_osim(osim_file_path, with_mesh=visualization_flag)
+    # model.to_osim(osim_filepath, with_mesh=visualization_flag)
     #
     # # Test that the model created is valid
     # try:
     #     import opensim as osim
     #
-    #     osim.Model(osim_file_path)
+    #     osim.Model(osim_filepath)
     # except ImportError:
     #     _logger.warning("You must install opensim to load the model with opensim")
 

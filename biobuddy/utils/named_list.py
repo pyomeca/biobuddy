@@ -32,6 +32,7 @@ class NamedList(list[T]):
             for item in self:
                 if item.name == key:
                     return item
+            raise RuntimeError(f"The key {key} does not exist in the current object.")
         else:
             raise TypeError("key must be int or str")
 

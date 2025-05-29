@@ -181,8 +181,6 @@ examples/*.bioMod
 
 *.vtp
 
-examples/models/wholebody.bioMod
-
-examples/models/wholebody_scaled.bioMod
+examples/models/scaled.osim
 
 docs/BioBuddy_images/

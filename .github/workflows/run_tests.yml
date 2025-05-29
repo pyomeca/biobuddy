@@ -9,7 +9,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
+        os: [ubuntu-latest, macos-latest, macos-13]  # windows-latest
         include:
           - os: ubuntu-latest
             label: linux-64
@@ -20,9 +20,24 @@ jobs:
           - os: macos-13
             label: osx-intel
             prefix: /Users/runner/miniconda3/envs/biobuddy
-          - os: windows-latest
-            label: win-64
-            prefix: C:\Miniconda3\envs\biobuddy
+          # - os: windows-latest
+          #   label: win-64
+          #   prefix: C:\Miniconda3\envs\biobuddy
+          #
+          # Removed Windows due to the following error:
+          # ________________ ERROR collecting tests/test_osim_to_biomod.py ________________
+          #ImportError while importing test module 'D:\a\biobuddy\biobuddy\tests\test_osim_to_biomod.py'.
+          #Hint: make sure your test modules/packages have valid Python names.
+          #Traceback:
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\importlib\__init__.py:126: in import_module
+          #    return _bootstrap._gcd_import(name[level:], package, level)
+          #tests\test_osim_to_biomod.py:7: in <module>
+          #    import opensim as osim
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\opensim\__init__.py:19: in <module>
+          #    from .common import *
+          #C:\Users\runneradmin\miniconda3\envs\test\Lib\opensim\common.py:10: in <module>
+          #    from . import _common
+          #E   ImportError: DLL load failed while importing _common: The specified procedure could not be found.
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -51,7 +66,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-cov codecov
+          pip install pytest pytest-cov codecov pyomeca
           conda install -c opensim-org opensim=4.5.1
           conda install -c conda-forge biorbd=1.11.2
 
@@ -61,12 +76,18 @@ jobs:
       - name: Send Codecov report
         uses: codecov/codecov-action@v5
         with:
+          path: .covergage
           files: ./coverage.xml
+          if-no-files-found: error
           flags: unittests
           fail_ci_if_error: true
           verbose: true
         if: matrix.os == 'ubuntu-latest'
 
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
           
       - name: Test installed version of python
         run: | 

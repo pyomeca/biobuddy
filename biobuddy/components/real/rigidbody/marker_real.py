@@ -60,7 +60,7 @@ class MarkerReal:
 
     @position.setter
     def position(self, value: Points):
-        self._position = points_to_array(name="marker", points=value)
+        self._position = points_to_array(points=value, name="marker")
 
     @property
     def is_technical(self) -> bool:
@@ -115,7 +115,7 @@ class MarkerReal:
         """
 
         # Get the position of the markers and do some sanity checks
-        p = points_to_array(name=f"marker function", points=function(data.values, model))
+        p = points_to_array(points=function(data.values, model), name=f"marker function")
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
         projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
         if np.isnan(projected_p).all():
@@ -142,7 +142,7 @@ class MarkerReal:
         out_string += f"\tparent\t{self.parent_name}\n"
 
         p = self.mean_position
-        out_string += f"\tposition\t{p[0]:0.4f}\t{p[1]:0.4f}\t{p[2]:0.4f}\n"
+        out_string += f"\tposition\t{p[0]:0.8f}\t{p[1]:0.8f}\t{p[2]:0.8f}\n"
         out_string += f"\ttechnical\t{1 if self.is_technical else 0}\n"
         out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
         out_string += "endmarker\n"

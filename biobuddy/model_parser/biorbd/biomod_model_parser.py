@@ -3,6 +3,7 @@ from typing import Callable
 
 import numpy as np
 
+from ... import MeshFileReal
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.segment_real import (
     SegmentReal,
@@ -14,6 +15,7 @@ from ...components.real.rigidbody.segment_real import (
 )
 from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.rigidbody.segment_scaling import SegmentScaling
 from ...utils.named_list import NamedList
@@ -50,6 +52,20 @@ class BiomodModelParser:
             if token_index >= len(tokens):
                 raise EndOfFileReached()
             return tokens[token_index]
+
+        def nb_float_tokens_until_next_str() -> int:
+            """
+            Count the number of float tokens until the next str token.
+            """
+            nonlocal token_index
+            count = 1
+            while True:
+                try:
+                    float(tokens[token_index + count])
+                except ValueError:
+                    break
+                count += 1
+            return count - 1
 
         # Parse the model
         biorbd_version = None
@@ -136,6 +152,21 @@ class BiomodModelParser:
                         current_component.translations = read_str(next_token=next_token)
                     elif token == "rotations":
                         current_component.rotations = read_str(next_token=next_token)
+                    elif token == "rangesq" or token == "rangesqdot":
+                        length = nb_float_tokens_until_next_str()
+                        if length % 2 != 0:
+                            raise ValueError(f"Length of range_q is not even: {length}")
+                        min_max = read_float_vector(next_token=next_token, length=length)
+                        min_bound = min_max[0::2]
+                        max_bound = min_max[1::2]
+                        if token == "rangesq":
+                            current_component.q_ranges = RangeOfMotion(
+                                range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound
+                            )
+                        else:
+                            current_component.qdot_ranges = RangeOfMotion(
+                                range_type=Ranges.Qdot, min_bound=min_bound, max_bound=max_bound
+                            )
                     elif token in ("mass", "com", "centerofmass", "inertia", "inertia_xxyyzz"):
                         if current_component.inertia_parameters is None:
                             current_component.inertia_parameters = InertiaParametersReal()
@@ -156,8 +187,29 @@ class BiomodModelParser:
                             current_component.mesh = MeshReal()
                         position = read_float_vector(next_token=next_token, length=3).T
                         current_component.mesh.add_positions(position)
-                    elif token == "mesh_file":
-                        raise NotImplementedError()
+                    elif token == "meshfile":
+                        mesh_file_name = read_str(next_token=next_token)
+                        if current_component.mesh_file is not None:
+                            raise RuntimeError(
+                                f"The mesh file {mesh_file_name} is the second mesh defined for this segment."
+                            )
+                        current_component.mesh_file = MeshFileReal(mesh_file_name=mesh_file_name)
+                    elif token == "meshcolor":
+                        if current_component.mesh_file is None:
+                            raise RuntimeError("The mesh file must be defined before the mesh color.")
+                        current_component.mesh_file.mesh_color = read_float_vector(next_token=next_token, length=3)
+                    elif token == "meshscale":
+                        if current_component.mesh_file is None:
+                            raise RuntimeError("The mesh file must be defined before the mesh scale.")
+                        current_component.mesh_file.mesh_scale = read_float_vector(next_token=next_token, length=3)
+                    elif token == "meshrt":
+                        if current_component.mesh_file is None:
+                            raise RuntimeError("The mesh file must be defined before the mesh rt.")
+                        angles = read_float_vector(next_token=next_token, length=3)
+                        angle_sequence = read_str(next_token=next_token)
+                        translations = read_float_vector(next_token=next_token, length=3)
+                        current_component.mesh_file.mesh_rotation = angles
+                        current_component.mesh_file.mesh_translation = translations
                     else:
                         raise ValueError(f"Unknown information in segment")
 
@@ -279,11 +331,25 @@ class BiomodModelParser:
             pass
 
     def to_real(self) -> BiomechanicalModelReal:
-        model = BiomechanicalModelReal()
+        model = BiomechanicalModelReal(gravity=self.gravity)
 
         # Add the segments
         for segment in self.segments:
-            model.segments.append(deepcopy(segment))
+            model.add_segment(deepcopy(segment))
+
+        # Add the muscle groups
+        for muscle_group in self.muscle_groups:
+            model.add_muscle_group(deepcopy(muscle_group))
+
+        # Add the muscles
+        for muscle in self.muscles:
+            model.add_muscle(deepcopy(muscle))
+
+        # Add the via points
+        for via_point in self.via_points:
+            model.add_via_point(deepcopy(via_point))
+
+        model.warnings = self.warnings
 
         return model
 

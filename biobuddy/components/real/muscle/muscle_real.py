@@ -62,6 +62,13 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        if optimal_length is not None and optimal_length <= 0:
+            raise ValueError("The optimal length of the muscle must be greater than 0.")
+        if maximal_force is not None and maximal_force <= 0:
+            raise ValueError("The maximal force of the muscle must be greater than 0.")
+        if maximal_excitation is not None and maximal_excitation <= 0:
+            raise ValueError("The maximal excitation of the muscle must be greater than 1.")
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -117,7 +124,7 @@ class MuscleReal:
 
     @origin_position.setter
     def origin_position(self, value: Points):
-        self._origin_position = point_to_array(name="origin position", point=value)
+        self._origin_position = point_to_array(point=value, name="origin position")
 
     @property
     def insertion_position(self) -> np.ndarray:
@@ -125,7 +132,7 @@ class MuscleReal:
 
     @insertion_position.setter
     def insertion_position(self, value: Points):
-        self._insertion_position = point_to_array(name="insertion position", point=value)
+        self._insertion_position = point_to_array(point=value, name="insertion position")
 
     @property
     def optimal_length(self) -> float:
@@ -230,10 +237,10 @@ class MuscleReal:
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
         origin_position = points_to_array(
-            name="muscle origin function", points=origin_position_function(data.values, model)
+            points=origin_position_function(data.values, model), name="muscle origin function"
         )
         insertion_position = points_to_array(
-            name="muscle insertion function", points=insertion_position_function(data.values, model)
+            points=insertion_position_function(data.values, model), name="muscle insertion function"
         )
         return MuscleReal(
             name,
