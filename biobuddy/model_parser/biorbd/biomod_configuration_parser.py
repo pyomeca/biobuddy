@@ -124,37 +124,37 @@ class BiomodConfigurationParser:
         token_index = -1
         try:
             while True:
-                token = read_str(next_token=next_token).lower()
+                token = read_str(next_token=next_token)
 
                 if current_component is None:
 
-                    if token == "scalingsegment":
+                    if token.lower() == "scalingsegment":
                         current_component = SegmentScaling(name=read_str(next_token=next_token), scaling_type=None)
-                    elif token == "markerweight":
+                    elif token.lower() == "markerweight":
                         marker_name = read_str(next_token=next_token)
                         marker_wight = read_float(next_token=next_token)
                         current_component = MarkerWeight(name=marker_name, weight=marker_wight)
                         self.scale_tool.add_marker_weight(current_component)
                         current_component = None
 
-                    elif token in TOKENS_TO_IGNORE_NO_COMPONENTS:
+                    elif token.lower() in TOKENS_TO_IGNORE_NO_COMPONENTS:
                         continue
-                    elif token in TOKENS_TO_IGNORE_ONE_COMPONENTS:
+                    elif token.lower() in TOKENS_TO_IGNORE_ONE_COMPONENTS:
                         token_index += 1
-                    elif token in TOKENS_TO_IGNORE_THREE_COMPONENTS:
+                    elif token.lower() in TOKENS_TO_IGNORE_THREE_COMPONENTS:
                         token_index += 3
-                    elif token in TOKENS_TO_IGNORE_NUMBERS:
+                    elif token.lower() in TOKENS_TO_IGNORE_NUMBERS:
                         number_of_tokens = nb_float_tokens_until_next_str()
                         token_index += number_of_tokens
                     else:
                         raise ValueError(f"Unknown component {token}")
 
                 elif isinstance(current_component, SegmentScaling):
-                    if token == "endscalingsegment":
+                    if token.lower() == "endscalingsegment":
                         self.scale_tool.add_scaling_segment(current_component)
                         current_component = None
 
-                    elif token == "scalingtype":
+                    elif token.lower() == "scalingtype":
                         scaling_type = read_str(next_token=next_token)
                         if scaling_type.lower() == "segmentwisescaling":
                             current_component.scaling_type = SegmentWiseScaling(
@@ -167,14 +167,14 @@ class BiomodConfigurationParser:
                         else:
                             raise NotImplementedError(f"Scaling type {scaling_type} not implemented yet.")
 
-                    elif token == "axis":
+                    elif token.lower() == "axis":
                         if current_component.scaling_type is None:
                             raise RuntimeError(
                                 f"The segments scaling type was not defined for scalingsegment {current_component.name}"
                             )
                         current_component.scaling_type.axis = Translations(read_str(next_token=next_token))
 
-                    elif token == "markerpair":
+                    elif token.lower() == "markerpair":
                         if current_component.scaling_type is None:
                             raise RuntimeError(
                                 f"The segments scaling type was not defined for scalingsegment {current_component.name}"
@@ -190,7 +190,7 @@ class BiomodConfigurationParser:
                             )
                         current_component.scaling_type.marker_pairs += [marker_pair]
 
-                    elif token == "xmarkerpair":
+                    elif token.lower() == "xmarkerpair":
                         marker_pair = read_str_list(next_token=next_token, length=2)
                         if len(marker_pair) != 2:
                             raise RuntimeError(
@@ -198,7 +198,7 @@ class BiomodConfigurationParser:
                             )
                         current_component.scaling_type.marker_pairs += [marker_pair]
 
-                    elif token == "ymarkerpair":
+                    elif token.lower() == "ymarkerpair":
                         marker_pair = read_str_list(next_token=next_token, length=2)
                         if len(marker_pair) != 2:
                             raise RuntimeError(
@@ -206,7 +206,7 @@ class BiomodConfigurationParser:
                             )
                         current_component.scaling_type.marker_pairs += [marker_pair]
 
-                    elif token == "zmarkerpair":
+                    elif token.lower() == "zmarkerpair":
                         marker_pair = read_str_list(next_token=next_token, length=2)
                         if len(marker_pair) != 2:
                             raise RuntimeError(

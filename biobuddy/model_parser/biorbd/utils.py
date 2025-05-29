@@ -55,11 +55,11 @@ def check_if_version_defined(biomod_version: int):
 
 
 def read_str(next_token: Callable) -> str:
-    return next_token().lower()
+    return next_token()
 
 
 def read_str_list(next_token: Callable, length: int) -> list[str]:
-    str_list = [next_token().lower() for _ in range(length)]
+    str_list = [next_token() for _ in range(length)]
     return str_list
 
 
