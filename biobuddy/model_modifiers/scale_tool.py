@@ -120,9 +120,9 @@ class ScaleTool:
         marker_positions = exp_marker_positions[:, marker_indices, :]
 
         # Check the weights
-        for marker in self.marker_weights:
-            if self.marker_weights[marker] < 0:
-                raise RuntimeError(f"The weight of marker {marker} is negative. It must be positive.")
+        for marker_name in self.marker_weights.keys():
+            if self.marker_weights[marker_name].weight < 0:
+                raise RuntimeError(f"The weight of marker {marker_name} is negative. It must be positive.")
 
         # Check the mass
         if mass <= 0:
@@ -194,16 +194,16 @@ class ScaleTool:
             return
 
         else:
-            for marker in self.marker_weights:
-                if marker not in marker_names:
-                    raise RuntimeError(f"The marker {marker} is not in the c3d file.")
-                marker_index = marker_names.index(marker)
+            for marker_name in self.marker_weights.keys():
+                if self.marker_weights[marker_name] not in marker_names:
+                    raise RuntimeError(f"The marker {marker_name} is not in the c3d file.")
+                marker_index = marker_names.index(marker_name)
                 this_marker_position = marker_positions[:, marker_index, :]
                 min_position = np.nanmin(this_marker_position, axis=1)
                 max_position = np.nanmax(this_marker_position, axis=1)
                 if np.linalg.norm(max_position - min_position) > self.max_marker_movement:
                     raise RuntimeError(
-                        f"The marker {marker} moves of approximately {np.linalg.norm(max_position - min_position)} m during the static trial, which is above the maximal limit of {self.max_marker_movement} m."
+                        f"The marker {marker_name} moves of approximately {np.linalg.norm(max_position - min_position)} m during the static trial, which is above the maximal limit of {self.max_marker_movement} m."
                     )
             return
 
