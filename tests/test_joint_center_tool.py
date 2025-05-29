@@ -11,7 +11,8 @@ from biobuddy import (
     JointCenterTool,
     Score,
     Sara,
-    C3dData, MarkerWeight,
+    C3dData,
+    MarkerWeight,
 )
 
 
