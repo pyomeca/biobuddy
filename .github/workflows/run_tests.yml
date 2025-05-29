@@ -9,7 +9,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13]  # windows-latest
+        os: [ubuntu-latest, macos-latest, macos-13, windows-latest]
         include:
           - os: ubuntu-latest
             label: linux-64
@@ -20,9 +20,9 @@ jobs:
           - os: macos-13
             label: osx-intel
             prefix: /Users/runner/miniconda3/envs/biobuddy
-          # - os: windows-latest
-          #   label: win-64
-          #   prefix: C:\Miniconda3\envs\biobuddy
+          - os: windows-latest
+            label: win-64
+            prefix: C:\Miniconda3\envs\biobuddy
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
