@@ -309,7 +309,7 @@ def test_score_and_sara_with_ghost_segments():
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
 
     # Read the .bioMod file
-    scaled_model = BiomechanicalModelReal.from_biomod(
+    scaled_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_model_filepath,
     )
     marker_weights = {

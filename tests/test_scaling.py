@@ -115,7 +115,7 @@ def test_scaling_wholebody():
     opensim_tool.run()
 
     # --- Read the model scaled in OpenSim and translate to bioMod --- #
-    osim_model_scaled = BiomechanicalModelReal.from_osim(
+    osim_model_scaled = BiomechanicalModelReal().from_osim(
         filepath=parent_path + "/examples/models/scaled.osim",
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -125,7 +125,7 @@ def test_scaling_wholebody():
     scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
 
     # --- Scale in BioBuddy --- #
-    original_model = BiomechanicalModelReal.from_osim(
+    original_model = BiomechanicalModelReal().from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,

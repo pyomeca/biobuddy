@@ -61,7 +61,7 @@ def main(visualization):
     # mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
     # Read the .osim file
-    original_osim_model = BiomechanicalModelReal.from_osim(
+    original_osim_model = BiomechanicalModelReal().from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,

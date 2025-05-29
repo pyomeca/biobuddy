@@ -416,7 +416,7 @@ def test_kinematics():
         os.remove(biomod_filepath)
 
     # Convert osim to biomod
-    model = BiomechanicalModelReal.from_osim(
+    model = BiomechanicalModelReal().from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -517,7 +517,7 @@ def test_translation_osim_to_biomod():
 
                     print(f" ******** Converting {os.path.join(folder, name)} ******** ")
                     # Convert osim to biomod
-                    model = BiomechanicalModelReal.from_osim(
+                    model = BiomechanicalModelReal().from_osim(
                         filepath=osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -558,7 +558,7 @@ def test_translation_osim_to_biomod():
                         RuntimeError,
                         match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
-                        model = BiomechanicalModelReal.from_osim(
+                        model = BiomechanicalModelReal().from_osim(
                             filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
@@ -569,7 +569,7 @@ def test_translation_osim_to_biomod():
                         RuntimeError,
                         match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
-                        model = BiomechanicalModelReal.from_osim(
+                        model = BiomechanicalModelReal().from_osim(
                             filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
