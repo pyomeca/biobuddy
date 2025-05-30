@@ -986,27 +986,72 @@ class JointCenterTool:
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )
 
+    def _setup_model_for_initial_rt(self, task):
+        joint_model = BiomechanicalModelReal()
+        segment_chain = self.original_model.get_chain_between_segments(task.parent_name, task.child_name)
+
+        joint_model.add_segment(SegmentReal(
+            name="ground",
+            segment_coordinate_system=SegmentCoordinateSystemReal(
+                scs=np.identity(4),
+                is_scs_local=True,
+            ),
+        ))
+
+        # Copy all segments in the chain
+        for segment_name in segment_chain:
+            if segment_name == task.parent_name:
+                # Add 6DoFs to the parent segment
+                first_segment = deepcopy(self.original_model.segments[segment_name])
+                first_segment.parent_name = "ground"
+                first_segment.translations = Translations.XYZ
+                first_segment.rotations = Rotations.XYZ
+                joint_model.add_segment(first_segment)
+            else:
+                joint_model.add_segment(deepcopy(self.original_model.segments[segment_name]))
+
+        joint_model.to_biomod("temporary.bioMod", with_mesh=False)
+        return joint_model
+
     def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
+            # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
+            reconstruct_whole_body = True
+            for marker in self.original_model.marker_names:
+                if marker not in task.c3d_data.marker_names:
+                    reconstruct_whole_body = False
+                    break
+
+            if reconstruct_whole_body:
+                marker_names = self.original_model.marker_names
+            else:
+                marker_names = task.parent_marker_names + task.child_marker_names
+
             if task.initialize_whole_trial_reconstruction:
                 # Reconstruct the whole trial to get a good initial rt for each frame
-                q_init = self.original_model.inverse_kinematics(
-                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
-                    marker_names=self.original_model.marker_names,
-                    marker_weights=marker_weights,
-                )
+                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, :]
+                model_for_initial_rt = deepcopy(self.original_model)
+                initial_rt_marker_weights = deepcopy(marker_weights)
             else:
-                # Reconstruct first frame to get an initial rt
-                q_init = self.original_model.inverse_kinematics(
-                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, 0],
-                    marker_names=self.original_model.marker_names,
-                    marker_weights=marker_weights,
-                )
+                # Reconstruct only the first frame to get an initial rt
+                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, 0]
+                model_for_initial_rt = self._setup_model_for_initial_rt(task)
+                initial_rt_marker_weights = None
 
-            segment_rt_in_global = self.original_model.forward_kinematics(q_init)
+            for marker in marker_names:
+                if marker not in task.c3d_data.marker_names:
+                    raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
+
+            q_init = model_for_initial_rt.inverse_kinematics(
+                marker_positions=marker_positions,
+                marker_names=marker_names,
+                marker_weights=initial_rt_marker_weights,
+            )
+
+            segment_rt_in_global = model_for_initial_rt.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]
             child_rt_init = segment_rt_in_global[task.child_name]
 
