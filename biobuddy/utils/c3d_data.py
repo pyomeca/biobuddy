@@ -27,13 +27,12 @@ class C3dData:
         for marker_name in self.marker_names:
             self.values[marker_name] = self.get_position((marker_name,)).squeeze()
 
+        # Not a property to avoid recomputing each time
+        self.nb_frames = self.ezc3d_data["data"]["points"][:, :, self.first_frame: self.last_frame].shape[2]
+
     @property
     def all_marker_positions(self) -> np.ndarray:
         return self.get_position(marker_names=self.marker_names)
-
-    @property
-    def nb_frames(self) -> int:
-        return self.last_frame - self.first_frame
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
         """Get the geometrical center position between markers"""

@@ -160,6 +160,11 @@ class RigidSegmentIdentification:
     ):
 
         def setup_segments_for_animation(segment_name: str):
+            mesh_file = None
+            if original_model.segments[segment_name].mesh_file is not None:
+                mesh_file = deepcopy(original_model.segments[segment_name].mesh_file)
+                mesh_file_name = mesh_file.mesh_file_name.split('/')[-1]
+                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
             joint_model.add_segment(
                 SegmentReal(
                     name=segment_name,
@@ -167,7 +172,7 @@ class RigidSegmentIdentification:
                     segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
                     translations=Translations.XYZ,
                     rotations=Rotations.XYZ,
-                    mesh_file=original_model.segments[segment_name].mesh_file,
+                    mesh_file=mesh_file,
                 )
             )
             for marker in original_model.segments[segment_name].markers:
@@ -294,26 +299,32 @@ class RigidSegmentIdentification:
 
         segment_list = original_model.get_chain_between_segments(self.parent_name, self.child_name)[1:]
         for segment_name in segment_list:
-            if original_model.segments[segment_name].mesh_file is not None:
-                mesh_file = original_model.segments[segment_name].mesh_file
 
-                if mesh_file.mesh_translation is None:
-                    mesh_translation = np.zeros((3,))
-                else:
-                    mesh_translation = mesh_file.mesh_translation
+            if not segment_name.startswith(self.child_name):
+                # There is another segment between the parent and the child segment, so we do not change it's position
+                continue
+            else:
 
-                if mesh_file.mesh_rotation is None:
-                    mesh_rotation = np.zeros((4, 1))
-                else:
-                    mesh_rotation = mesh_file.mesh_rotation
+                if original_model.segments[segment_name].mesh_file is not None:
+                    mesh_file = original_model.segments[segment_name].mesh_file
 
-                mesh_rt = RotoTransMatrix()
-                mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
-                new_rt = rotation_translation_transform.rt_matrix @ mesh_rt.rt_matrix
+                    if mesh_file.mesh_translation is None:
+                        mesh_translation = np.zeros((3,))
+                    else:
+                        mesh_translation = mesh_file.mesh_translation
 
-                # Update mesh file's local rotation and translation
-                new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
-                new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
+                    if mesh_file.mesh_rotation is None:
+                        mesh_rotation = np.zeros((4, 1))
+                    else:
+                        mesh_rotation = mesh_file.mesh_rotation
+
+                    mesh_rt = RotoTransMatrix()
+                    mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
+                    new_rt = rotation_translation_transform.rt_matrix @ mesh_rt.rt_matrix
+
+                    # Update mesh file's local rotation and translation
+                    new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
+                    new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
 
         # Markers
         marker_positions = original_model.markers_in_global()
@@ -1000,17 +1011,30 @@ class JointCenterTool:
 
         # Copy all segments in the chain
         for segment_name in segment_chain:
+
+            # get the filename so that we can point to the Geometry_cleaned forler
+            mesh_file = None
+            if self.original_model.segments[segment_name].mesh_file is not None:
+                mesh_file = self.original_model.segments[segment_name].mesh_file
+                mesh_file_name = mesh_file.mesh_file_name.split('/')[-1]
+                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
+
             if segment_name == task.parent_name:
                 # Add 6DoFs to the parent segment
                 first_segment = deepcopy(self.original_model.segments[segment_name])
                 first_segment.parent_name = "ground"
                 first_segment.translations = Translations.XYZ
                 first_segment.rotations = Rotations.XYZ
+                first_segment.mesh_file = mesh_file
                 joint_model.add_segment(first_segment)
             else:
-                joint_model.add_segment(deepcopy(self.original_model.segments[segment_name]))
+                other_segment = deepcopy(self.original_model.segments[segment_name])
+                other_segment.mesh_file = mesh_file
+                joint_model.add_segment(other_segment)
 
-        joint_model.to_biomod("temporary.bioMod", with_mesh=False)
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
+        joint_model.to_biomod(temporary_model_path)
         return joint_model
 
     def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
