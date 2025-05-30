@@ -29,12 +29,12 @@ pip install numpy matplotlib lxml pytest black scipy ezc3d pyomeca
 ```
 
 # Model translation
-You can load the original model using one of the `BiomechanicalModelReal.from_[format]` methods, and then export it into another format using the `BiomechanicalModelReal.to_[format]` method.
+You can load the original model using one of the `BiomechanicalModelReal().from_[format]` methods, and then export it into another format using the `BiomechanicalModelReal.to_[format]` method.
 ```python3
 from biobuddy import BiomechanicalModelReal
 
 # Read an .osim file
-model = BiomechanicalModelReal.from_osim(
+model = BiomechanicalModelReal().from_osim(
     filepath=osim_filepath,
     # Other optional parameters here
 )

@@ -8,8 +8,9 @@ import opensim as osim
 import pytest
 import numpy.testing as npt
 import lxml
+from deepdiff import DeepDiff
 
-from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
+from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal, ScaleTool
 
 
 class MotionType(Enum):
@@ -415,7 +416,7 @@ def test_kinematics():
         os.remove(biomod_filepath)
 
     # Convert osim to biomod
-    model = BiomechanicalModelReal.from_osim(
+    model = BiomechanicalModelReal().from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -516,7 +517,7 @@ def test_translation_osim_to_biomod():
 
                     print(f" ******** Converting {os.path.join(folder, name)} ******** ")
                     # Convert osim to biomod
-                    model = BiomechanicalModelReal.from_osim(
+                    model = BiomechanicalModelReal().from_osim(
                         filepath=osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -557,7 +558,7 @@ def test_translation_osim_to_biomod():
                         RuntimeError,
                         match="Joint type PinJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
-                        model = BiomechanicalModelReal.from_osim(
+                        model = BiomechanicalModelReal().from_osim(
                             filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
@@ -568,7 +569,7 @@ def test_translation_osim_to_biomod():
                         RuntimeError,
                         match="Joint type SliderJoint is not implemented yet. Allowed joint type are: WeldJoint CustomJoint Ground ",
                     ):
-                        model = BiomechanicalModelReal.from_osim(
+                        model = BiomechanicalModelReal().from_osim(
                             filepath=osim_filepath,
                             muscle_type=MuscleType.HILL_DE_GROOTE,
                             muscle_state_type=MuscleStateType.DEGROOTE,
@@ -580,3 +581,40 @@ def test_translation_osim_to_biomod():
                 else:
                     if os.path.join(folder, name) not in skipped:
                         raise RuntimeError("OpenSim added a new model to their repository. Please check the model.")
+
+
+def test_translation_of_scaling_configuration():
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    biomod_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.bioMod"
+    biomod_config_filepath_new = parent_path + f"/examples/models/arm26_allbiceps_1dof_new.bioMod"
+    osim_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.xml"
+
+    # --- Reading a .bioMod scaling configuration and translating it into a .xml configuration --- #
+    # Read an .bioMod file
+    original_model = BiomechanicalModelReal().from_biomod(filepath=biomod_config_filepath)
+
+    scaling_configuration = ScaleTool(original_model).from_biomod(
+        filepath=biomod_config_filepath,
+    )
+
+    # And convert it to a .xml file
+    scaling_configuration.to_xml(osim_config_filepath)
+
+    # Read the .xml file back
+    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(filepath=osim_config_filepath)
+
+    # Rewrite it into a .bioMod to compare with the original one
+    new_xml_scaling_configuration.to_biomod(biomod_config_filepath_new, append=False)
+
+    # Reread the .biomod configuration we just printed
+    new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
+
+    diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
+
+    # If the two objects are the same, there are no fields in diff
+    assert diff == {}
+
+    os.remove(osim_config_filepath)
+    os.remove(biomod_config_filepath_new)

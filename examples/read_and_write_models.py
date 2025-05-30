@@ -42,7 +42,7 @@ def main():
 
     # --- Reading an .osim model and translating it to a .bioMod model --- #
     # Read an .osim file
-    model = BiomechanicalModelReal.from_osim(
+    model = BiomechanicalModelReal().from_osim(
         filepath=osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -98,9 +98,7 @@ def main():
 
     # --- Reading an .bioMod model and translating it to a .osim model --- #
     # Read a .bioMod file
-    model = BiomechanicalModelReal.from_biomod(
-        filepath=biomod_filepath,
-    )
+    model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # TODO
     # And convert it to an .osim file

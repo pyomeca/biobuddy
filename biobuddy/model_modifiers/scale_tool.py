@@ -2,11 +2,13 @@ import os
 from copy import deepcopy
 from enum import Enum
 import logging
-
+import xml.etree.cElementTree as ET
+from xml.dom import minidom
 import numpy as np
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
+from ..components.real.rigidbody.marker_weight import MarkerWeight
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.marker_real import MarkerReal
 from ..components.real.rigidbody.contact_real import ContactReal
@@ -58,8 +60,11 @@ class ScaleTool:
         self.header = ""
         self.original_mass = None
         self.scaling_segments = NamedList[SegmentScaling]()
-        self.marker_weights = {}
+        self.marker_weights = NamedList[MarkerWeight]()
         self.warnings = ""
+
+    def add_marker_weight(self, marker_weight: MarkerWeight):
+        self.marker_weights.append(marker_weight)
 
     def scale(
         self,
@@ -115,9 +120,9 @@ class ScaleTool:
         marker_positions = exp_marker_positions[:, marker_indices, :]
 
         # Check the weights
-        for marker in self.marker_weights:
-            if self.marker_weights[marker] < 0:
-                raise RuntimeError(f"The weight of marker {marker} is negative. It must be positive.")
+        for marker_name in self.marker_weights.keys():
+            if self.marker_weights[marker_name].weight < 0:
+                raise RuntimeError(f"The weight of marker {marker_name} is negative. It must be positive.")
 
         # Check the mass
         if mass <= 0:
@@ -126,7 +131,7 @@ class ScaleTool:
         # Check that a scaling configuration was set
         if len(self.scaling_segments) == 0:
             raise RuntimeError(
-                "No scaling configuration was set. Please set a scaling configuration using ScaleTool.from_xml(filepath=filepath) or ScaleTool.from_biomod(filepath=filepath)."
+                "No scaling configuration was set. Please set a scaling configuration using ScaleTool().from_xml(filepath=filepath) or ScaleTool().from_biomod(filepath=filepath)."
             )
 
         self.check_that_makers_do_not_move(marker_positions, marker_names)
@@ -189,16 +194,16 @@ class ScaleTool:
             return
 
         else:
-            for marker in self.marker_weights:
-                if marker not in marker_names:
-                    raise RuntimeError(f"The marker {marker} is not in the c3d file.")
-                marker_index = marker_names.index(marker)
+            for marker_name in self.marker_weights.keys():
+                if self.marker_weights[marker_name] not in marker_names:
+                    raise RuntimeError(f"The marker {marker_name} is not in the c3d file.")
+                marker_index = marker_names.index(marker_name)
                 this_marker_position = marker_positions[:, marker_index, :]
                 min_position = np.nanmin(this_marker_position, axis=1)
                 max_position = np.nanmax(this_marker_position, axis=1)
                 if np.linalg.norm(max_position - min_position) > self.max_marker_movement:
                     raise RuntimeError(
-                        f"The marker {marker} moves of approximately {np.linalg.norm(max_position - min_position)} m during the static trial, which is above the maximal limit of {self.max_marker_movement} m."
+                        f"The marker {marker_name} moves of approximately {np.linalg.norm(max_position - min_position)} m during the static trial, which is above the maximal limit of {self.max_marker_movement} m."
                     )
             return
 
@@ -667,8 +672,8 @@ class ScaleTool:
                 / original_muscle_length
             )
 
-    @staticmethod
     def from_biomod(
+        self,
         filepath: str,
     ):
         """
@@ -695,3 +700,75 @@ class ScaleTool:
 
         configuration = OsimConfigurationParser(filepath=filepath, original_model=self.original_model)
         return configuration.scale_tool
+
+    def to_biomod(self, filepath: str, append: bool = True):
+
+        if os.path.exists(filepath) and append:
+            file = open(filepath, "a")
+        else:
+            file = open(filepath, "w")
+
+        out_string = ""
+        out_string += "\n\n\n"
+        out_string += "// --------------------------------------------------------------\n"
+        out_string += "// SEGMENT SCALING CONFIGURATION\n"
+        out_string += "// --------------------------------------------------------------\n\n"
+
+        for segment_scaling in self.scaling_segments:
+            out_string += segment_scaling.to_biomod()
+        out_string += "\n\n\n"
+
+        out_string += "// --------------------------------------------------------------\n"
+        out_string += "// MARKER WEIGHTS\n"
+        out_string += "// --------------------------------------------------------------\n\n"
+        for marker_name in self.marker_weights.keys():
+            out_string += f"markerweight\t{marker_name}\t{self.marker_weights[marker_name].weight}\n"
+
+        file.write(out_string)
+        file.close()
+
+    def to_xml(self, filepath: str):
+
+        # Create the root element
+        root = ET.Element("OpenSimDocument", Version="40500")
+
+        # Create the ScaleTool element and its children
+        scale_tool = ET.SubElement(root, "ScaleTool", name="scale_tool")
+
+        # Create the GenericModelMaker element and its children
+        generic_model_maker = ET.SubElement(scale_tool, "GenericModelMaker")
+        ET.SubElement(generic_model_maker, "model_file").text = self.original_model.filepath
+        ET.SubElement(generic_model_maker, "marker_set_file").text = "Unassigned"
+
+        # Create the ModelScaler element and its children
+        model_scaler = ET.SubElement(scale_tool, "ModelScaler")
+        ET.SubElement(model_scaler, "apply").text = "true"
+        ET.SubElement(model_scaler, "scaling_order").text = "measurements"
+
+        # Create the MeasurementSet element and its children
+        measurement_set = ET.SubElement(model_scaler, "MeasurementSet")
+        objects = ET.SubElement(measurement_set, "objects")
+
+        for segment_scaling in self.scaling_segments:
+            segment_scaling.to_xml(objects)
+
+        # Create the MarkerPlacer element and its children
+        marker_placer = ET.SubElement(scale_tool, "MarkerPlacer")
+
+        # Add apply element
+        ET.SubElement(marker_placer, "apply").text = "true"
+
+        # Create the IKTaskSet element and its children
+        ik_task_set = ET.SubElement(marker_placer, "IKTaskSet")
+        ik_objects = ET.SubElement(ik_task_set, "objects")
+
+        # Write the marker weights
+        for marker_name in self.marker_weights.keys():
+            ik_marker_task = ET.SubElement(ik_objects, "IKMarkerTask", name=marker_name)
+            ET.SubElement(ik_marker_task, "apply").text = "true"
+            ET.SubElement(ik_marker_task, "weight").text = str(self.marker_weights[marker_name].weight)
+
+        # Write the XML string to a file with the usual indentation
+        with open(filepath, "w", encoding="UTF-8") as f:
+            xml_str = minidom.parseString(ET.tostring(root, "utf-8")).toprettyxml(indent="    ")
+            f.write(xml_str)

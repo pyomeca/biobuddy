@@ -58,8 +58,9 @@ def read_str(next_token: Callable) -> str:
     return next_token()
 
 
-def read_str_list(next_token: Callable) -> list[str]:
-    return next_token().replace("\t", " ").split(" ")
+def read_str_list(next_token: Callable, length: int) -> list[str]:
+    str_list = [next_token() for _ in range(length)]
+    return str_list
 
 
 def read_int(next_token: Callable) -> int:

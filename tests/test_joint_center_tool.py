@@ -4,6 +4,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
+from biobuddy.utils.named_list import NamedList
 from test_utils import remove_temporary_biomods
 from biobuddy import (
     BiomechanicalModelReal,
@@ -11,6 +12,7 @@ from biobuddy import (
     Score,
     Sara,
     C3dData,
+    MarkerWeight,
 )
 
 
@@ -68,27 +70,26 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
 
     # Read the .bioMod file
-    scaled_model = BiomechanicalModelReal.from_biomod(
+    scaled_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_model_filepath,
     )
-    marker_weights = {
-        "RASIS": 1.0,
-        "LASIS": 1.0,
-        "LPSIS": 0.5,
-        "RPSIS": 0.5,
-        "RLFE": 1.0,
-        "RMFE": 1.0,
-        "RGT": 0.1,
-        "RTHI1": 5.0,
-        "RTHI2": 5.0,
-        "RTHI3": 5.0,
-        "RATT": 0.5,
-        "RLM": 1.0,
-        "RSPH": 1.0,
-        "RLEG1": 5.0,
-        "RLEG2": 5.0,
-        "RLEG3": 5.0,
-    }
+    marker_weights = NamedList()
+    marker_weights.append(MarkerWeight("RASIS", 1.0))
+    marker_weights.append(MarkerWeight("LASIS", 1.0))
+    marker_weights.append(MarkerWeight("LPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RLFE", 1.0))
+    marker_weights.append(MarkerWeight("RMFE", 1.0))
+    marker_weights.append(MarkerWeight("RGT", 0.1))
+    marker_weights.append(MarkerWeight("RTHI1", 5.0))
+    marker_weights.append(MarkerWeight("RTHI2", 5.0))
+    marker_weights.append(MarkerWeight("RTHI3", 5.0))
+    marker_weights.append(MarkerWeight("RATT", 0.5))
+    marker_weights.append(MarkerWeight("RLM", 1.0))
+    marker_weights.append(MarkerWeight("RSPH", 1.0))
+    marker_weights.append(MarkerWeight("RLEG1", 5.0))
+    marker_weights.append(MarkerWeight("RLEG2", 5.0))
+    marker_weights.append(MarkerWeight("RLEG3", 5.0))
 
     joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
     # Hip Right
@@ -309,27 +310,26 @@ def test_score_and_sara_with_ghost_segments():
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
 
     # Read the .bioMod file
-    scaled_model = BiomechanicalModelReal.from_biomod(
+    scaled_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_model_filepath,
     )
-    marker_weights = {
-        "RASIS": 1.0,
-        "LASIS": 1.0,
-        "LPSIS": 0.5,
-        "RPSIS": 0.5,
-        "RLFE": 1.0,
-        "RMFE": 1.0,
-        "RGT": 0.1,
-        "RTHI1": 5.0,
-        "RTHI2": 5.0,
-        "RTHI3": 5.0,
-        "RATT": 0.5,
-        "RLM": 1.0,
-        "RSPH": 1.0,
-        "RLEG1": 5.0,
-        "RLEG2": 5.0,
-        "RLEG3": 5.0,
-    }
+    marker_weights = NamedList()
+    marker_weights.append(MarkerWeight("RASIS", 1.0))
+    marker_weights.append(MarkerWeight("LASIS", 1.0))
+    marker_weights.append(MarkerWeight("LPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RLFE", 1.0))
+    marker_weights.append(MarkerWeight("RMFE", 1.0))
+    marker_weights.append(MarkerWeight("RGT", 0.1))
+    marker_weights.append(MarkerWeight("RTHI1", 5.0))
+    marker_weights.append(MarkerWeight("RTHI2", 5.0))
+    marker_weights.append(MarkerWeight("RTHI3", 5.0))
+    marker_weights.append(MarkerWeight("RATT", 0.5))
+    marker_weights.append(MarkerWeight("RLM", 1.0))
+    marker_weights.append(MarkerWeight("RSPH", 1.0))
+    marker_weights.append(MarkerWeight("RLEG1", 5.0))
+    marker_weights.append(MarkerWeight("RLEG2", 5.0))
+    marker_weights.append(MarkerWeight("RLEG3", 5.0))
 
     joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
     # Hip Right

@@ -204,7 +204,7 @@ class ModelDynamics:
         marker_names: list[str],
         q_regularization_weight: float = None,
         q_target: np.ndarray = None,
-        marker_weights: dict[str, float] = None,
+        marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
     ) -> np.ndarray:
         """
@@ -265,17 +265,19 @@ class ModelDynamics:
         markers_real = marker_positions[:, marker_indices, :]
 
         if marker_weights is None:
-            marker_weights = {marker_name: 1.0 for marker_name in marker_names_reordered}
+            marker_weights = NamedList()
+            for marker_name in marker_names_reordered:
+                marker_weights.append(MarkerWeight(marker_name, 1.0))
         else:
             for marker_name in marker_names_reordered:
-                if marker_name not in marker_weights:
+                if marker_name not in marker_weights.keys():
                     raise ValueError(
                         f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
                     )
 
         marker_weights_reordered = np.zeros((nb_markers,))
         for i_marker in range(nb_markers):
-            marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]]
+            marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]].weight
 
         init = np.ones((nb_q,)) * 0.0001
         if q_target is not None:

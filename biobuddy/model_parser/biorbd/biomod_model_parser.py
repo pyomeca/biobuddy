@@ -17,7 +17,6 @@ from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, Muscle
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal
-from ...components.real.rigidbody.segment_scaling import SegmentScaling
 from ...utils.named_list import NamedList
 from .utils import (
     tokenize_biomod,
@@ -28,6 +27,11 @@ from .utils import (
     read_bool,
     read_float_vector,
 )
+
+
+TOKENS_TO_IGNORE_NO_COMPONENTS = ["endscalingsegment"]
+TOKENS_TO_IGNORE_ONE_COMPONENTS = ["scalingsegment", "scalingtype", "axis"]
+TOKENS_TO_IGNORE_TWO_COMPONENTS = ["markerpair", "xmarkerpair", "ymarkerpair", "zmarkerpair", "markerweight"]
 
 
 class EndOfFileReached(Exception):
@@ -74,39 +78,39 @@ class BiomodModelParser:
         token_index = -1
         try:
             while True:
-                token = read_str(next_token=next_token).lower()
+                token = read_str(next_token=next_token)
 
                 if current_component is None:
-                    if token == "version":
+                    if token.lower() == "version":
                         if biorbd_version is not None:
                             raise ValueError("Version already defined")
                         biomod_version = read_int(next_token=next_token)
                         # True for version 3 or less, False for version 4 or more
                         rt_in_matrix_default = biomod_version < 4
-                    elif token == "gravity":
+                    elif token.lower() == "gravity":
                         check_if_version_defined(biomod_version)
                         if gravity is not None:
                             raise ValueError("Gravity already defined")
                         gravity = read_float_vector(next_token=next_token, length=3)
-                    elif token == "segment":
+                    elif token.lower() == "segment":
                         check_if_version_defined(biomod_version)
                         current_component = SegmentReal(name=read_str(next_token=next_token))
                         current_rt_in_matrix = rt_in_matrix_default
-                    elif token == "imu":
+                    elif token.lower() == "imu":
                         check_if_version_defined(biomod_version)
                         current_component = InertialMeasurementUnitReal(
                             name=read_str(next_token=next_token), parent_name=""
                         )
                         current_rt_in_matrix = rt_in_matrix_default
-                    elif token == "marker":
+                    elif token.lower() == "marker":
                         check_if_version_defined(biomod_version)
                         current_component = MarkerReal(name=read_str(next_token=next_token), parent_name="")
-                    elif token == "musclegroup":
+                    elif token.lower() == "musclegroup":
                         check_if_version_defined(biomod_version)
                         current_component = MuscleGroup(
                             name=read_str(next_token=next_token), origin_parent_name="", insertion_parent_name=""
                         )
-                    elif token == "muscle":
+                    elif token.lower() == "muscle":
                         check_if_version_defined(biomod_version)
                         current_component = MuscleReal(
                             name=read_str(next_token=next_token),
@@ -121,7 +125,7 @@ class BiomodModelParser:
                             pennation_angle=None,
                             maximal_excitation=None,
                         )
-                    elif token == "viapoint":
+                    elif token.lower() == "viapoint":
                         check_if_version_defined(biomod_version)
                         current_component = ViaPointReal(
                             name=read_str(next_token=next_token),
@@ -130,36 +134,40 @@ class BiomodModelParser:
                             muscle_group="",
                             position=None,
                         )
-                    elif token in ["mass", "scalingsegment"]:
+                    elif token in TOKENS_TO_IGNORE_NO_COMPONENTS:
                         continue
+                    elif token in TOKENS_TO_IGNORE_ONE_COMPONENTS:
+                        token_index += 1
+                    elif token in TOKENS_TO_IGNORE_TWO_COMPONENTS:
+                        token_index += 2
                     else:
                         raise ValueError(f"Unknown component {token}")
 
                 elif isinstance(current_component, SegmentReal):
-                    if token == "endsegment":
+                    if token.lower() == "endsegment":
                         self.segments.append(current_component)
                         current_component = None
-                    elif token == "parent":
+                    elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
-                    elif token == "rtinmatrix":
+                    elif token.lower() == "rtinmatrix":
                         current_rt_in_matrix = read_bool(next_token=next_token)
-                    elif token == "rt":
+                    elif token.lower() == "rt":
                         scs = _get_rt_matrix(next_token=next_token, current_rt_in_matrix=current_rt_in_matrix)
                         current_component.segment_coordinate_system = SegmentCoordinateSystemReal(
                             scs=scs, is_scs_local=True
                         )
-                    elif token == "translations":
+                    elif token.lower() == "translations":
                         current_component.translations = read_str(next_token=next_token)
-                    elif token == "rotations":
+                    elif token.lower() == "rotations":
                         current_component.rotations = read_str(next_token=next_token)
-                    elif token == "rangesq" or token == "rangesqdot":
+                    elif token.lower() == "rangesq" or token.lower() == "rangesqdot":
                         length = nb_float_tokens_until_next_str()
                         if length % 2 != 0:
                             raise ValueError(f"Length of range_q is not even: {length}")
                         min_max = read_float_vector(next_token=next_token, length=length)
                         min_bound = min_max[0::2]
                         max_bound = min_max[1::2]
-                        if token == "rangesq":
+                        if token.lower() == "rangesq":
                             current_component.q_ranges = RangeOfMotion(
                                 range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound
                             )
@@ -167,42 +175,42 @@ class BiomodModelParser:
                             current_component.qdot_ranges = RangeOfMotion(
                                 range_type=Ranges.Qdot, min_bound=min_bound, max_bound=max_bound
                             )
-                    elif token in ("mass", "com", "centerofmass", "inertia", "inertia_xxyyzz"):
+                    elif token.lower() in ("mass", "com", "centerofmass", "inertia", "inertia_xxyyzz"):
                         if current_component.inertia_parameters is None:
                             current_component.inertia_parameters = InertiaParametersReal()
 
-                        if token == "mass":
+                        if token.lower() == "mass":
                             current_component.inertia_parameters.mass = read_float(next_token=next_token)
-                        elif token == "com" or token == "centerofmass":
+                        elif token.lower() == "com" or token.lower() == "centerofmass":
                             com = read_float_vector(next_token=next_token, length=3)
                             current_component.inertia_parameters.center_of_mass = com
-                        elif token == "inertia":
+                        elif token.lower() == "inertia":
                             inertia = read_float_vector(next_token=next_token, length=9).reshape((3, 3))
                             current_component.inertia_parameters.inertia = inertia
-                        elif token == "inertia_xxyyzz":
+                        elif token.lower() == "inertia_xxyyzz":
                             inertia = read_float_vector(next_token=next_token, length=3)
                             current_component.inertia_parameters.inertia = np.diag(inertia)
-                    elif token == "mesh":
+                    elif token.lower() == "mesh":
                         if current_component.mesh is None:
                             current_component.mesh = MeshReal()
                         position = read_float_vector(next_token=next_token, length=3).T
                         current_component.mesh.add_positions(position)
-                    elif token == "meshfile":
+                    elif token.lower() == "meshfile":
                         mesh_file_name = read_str(next_token=next_token)
                         if current_component.mesh_file is not None:
                             raise RuntimeError(
                                 f"The mesh file {mesh_file_name} is the second mesh defined for this segment."
                             )
                         current_component.mesh_file = MeshFileReal(mesh_file_name=mesh_file_name)
-                    elif token == "meshcolor":
+                    elif token.lower() == "meshcolor":
                         if current_component.mesh_file is None:
                             raise RuntimeError("The mesh file must be defined before the mesh color.")
                         current_component.mesh_file.mesh_color = read_float_vector(next_token=next_token, length=3)
-                    elif token == "meshscale":
+                    elif token.lower() == "meshscale":
                         if current_component.mesh_file is None:
                             raise RuntimeError("The mesh file must be defined before the mesh scale.")
                         current_component.mesh_file.mesh_scale = read_float_vector(next_token=next_token, length=3)
-                    elif token == "meshrt":
+                    elif token.lower() == "meshrt":
                         if current_component.mesh_file is None:
                             raise RuntimeError("The mesh file must be defined before the mesh rt.")
                         angles = read_float_vector(next_token=next_token, length=3)
@@ -214,53 +222,53 @@ class BiomodModelParser:
                         raise ValueError(f"Unknown information in segment")
 
                 elif isinstance(current_component, InertialMeasurementUnitReal):
-                    if token == "endimu":
+                    if token.lower() == "endimu":
                         if not current_component.parent_name:
                             raise ValueError(f"Parent name not found in imu {current_component.name}")
                         self.segments[current_component.parent_name].imus.append(current_component)
                         current_component = None
-                    elif token == "parent":
+                    elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
-                    elif token == "rtinmatrix":
+                    elif token.lower() == "rtinmatrix":
                         current_rt_in_matrix = read_bool(next_token=next_token)
-                    elif token == "rt":
+                    elif token.lower() == "rt":
                         scs = _get_rt_matrix(next_token=next_token, current_rt_in_matrix=current_rt_in_matrix)
                         current_component.scs = scs
-                    elif token == "technical":
+                    elif token.lower() == "technical":
                         current_component.is_technical = read_bool(next_token=next_token)
-                    elif token == "anatomical":
+                    elif token.lower() == "anatomical":
                         current_component.is_anatomical = read_bool(next_token=next_token)
 
                 elif isinstance(current_component, MarkerReal):
-                    if token == "endmarker":
+                    if token.lower() == "endmarker":
                         if not current_component.parent_name:
                             raise ValueError(f"Parent name not found in marker {current_component.name}")
                         self.segments[current_component.parent_name].markers.append(current_component)
                         current_component = None
-                    elif token == "parent":
+                    elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
-                    elif token == "position":
+                    elif token.lower() == "position":
                         current_component.position = read_float_vector(next_token=next_token, length=3)
-                    elif token == "technical":
+                    elif token.lower() == "technical":
                         current_component.is_technical = read_bool(next_token=next_token)
-                    elif token == "anatomical":
+                    elif token.lower() == "anatomical":
                         current_component.is_anatomical = read_bool(next_token=next_token)
 
                 elif isinstance(current_component, MuscleGroup):
-                    if token == "endmusclegroup":
+                    if token.lower() == "endmusclegroup":
                         if not current_component.insertion_parent_name:
                             raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")
                         if not current_component.origin_parent_name:
                             raise ValueError(f"Origin parent name not found in musclegroup {current_component.name}")
                         self.muscle_groups.append(current_component)
                         current_component = None
-                    elif token == "insertionparent":
+                    elif token.lower() == "insertionparent":
                         current_component.insertion_parent_name = read_str(next_token=next_token)
-                    elif token == "originparent":
+                    elif token.lower() == "originparent":
                         current_component.origin_parent_name = read_str(next_token=next_token)
 
                 elif isinstance(current_component, MuscleReal):
-                    if token == "endmuscle":
+                    if token.lower() == "endmuscle":
                         if not current_component.muscle_type:
                             raise ValueError(f"Muscle type not found in muscle {current_component.name}")
                         if not current_component.state_type:
@@ -281,29 +289,29 @@ class BiomodModelParser:
                             raise ValueError(f"Pennation angle not found in muscle {current_component.name}")
                         self.muscles.append(current_component)
                         current_component = None
-                    elif token == "type":
+                    elif token.lower() == "type":
                         current_component.muscle_type = MuscleType(read_str(next_token=next_token))
-                    elif token == "statetype":
+                    elif token.lower() == "statetype":
                         current_component.state_type = MuscleStateType(read_str(next_token=next_token))
-                    elif token == "musclegroup":
+                    elif token.lower() == "musclegroup":
                         current_component.muscle_group = read_str(next_token=next_token)
-                    elif token == "originposition":
+                    elif token.lower() == "originposition":
                         current_component.origin_position = read_float_vector(next_token=next_token, length=3)
-                    elif token == "insertionposition":
+                    elif token.lower() == "insertionposition":
                         current_component.insertion_position = read_float_vector(next_token=next_token, length=3)
-                    elif token == "optimallength":
+                    elif token.lower() == "optimallength":
                         current_component.optimal_length = read_float(next_token=next_token)
-                    elif token == "maximalforce":
+                    elif token.lower() == "maximalforce":
                         current_component.maximal_force = read_float(next_token=next_token)
-                    elif token == "tendonslacklength":
+                    elif token.lower() == "tendonslacklength":
                         current_component.tendon_slack_length = read_float(next_token=next_token)
-                    elif token == "pennationangle":
+                    elif token.lower() == "pennationangle":
                         current_component.pennation_angle = read_float(next_token=next_token)
-                    elif token == "maximal_excitation":
+                    elif token.lower() == "maximal_excitation":
                         current_component.maximal_excitation = read_float(next_token=next_token)
 
                 elif isinstance(current_component, ViaPointReal):
-                    if token == "endviapoint":
+                    if token.lower() == "endviapoint":
                         if not current_component.parent_name:
                             raise ValueError(f"Parent name not found in via point {current_component.name}")
                         if not current_component.muscle_name:
@@ -312,19 +320,14 @@ class BiomodModelParser:
                             raise ValueError(f"Muscle group not found in muscle {current_component.name}")
                         self.via_points.append(current_component)
                         current_component = None
-                    elif token == "parent":
+                    elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
-                    elif token == "muscle":
+                    elif token.lower() == "muscle":
                         current_component.muscle_name = read_str(next_token=next_token)
-                    elif token == "musclegroup":
+                    elif token.lower() == "musclegroup":
                         current_component.muscle_group = read_str(next_token=next_token)
-                    elif token == "position":
+                    elif token.lower() == "position":
                         current_component.position = read_float_vector(next_token=next_token, length=3)
-
-                elif isinstance(current_component, SegmentScaling):
-                    # Segment scaling is read by biomod_configuration_parser
-                    continue
-
                 else:
                     raise ValueError(f"Unknown component {type(current_component)}")
         except EndOfFileReached:

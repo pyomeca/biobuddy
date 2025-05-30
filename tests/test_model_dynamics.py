@@ -21,7 +21,7 @@ def test_biomechanics_model_real_utils_functions():
     wholebody_biorbd_filepath = wholebody_filepath.replace(".osim", ".bioMod")
 
     # Define models
-    wholebody_model = BiomechanicalModelReal.from_osim(
+    wholebody_model = BiomechanicalModelReal().from_osim(
         filepath=wholebody_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
@@ -66,7 +66,7 @@ def test_biomechanics_model_real_utils_functions():
     leg_filepath_without_mesh = leg_filepath.replace(".bioMod", "_without_mesh.bioMod")
 
     # Define models
-    leg_model = BiomechanicalModelReal.from_biomod(
+    leg_model = BiomechanicalModelReal().from_biomod(
         filepath=leg_filepath,
     )
     leg_model.to_biomod(leg_filepath_without_mesh, with_mesh=False)
