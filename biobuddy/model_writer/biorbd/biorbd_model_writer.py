@@ -64,7 +64,7 @@ class BiorbdModelWriter:
             out_string += "\n/*-------------- WARNINGS---------------\n"
             for warning in model.warnings:
                 out_string += "\n" + warning
-            out_string += "*/\n"
+            out_string += "\n\n*/\n"
 
         # removing any character that is not ascii readable from the out_string before writing the model
         cleaned_string = out_string.encode("ascii", "ignore").decode()

@@ -236,7 +236,7 @@ class RigidSegmentIdentification:
 
         viz = pyorerun.PhaseRerun(t)
         if not without_exp_markers:
-            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers)
+            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
