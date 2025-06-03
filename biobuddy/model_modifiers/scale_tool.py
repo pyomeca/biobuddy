@@ -195,7 +195,7 @@ class ScaleTool:
 
         else:
             for marker_name in self.marker_weights.keys():
-                if self.marker_weights[marker_name] not in marker_names:
+                if self.marker_weights[marker_name].name not in marker_names:
                     raise RuntimeError(f"The marker {marker_name} is not in the c3d file.")
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = marker_positions[:, marker_index, :]
@@ -265,7 +265,7 @@ class ScaleTool:
                     )
             else:
                 # If the segment is not scaled, keep its original mass
-                if self.original_model.segments[segment_name].inertia_parameters is None:
+                if self.original_model.segments[segment_name].inertia_parameters is None or self.original_model.segments[segment_name].inertia_parameters.mass == 0:
                     segment_masses[segment_name] = 0
                 else:
                     raise NotImplementedError(
