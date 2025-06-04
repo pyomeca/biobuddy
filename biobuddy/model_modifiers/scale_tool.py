@@ -265,7 +265,10 @@ class ScaleTool:
                     )
             else:
                 # If the segment is not scaled, keep its original mass
-                if self.original_model.segments[segment_name].inertia_parameters is None or self.original_model.segments[segment_name].inertia_parameters.mass == 0:
+                if (
+                    self.original_model.segments[segment_name].inertia_parameters is None
+                    or self.original_model.segments[segment_name].inertia_parameters.mass == 0
+                ):
                     segment_masses[segment_name] = 0
                 else:
                     raise NotImplementedError(
