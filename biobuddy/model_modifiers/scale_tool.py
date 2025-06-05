@@ -20,6 +20,8 @@ from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
+from ..utils.translations import Translations
+from ..utils.rotations import Rotations
 
 _logger = logging.getLogger(__name__)
 
@@ -265,7 +267,10 @@ class ScaleTool:
                     )
             else:
                 # If the segment is not scaled, keep its original mass
-                if self.original_model.segments[segment_name].inertia_parameters is None or self.original_model.segments[segment_name].inertia_parameters.mass == 0:
+                if (
+                    self.original_model.segments[segment_name].inertia_parameters is None
+                    or self.original_model.segments[segment_name].inertia_parameters.mass == 0
+                ):
                     segment_masses[segment_name] = 0
                 else:
                     raise NotImplementedError(
@@ -297,40 +302,41 @@ class ScaleTool:
 
         for segment_name in self.original_model.segments.keys():
 
-            # Check if the segments has a ghost parent
-            if (
-                self.original_model.segments[segment_name].name + "_parent_offset"
-                in self.original_model.segments.keys()
-            ):
-                offset_parent = self.original_model.segments[segment_name + "_parent_offset"].parent_name
-                if offset_parent in self.scaling_segments.keys():
-                    # Apply scaling to the position of the offset parent segment instead of the current segment
-                    offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
-                    scs_scaled = SegmentCoordinateSystemReal(
-                        scs=self.scale_rt(
-                            deepcopy(
-                                self.original_model.segments[
-                                    segment_name + "_parent_offset"
-                                ].segment_coordinate_system.scs[:, :, 0]
+            # Check if the segments has ghost parents
+            ghost_parent_names = ["_parent_offset", "_translation"]
+            for ghost_key in ghost_parent_names:
+                if self.original_model.segments[segment_name].name + ghost_key in self.original_model.segments.keys():
+                    offset_parent = self.original_model.segments[segment_name + ghost_key].parent_name
+                    if offset_parent in self.scaling_segments.keys():
+                        # Apply scaling to the position of the offset parent segment instead of the current segment
+                        offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
+                        scs_scaled = SegmentCoordinateSystemReal(
+                            scs=self.scale_rt(
+                                deepcopy(
+                                    self.original_model.segments[
+                                        segment_name + ghost_key
+                                    ].segment_coordinate_system.scs[:, :, 0]
+                                ),
+                                offset_parent_scale_factor,
                             ),
-                            offset_parent_scale_factor,
-                        ),
-                        is_scs_local=True,
-                    )
-                    self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
+                            is_scs_local=True,
+                        )
+                        self.scaled_model.segments[segment_name + ghost_key].segment_coordinate_system = scs_scaled
 
-                # Scale the meshes of the intermediary ghost segments
-                looping_parent_name = self.original_model.segments[
-                    segment_name
-                ].parent_name  # The current segment's mesh will be scaled later
-                scale_factor = scaling_factors[segment_name].to_vector()
-                while "_parent_offset" not in looping_parent_name:
-                    mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
-                    if mesh_file is not None:
-                        mesh_file.mesh_scale *= scale_factor
-                        mesh_file.mesh_translation *= scale_factor
-                    self.scaled_model.segments[looping_parent_name].mesh_file = mesh_file
-                    looping_parent_name = self.original_model.segments[looping_parent_name].parent_name
+                    # Scale the meshes of the intermediary ghost segments
+                    looping_parent_name = self.original_model.segments[
+                        segment_name
+                    ].parent_name  # The current segment's mesh will be scaled later
+                    scale_factor = scaling_factors[segment_name].to_vector()
+                    while ghost_key not in looping_parent_name:
+                        mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
+                        if mesh_file is not None:
+                            mesh_file.mesh_scale *= scale_factor
+                            mesh_file.mesh_translation *= scale_factor
+                        self.scaled_model.segments[looping_parent_name].mesh_file = mesh_file
+                        looping_parent_name = self.original_model.segments[looping_parent_name].parent_name
+                    # Apply it to only one of the ghost segments recognized
+                    break
 
             # Apply scaling to the current segment
             if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
@@ -540,7 +546,9 @@ class ScaleTool:
             model_6dof.segments["base"].translations = Translations.XYZ
             model_6dof.segments["base"].rotations = Rotations.XYZ
         else:
-            raise NotImplementedError("The model does not have a base segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue.")
+            raise NotImplementedError(
+                "The model does not have a base segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue."
+            )
         return model_6dof
 
     def find_static_pose(
@@ -616,7 +624,8 @@ class ScaleTool:
             q_original = q_static
         else:
             raise NotImplementedError(
-                "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet.")
+                "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
+            )
 
         jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):

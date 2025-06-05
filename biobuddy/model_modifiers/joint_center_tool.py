@@ -163,7 +163,7 @@ class RigidSegmentIdentification:
             mesh_file = None
             if original_model.segments[segment_name].mesh_file is not None:
                 mesh_file = deepcopy(original_model.segments[segment_name].mesh_file)
-                mesh_file_name = mesh_file.mesh_file_name.split('/')[-1]
+                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
                 mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
             joint_model.add_segment(
                 SegmentReal(
@@ -1001,13 +1001,15 @@ class JointCenterTool:
         joint_model = BiomechanicalModelReal()
         segment_chain = self.original_model.get_chain_between_segments(task.parent_name, task.child_name)
 
-        joint_model.add_segment(SegmentReal(
-            name="ground",
-            segment_coordinate_system=SegmentCoordinateSystemReal(
-                scs=np.identity(4),
-                is_scs_local=True,
-            ),
-        ))
+        joint_model.add_segment(
+            SegmentReal(
+                name="ground",
+                segment_coordinate_system=SegmentCoordinateSystemReal(
+                    scs=np.identity(4),
+                    is_scs_local=True,
+                ),
+            )
+        )
 
         # Copy all segments in the chain
         for segment_name in segment_chain:
@@ -1016,7 +1018,7 @@ class JointCenterTool:
             mesh_file = None
             if self.original_model.segments[segment_name].mesh_file is not None:
                 mesh_file = self.original_model.segments[segment_name].mesh_file
-                mesh_file_name = mesh_file.mesh_file_name.split('/')[-1]
+                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
                 mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
 
             if segment_name == task.parent_name:

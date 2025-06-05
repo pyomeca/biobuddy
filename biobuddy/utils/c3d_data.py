@@ -28,7 +28,7 @@ class C3dData:
             self.values[marker_name] = self.get_position((marker_name,)).squeeze()
 
         # Not a property to avoid recomputing each time
-        self.nb_frames = self.ezc3d_data["data"]["points"][:, :, self.first_frame: self.last_frame].shape[2]
+        self.nb_frames = self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame].shape[2]
 
     @property
     def all_marker_positions(self) -> np.ndarray:
