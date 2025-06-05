@@ -534,6 +534,15 @@ class ScaleTool:
             position=original_via_point.position * parent_scale_factor,
         )
 
+    def create_free_floating_base_model(self):
+        model_6dof = deepcopy(self.scaled_model)
+        if "base" in model_6dof.segment_names:
+            model_6dof.segments["base"].translations = Translations.XYZ
+            model_6dof.segments["base"].rotations = Rotations.XYZ
+        else:
+            raise NotImplementedError("The model does not have a base segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue.")
+        return model_6dof
+
     def find_static_pose(
         self,
         marker_positions: np.ndarray,
@@ -542,9 +551,15 @@ class ScaleTool:
         initial_static_pose: np.ndarray | None,
         visualize_optimal_static_pose: bool,
         method: str,
-    ) -> np.ndarray:
+    ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        optimal_q = self.scaled_model.inverse_kinematics(
+        if self.scaled_model.root_segment.nb_q != 6:
+            # If the model does not have a free-floating base, we need to create a temporary model with a free-floating base to match the experimental markers
+            model_to_use = self.create_free_floating_base_model()
+        else:
+            model_to_use = deepcopy(self.scaled_model)
+
+        optimal_q = model_to_use.inverse_kinematics(
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
@@ -567,7 +582,7 @@ class ScaleTool:
             debugging_model_path = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "../../examples/models/temporary.bioMod")
             )
-            self.scaled_model.to_biomod(debugging_model_path)
+            model_to_use.to_biomod(debugging_model_path)
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
@@ -575,7 +590,7 @@ class ScaleTool:
             viz_biomod_model.options.show_center_of_mass_labels = False
             viz.add_animated_model(viz_biomod_model, optimal_q)
 
-            model_marker_names = self.scaled_model.marker_names
+            model_marker_names = model_to_use.marker_names
             marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
             pyomarkers = Markers(data=marker_positions[:, marker_indices, :], channels=model_marker_names)
             viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers, show_tracked_marker_labels=False)
@@ -588,10 +603,22 @@ class ScaleTool:
                 "If not, please make sure the model and subject are not positioned close to singularities (gimbal lock)."
             )
 
-        return np.median(optimal_q, axis=1)
+        q_static = np.median(optimal_q, axis=1)
+
+        return q_static, model_to_use
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
-        jcs_in_global = self.scaled_model.forward_kinematics(q_static)
+
+        # Remove the fake root degrees of freedom if needed
+        if self.scaled_model.root_segment.nb_q == 0:
+            q_original = q_static[6:]
+        elif self.scaled_model.root_segment.nb_q == 6:
+            q_original = q_static
+        else:
+            raise NotImplementedError(
+                "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet.")
+
+        jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=jcs_in_global[segment_name][:, :, 0],
@@ -602,9 +629,10 @@ class ScaleTool:
             )
 
     def replace_markers_on_segments_local_scs(
-        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray
+        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray, model_to_use: BiomechanicalModelReal
     ):
-        jcs_in_global = self.scaled_model.forward_kinematics(q)
+
+        jcs_in_global = model_to_use.forward_kinematics(q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
                 raise RuntimeError(
@@ -628,7 +656,7 @@ class ScaleTool:
         visualize_optimal_static_pose: bool,
         method: str,
     ):
-        q_static = self.find_static_pose(
+        q_static, model_to_use = self.find_static_pose(
             marker_positions,
             marker_names,
             q_regularization_weight,
@@ -636,13 +664,11 @@ class ScaleTool:
             visualize_optimal_static_pose,
             method,
         )
+        self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
+
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
-            q = np.zeros((self.scaled_model.nb_q,))
-        else:
-            q = q_static
-        self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q)
 
     def modify_muscle_parameters(self):
         """

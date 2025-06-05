@@ -372,6 +372,16 @@ class BiomechanicalModelReal(ModelDynamics):
         """
         return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
 
+    @property
+    def root_segment(self) -> "SegmentReal":
+        """
+        Get the root segment of the model, which is the segment with no parent.
+        """
+        for segment in self.segments:
+            if segment.parent_name == "base":
+                return segment
+        raise ValueError("No root segment found in the model. Please check your model.")
+
     def from_biomod(
         self,
         filepath: str,
