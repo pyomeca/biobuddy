@@ -380,7 +380,17 @@ class BiomechanicalModelReal(ModelDynamics):
         for segment in self.segments:
             if segment.parent_name == "base":
                 return segment
-        raise ValueError("No root segment found in the model. Please check your model.")
+        # TODO: make sure that the base segment is always defined
+        # raise ValueError("No root segment found in the model. Please check your model.")
+
+    def degrees_of_freedom(self) -> list[Translations | Rotations]:
+        dofs = []
+        for segment in self.segments:
+            if segment.translations != Translations.NONE:
+                dofs.append(segment.translations)
+            if segment.rotations != Rotations.NONE:
+                dofs.append(segment.rotations)
+        return dofs
 
     def from_biomod(
         self,
