@@ -184,3 +184,7 @@ examples/*.bioMod
 examples/models/scaled.osim
 
 docs/BioBuddy_images/
+
+examples/data/hide_and_seek/
+
+examples/models/hide_and_seek/
