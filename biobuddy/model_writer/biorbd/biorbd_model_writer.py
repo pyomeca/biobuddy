@@ -23,6 +23,8 @@ class BiorbdModelWriter:
 
         out_string += model.header
 
+        out_string += f"gravity\t{model.gravity[0, 0]}\t{model.gravity[1, 0]}\t{model.gravity[2, 0]}\n\n"
+
         out_string += "\n\n\n"
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
