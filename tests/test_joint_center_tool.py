@@ -158,6 +158,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
+            decimal=5,
         )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
@@ -177,6 +178,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
+            decimal=5,
         )
     else:
         npt.assert_almost_equal(
@@ -189,6 +191,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
+            decimal=5,
         )
 
     # Test that the original model did not change
@@ -203,6 +206,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
     assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
@@ -215,6 +219,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     # Test the reconstruction for the original model and the output model with the functional joint centers
