@@ -991,7 +991,6 @@ class JointCenterTool:
             if (
                 current_segment.parent_name == ""
                 or current_segment.parent_name == "base"
-                or current_segment.parent_name is None
             ):
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"

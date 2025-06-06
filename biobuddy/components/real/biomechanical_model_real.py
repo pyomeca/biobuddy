@@ -45,6 +45,7 @@ class BiomechanicalModelReal(ModelDynamics):
         from ..real.rigidbody.segment_real import SegmentReal
         if len(self.segments) == 0 and segment.name != "root":
             self.segments.append(SegmentReal(name="root"))
+            segment.parent_name = "root"
 
         if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
             raise ValueError(
@@ -383,7 +384,7 @@ class BiomechanicalModelReal(ModelDynamics):
         Get the root segment of the model, which is the segment with no parent.
         """
         for segment in self.segments:
-            if segment.parent_name == "base":
+            if segment.name == "root":
                 return segment
         # TODO: make sure that the base segment is always defined
         # raise ValueError("No root segment found in the model. Please check your model.")

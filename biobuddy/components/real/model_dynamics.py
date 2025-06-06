@@ -86,9 +86,8 @@ class ModelDynamics:
             rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
             while current_segment.segment_coordinate_system.is_in_local:
                 current_parent_name = current_segment.parent_name
-                if (
-                    current_parent_name == "base" or current_parent_name is None
-                ):  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
+                if current_parent_name == "base":
+                    # @pariterre : is this really hardcoded in biorbd ?
                     break
                 current_segment = self.segments[current_parent_name]
                 rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
@@ -339,11 +338,7 @@ class ModelDynamics:
             for i_frame in range(nb_frames):
                 segment_rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
                 parent_name = self.segments[segment_name].parent_name
-                if segment_name == "base":
-                    # This is useful for the case where the base segment has DoFs (like when finding the static pose through IK)
-                    parent_rt = np.identity(4)
-                elif parent_name == "base" and "base" not in segment_rt_in_global:
-                    # This is the traditionnal case where the base segment is not explicitly declared
+                if parent_name == "base":
                     parent_rt = np.identity(4)
                 else:
                     parent_rt = segment_rt_in_global[parent_name][:, :, i_frame]

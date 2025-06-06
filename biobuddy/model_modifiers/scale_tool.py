@@ -542,12 +542,12 @@ class ScaleTool:
 
     def create_free_floating_base_model(self):
         model_6dof = deepcopy(self.scaled_model)
-        if "base" in model_6dof.segment_names:
-            model_6dof.segments["base"].translations = Translations.XYZ
-            model_6dof.segments["base"].rotations = Rotations.XYZ
+        if "root" in model_6dof.segment_names:
+            model_6dof.segments["root"].translations = Translations.XYZ
+            model_6dof.segments["root"].rotations = Rotations.XYZ
         else:
             raise NotImplementedError(
-                "The model does not have a base segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue."
+                "The model does not have a root segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue."
             )
         return model_6dof
 
@@ -561,7 +561,7 @@ class ScaleTool:
         method: str,
     ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] != [Translations.XYZ, Rotations.XYZ]:
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [Translations.XYZ, Rotations.XYZ]:
             model_to_use = deepcopy(self.scaled_model)
         else:
             # If the model does not have a free-floating base, we need to create a temporary model with a free-floating base to match the experimental markers

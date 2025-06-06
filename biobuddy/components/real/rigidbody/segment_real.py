@@ -19,7 +19,7 @@ class SegmentReal:
         self,
         name: str,
         parent_name: str = "base",
-        segment_coordinate_system: SegmentCoordinateSystemReal = None,
+        segment_coordinate_system: SegmentCoordinateSystemReal = SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
         q_ranges: RangeOfMotion = None,
