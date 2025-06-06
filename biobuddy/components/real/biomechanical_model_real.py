@@ -41,6 +41,11 @@ class BiomechanicalModelReal(ModelDynamics):
         segment
             The segment to add
         """
+        # If there is no root segment, declare one before adding other segments
+        from ..real.rigidbody.segment_real import SegmentReal
+        if len(self.segments) == 0 and segment.name != "root":
+            self.segments.append(SegmentReal(name="root"))
+
         if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
             raise ValueError(
                 f"Parent segment should be declared before the child segments. "
