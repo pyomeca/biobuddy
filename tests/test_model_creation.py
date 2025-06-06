@@ -220,7 +220,17 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert bio_model.segment_names == ["root", "TRUNK", "HEAD", "UPPER_ARM", "LOWER_ARM", "HAND", "THIGH", "SHANK", "FOOT"]
+    assert bio_model.segment_names == [
+        "root",
+        "TRUNK",
+        "HEAD",
+        "UPPER_ARM",
+        "LOWER_ARM",
+        "HAND",
+        "THIGH",
+        "SHANK",
+        "FOOT",
+    ]
     assert bio_model.marker_names == [
         "PELVIS",
         "BOTTOM_HEAD",
