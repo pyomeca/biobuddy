@@ -1049,18 +1049,18 @@ class JointCenterTool:
 
             if reconstruct_whole_body:
                 marker_names = self.original_model.marker_names
+                model_for_initial_rt = deepcopy(self.original_model)
             else:
                 marker_names = task.parent_marker_names + task.child_marker_names
+                model_for_initial_rt = self._setup_model_for_initial_rt(task)
 
             if task.initialize_whole_trial_reconstruction:
                 # Reconstruct the whole trial to get a good initial rt for each frame
                 marker_positions = task.c3d_data.get_position(marker_names)[:3, :, :]
-                model_for_initial_rt = deepcopy(self.original_model)
                 initial_rt_marker_weights = deepcopy(marker_weights)
             else:
                 # Reconstruct only the first frame to get an initial rt
                 marker_positions = task.c3d_data.get_position(marker_names)[:3, :, 0]
-                model_for_initial_rt = self._setup_model_for_initial_rt(task)
                 initial_rt_marker_weights = None
 
             for marker in marker_names:
