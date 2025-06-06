@@ -107,7 +107,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
 
     model = biorbd.Model(kinematic_model_filepath)
     assert model.nbQ() == 4
-    assert model.nbSegment() == 2
+    assert model.nbSegment() == 3
     assert model.nbMarkers() == 0
     assert model.nbMuscles() == 1
     assert model.nbMuscleGroups() == 1

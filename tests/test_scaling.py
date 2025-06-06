@@ -1,5 +1,5 @@
 """
-TODO: Add the biomod sclaing configuration + test it
+TODO: Add tests for the scaling configuration
 """
 
 import os

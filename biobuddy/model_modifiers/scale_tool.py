@@ -621,10 +621,10 @@ class ScaleTool:
     def make_static_pose_the_zero(self, q_static: np.ndarray):
 
         # Remove the fake root degrees of freedom if needed
-        if self.scaled_model.root_segment.nb_q == 0:
-            q_original = q_static[6:]
-        elif self.scaled_model.root_segment.nb_q == 6:
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [Translations.XYZ, Rotations.XYZ]:
             q_original = q_static
+        elif self.scaled_model.root_segment.nb_q == 0:
+            q_original = q_static[6:]
         else:
             raise NotImplementedError(
                 "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
