@@ -32,8 +32,8 @@ class RigidSegmentIdentification:
         child_name: str,
         parent_marker_names: list[str],
         child_marker_names: list[str],
-        first_frame: int,
-        last_frame: int,
+        first_frame: int = None,
+        last_frame: int = None,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
@@ -160,6 +160,11 @@ class RigidSegmentIdentification:
     ):
 
         def setup_segments_for_animation(segment_name: str):
+            mesh_file = None
+            if original_model.segments[segment_name].mesh_file is not None:
+                mesh_file = deepcopy(original_model.segments[segment_name].mesh_file)
+                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
+                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
             joint_model.add_segment(
                 SegmentReal(
                     name=segment_name,
@@ -167,7 +172,7 @@ class RigidSegmentIdentification:
                     segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.identity(4), is_scs_local=True),
                     translations=Translations.XYZ,
                     rotations=Rotations.XYZ,
-                    mesh_file=original_model.segments[segment_name].mesh_file,
+                    mesh_file=mesh_file,
                 )
             )
             for marker in original_model.segments[segment_name].markers:
@@ -231,7 +236,7 @@ class RigidSegmentIdentification:
 
         viz = pyorerun.PhaseRerun(t)
         if not without_exp_markers:
-            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers)
+            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
@@ -294,26 +299,32 @@ class RigidSegmentIdentification:
 
         segment_list = original_model.get_chain_between_segments(self.parent_name, self.child_name)[1:]
         for segment_name in segment_list:
-            if original_model.segments[segment_name].mesh_file is not None:
-                mesh_file = original_model.segments[segment_name].mesh_file
 
-                if mesh_file.mesh_translation is None:
-                    mesh_translation = np.zeros((3,))
-                else:
-                    mesh_translation = mesh_file.mesh_translation
+            if not segment_name.startswith(self.child_name):
+                # There is another segment between the parent and the child segment, so we do not change it's position
+                continue
+            else:
 
-                if mesh_file.mesh_rotation is None:
-                    mesh_rotation = np.zeros((4, 1))
-                else:
-                    mesh_rotation = mesh_file.mesh_rotation
+                if original_model.segments[segment_name].mesh_file is not None:
+                    mesh_file = original_model.segments[segment_name].mesh_file
 
-                mesh_rt = RotoTransMatrix()
-                mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
-                new_rt = rotation_translation_transform.rt_matrix @ mesh_rt.rt_matrix
+                    if mesh_file.mesh_translation is None:
+                        mesh_translation = np.zeros((3,))
+                    else:
+                        mesh_translation = mesh_file.mesh_translation
 
-                # Update mesh file's local rotation and translation
-                new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
-                new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
+                    if mesh_file.mesh_rotation is None:
+                        mesh_rotation = np.zeros((4, 1))
+                    else:
+                        mesh_rotation = mesh_file.mesh_rotation
+
+                    mesh_rt = RotoTransMatrix()
+                    mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
+                    new_rt = rotation_translation_transform.rt_matrix @ mesh_rt.rt_matrix
+
+                    # Update mesh file's local rotation and translation
+                    new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt[:3, :3])
+                    new_model.segments[segment_name].mesh_file.mesh_translation = new_rt[:3, 3]
 
         # Markers
         marker_positions = original_model.markers_in_global()
@@ -670,11 +681,11 @@ class Sara(RigidSegmentIdentification):
         child_name: str,
         parent_marker_names: list[str],
         child_marker_names: list[str],
-        first_frame: int,
-        last_frame: int,
         joint_center_markers: list[str],
         distal_markers: list[str],
         is_longitudinal_axis_from_jcs_to_distal_markers: bool,
+        first_frame: int = None,
+        last_frame: int = None,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
@@ -977,36 +988,92 @@ class JointCenterTool:
         current_segment = deepcopy(self.original_model.segments[jcs_identifier.child_name])
         while current_segment.parent_name != jcs_identifier.parent_name:
             current_segment = deepcopy(self.original_model.segments[current_segment.parent_name])
-            if (
-                current_segment.parent_name == ""
-                or current_segment.parent_name == "base"
-                or current_segment.parent_name is None
-            ):
+            if current_segment.parent_name == "base":
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )
+
+    def _setup_model_for_initial_rt(self, task):
+        joint_model = BiomechanicalModelReal()
+        segment_chain = self.original_model.get_chain_between_segments(task.parent_name, task.child_name)
+
+        joint_model.add_segment(
+            SegmentReal(
+                name="ground",
+                segment_coordinate_system=SegmentCoordinateSystemReal(
+                    scs=np.identity(4),
+                    is_scs_local=True,
+                ),
+            )
+        )
+
+        # Copy all segments in the chain
+        for segment_name in segment_chain:
+
+            # get the filename so that we can point to the Geometry_cleaned forler
+            mesh_file = None
+            if self.original_model.segments[segment_name].mesh_file is not None:
+                mesh_file = self.original_model.segments[segment_name].mesh_file
+                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
+                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
+
+            if segment_name == task.parent_name:
+                # Add 6DoFs to the parent segment
+                first_segment = deepcopy(self.original_model.segments[segment_name])
+                first_segment.parent_name = "ground"
+                first_segment.translations = Translations.XYZ
+                first_segment.rotations = Rotations.XYZ
+                first_segment.mesh_file = mesh_file
+                joint_model.add_segment(first_segment)
+            else:
+                other_segment = deepcopy(self.original_model.segments[segment_name])
+                other_segment.mesh_file = mesh_file
+                joint_model.add_segment(other_segment)
+
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
+        joint_model.to_biomod(temporary_model_path)
+        return joint_model
 
     def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
+            # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
+            reconstruct_whole_body = True
+            for marker in self.original_model.marker_names:
+                if marker not in task.c3d_data.marker_names:
+                    reconstruct_whole_body = False
+                    break
+
+            if reconstruct_whole_body:
+                marker_names = self.original_model.marker_names
+                model_for_initial_rt = deepcopy(self.original_model)
+            else:
+                marker_names = task.parent_marker_names + task.child_marker_names
+                model_for_initial_rt = self._setup_model_for_initial_rt(task)
+
             if task.initialize_whole_trial_reconstruction:
                 # Reconstruct the whole trial to get a good initial rt for each frame
-                q_init = self.original_model.inverse_kinematics(
-                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, :],
-                    marker_names=self.original_model.marker_names,
-                    marker_weights=marker_weights,
-                )
+                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, :]
+                initial_rt_marker_weights = deepcopy(marker_weights)
             else:
-                # Reconstruct first frame to get an initial rt
-                q_init = self.original_model.inverse_kinematics(
-                    marker_positions=task.c3d_data.get_position(self.original_model.marker_names)[:3, :, 0],
-                    marker_names=self.original_model.marker_names,
-                    marker_weights=marker_weights,
-                )
+                # Reconstruct only the first frame to get an initial rt
+                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, 0]
+                initial_rt_marker_weights = None
 
-            segment_rt_in_global = self.original_model.forward_kinematics(q_init)
+            for marker in marker_names:
+                if marker not in task.c3d_data.marker_names:
+                    raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
+
+            q_init = model_for_initial_rt.inverse_kinematics(
+                marker_positions=marker_positions,
+                marker_names=marker_names,
+                marker_weights=initial_rt_marker_weights,
+            )
+
+            segment_rt_in_global = model_for_initial_rt.forward_kinematics(q_init)
             parent_rt_init = segment_rt_in_global[task.parent_name]
             child_rt_init = segment_rt_in_global[task.child_name]
 

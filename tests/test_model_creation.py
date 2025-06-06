@@ -212,15 +212,25 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
     assert bio_model.nb_q == 7
-    assert model.nbSegment() == 8
-    assert bio_model.nb_segments == 8
+    assert model.nbSegment() == 9
+    assert bio_model.nb_segments == 9
     assert model.nbMarkers() == 25
     assert bio_model.nb_markers == 25
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert bio_model.segment_names == ["TRUNK", "HEAD", "UPPER_ARM", "LOWER_ARM", "HAND", "THIGH", "SHANK", "FOOT"]
+    assert bio_model.segment_names == [
+        "root",
+        "TRUNK",
+        "HEAD",
+        "UPPER_ARM",
+        "LOWER_ARM",
+        "HAND",
+        "THIGH",
+        "SHANK",
+        "FOOT",
+    ]
     assert bio_model.marker_names == [
         "PELVIS",
         "BOTTOM_HEAD",
@@ -563,8 +573,8 @@ def test_complex_model():
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 4
     assert real_model.nb_q == 4
-    assert model.nbSegment() == 2
-    assert real_model.nb_segments == 2
+    assert model.nbSegment() == 3
+    assert real_model.nb_segments == 3
     assert model.nbMarkers() == 0
     assert real_model.nb_markers == 0
     assert model.nbMuscles() == 1

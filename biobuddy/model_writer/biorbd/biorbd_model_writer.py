@@ -23,6 +23,9 @@ class BiorbdModelWriter:
 
         out_string += model.header
 
+        if model.gravity is not None:
+            out_string += f"gravity\t{model.gravity[0, 0]}\t{model.gravity[1, 0]}\t{model.gravity[2, 0]}\n\n"
+
         out_string += "\n\n\n"
         out_string += "// --------------------------------------------------------------\n"
         out_string += "// SEGMENTS\n"
@@ -64,7 +67,7 @@ class BiorbdModelWriter:
             out_string += "\n/*-------------- WARNINGS---------------\n"
             for warning in model.warnings:
                 out_string += "\n" + warning
-            out_string += "*/\n"
+            out_string += "\n\n*/\n"
 
         # removing any character that is not ascii readable from the out_string before writing the model
         cleaned_string = out_string.encode("ascii", "ignore").decode()

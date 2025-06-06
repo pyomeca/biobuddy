@@ -91,7 +91,7 @@ class BiomodModelParser:
                         check_if_version_defined(biomod_version)
                         if gravity is not None:
                             raise ValueError("Gravity already defined")
-                        gravity = read_float_vector(next_token=next_token, length=3)
+                        self.gravity = read_float_vector(next_token=next_token, length=3)
                     elif token.lower() == "segment":
                         check_if_version_defined(biomod_version)
                         current_component = SegmentReal(name=read_str(next_token=next_token))

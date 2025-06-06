@@ -7,7 +7,13 @@ class C3dData:
     Implementation of the `Data` protocol from model_creation
     """
 
-    def __init__(self, c3d_path, first_frame: int = 0, last_frame: int = -1):
+    def __init__(self, c3d_path, first_frame: int | None = 0, last_frame: int | None = -1):
+
+        if first_frame is None:
+            first_frame = 0
+        if last_frame is None:
+            last_frame = -1
+
         self.first_frame = first_frame
         self.last_frame = last_frame
         self.c3d_path = c3d_path
@@ -21,13 +27,12 @@ class C3dData:
         for marker_name in self.marker_names:
             self.values[marker_name] = self.get_position((marker_name,)).squeeze()
 
+        # Not a property to avoid recomputing each time
+        self.nb_frames = self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame].shape[2]
+
     @property
     def all_marker_positions(self) -> np.ndarray:
         return self.get_position(marker_names=self.marker_names)
-
-    @property
-    def nb_frames(self) -> int:
-        return self.last_frame - self.first_frame
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
         """Get the geometrical center position between markers"""

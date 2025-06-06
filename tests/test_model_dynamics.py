@@ -77,7 +77,7 @@ def test_biomechanics_model_real_utils_functions():
     nb_markers = leg_model.nb_markers
     assert nb_markers == 16
     nb_segments = leg_model.nb_segments
-    assert nb_segments == 3
+    assert nb_segments == 4
 
     nb_frames = 5
     q_random = np.random.rand(nb_q, nb_frames)

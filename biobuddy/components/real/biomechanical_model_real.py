@@ -41,6 +41,13 @@ class BiomechanicalModelReal(ModelDynamics):
         segment
             The segment to add
         """
+        # If there is no root segment, declare one before adding other segments
+        from ..real.rigidbody.segment_real import SegmentReal
+
+        if len(self.segments) == 0 and segment.name != "root":
+            self.segments.append(SegmentReal(name="root"))
+            segment.parent_name = "root"
+
         if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
             raise ValueError(
                 f"Parent segment should be declared before the child segments. "
@@ -371,6 +378,26 @@ class BiomechanicalModelReal(ModelDynamics):
         Get the names of the via point which have this segment as a parent.
         """
         return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
+
+    @property
+    def root_segment(self) -> "SegmentReal":
+        """
+        Get the root segment of the model, which is the segment with no parent.
+        """
+        for segment in self.segments:
+            if segment.name == "root":
+                return segment
+        # TODO: make sure that the base segment is always defined
+        # raise ValueError("No root segment found in the model. Please check your model.")
+
+    def degrees_of_freedom(self) -> list[Translations | Rotations]:
+        dofs = []
+        for segment in self.segments:
+            if segment.translations != Translations.NONE:
+                dofs.append(segment.translations)
+            if segment.rotations != Rotations.NONE:
+                dofs.append(segment.rotations)
+        return dofs
 
     def from_biomod(
         self,
