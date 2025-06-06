@@ -988,10 +988,7 @@ class JointCenterTool:
         current_segment = deepcopy(self.original_model.segments[jcs_identifier.child_name])
         while current_segment.parent_name != jcs_identifier.parent_name:
             current_segment = deepcopy(self.original_model.segments[current_segment.parent_name])
-            if (
-                current_segment.parent_name == ""
-                or current_segment.parent_name == "base"
-            ):
+            if current_segment.parent_name == "base":
                 raise RuntimeError(
                     f"The segment {jcs_identifier.child_name} is not the child of the segment {jcs_identifier.parent_name}. Please check the kinematic chain again"
                 )

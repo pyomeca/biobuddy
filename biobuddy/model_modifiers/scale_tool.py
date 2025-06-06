@@ -561,7 +561,10 @@ class ScaleTool:
         method: str,
     ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [Translations.XYZ, Rotations.XYZ]:
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+            Translations.XYZ,
+            Rotations.XYZ,
+        ]:
             model_to_use = deepcopy(self.scaled_model)
         else:
             # If the model does not have a free-floating base, we need to create a temporary model with a free-floating base to match the experimental markers
