@@ -183,10 +183,14 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-            np.array([[ 0.97048,  0.04046, -0.23778,  0.02157],
-                       [-0.06086,  0.99501, -0.07909, -0.40738],
-                       [ 0.2334 ,  0.09123,  0.96809, -0.02919],
-                       [ 0.     ,  0.     ,  0.     ,  1.     ]]),
+            np.array(
+                [
+                    [0.97048, 0.04046, -0.23778, 0.02157],
+                    [-0.06086, 0.99501, -0.07909, -0.40738],
+                    [0.2334, 0.09123, 0.96809, -0.02919],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
 
@@ -398,10 +402,14 @@ def test_score_and_sara_with_ghost_segments():
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[ 0.9422628,  0.1384471, -0.3049152,  0.0053956],
-                   [-0.1588124,  0.9863761, -0.0429041, -0.3826869],
-                   [ 0.2948212,  0.0888513,  0.9514126, -0.0096506],
-                   [ 0.       ,  0.       ,  0.       ,  1.       ]]),
+        np.array(
+            [
+                [0.9422628, 0.1384471, -0.3049152, 0.0053956],
+                [-0.1588124, 0.9863761, -0.0429041, -0.3826869],
+                [0.2948212, 0.0888513, 0.9514126, -0.0096506],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
