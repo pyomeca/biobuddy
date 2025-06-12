@@ -20,6 +20,8 @@ from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
+from ..utils.translations import Translations
+from ..utils.rotations import Rotations
 
 _logger = logging.getLogger(__name__)
 
@@ -195,7 +197,7 @@ class ScaleTool:
 
         else:
             for marker_name in self.marker_weights.keys():
-                if self.marker_weights[marker_name] not in marker_names:
+                if self.marker_weights[marker_name].name not in marker_names:
                     raise RuntimeError(f"The marker {marker_name} is not in the c3d file.")
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = marker_positions[:, marker_index, :]
@@ -265,7 +267,10 @@ class ScaleTool:
                     )
             else:
                 # If the segment is not scaled, keep its original mass
-                if self.original_model.segments[segment_name].inertia_parameters is None:
+                if (
+                    self.original_model.segments[segment_name].inertia_parameters is None
+                    or self.original_model.segments[segment_name].inertia_parameters.mass == 0
+                ):
                     segment_masses[segment_name] = 0
                 else:
                     raise NotImplementedError(
@@ -297,40 +302,41 @@ class ScaleTool:
 
         for segment_name in self.original_model.segments.keys():
 
-            # Check if the segments has a ghost parent
-            if (
-                self.original_model.segments[segment_name].name + "_parent_offset"
-                in self.original_model.segments.keys()
-            ):
-                offset_parent = self.original_model.segments[segment_name + "_parent_offset"].parent_name
-                if offset_parent in self.scaling_segments.keys():
-                    # Apply scaling to the position of the offset parent segment instead of the current segment
-                    offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
-                    scs_scaled = SegmentCoordinateSystemReal(
-                        scs=self.scale_rt(
-                            deepcopy(
-                                self.original_model.segments[
-                                    segment_name + "_parent_offset"
-                                ].segment_coordinate_system.scs[:, :, 0]
+            # Check if the segments has ghost parents
+            ghost_parent_names = ["_parent_offset", "_translation"]
+            for ghost_key in ghost_parent_names:
+                if self.original_model.segments[segment_name].name + ghost_key in self.original_model.segments.keys():
+                    offset_parent = self.original_model.segments[segment_name + ghost_key].parent_name
+                    if offset_parent in self.scaling_segments.keys():
+                        # Apply scaling to the position of the offset parent segment instead of the current segment
+                        offset_parent_scale_factor = scaling_factors[offset_parent].to_vector()
+                        scs_scaled = SegmentCoordinateSystemReal(
+                            scs=self.scale_rt(
+                                deepcopy(
+                                    self.original_model.segments[
+                                        segment_name + ghost_key
+                                    ].segment_coordinate_system.scs[:, :, 0]
+                                ),
+                                offset_parent_scale_factor,
                             ),
-                            offset_parent_scale_factor,
-                        ),
-                        is_scs_local=True,
-                    )
-                    self.scaled_model.segments[segment_name + "_parent_offset"].segment_coordinate_system = scs_scaled
+                            is_scs_local=True,
+                        )
+                        self.scaled_model.segments[segment_name + ghost_key].segment_coordinate_system = scs_scaled
 
-                # Scale the meshes of the intermediary ghost segments
-                looping_parent_name = self.original_model.segments[
-                    segment_name
-                ].parent_name  # The current segment's mesh will be scaled later
-                scale_factor = scaling_factors[segment_name].to_vector()
-                while "_parent_offset" not in looping_parent_name:
-                    mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
-                    if mesh_file is not None:
-                        mesh_file.mesh_scale *= scale_factor
-                        mesh_file.mesh_translation *= scale_factor
-                    self.scaled_model.segments[looping_parent_name].mesh_file = mesh_file
-                    looping_parent_name = self.original_model.segments[looping_parent_name].parent_name
+                    # Scale the meshes of the intermediary ghost segments
+                    looping_parent_name = self.original_model.segments[
+                        segment_name
+                    ].parent_name  # The current segment's mesh will be scaled later
+                    scale_factor = scaling_factors[segment_name].to_vector()
+                    while ghost_key not in looping_parent_name:
+                        mesh_file = deepcopy(self.original_model.segments[looping_parent_name].mesh_file)
+                        if mesh_file is not None:
+                            mesh_file.mesh_scale *= scale_factor
+                            mesh_file.mesh_translation *= scale_factor
+                        self.scaled_model.segments[looping_parent_name].mesh_file = mesh_file
+                        looping_parent_name = self.original_model.segments[looping_parent_name].parent_name
+                    # Apply it to only one of the ghost segments recognized
+                    break
 
             # Apply scaling to the current segment
             if self.original_model.segments[segment_name].parent_name in self.scaling_segments.keys():
@@ -534,6 +540,17 @@ class ScaleTool:
             position=original_via_point.position * parent_scale_factor,
         )
 
+    def create_free_floating_base_model(self):
+        model_6dof = deepcopy(self.scaled_model)
+        if "root" in model_6dof.segment_names:
+            model_6dof.segments["root"].translations = Translations.XYZ
+            model_6dof.segments["root"].rotations = Rotations.XYZ
+        else:
+            raise NotImplementedError(
+                "The model does not have a root segment. Creation of a temporary free-floating base model is not implemented, yet. Please notify the devs is you encounter this issue."
+            )
+        return model_6dof
+
     def find_static_pose(
         self,
         marker_positions: np.ndarray,
@@ -542,9 +559,18 @@ class ScaleTool:
         initial_static_pose: np.ndarray | None,
         visualize_optimal_static_pose: bool,
         method: str,
-    ) -> np.ndarray:
+    ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        optimal_q = self.scaled_model.inverse_kinematics(
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+            Translations.XYZ,
+            Rotations.XYZ,
+        ]:
+            model_to_use = deepcopy(self.scaled_model)
+        else:
+            # If the model does not have a free-floating base, we need to create a temporary model with a free-floating base to match the experimental markers
+            model_to_use = self.create_free_floating_base_model()
+
+        optimal_q = model_to_use.inverse_kinematics(
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
@@ -567,7 +593,7 @@ class ScaleTool:
             debugging_model_path = os.path.abspath(
                 os.path.join(os.path.dirname(__file__), "../../examples/models/temporary.bioMod")
             )
-            self.scaled_model.to_biomod(debugging_model_path)
+            model_to_use.to_biomod(debugging_model_path)
             viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
@@ -575,7 +601,7 @@ class ScaleTool:
             viz_biomod_model.options.show_center_of_mass_labels = False
             viz.add_animated_model(viz_biomod_model, optimal_q)
 
-            model_marker_names = self.scaled_model.marker_names
+            model_marker_names = model_to_use.marker_names
             marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
             pyomarkers = Markers(data=marker_positions[:, marker_indices, :], channels=model_marker_names)
             viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers, show_tracked_marker_labels=False)
@@ -588,10 +614,26 @@ class ScaleTool:
                 "If not, please make sure the model and subject are not positioned close to singularities (gimbal lock)."
             )
 
-        return np.median(optimal_q, axis=1)
+        q_static = np.median(optimal_q, axis=1)
+
+        return q_static, model_to_use
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
-        jcs_in_global = self.scaled_model.forward_kinematics(q_static)
+
+        # Remove the fake root degrees of freedom if needed
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+            Translations.XYZ,
+            Rotations.XYZ,
+        ]:
+            q_original = q_static
+        elif self.scaled_model.root_segment.nb_q == 0:
+            q_original = q_static[6:]
+        else:
+            raise NotImplementedError(
+                "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
+            )
+
+        jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=jcs_in_global[segment_name][:, :, 0],
@@ -602,9 +644,10 @@ class ScaleTool:
             )
 
     def replace_markers_on_segments_local_scs(
-        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray
+        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray, model_to_use: BiomechanicalModelReal
     ):
-        jcs_in_global = self.scaled_model.forward_kinematics(q)
+
+        jcs_in_global = model_to_use.forward_kinematics(q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
                 raise RuntimeError(
@@ -628,7 +671,7 @@ class ScaleTool:
         visualize_optimal_static_pose: bool,
         method: str,
     ):
-        q_static = self.find_static_pose(
+        q_static, model_to_use = self.find_static_pose(
             marker_positions,
             marker_names,
             q_regularization_weight,
@@ -636,13 +679,15 @@ class ScaleTool:
             visualize_optimal_static_pose,
             method,
         )
+
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
-            q = np.zeros((self.scaled_model.nb_q,))
+            self.replace_markers_on_segments_local_scs(
+                marker_positions, marker_names, q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
+            )
         else:
-            q = q_static
-        self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q)
+            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
 
     def modify_muscle_parameters(self):
         """

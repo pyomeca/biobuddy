@@ -93,7 +93,7 @@ def main(visualization):
         viz_scaled_model.options.show_gravity = True
         viz_scaled_model.options.show_marker_labels = False
         viz_scaled_model.options.show_center_of_mass_labels = False
-        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
+        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
 
         # Animate
         viz.rerun_by_frame("Model output")

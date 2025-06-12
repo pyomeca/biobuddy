@@ -86,9 +86,8 @@ class ModelDynamics:
             rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
             while current_segment.segment_coordinate_system.is_in_local:
                 current_parent_name = current_segment.parent_name
-                if (
-                    current_parent_name == "base" or current_parent_name is None
-                ):  # @pariterre : is this really hardcoded in biorbd ? I thought it was "root"
+                if current_parent_name == "base":
+                    # @pariterre : is this really hardcoded in biorbd ?
                     break
                 current_segment = self.segments[current_parent_name]
                 rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
@@ -206,6 +205,7 @@ class ModelDynamics:
         q_target: np.ndarray = None,
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
+        animate_reconstruction: bool = False,
     ) -> np.ndarray:
         """
         Solve the inverse kinematics problem using least squares optimization.
@@ -227,6 +227,8 @@ class ModelDynamics:
             The weights of each marker to consider during the least squares. If None, all markers are equally weighted.
         method
             The least square method to use. By default, the Levenberg-Marquardt method is used.
+        animate_reconstruction
+            Weather to animate the reconstruction
         """
 
         try:
@@ -264,20 +266,15 @@ class ModelDynamics:
                 marker_names_reordered += [m]
         markers_real = marker_positions[:, marker_indices, :]
 
-        if marker_weights is None:
-            marker_weights = NamedList()
-            for marker_name in marker_names_reordered:
-                marker_weights.append(MarkerWeight(marker_name, 1.0))
-        else:
+        marker_weights_reordered = np.ones((nb_markers,))
+        if marker_weights is not None:
             for marker_name in marker_names_reordered:
                 if marker_name not in marker_weights.keys():
                     raise ValueError(
                         f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
                     )
-
-        marker_weights_reordered = np.zeros((nb_markers,))
-        for i_marker in range(nb_markers):
-            marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]].weight
+            for i_marker in range(nb_markers):
+                marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]].weight
 
         init = np.ones((nb_q,)) * 0.0001
         if q_target is not None:
@@ -315,6 +312,32 @@ class ModelDynamics:
                 tr_options=dict(disp=False),
             )
             optimal_q[:, i_frame] = sol.x
+
+        if animate_reconstruction:
+            if not with_biorbd:
+                raise RuntimeError(
+                    "To animate the inverse kinematics reconstruction, your model should be to_biomod-able."
+                )
+            else:
+
+                # Compare the result visually
+                import pyorerun
+                from pyomeca import Markers
+
+                t = np.linspace(0, 1, optimal_q.shape[1])
+                viz = pyorerun.PhaseRerun(t)
+
+                # Add the experimental markers from the static trial
+                pyomarkers = Markers(data=markers_real, channels=marker_names_reordered)
+                viz_scaled_model = pyorerun.BiorbdModel("temporary.bioMod")
+                viz_scaled_model.options.transparent_mesh = False
+                viz_scaled_model.options.show_gravity = True
+                viz_scaled_model.options.show_marker_labels = False
+                viz_scaled_model.options.show_center_of_mass_labels = False
+                viz.add_animated_model(
+                    viz_scaled_model, optimal_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False
+                )
+                viz.rerun_by_frame("Model output")
 
         return optimal_q
 

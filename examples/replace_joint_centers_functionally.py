@@ -24,6 +24,7 @@ from biobuddy import (
     JointCenterTool,
     Sara,
     Score,
+    MarkerWeight,
 )
 
 
@@ -87,7 +88,6 @@ def main(visualization):
         make_static_pose_the_models_zero=True,
         visualize_optimal_static_pose=False,
     )
-    marker_weights = scale_tool.marker_weights
 
     # Add to the model the new technical markers that will be used to identify the joint centers
     technical_marker_to_add = {
@@ -118,7 +118,7 @@ def main(visualization):
                     is_technical=True,
                 )
             )
-            marker_weights[marker] = 5.0
+            scale_tool.add_marker_weight(MarkerWeight(name=marker, weight=5.0))
     scaled_model.to_biomod(scaled_biomod_filepath)
 
     # ---------- ECH ---------- #
@@ -134,8 +134,8 @@ def main(visualization):
             child_marker_names=["RLFE", "RMFE"] + technical_marker_to_add["femur_r"],
             first_frame=1,
             last_frame=500,  # Marker inversion happening after this frame in the example data!
-            initialize_whole_trial_reconstruction=False,  # True,
-            animate_rt=False,
+            initialize_whole_trial_reconstruction=True,
+            animate_rt=True,
         )
     )
     joint_center_tool.add(
@@ -150,13 +150,13 @@ def main(visualization):
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             first_frame=300,
             last_frame=922 - 100,
-            initialize_whole_trial_reconstruction=False,
+            initialize_whole_trial_reconstruction=True,
             animate_rt=False,
         )
     )
     # ... add all other joints that you want to modify based on the functional trials
 
-    score_model = joint_center_tool.replace_joint_centers(marker_weights)
+    score_model = joint_center_tool.replace_joint_centers(scale_tool.marker_weights)
     score_model.to_biomod(score_biomod_filepath)
 
     if visualization:
@@ -181,7 +181,7 @@ def main(visualization):
         # Animate
         viz.rerun_by_frame("Model output")
 
-    return marker_weights
+    return scale_tool.marker_weights
 
 
 if __name__ == "__main__":
