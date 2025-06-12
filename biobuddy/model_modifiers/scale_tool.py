@@ -679,11 +679,13 @@ class ScaleTool:
             visualize_optimal_static_pose,
             method,
         )
-        self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
 
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
+            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q=np.zeros((self.scaled_model.nb_q, )), model_to_use=self.scaled_model)
+        else:
+            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
 
     def modify_muscle_parameters(self):
         """

@@ -163,8 +163,8 @@ def test_scaling_wholebody():
     q_zeros = np.zeros((42, marker_positions.shape[2]))
     q_random = np.random.rand(42) * 2 * np.pi
 
-    # For debugging
-    visualize_model_scaling_output(scaled_model, osim_model_scaled, q_zeros, marker_names, marker_positions)
+    # # For debugging
+    # visualize_model_scaling_output(scaled_model, osim_model_scaled, q_zeros, marker_names, marker_positions)
 
     # TODO: Find out why there is a discrepancy between the OpenSim and BioBuddy scaling factors of the to the third decimal.
     # Scaling factors from scaling_factors.osim  (TODO: add the scaling factors in the osim parser)
