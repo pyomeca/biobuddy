@@ -185,9 +185,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
             np.array(
                 [
-                    [0.96988145, 0.03936066, -0.2403762, 0.02157451],
-                    [-0.0607774, 0.99474922, -0.0823413, -0.40738561],
-                    [0.23587303, 0.09447074, 0.96718105, -0.02918969],
+                    [0.97048, 0.04046, -0.23778, 0.02157],
+                    [-0.06086, 0.99501, -0.07909, -0.40738],
+                    [0.2334, 0.09123, 0.96809, -0.02919],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -248,7 +248,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8563361750437755, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8557801207489502, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
@@ -290,7 +290,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.2169738227469282, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1977295552412954, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     remove_temporary_biomods()
@@ -379,9 +379,9 @@ def test_score_and_sara_with_ghost_segments():
         score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [1.0, 0.0, 0.0, -0.03420629],
-                [0.0, 1.0, 0.0, -0.03289557],
-                [0.0, 0.0, 1.0, -0.01101487],
+                [1.0, 0.0, 0.0, -0.0360742],
+                [0.0, 1.0, 0.0, -0.0350205],
+                [0.0, 0.0, 1.0, -0.0113453],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
@@ -391,9 +391,9 @@ def test_score_and_sara_with_ghost_segments():
         score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [1.0, -0.0, 0.0, -0.03355271],
-                [-0.0, 1.0, 0.0, -0.03045443],
-                [0.0, 0.0, 1.0, 0.09104087],
+                [1.0, -0.0, 0.0, -0.0316848],
+                [-0.0, 1.0, 0.0, -0.0283295],
+                [0.0, 0.0, 1.0, 0.0913713],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
@@ -404,9 +404,9 @@ def test_score_and_sara_with_ghost_segments():
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [0.94215046, 0.13837971, -0.30529259, 0.00540745],
-                [-0.15878056, 0.986381, -0.04290986, -0.38266012],
-                [0.29519695, 0.08890207, 0.95129132, -0.0098363],
+                [0.9422628, 0.1384471, -0.3049152, 0.0053956],
+                [-0.1588124, 0.9863761, -0.0429041, -0.3826869],
+                [0.2948212, 0.0888513, 0.9514126, -0.0096506],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
@@ -464,9 +464,9 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
-    # The error is worse because it is a unit test (for the tests to run quickly)
+    # The error is worse because it is a small test (for the tests to run quickly)
     npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1078381510264328, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=5)
 
     # Knee
     marker_names = list(marker_weights.keys())
@@ -495,7 +495,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # The error is worse because it is a unit test (for the tests to run quickly)
     npt.assert_almost_equal(original_marker_tracking_error, 9.956010278714874)
-    npt.assert_almost_equal(new_marker_tracking_error, 10.517878851688314, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 10.58025762257233, decimal=5)
 
     remove_temporary_biomods()
     if os.path.exists(score_biomod_filepath):
