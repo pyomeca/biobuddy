@@ -12,4 +12,3 @@ class MarkerWeight:
         """
         self.name = name
         self.weight = weight
-
