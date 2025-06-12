@@ -205,6 +205,7 @@ class ModelDynamics:
         q_target: np.ndarray = None,
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
+        animate_reconstruction: bool = False,
     ) -> np.ndarray:
         """
         Solve the inverse kinematics problem using least squares optimization.
@@ -226,6 +227,8 @@ class ModelDynamics:
             The weights of each marker to consider during the least squares. If None, all markers are equally weighted.
         method
             The least square method to use. By default, the Levenberg-Marquardt method is used.
+        animate_reconstruction
+            Weather to animate the reconstruction
         """
 
         try:
@@ -309,6 +312,28 @@ class ModelDynamics:
                 tr_options=dict(disp=False),
             )
             optimal_q[:, i_frame] = sol.x
+
+        if animate_reconstruction:
+            if not with_biorbd:
+                raise RuntimeError("To animate the inverse kinematics reconstruction, your model should be to_biomod-able.")
+            else:
+
+                # Compare the result visually
+                import pyorerun
+                from pyomeca import Markers
+
+                t = np.linspace(0, 1, optimal_q.shape[1])
+                viz = pyorerun.PhaseRerun(t)
+
+                # Add the experimental markers from the static trial
+                pyomarkers = Markers(data=markers_real, channels=marker_names_reordered)
+                viz_scaled_model = pyorerun.BiorbdModel("temporary.bioMod")
+                viz_scaled_model.options.transparent_mesh = False
+                viz_scaled_model.options.show_gravity = True
+                viz_scaled_model.options.show_marker_labels = False
+                viz_scaled_model.options.show_center_of_mass_labels = False
+                viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+                viz.rerun_by_frame("Model output")
 
         return optimal_q
 
