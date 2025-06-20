@@ -71,7 +71,7 @@ jobs:
           conda install -c conda-forge biorbd=1.11.2 deepdiff
 
       - name: Run tests with code coverage
-        run: pytest -v --color=yes --cov-report --cov=biobuddy tests
+        run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests
         
       - name: Send Codecov report
         id: archive
