@@ -71,15 +71,14 @@ jobs:
           conda install -c conda-forge biorbd=1.11.2 deepdiff
 
       - name: Run tests with code coverage
-        run: pytest -v --color=yes --cov-branch --cov-report=xml --cov=biobuddy tests
+        run: pytest -v --color=yes --cov-report --cov=biobuddy tests
         
       - name: Send Codecov report
+        id: archive
         uses: codecov/codecov-action@v5
         with:
           path: .covergage
-          files: ./coverage.xml
           if-no-files-found: error
-          flags: unittests
           fail_ci_if_error: true
           verbose: true
         if: matrix.os == 'ubuntu-latest'
@@ -88,6 +87,13 @@ jobs:
         run: |
           coverage xml
           coverage report -m
+
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
           
       - name: Test installed version of python
         run: | 
