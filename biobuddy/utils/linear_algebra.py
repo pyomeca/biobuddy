@@ -342,7 +342,7 @@ def ortho_norm_basis(vector, idx) -> np.ndarray:
 def is_ortho_basis(basis) -> bool:
     return (
         False
-        if np.dot(basis[0], basis[1]) != 0 or np.dot(basis[1], basis[2]) != 0 or np.dot(basis[0], basis[2]) != 0
+        if np.abs(np.dot(basis[0], basis[1])) > 1e-8 or np.abs(np.dot(basis[1], basis[2]))  > 1e-8 or np.abs(np.dot(basis[0], basis[2])) > 1e-8
         else True
     )
 

@@ -2,13 +2,9 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-try:
-    import biorbd
-    BIORBD_AVAILABLE = True
-except ImportError:
-    BIORBD_AVAILABLE = False
+import biorbd
 
-from biobuddy import Rotations
+from biobuddy import Rotations, SegmentCoordinateSystemReal
 from biobuddy.utils.linear_algebra import (
     rot_x_matrix, rot_y_matrix, rot_z_matrix,
     get_rotation_vector_from_sequence, get_sequence_from_rotation_vector,
@@ -17,18 +13,16 @@ from biobuddy.utils.linear_algebra import (
     compute_matrix_rotation, rot2eul, get_closest_rt_matrix,
     quaternion_to_rotation_matrix, coord_sys, ortho_norm_basis, is_ortho_basis,
     get_rt_aligning_markers_in_global, point_from_global_to_local, point_from_local_to_global,
-    RotoTransMatrix, RotoTransMatrixTimeSeries, OrthoMatrix
+    RotoTransMatrix, RotoTransMatrixTimeSeries, OrthoMatrix, multiply_homogeneous_matrix
 )
-
-
 
 
 def test_rotation_matrices():
     """Test basic rotation matrices for known angles."""
     # Test identity (zero rotation)
-    assert np.allclose(rot_x_matrix(0), np.eye(3))
-    assert np.allclose(rot_y_matrix(0), np.eye(3))
-    assert np.allclose(rot_z_matrix(0), np.eye(3))
+    npt.assert_almost_equal(rot_x_matrix(0), np.eye(3))
+    npt.assert_almost_equal(rot_y_matrix(0), np.eye(3))
+    npt.assert_almost_equal(rot_z_matrix(0), np.eye(3))
     
     # Test 90 degree rotations
     angle_90 = np.pi / 2
@@ -80,9 +74,9 @@ def test_rotation_matrices():
 def test_rotation_vector_sequences():
     """Test rotation vector and sequence conversion functions."""
     # Test get_rotation_vector_from_sequence
-    assert np.allclose(get_rotation_vector_from_sequence("x"), np.array([1, 0, 0]))
-    assert np.allclose(get_rotation_vector_from_sequence("y"), np.array([0, 1, 0]))
-    assert np.allclose(get_rotation_vector_from_sequence("z"), np.array([0, 0, 1]))
+    npt.assert_almost_equal(get_rotation_vector_from_sequence("x"), np.array([1, 0, 0]))
+    npt.assert_almost_equal(get_rotation_vector_from_sequence("y"), np.array([0, 1, 0]))
+    npt.assert_almost_equal(get_rotation_vector_from_sequence("z"), np.array([0, 0, 1]))
     
     # Test invalid sequence
     with pytest.raises(RuntimeError, match="Rotation sequence .* not recognized"):
@@ -114,11 +108,12 @@ def test_euler_and_translation_to_matrix():
     assert rt.shape == (4, 4)
     
     # Check homogeneous matrix structure
-    assert np.allclose(rt[3, :], np.array([0, 0, 0, 1]))
+    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
     
     # Check rotation part
-    expected_rot = rot_x_matrix(np.pi/2)
-    npt.assert_almost_equal(rt[:3, :3], expected_rot)
+    npt.assert_almost_equal(rt[:3, :3], np.array([[ 1.0,  0.0,  0.0],
+                                                   [ 0.0,  0.0, -1.0],
+                                                   [ 0.0,  1.0,  0.0]]))
     
     # Check translation part
     npt.assert_almost_equal(rt[:3, 3], translations)
@@ -134,11 +129,16 @@ def test_euler_and_translation_to_matrix():
     assert rt.shape == (4, 4)
     
     # Check homogeneous matrix structure
-    assert np.allclose(rt[3, :], np.array([0, 0, 0, 1]))
+    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
     
     # Check translation part
     npt.assert_almost_equal(rt[:3, 3], translations)
-    
+
+    # Check rotation part
+    npt.assert_almost_equal(rt[:3, :3], np.array([[ 0.4330127 , -0.75      ,  0.5       ],
+                                               [ 0.78914913,  0.04736717, -0.61237244],
+                                               [ 0.43559574,  0.65973961,  0.61237244]]))
+
     # Test error conditions
     with pytest.raises(RuntimeError, match="The angles must be a vector"):
         euler_and_translation_to_matrix(np.array([[1, 2], [3, 4]]), "x", np.array([1, 2, 3]))
@@ -172,11 +172,19 @@ def test_mean_homogenous_matrix():
     assert mean_matrix.shape == (4, 4)
     
     # Check homogeneous matrix structure
-    assert np.allclose(mean_matrix[3, :], np.array([0, 0, 0, 1]))
+    npt.assert_almost_equal(mean_matrix[3, :], np.array([0, 0, 0, 1]))
     
     # Check that result is a valid transformation matrix
-    assert np.allclose(mean_matrix[:3, :3] @ mean_matrix[:3, :3].T, np.eye(3), atol=1e-6)
+    npt.assert_almost_equal(mean_matrix[:3, :3] @ mean_matrix[:3, :3].T, np.eye(3), decimal=6)
     npt.assert_almost_equal(np.linalg.det(mean_matrix[:3, :3]), 1.0)
+
+    # Test the translation values
+    npt.assert_almost_equal(mean_matrix[:3, 3], np.array([2.0, 0.0, 0.0]))
+
+    # Test the rotation values
+    npt.assert_almost_equal(mean_matrix[:3, :3], np.array([[ 1.        ,  0.        ,  0.        ],
+                                                               [ 0.        ,  0.98006658, -0.19866933],
+                                                               [ 0.        ,  0.19866933,  0.98006658]]))
 
 
 def test_mean_unit_vector():
@@ -206,13 +214,22 @@ def test_mean_unit_vector():
     with pytest.raises(RuntimeError, match="The vectors must be of shape"):
         mean_unit_vector(np.array([[1, 2], [3, 4]]))
 
+    # Test the mean vector value
+    npt.assert_almost_equal(mean_vector, np.array([0.98006658, 0.19866933, 0.        , 1.        ]))
+
+
 
 def test_to_euler():
     """Test conversion from rotation matrix to Euler angles."""
     # Test with known angles
     angles = np.array([0.1, 0.2, 0.3])
     rt = euler_and_translation_to_matrix(angles, "xyz", np.array([0, 0, 0]))
-    
+
+    # Check the rt matrix
+    npt.assert_almost_equal(rt[:3, :3], np.array([[ 0.93629336, -0.28962948,  0.19866933],
+                                                   [ 0.31299183,  0.94470249, -0.0978434 ],
+                                                   [-0.15934508,  0.153792  ,  0.97517033]]))
+
     # Extract Euler angles
     extracted_angles = to_euler(rt, "xyz")
     
@@ -323,7 +340,7 @@ def test_get_closest_rt_matrix():
     # Check that result is valid
     assert result.shape == (4, 4)
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
-    np.testing.assert_allclose(result[:3, :3] @ result[:3, :3].T, np.eye(3), atol=1e-6)
+    npt.assert_almost_equal(result[:3, :3] @ result[:3, :3].T, np.eye(3), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
     
     # Test error conditions
@@ -362,7 +379,7 @@ def test_quaternion_to_rotation_matrix():
     result = quaternion_to_rotation_matrix(quat_scalar, quat_vector)
     
     # Check orthogonality
-    np.testing.assert_allclose(result @ result.T, np.eye(3), atol=1e-6)
+    npt.assert_almost_equal(result @ result.T, np.eye(3), decimal=6)
     
     # Check determinant
     npt.assert_almost_equal(np.linalg.det(result), 1.0)
@@ -433,7 +450,7 @@ def test_ortho_norm_basis():
         # For idx=0, the input vector should be the first basis vector
         normalized_vector = vector / np.linalg.norm(vector)
         if idx == 0:
-            assert np.allclose(basis[0, :], normalized_vector)
+            npt.assert_almost_equal(basis[0, :], normalized_vector)
     
     # Test with different vector
     vector2 = np.array([0, 1, 0])
@@ -630,7 +647,7 @@ def test_ortho_matrix_class():
     
     # Check that rotation matrix is orthogonal
     rot_matrix = ortho_matrix.get_rotation_matrix()
-    np.testing.assert_allclose(rot_matrix @ rot_matrix.T, np.eye(3), atol=1e-10)
+    npt.assert_almost_equal(rot_matrix @ rot_matrix.T, np.eye(3), decimal=10)
     npt.assert_almost_equal(np.linalg.det(rot_matrix), 1.0)
     
     # Test identity case
@@ -647,7 +664,6 @@ def test_ortho_matrix_class():
     npt.assert_almost_equal(ortho_copy.get_matrix(), expected_inverse, decimal=10)
 
 
-@pytest.mark.skipif(not BIORBD_AVAILABLE, reason="biorbd not available")
 def test_rt():
 
     np.random.seed(42)
@@ -703,15 +719,35 @@ def test_rt():
                     angles_biobuddy = rt_biobuddy.euler_angles(angle_sequence=angle_sequence.value)
 
 
-# TODO: Add tests for point_from_global_to_local and point_from_local_to_global functions
-# These functions require RotoTransMatrix class which references biorbd or other dependencies
+def test_point_from_global_to_local():
+    point_in_global = np.array([0.1, 0.1, 0.1])
+    jcs_in_global = np.array([[1.0, 0.0, 0.0, 0.1],
+                              [0.0, 0.0, -1.0, 0.1],
+                              [0.0, 1.0, 0.0, 0.1],
+                              [0.0, 0.0, 0.0, 1.0]])
 
-# TODO: Add tests for multiply_homogeneous_matrix function
-# This function seems to have issues with the self parameter and needs investigation
+    point_in_local = point_from_global_to_local(point_in_global, jcs_in_global)
+    npt.assert_almost_equal(point_in_local, np.array([[0.],
+                                                       [0.],
+                                                       [0.],
+                                                       [1.]]))
 
-# TODO: Add tests for transpose_homogenous_matrix function with 3D arrays
-# This function works with 3D arrays and needs proper test data setup
 
+def test_multiply_homogeneous_matrix():
+
+    angles = np.array([0.1, 0.2, 0.3])
+    angle_sequence = "zyx"
+    translations = np.array([1, 2, 3])
+
+    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
+    matrix_1 = SegmentCoordinateSystemReal(rt)
+    matrix_2 = euler_and_translation_to_matrix(angles*2, angle_sequence, translations*2)
+
+    mult = multiply_homogeneous_matrix(matrix_1, matrix_2)
+    npt.assert_almost_equal(mult, np.array([[ 0.78849493,  0.13230009,  0.60064334,  4.11261658],
+                                           [ 0.37046366,  0.67738988, -0.63553098,  4.37081205],
+                                           [-0.49095053,  0.72362949,  0.48510611,  9.37893943],
+                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
 
 def test_transpose_homogenous_matrix():
     """Test transpose of homogeneous matrix for 3D arrays."""
@@ -749,6 +785,12 @@ def test_transpose_homogenous_matrix():
         # Check structure
         npt.assert_almost_equal(trans[3, :3], np.zeros(3))
         npt.assert_almost_equal(trans[3, 3], 1.0)
+
+    # Test the values for the second frame
+    npt.assert_almost_equal(transposed[:, :, 1], np.array([[ 1.        ,  0.        ,  0.        , -1.        ],
+                                                   [ 0.        ,  0.99500417,  0.09983342,  0.        ],
+                                                   [ 0.        , -0.09983342,  0.99500417,  0.        ],
+                                                   [ 0.        ,  0.        ,  0.        ,  1.        ]]))
 
 
 def test_point_transformations():
@@ -797,7 +839,7 @@ def test_additional_edge_cases():
     try:
         result = quaternion_to_rotation_matrix(quat_scalar, quat_vector)
         # If it doesn't raise an error, check that it's still a valid rotation matrix
-        np.testing.assert_allclose(result @ result.T, np.eye(3), atol=1e-6)
+        npt.assert_almost_equal(result @ result.T, np.eye(3), decimal=6)
     except RuntimeError as e:
         # Expected for invalid quaternions
         assert "rotation matrix computed does not lie in SO(3)" in str(e)
