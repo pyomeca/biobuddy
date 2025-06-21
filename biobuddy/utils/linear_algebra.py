@@ -342,7 +342,9 @@ def ortho_norm_basis(vector, idx) -> np.ndarray:
 def is_ortho_basis(basis) -> bool:
     return (
         False
-        if np.dot(basis[0], basis[1]) != 0 or np.dot(basis[1], basis[2]) != 0 or np.dot(basis[0], basis[2]) != 0
+        if np.abs(np.dot(basis[0], basis[1])) > 1e-8
+        or np.abs(np.dot(basis[1], basis[2])) > 1e-8
+        or np.abs(np.dot(basis[0], basis[2])) > 1e-8
         else True
     )
 
@@ -461,7 +463,7 @@ class RotoTransMatrixTimeSeries:
     def from_rt_matrix(self, rt: np.ndarray):
         if len(rt.shape) != 3:
             raise ValueError(
-                f"The rt and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
+                f"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rt.shape}"
             )
 
         rt_time_series = []
