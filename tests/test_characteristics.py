@@ -358,5 +358,65 @@ def test_sex_differences():
     assert male_trunk_mass != female_trunk_mass
 
 
+def test_de_leva_table_different_masses():
+    """Test De Leva table with different total masses."""
+    masses = [50.0, 70.0, 100.0, 120.0]
+    
+    for total_mass in masses:
+        male_table = DeLevaTable(total_mass, Sex.MALE)
+        female_table = DeLevaTable(total_mass, Sex.FEMALE)
+        
+        # Test that calculations scale correctly
+        mock_markers = {
+            'TOP_HEAD': np.array([0, 0, 10]),
+            'SHOULDER': np.array([0, 0, 8]),
+            'PELVIS': np.array([0, 0, 5]),
+            'ELBOW': np.array([1, 0, 7]),
+            'WRIST': np.array([2, 0, 6]),
+            'FINGER': np.array([3, 0, 6]),
+            'KNEE': np.array([0, 0, 3]),
+            'ANKLE': np.array([0, 0, 1]),
+            'TOE': np.array([0, 1, 0]),
+        }
+        
+        # Test head mass scales correctly
+        male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_markers, None)
+        female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_markers, None)
+        
+        npt.assert_almost_equal(male_head_mass, 0.0694 * total_mass)
+        npt.assert_almost_equal(female_head_mass, 0.0669 * total_mass)
+
+
+def test_de_leva_table_edge_cases():
+    """Test edge cases for De Leva table."""
+    # Test with very small mass
+    small_mass = 0.1
+    table = DeLevaTable(small_mass, Sex.MALE)
+    
+    mock_markers = {
+        'TOP_HEAD': np.array([0, 0, 10]),
+        'SHOULDER': np.array([0, 0, 8]),
+        'PELVIS': np.array([0, 0, 5]),
+        'ELBOW': np.array([1, 0, 7]),
+        'WRIST': np.array([2, 0, 6]),
+        'FINGER': np.array([3, 0, 6]),
+        'KNEE': np.array([0, 0, 3]),
+        'ANKLE': np.array([0, 0, 1]),
+        'TOE': np.array([0, 1, 0]),
+    }
+    
+    # Should still work with very small masses
+    head_mass = table[SegmentName.HEAD].relative_mass(mock_markers, None)
+    expected = 0.0694 * small_mass
+    npt.assert_almost_equal(head_mass, expected)
+    
+    # Test with very large mass
+    large_mass = 200.0
+    table = DeLevaTable(large_mass, Sex.FEMALE)
+    head_mass = table[SegmentName.HEAD].relative_mass(mock_markers, None)
+    expected = 0.0669 * large_mass
+    npt.assert_almost_equal(head_mass, expected)
+
+
 if __name__ == "__main__":
     pytest.main([__file__])
