@@ -36,6 +36,8 @@ class DeLevaTable:
             The sex ('male' or 'female') of the subject
         """
 
+        # TODO: Bilateral segments (counts for the right and left sides) should be handled differently to allow for unilateral segments
+
         self.sex = sex
         self.inertial_table = {
             Sex.MALE: {
