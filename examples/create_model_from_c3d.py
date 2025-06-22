@@ -18,6 +18,8 @@ from biobuddy import (
     Translations,
     Rotations,
     DeLevaTable,
+    Sex,
+    SegmentName,
 )
 import ezc3d
 
@@ -55,19 +57,19 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
-    de_leva = DeLevaTable(total_mass=100, sex="female")
+    de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="TRUNK",
             translations=Translations.YZ,
             rotations=Rotations.X,
-            inertia_parameters=de_leva["TRUNK"],
+            inertia_parameters=de_leva[SegmentName.TRUNK],
         )
     )
     model.segments["TRUNK"].add_marker(Marker("PELVIS"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HEAD",
             parent_name="TRUNK",
@@ -78,7 +80,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 axis_to_keep=Axis.Name.Z,
             ),
             mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD")),
-            inertia_parameters=de_leva["HEAD"],
+            inertia_parameters=de_leva[SegmentName.HEAD],
         )
     )
     model.segments["HEAD"].add_marker(Marker("BOTTOM_HEAD"))
@@ -86,7 +88,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     model.segments["HEAD"].add_marker(Marker("HEAD_Z"))
     model.segments["HEAD"].add_marker(Marker("HEAD_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="UPPER_ARM",
             parent_name="TRUNK",
@@ -97,14 +99,14 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Y, start="SHOULDER", end="SHOULDER_XY"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva["UPPER_ARM"],
+            inertia_parameters=de_leva[SegmentName.UPPER_ARM],
         )
     )
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER"))
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_X"))
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
@@ -114,14 +116,14 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.X, start="ELBOW", end="ELBOW_XY"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva["LOWER_ARM"],
+            inertia_parameters=de_leva[SegmentName.LOWER_ARM],
         )
     )
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW"))
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_Y"))
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HAND",
             parent_name="LOWER_ARM",
@@ -131,7 +133,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Z, start="WRIST", end="HAND_YZ"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva["HAND"],
+            inertia_parameters=de_leva[SegmentName.HAND],
         )
     )
     model.segments["HAND"].add_marker(Marker("WRIST"))
@@ -139,7 +141,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     model.segments["HAND"].add_marker(Marker("HAND_Y"))
     model.segments["HAND"].add_marker(Marker("HAND_YZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="THIGH",
             parent_name="TRUNK",
@@ -150,14 +152,14 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Y, start="THIGH_ORIGIN", end="THIGH_Y"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva["THIGH"],
+            inertia_parameters=de_leva[SegmentName.THIGH],
         )
     )
     model.segments["THIGH"].add_marker(Marker("THIGH_ORIGIN"))
     model.segments["THIGH"].add_marker(Marker("THIGH_X"))
     model.segments["THIGH"].add_marker(Marker("THIGH_Y"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="SHANK",
             parent_name="THIGH",
@@ -168,14 +170,14 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.X, start="KNEE", end="KNEE_XZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            inertia_parameters=de_leva["SHANK"],
+            inertia_parameters=de_leva[SegmentName.SHANK],
         )
     )
     model.segments["SHANK"].add_marker(Marker("KNEE"))
     model.segments["SHANK"].add_marker(Marker("KNEE_Z"))
     model.segments["SHANK"].add_marker(Marker("KNEE_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="FOOT",
             parent_name="SHANK",
@@ -186,7 +188,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
                 second_axis=Axis(name=Axis.Name.Y, start="ANKLE", end="ANKLE_YZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            inertia_parameters=de_leva["FOOT"],
+            inertia_parameters=de_leva[SegmentName.FOOT],
         )
     )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
@@ -195,7 +197,8 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
     # Put the model together, print it and print it to a bioMod file
-    model.to_biomod(kinematic_model_filepath, C3dData(c3d_filepath))
+    model_real = model.to_real(C3dData(c3d_filepath))
+    model_real.to_biomod(kinematic_model_filepath)
 
     model = biorbd.Model(kinematic_model_filepath)
     assert model.nbQ() == 7
