@@ -1,7 +1,10 @@
 from typing import Iterable
 import numpy as np
+import logging
 
 from .mesh import Mesh
+
+_logger = logging.getLogger(__name__)
 
 
 def read_vtp(filename: str) -> Mesh:
@@ -167,4 +170,4 @@ def _handle_polygons_shape(polygon_apex_idx: list) -> list[list[float]]:
         return [polygon_apex_idx]
 
     else:
-        raise RuntimeError("Something went wrong: a polygon formed of two apex was detected.")
+        _logger.warning("Something went wrong: a polygon formed of two apex was detected.")
