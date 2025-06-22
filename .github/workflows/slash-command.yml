@@ -9,18 +9,17 @@ env:
 
 jobs:
   slash-command:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     if: github.event.issue.pull_request != null && contains(github.event.comment.body, '/codecov')
     steps:
       - name: Send Codecov report
         id: archive
         uses: codecov/codecov-action@v5
         with:
-          path: .covergage
+          path: .coverage
           if-no-files-found: error
           fail_ci_if_error: true
           verbose: true
-        if: matrix.os == 'ubuntu-latest'
 
       - name: Generate XML report
         run: |
