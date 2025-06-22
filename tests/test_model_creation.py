@@ -286,8 +286,6 @@ def write_markers_to_c3d(save_path: str, model):
     c3d.write(save_path)
 
 
-# TODO: @pariterre could you determine if this tests is worth to keep ?
-"""
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
@@ -471,11 +469,19 @@ def test_model_creation_from_data():
 
     # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
 
+
+    destroy_model(bio_model)
+
+    # Test the attributes of the model
+    assert bio_model.segment_names == []
+    assert bio_model.marker_names == []
+
+
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
     if os.path.exists(c3d_filepath):
         os.remove(c3d_filepath)
-"""
+
 
 
 def test_complex_model():
