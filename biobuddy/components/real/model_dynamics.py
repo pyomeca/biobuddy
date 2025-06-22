@@ -383,9 +383,7 @@ class ModelDynamics:
 
     @requires_initialization
     def markers_in_global(self, q: np.ndarray = None) -> np.ndarray:
-        """
-        TODO: to be tested ?
-        """
+
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
@@ -429,18 +427,17 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for contact in segment.contacts:
                     contact_in_global = point_from_local_to_global(
-                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment][:, :, i_frame]
+                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
                     )
-                    contact_positions[:, i_contact] = contact_in_global
+                    contact_positions[:, i_contact, i_frame] = contact_in_global.reshape(
+                        -1,
+                    )
                     i_contact += 1
 
         return contact_positions
 
     @requires_initialization
-    def com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
-        """
-        TODO: to be tested ?
-        """
+    def segment_com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
@@ -455,18 +452,40 @@ class ModelDynamics:
             com_position = np.ones((4, nb_frames))
             jcs_in_global = self.forward_kinematics(q)
             for i_frame in range(nb_frames):
-                com_in_global = point_from_local_to_global(
+                segment_com_in_global = point_from_local_to_global(
                     point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass,
                     jcs_in_global=jcs_in_global[segment_name][:, :, i_frame],
                 )
-                com_position[:, i_frame] = com_in_global.reshape(
+                com_position[:, i_frame] = segment_com_in_global.reshape(
                     -1,
                 )
 
         return com_position
 
+
     @requires_initialization
-    def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.0001) -> np.ndarray:
+    def total_com_in_global(self, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        com_position = np.zeros((4, nb_frames))
+        for segment_name in self.segments.keys():
+            this_segment_com = self.segment_com_in_global(segment_name, q=q)
+            if this_segment_com is not None:
+                com_position += this_segment_com * self.segments[segment_name].inertia_parameters.mass
+
+        com_position[:3, :] /= self.mass
+        com_position[3, :] = 1.0  # Set the homogeneous coordinate to 1
+
+        return com_position
+
+    @requires_initialization
+    def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.01) -> np.ndarray:
         """
         Numerically compute the Jacobian of marker position with respect to q.
 
@@ -482,6 +501,8 @@ class ModelDynamics:
         np.ndarray
             Jacobian of shape (3, nb_q)
         """
+        # TODO: Watch out there i problem with this implementation
+
         nb_q = self.nb_q
         nb_markers = self.nb_markers
         jac = np.zeros((3, nb_markers, nb_q))

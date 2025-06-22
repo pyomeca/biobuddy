@@ -255,7 +255,7 @@ class RigidSegmentIdentification:
 
         # Center of mass
         # CoM stays at the same place in the global reference frame
-        com_position_global = original_model.com_in_global(self.child_name)
+        com_position_global = original_model.segment_com_in_global(self.child_name)
         new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
             new_child_jcs_in_global.inverse @ com_position_global
         )
