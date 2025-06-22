@@ -54,7 +54,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
-      
+
       - name: Set up Python
         run: |
           conda install -cconda-forge python=3.11.11 pip 
@@ -73,6 +73,28 @@ jobs:
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests
 
+      - name: Send Codecov report
+        id: archive
+        uses: codecov/codecov-action@v5
+        with:
+          path: .covergage
+          if-no-files-found: error
+          fail_ci_if_error: true
+          verbose: true
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
+
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
+
       - name: Test installed version of python
         run: | 
           BASE_FOLDER=`pwd`
@@ -80,4 +102,3 @@ jobs:
           cd
           python -c "import biobuddy"
           cd $BASE_FOLDER
-
