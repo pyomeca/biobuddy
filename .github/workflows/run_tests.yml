@@ -66,12 +66,34 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-cov pyomeca
+          pip install pytest pytest-cov codecov pyomeca
           conda install -c opensim-org opensim=4.5.1
           conda install -c conda-forge biorbd=1.11.2 deepdiff
 
-      - name: Run tests without code coverage
-        run: pytest -v --color=yes tests
+      - name: Run tests with code coverage
+        run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests
+
+      - name: Send Codecov report
+        id: archive
+        uses: codecov/codecov-action@v5
+        with:
+          path: .covergage
+          if-no-files-found: error
+          fail_ci_if_error: true
+          verbose: true
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Generate XML report
+        run: |
+          coverage xml
+          coverage report -m
+
+      - uses: codecov/codecov-action@v5
+        with:
+          files: ./coverage.xml
+          flags: unittests
+          fail_ci_if_error: true
+          verbose: true
 
       - name: Test installed version of python
         run: | 
