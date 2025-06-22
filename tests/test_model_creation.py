@@ -286,8 +286,8 @@ def write_markers_to_c3d(save_path: str, model):
     c3d.write(save_path)
 
 
-# TODO: @pariterre could you determine if this tests is worth to keep ?
 """
+# TODO: this test fails with exit code 134
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
@@ -470,6 +470,12 @@ def test_model_creation_from_data():
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
+
+    destroy_model(model)
+
+    # Test the attributes of the model
+    assert model.segments == []
+    assert model.markers == []
 
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)

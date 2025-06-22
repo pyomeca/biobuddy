@@ -1,0 +1,49 @@
+# This file was generated based on the recommendations from https://docs.github.com/en/enterprise-cloud@latest/copilot/customizing-copilot/customizing-the-development-environment-for-copilot-coding-agent#preinstalling-tools-or-dependencies-in-copilots-environment
+
+name: "Copilot Setup Steps"
+
+# Automatically run the setup steps when they are changed to allow for easy validation, and
+# allow manual testing through the repository's "Actions" tab
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+env:
+  EXAMPLES_FOLDER: examples
+
+jobs:
+  # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
+  copilot-setup-steps:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code with submodule
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          miniforge-version: latest
+
+      - name: Set up Python
+        run: |
+          conda install -cconda-forge python=3.11.11 pip 
+
+      - name: Install dependencies
+        run: | 
+          pip install . && pip uninstall -y biobuddy
+          pip install scipy==1.15.1 numpy lxml ezc3d
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-cov codecov pyomeca black
+          conda install -c opensim-org opensim=4.5.1
+          conda install -c conda-forge biorbd=1.11.2 deepdiff
+  

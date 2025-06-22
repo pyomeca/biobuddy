@@ -15,7 +15,7 @@ def main():
 
     # Convert the files
     mesh = MeshParser(geometry_folder=geometry_path)
-    mesh.process_meshes()
+    mesh.process_meshes(fail_on_error=False)
     mesh.write(geometry_cleaned_path, format=MeshFormat.VTP)
 
 
