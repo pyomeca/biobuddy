@@ -240,8 +240,6 @@ def test_base_segment_coordinate_system():
     # We'll use a simple model that can be created without complex dependencies
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
-
-    # Skip this test if the model file doesn't exist
     leg_model = BiomechanicalModelReal().from_biomod(filepath=leg_filepath)
 
     # Test femur_r segment coordinate system
@@ -435,7 +433,10 @@ def test_inverse_kinematics_basic():
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
 
     leg_model = BiomechanicalModelReal().from_biomod(filepath=leg_filepath)
-    biorbd_leg_model = biorbd.Model(leg_filepath)
+    tempo_leg_filepath = leg_filepath.replace(".bioMod", "_without_mesh.bioMod")
+    leg_model.to_biomod(tempo_leg_filepath, with_mesh=False)
+    biorbd_leg_model = biorbd.Model(tempo_leg_filepath)
+    leg_model = BiomechanicalModelReal().from_biomod(filepath=tempo_leg_filepath)
 
     # Create synthetic experimental data by forward kinematics
     q_true = np.random.rand(leg_model.nb_q, 1) * 0.1  # Small random joint angles
@@ -459,6 +460,9 @@ def test_inverse_kinematics_basic():
 
     # Check that the solution is close to the true q
     npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
+
+    # Delete the temporary model created
+    os.remove(tempo_leg_filepath)
 
 
 def test_inverse_kinematics_error_handling():
