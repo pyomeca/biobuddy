@@ -12,6 +12,7 @@ from ...components.real.rigidbody.segment_real import (
     MeshReal,
     SegmentCoordinateSystemReal,
     MarkerReal,
+    ContactReal,
 )
 from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.generic.muscle.muscle_group import MuscleGroup
@@ -27,6 +28,7 @@ from .utils import (
     read_bool,
     read_float_vector,
 )
+from ...utils.translations import Translations
 
 
 TOKENS_TO_IGNORE_NO_COMPONENTS = ["endscalingsegment"]
@@ -105,6 +107,9 @@ class BiomodModelParser:
                     elif token.lower() == "marker":
                         check_if_version_defined(biomod_version)
                         current_component = MarkerReal(name=read_str(next_token=next_token), parent_name="")
+                    elif token.lower() == "contact":
+                        check_if_version_defined(biomod_version)
+                        current_component = ContactReal(name=read_str(next_token=next_token), parent_name="")
                     elif token.lower() == "musclegroup":
                         check_if_version_defined(biomod_version)
                         current_component = MuscleGroup(
@@ -253,6 +258,19 @@ class BiomodModelParser:
                         current_component.is_technical = read_bool(next_token=next_token)
                     elif token.lower() == "anatomical":
                         current_component.is_anatomical = read_bool(next_token=next_token)
+
+                elif isinstance(current_component, ContactReal):
+                    if token.lower() == "endcontact":
+                        if not current_component.parent_name:
+                            raise ValueError(f"Parent name not found in contact {current_component.name}")
+                        self.segments[current_component.parent_name].contacts.append(current_component)
+                        current_component = None
+                    elif token.lower() == "parent":
+                        current_component.parent_name = read_str(next_token=next_token)
+                    elif token.lower() == "position":
+                        current_component.position = read_float_vector(next_token=next_token, length=3)
+                    elif token.lower() == "axis":
+                        current_component.axis = Translations(read_str(next_token=next_token))
 
                 elif isinstance(current_component, MuscleGroup):
                     if token.lower() == "endmusclegroup":

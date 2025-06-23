@@ -1,0 +1,108 @@
+version 4
+
+
+
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	root
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	GROUND
+	parent	root
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	PENDULUM
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	translations	xyz
+	rotations	x
+	rangesQ 
+		-1.000000	1.000000
+		-1.000000	1.000000
+		-1.000000	1.000000
+		-3.141593	3.141593
+
+	rangesQdot 
+		-10.000000	10.000000
+		-10.000000	10.000000
+		-10.000000	10.000000
+		-31.415927	31.415927
+
+endsegment
+
+contact	PENDULUM_CONTACT
+	parent	PENDULUM
+	position	0.0	0.0	0.0
+	axis	xyz
+endcontact
+
+
+
+// --------------------------------------------------------------
+// MUSCLE GROUPS
+// --------------------------------------------------------------
+
+musclegroup	PENDULUM_MUSCLE_GROUP
+	OriginParent	GROUND
+	InsertionParent	PENDULUM
+endmusclegroup
+
+
+
+
+// --------------------------------------------------------------
+// MUSCLES
+// --------------------------------------------------------------
+
+muscle	PENDULUM_MUSCLE
+	type	hillthelen
+	statetype	degroote
+	musclegroup	PENDULUM_MUSCLE_GROUP
+	originposition	0.0	0.0	0.0
+	insertionposition	0.0	0.0	1.0
+	optimallength	0.1000
+	maximalforce	100.0000
+	tendonslacklength	0.0500
+	pennationangle	0.0500
+endmuscle
+
+
+
+// --------------------------------------------------------------
+// MUSCLES VIA POINTS
+// --------------------------------------------------------------
+
+viapoint	PENDULUM_MUSCLE
+	parent	PENDULUM
+	muscle	PENDULUM_MUSCLE
+	musclegroup	PENDULUM_MUSCLE_GROUP
+	position	0.0	0.0	0.5
+endviapoint
+
+
+

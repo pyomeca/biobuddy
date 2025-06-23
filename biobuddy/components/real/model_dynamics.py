@@ -101,21 +101,37 @@ class ModelDynamics:
         """
         parent_name = self.segments[segment_name].parent_name
         parent_offset_name = segment_name + "_parent_offset"
-        if parent_offset_name not in self.segment_names and parent_name.startswith(segment_name):
-            raise NotImplementedError(
-                f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
-            )
+        if parent_offset_name not in self.segment_names:
+            if parent_name.startswith(segment_name):
+                raise NotImplementedError(
+                    f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
+                )
+            else:
+                out_rt = RotoTransMatrix()
+                out_rt.from_rt_matrix(np.identity(4))
+                return out_rt
+        else:
+            rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
+            while parent_name != parent_offset_name:
+                if parent_name == "base":
+                    raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
+                rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
+                parent_name = self.segments[parent_name].parent_name
 
-        rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
-        while parent_name != parent_offset_name:
-            if parent_name == "base":
-                raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
-            rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
-            parent_name = self.segments[parent_name].parent_name
+            out_rt = RotoTransMatrix()
+            out_rt.from_rt_matrix(rt)
+            return out_rt
 
-        out_rt = RotoTransMatrix()
-        out_rt.from_rt_matrix(rt)
-        return out_rt
+    def segment_has_ghost_parents(self, segment_name: str) -> bool:
+        """
+        Check if the segment has ghost parents.
+        A ghost parent is a segment that does not hold inertia, but is used to define the segment's coordinate system.
+        """
+        ghost_keys = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        for key in ghost_keys:
+            if segment_name + key in self.segments.keys():
+                return True
+        return False
 
     @staticmethod
     def _marker_residual(
@@ -144,7 +160,7 @@ class ModelDynamics:
             vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
                 markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
             ) * marker_weights_reordered[i_marker]
-        # TODO: setup the IKTask to set the "q_ref" to something else than zero.
+        # TODO: setup the IKTask from osim to set the "q_ref" to something else than zero.
         out = np.hstack(
             (
                 vect_pos_markers,
@@ -251,7 +267,14 @@ class ModelDynamics:
         nb_markers = len(marker_names)
         if len(marker_positions.shape) == 2:
             marker_positions = marker_positions[:, :, np.newaxis]
-        elif len(marker_positions.shape) == 1 or marker_positions.shape[0] > 3:
+        if len(marker_positions.shape) != 3:
+            raise RuntimeError(
+                f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}"
+            )
+
+        if marker_positions.shape[0] == 4:
+            marker_positions = marker_positions[:3, :, :]  # Remove the homogeneous coordinate if present
+        if marker_positions.shape[0] != 3:
             raise RuntimeError(
                 f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}"
             )
@@ -383,9 +406,7 @@ class ModelDynamics:
 
     @requires_initialization
     def markers_in_global(self, q: np.ndarray = None) -> np.ndarray:
-        """
-        TODO: to be tested ?
-        """
+
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
@@ -429,18 +450,17 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for contact in segment.contacts:
                     contact_in_global = point_from_local_to_global(
-                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment][:, :, i_frame]
+                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
                     )
-                    contact_positions[:, i_contact] = contact_in_global
+                    contact_positions[:, i_contact, i_frame] = contact_in_global.reshape(
+                        -1,
+                    )
                     i_contact += 1
 
         return contact_positions
 
     @requires_initialization
-    def com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
-        """
-        TODO: to be tested ?
-        """
+    def segment_com_in_global(self, segment_name: str, q: np.ndarray = None) -> np.ndarray:
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
             q = q[:, np.newaxis]
@@ -455,18 +475,39 @@ class ModelDynamics:
             com_position = np.ones((4, nb_frames))
             jcs_in_global = self.forward_kinematics(q)
             for i_frame in range(nb_frames):
-                com_in_global = point_from_local_to_global(
+                segment_com_in_global = point_from_local_to_global(
                     point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass,
                     jcs_in_global=jcs_in_global[segment_name][:, :, i_frame],
                 )
-                com_position[:, i_frame] = com_in_global.reshape(
+                com_position[:, i_frame] = segment_com_in_global.reshape(
                     -1,
                 )
 
         return com_position
 
     @requires_initialization
-    def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.0001) -> np.ndarray:
+    def total_com_in_global(self, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        com_position = np.zeros((4, nb_frames))
+        for segment_name in self.segments.keys():
+            this_segment_com = self.segment_com_in_global(segment_name, q=q)
+            if this_segment_com is not None:
+                com_position += this_segment_com * self.segments[segment_name].inertia_parameters.mass
+
+        com_position[:3, :] /= self.mass
+        com_position[3, :] = 1.0  # Set the homogeneous coordinate to 1
+
+        return com_position
+
+    @requires_initialization
+    def markers_jacobian(self, q: np.ndarray, epsilon: float = 0.01) -> np.ndarray:
         """
         Numerically compute the Jacobian of marker position with respect to q.
 
@@ -482,6 +523,8 @@ class ModelDynamics:
         np.ndarray
             Jacobian of shape (3, nb_q)
         """
+        # TODO: Watch out there i problem with this implementation
+
         nb_q = self.nb_q
         nb_markers = self.nb_markers
         jac = np.zeros((3, nb_markers, nb_q))
