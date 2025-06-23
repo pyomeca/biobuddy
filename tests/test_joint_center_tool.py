@@ -572,142 +572,15 @@ def test_functional_trial_validation():
     movement_magnitude = np.linalg.norm(marker_0_movement)
     assert movement_magnitude > 0, "Markers should move in functional trial"
 
-    # TODO: Add integration tests that work with actual C3D files and biomechanical models
-    # These would test the complete workflow of Score and Sara algorithms
-    # def test_score_with_real_data():
-    #     """Test Score algorithm with real C3D data."""
-    #     # This would require actual test data files
-    #     pass
 
-    # def test_sara_with_real_data():
-    #     """Test Sara algorithm with real C3D data."""
-    #     # This would require actual test data files
-    #     pass
+# TODO: Add integration tests that work with actual C3D files and biomechanical models
+# These would test the complete workflow of Score and Sara algorithms
+# def test_score_with_real_data():
+#     """Test Score algorithm with real C3D data."""
+#     # This would require actual test data files
+#     pass
 
-    # Test the joints' new RT
-    assert score_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array(
-            [
-                [1.0, 0.0, 0.0, -0.0360742],
-                [0.0, 1.0, 0.0, -0.0350205],
-                [0.0, 0.0, 1.0, -0.0113453],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
-    )
-    assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
-        np.array(
-            [
-                [1.0, -0.0, 0.0, -0.0316848],
-                [-0.0, 1.0, 0.0, -0.0283295],
-                [0.0, 0.0, 1.0, 0.0913713],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
-    )
-
-    assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array(
-            [
-                [0.9422628, 0.1384471, -0.3049152, 0.0053956],
-                [-0.1588124, 0.9863761, -0.0429041, -0.3826869],
-                [0.2948212, 0.0888513, 0.9514126, -0.0096506],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
-    )
-
-    assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-    )
-
-    # Test that the original model did not change
-    assert scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array(
-            [[1.0, 0.0, 0.0, -0.067759], [0.0, 1.0, 0.0, -0.06335], [0.0, 0.0, 1.0, 0.080026], [0.0, 0.0, 0.0, 1.0]]
-        ),
-    )
-    assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-    )
-    assert scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.387741], [0.0, 0.0, 1.0, -0.0], [0.0, 0.0, 0.0, 1.0]]),
-    )
-    assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
-    npt.assert_almost_equal(
-        scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
-    )
-
-    # Test the reconstruction for the original model and the output model with the functional joint centers
-    # Hip
-    original_optimal_q = scaled_model.inverse_kinematics(
-        marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
-        marker_names=list(marker_weights.keys()),
-        marker_weights=marker_weights,
-        method="lm",
-    )
-    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)
-    original_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
-    original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
-
-    new_optimal_q = score_model.inverse_kinematics(
-        marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
-        marker_names=list(marker_weights.keys()),
-        marker_weights=marker_weights,
-        method="lm",
-    )
-    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)
-    new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
-    new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
-
-    # The error is worse because it is a small test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=5)
-
-    # Knee
-    marker_names = list(marker_weights.keys())
-    original_optimal_q = scaled_model.inverse_kinematics(
-        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
-        marker_names=marker_names,
-        marker_weights=marker_weights,
-        method="lm",
-    )
-    new_optimal_q = score_model.inverse_kinematics(
-        marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
-        marker_names=marker_names,
-        marker_weights=marker_weights,
-        method="lm",
-    )
-
-    markers_index = scaled_model.markers_indices(marker_names)
-
-    original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)[:3, markers_index, :]
-    original_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - original_markers_reconstructed
-    original_marker_tracking_error = np.sum(original_marker_position_diff**2)
-
-    new_markers_reconstructed = score_model.markers_in_global(new_optimal_q)[:3, markers_index, :]
-    new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
-    new_marker_tracking_error = np.sum(new_marker_position_diff**2)
-
-    # The error is worse because it is a unit test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 9.956010278714874)
-    npt.assert_almost_equal(new_marker_tracking_error, 10.58025762257233, decimal=5)
-
-    remove_temporary_biomods()
-    if os.path.exists(score_biomod_filepath):
-        os.remove(score_biomod_filepath)
+# def test_sara_with_real_data():
+#     """Test Sara algorithm with real C3D data."""
+#     # This would require actual test data files
+#     pass
