@@ -101,21 +101,37 @@ class ModelDynamics:
         """
         parent_name = self.segments[segment_name].parent_name
         parent_offset_name = segment_name + "_parent_offset"
-        if parent_offset_name not in self.segment_names and parent_name.startswith(segment_name):
-            raise NotImplementedError(
-                f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
-            )
+        if parent_offset_name not in self.segment_names:
+            if parent_name.startswith(segment_name):
+                raise NotImplementedError(
+                    f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
+                )
+            else:
+                out_rt = RotoTransMatrix()
+                out_rt.from_rt_matrix(np.identity(4))
+                return out_rt
+        else:
+            rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
+            while parent_name != parent_offset_name:
+                if parent_name == "base":
+                    raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
+                rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
+                parent_name = self.segments[parent_name].parent_name
 
-        rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
-        while parent_name != parent_offset_name:
-            if parent_name == "base":
-                raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
-            rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
-            parent_name = self.segments[parent_name].parent_name
+            out_rt = RotoTransMatrix()
+            out_rt.from_rt_matrix(rt)
+            return out_rt
 
-        out_rt = RotoTransMatrix()
-        out_rt.from_rt_matrix(rt)
-        return out_rt
+    def segment_has_ghost_parents(self, segment_name: str) -> bool:
+        """
+        Check if the segment has ghost parents.
+        A ghost parent is a segment that does not hold inertia, but is used to define the segment's coordinate system.
+        """
+        ghost_keys = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        for key in ghost_keys:
+            if segment_name + key in self.segments.keys():
+                return True
+        return False
 
     @staticmethod
     def _marker_residual(
@@ -144,7 +160,7 @@ class ModelDynamics:
             vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
                 markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
             ) * marker_weights_reordered[i_marker]
-        # TODO: setup the IKTask to set the "q_ref" to something else than zero.
+        # TODO: setup the IKTask from osim to set the "q_ref" to something else than zero.
         out = np.hstack(
             (
                 vect_pos_markers,
@@ -251,7 +267,14 @@ class ModelDynamics:
         nb_markers = len(marker_names)
         if len(marker_positions.shape) == 2:
             marker_positions = marker_positions[:, :, np.newaxis]
-        elif len(marker_positions.shape) == 1 or marker_positions.shape[0] > 3:
+        if len(marker_positions.shape) != 3:
+            raise RuntimeError(
+                f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}"
+            )
+
+        if marker_positions.shape[0] == 4:
+            marker_positions = marker_positions[:3, :, :]  # Remove the homogeneous coordinate if present
+        if marker_positions.shape[0] != 3:
             raise RuntimeError(
                 f"The marker_positions must be of shape (3, nb_markers, nb_frames). Here the shape provided is {marker_positions.shape}"
             )
