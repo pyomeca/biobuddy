@@ -171,8 +171,6 @@ def test_biomechanics_model_real_utils_functions():
                     decimal=4,
                 )
 
-
-
     # --- leg_without_ghost_parents.bioMod --- #
     complex_filepath = parent_path + "/examples/models/example_of_complex_model.bioMod"
 
@@ -251,18 +249,30 @@ def test_base_segment_coordinate_system():
     scs_global = leg_model.segment_coordinate_system_in_global("femur_r")
 
     # Test the values
-    npt.assert_almost_equal(scs_local, np.array([[ 0.941067,  0.334883,  0.047408, -0.067759],
-                                               [-0.335537,  0.906752,  0.255373, -0.06335 ],
-                                               [ 0.042533, -0.25623 ,  0.96568 ,  0.080026],
-                                               [ 0.      ,  0.      ,  0.      ,  1.      ]]),
-                           decimal=5
-                           )
-    npt.assert_almost_equal(scs_global[:, :, 0], np.array([[ 0.99525177,  0.0957537 , -0.01746835,  0.64714318],
-                                                               [-0.0351334 ,  0.18604158, -0.98191353,  0.45086954],
-                                                               [-0.09077201,  0.9778649 ,  0.18852236,  0.84057565],
-                                                               [ 0.        ,  0.        ,  0.        ,  1.        ]]),
-                           decimal=5,
-                           )
+    npt.assert_almost_equal(
+        scs_local,
+        np.array(
+            [
+                [0.941067, 0.334883, 0.047408, -0.067759],
+                [-0.335537, 0.906752, 0.255373, -0.06335],
+                [0.042533, -0.25623, 0.96568, 0.080026],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
+    npt.assert_almost_equal(
+        scs_global[:, :, 0],
+        np.array(
+            [
+                [0.99525177, 0.0957537, -0.01746835, 0.64714318],
+                [-0.0351334, 0.18604158, -0.98191353, 0.45086954],
+                [-0.09077201, 0.9778649, 0.18852236, 0.84057565],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
 
 
 def test_marker_residual_static_method():
@@ -281,9 +291,7 @@ def test_marker_residual_static_method():
 
     # Get model markers to create "experimental" markers
     model_markers = leg_model.markers_in_global(q)
-    experimental_markers = (
-        model_markers[:3, :, 0] + np.random.rand(3, leg_model.nb_markers) * 0.01
-    )  # Add small noise
+    experimental_markers = model_markers[:3, :, 0] + np.random.rand(3, leg_model.nb_markers) * 0.01  # Add small noise
 
     marker_names = leg_model.marker_names
     marker_weights = np.ones(leg_model.nb_markers)
@@ -301,18 +309,71 @@ def test_marker_residual_static_method():
     )
 
     # Check the residual values
-    npt.assert_almost_equal(residual, np.array([-0.00020584, -0.00199674, -0.00034389, -0.0096991 , -0.00514234,
-                                           -0.0090932 , -0.00832443, -0.00592415, -0.0025878 , -0.00212339,
-                                           -0.0004645 , -0.00662522, -0.00181825, -0.00607545, -0.00311711,
-                                           -0.00183405, -0.00170524, -0.00520068, -0.00304242, -0.00065052,
-                                           -0.0054671 , -0.00524756, -0.00948886, -0.00184854, -0.00431945,
-                                           -0.00965632, -0.00969585, -0.00291229, -0.00808397, -0.00775133,
-                                           -0.00611853, -0.00304614, -0.00939499, -0.00139494, -0.00097672,
-                                           -0.00894827, -0.00292145, -0.00684233, -0.005979  , -0.00366362,
-                                           -0.00440152, -0.00921874, -0.0045607 , -0.00122038, -0.00088493,
-                                           -0.00785176, -0.00495177, -0.00195983,  0.0037454 ,  0.00950714,
-                                            0.00731994,  0.00598658,  0.00156019,  0.00155995,  0.00058084,
-                                            0.00866176,  0.00601115,  0.00708073]))
+    npt.assert_almost_equal(
+        residual,
+        np.array(
+            [
+                -0.00020584,
+                -0.00199674,
+                -0.00034389,
+                -0.0096991,
+                -0.00514234,
+                -0.0090932,
+                -0.00832443,
+                -0.00592415,
+                -0.0025878,
+                -0.00212339,
+                -0.0004645,
+                -0.00662522,
+                -0.00181825,
+                -0.00607545,
+                -0.00311711,
+                -0.00183405,
+                -0.00170524,
+                -0.00520068,
+                -0.00304242,
+                -0.00065052,
+                -0.0054671,
+                -0.00524756,
+                -0.00948886,
+                -0.00184854,
+                -0.00431945,
+                -0.00965632,
+                -0.00969585,
+                -0.00291229,
+                -0.00808397,
+                -0.00775133,
+                -0.00611853,
+                -0.00304614,
+                -0.00939499,
+                -0.00139494,
+                -0.00097672,
+                -0.00894827,
+                -0.00292145,
+                -0.00684233,
+                -0.005979,
+                -0.00366362,
+                -0.00440152,
+                -0.00921874,
+                -0.0045607,
+                -0.00122038,
+                -0.00088493,
+                -0.00785176,
+                -0.00495177,
+                -0.00195983,
+                0.0037454,
+                0.00950714,
+                0.00731994,
+                0.00598658,
+                0.00156019,
+                0.00155995,
+                0.00058084,
+                0.00866176,
+                0.00601115,
+                0.00708073,
+            ]
+        ),
+    )
 
 
 def test_forward_kinematics_error_handling():
@@ -326,6 +387,7 @@ def test_forward_kinematics_error_handling():
     q_wrong_shape = np.zeros((leg_model.nb_q, 5, 2))  # 3D array should fail
     with pytest.raises(RuntimeError, match="q must be of shape"):
         leg_model.forward_kinematics(q_wrong_shape)
+
 
 def test_markers_in_global_error_handling():
     """Test error handling in markers_in_global."""
@@ -451,10 +513,17 @@ def test_rt_from_parent_offset_to_real_segment_basic():
     model_without = BiomechanicalModelReal().from_biomod(filepath=model_without_filepath)
 
     rt_result = model_with.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix
-    npt.assert_almost_equal(rt_result, np.array([[ 0.998838,  0.017684, -0.044828,  0.      ],
-                                                       [-0.011801,  0.99167 ,  0.128259,  0.      ],
-                                                       [ 0.046723, -0.127581,  0.990727,  0.      ],
-                                                       [ 0.      ,  0.      ,  0.      ,  1.      ]]))
+    npt.assert_almost_equal(
+        rt_result,
+        np.array(
+            [
+                [0.998838, 0.017684, -0.044828, 0.0],
+                [-0.011801, 0.99167, 0.128259, 0.0],
+                [0.046723, -0.127581, 0.990727, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
 
     rt_result = model_without.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix
     npt.assert_almost_equal(rt_result, np.identity(4))

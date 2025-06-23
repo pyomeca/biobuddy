@@ -485,7 +485,6 @@ class ModelDynamics:
 
         return com_position
 
-
     @requires_initialization
     def total_com_in_global(self, q: np.ndarray = None) -> np.ndarray:
         q = np.zeros((self.nb_q, 1)) if q is None else q
