@@ -10,15 +10,6 @@ import numpy.testing as npt
 
 from test_utils import remove_temporary_biomods
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
-from biobuddy.components.real.rigidbody.segment_scaling import SegmentScaling
-from biobuddy.components.real.rigidbody.marker_weight import MarkerWeight
-from biobuddy.components.real.rigidbody.marker_real import MarkerReal
-from biobuddy.components.real.rigidbody.contact_real import ContactReal
-from biobuddy.components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
-from biobuddy.components.real.muscle.muscle_real import MuscleReal
-from biobuddy.components.real.muscle.via_point_real import ViaPointReal
-from biobuddy.utils.linear_algebra import RotoTransMatrix
-
 
 def convert_c3d_to_trc(c3d_filepath):
     """
