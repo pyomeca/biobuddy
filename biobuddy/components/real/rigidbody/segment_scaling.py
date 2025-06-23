@@ -42,15 +42,13 @@ class ScaleFactor:
 
 
 class AxisWiseScaling:
-    def __init__(self, segment_name: str, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
+    def __init__(self, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
 
         Parameters
         ----------
-        segment_name
-            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -80,7 +78,6 @@ class AxisWiseScaling:
 
     def compute_scale_factors(
         self,
-        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
@@ -99,7 +96,7 @@ class AxisWiseScaling:
 
 
 class SegmentWiseScaling:
-    def __init__(self, segment_name: str, axis: Translations, marker_pairs: list[list[str, str]]):
+    def __init__(self, axis: Translations, marker_pairs: list[list[str]]):
         """
         One scaling factor is applied per segment.
         This method is equivalent to OpenSim's method.
@@ -107,8 +104,6 @@ class SegmentWiseScaling:
 
         Parameters
         ----------
-        segment_name
-            The name of the segment to scale
         axis
             The axis on which to scale the segment
         marker_pairs
@@ -127,7 +122,6 @@ class SegmentWiseScaling:
 
     def compute_scale_factors(
         self,
-        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
@@ -196,7 +190,6 @@ class BodyWiseScaling:
 
     def compute_scale_factors(
         self,
-        segment_name: str,
         original_model: "BiomechanicalModelReal",
         marker_positions: np.ndarray,
         marker_names: list[str],
@@ -243,7 +236,7 @@ class SegmentScaling:
     def compute_scaling_factors(
         self, original_model: "BiomechanicalModelReal", marker_positions: np.ndarray, marker_names: list[str]
     ) -> ScaleFactor:
-        return self.scaling_type.compute_scale_factors(self.name, original_model, marker_positions, marker_names)
+        return self.scaling_type.compute_scale_factors(original_model, marker_positions, marker_names)
 
     def to_biomod(self):
         out_string = ""

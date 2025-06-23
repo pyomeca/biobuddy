@@ -68,6 +68,41 @@ class ScaleTool:
     def add_marker_weight(self, marker_weight: MarkerWeight):
         self.marker_weights.append(marker_weight)
 
+    def remove_marker_weight(self, marker_name: str):
+        self.marker_weights.remove(marker_name)
+
+    def add_scaling_segment(self, scaling_segment: SegmentScaling):
+        """
+        Add a scaling segment to the scale tool.
+
+        Parameters
+        ----------
+        scaling_segment
+            The scaling segment to add
+        """
+
+        if not isinstance(scaling_segment, SegmentScaling):
+            raise RuntimeError("The scaling segment must be of type SegmentScaling.")
+        self.scaling_segments.append(scaling_segment)
+
+    def remove_scaling_segment(self, segment_scaling_name: str):
+        """
+        Remove a scaling segment from the scale tool.
+
+        Parameters
+        ----------
+        segment_scaling_name
+            The name of the scaling segment to remove
+        """
+        self.scaling_segments.remove(segment_scaling_name)
+
+    def print_marker_weights(self):
+        """
+        Print the marker weights in a human-readable format for debugging purposes.
+        """
+        for marker_weight in self.marker_weights:
+            print(f"{marker_weight.name} : {marker_weight.weight:.2f}")
+
     def scale(
         self,
         filepath: str,
@@ -154,31 +189,6 @@ class ScaleTool:
         )
 
         return self.scaled_model
-
-    def add_scaling_segment(self, scaling_segment: SegmentScaling):
-        """
-        Add a scaling segment to the scale tool.
-
-        Parameters
-        ----------
-        scaling_segment
-            The scaling segment to add
-        """
-
-        if not isinstance(scaling_segment, SegmentScaling):
-            raise RuntimeError("The scaling segment must be of type SegmentScaling.")
-        self.scaling_segments.append(scaling_segment)
-
-    def remove_scaling_segment(self, segment_scaling_name: str):
-        """
-        Remove a scaling segment from the scale tool.
-
-        Parameters
-        ----------
-        segment_scaling_name
-            The name of the scaling segment to remove
-        """
-        self.scaling_segments.remove(segment_scaling_name)
 
     def check_that_makers_do_not_move(self, marker_positions, marker_names):
         """

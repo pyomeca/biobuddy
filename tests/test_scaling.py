@@ -1,11 +1,8 @@
-"""
-TODO: Add tests for the scaling configuration
-"""
-
 import os
 import pytest
 import opensim as osim
 import shutil
+from deepdiff import DeepDiff
 
 import ezc3d
 import biorbd
@@ -13,7 +10,17 @@ import numpy as np
 import numpy.testing as npt
 
 from test_utils import remove_temporary_biomods
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
+from biobuddy import (
+    BiomechanicalModelReal,
+    MuscleType,
+    MuscleStateType,
+    ScaleTool,
+    C3dData,
+    SegmentScaling,
+    SegmentWiseScaling,
+    Translations,
+    MarkerWeight,
+)
 
 
 def convert_c3d_to_trc(c3d_filepath):
@@ -324,3 +331,98 @@ def test_scaling_wholebody():
     os.remove("wholebody.osim")
     os.remove(parent_path + "/examples/models/scaled.osim")
     remove_temporary_biomods()
+
+
+
+def test_translation_of_scaling_configuration():
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    biomod_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.bioMod"
+    biomod_config_filepath_new = parent_path + f"/examples/models/arm26_allbiceps_1dof_new.bioMod"
+    osim_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.xml"
+
+    # --- Reading a .bioMod scaling configuration and translating it into a .xml configuration --- #
+    # Read an .bioMod file
+    original_model = BiomechanicalModelReal().from_biomod(filepath=biomod_config_filepath)
+
+    scaling_configuration = ScaleTool(original_model).from_biomod(
+        filepath=biomod_config_filepath,
+    )
+
+    # And convert it to a .xml file
+    scaling_configuration.to_xml(osim_config_filepath)
+
+    # Read the .xml file back
+    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(filepath=osim_config_filepath)
+
+    # Rewrite it into a .bioMod to compare with the original one
+    new_xml_scaling_configuration.to_biomod(biomod_config_filepath_new, append=False)
+
+    # Reread the .biomod configuration we just printed
+    new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
+
+    diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
+
+    # If the two objects are the same, there are no fields in diff
+    assert diff == {}
+
+    os.remove(osim_config_filepath)
+    os.remove(biomod_config_filepath_new)
+
+
+def test_creation_of_scaling_configuration():
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    biomod_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.bioMod"
+
+    # --- Creating a scaling configuration --- #
+    # Read a biomod file to construct a BiomechanicalModelReal object
+    original_model = BiomechanicalModelReal().from_biomod(filepath=biomod_config_filepath)
+
+    # Create the scaling configuration
+    scaling_configuration = ScaleTool(original_model)
+
+    # Add a scaling segment for the pelvis
+    scaling_configuration.add_scaling_segment(
+        SegmentScaling(
+            name="pelvis",
+            scaling_type= SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[
+                    ["RASIS", "LASIS"],
+                    ["RPSIS", "LPSIS"],
+                ]
+            )
+        )
+    )
+    assert scaling_configuration.scaling_segments.keys() == ["pelvis"]
+    assert isinstance(scaling_configuration.scaling_segments["pelvis"].scaling_type, SegmentWiseScaling)
+    assert scaling_configuration.scaling_segments["pelvis"].scaling_type.axis == Translations.XYZ
+    assert scaling_configuration.scaling_segments["pelvis"].scaling_type.marker_pairs == [
+                                                                                            ["RASIS", "LASIS"],
+                                                                                            ["RPSIS", "LPSIS"],
+                                                                                        ]
+
+    # Add marker weights for the pelvis segment
+    scaling_configuration.add_marker_weight(MarkerWeight(name="RASIS", weight=1.0))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="LASIS", weight=1.0))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="RPSIS", weight=0.5))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="LPSIS", weight=0.5))
+    assert scaling_configuration.marker_weights.keys() == ["RASIS", "LASIS", "RPSIS", "LPSIS"]
+    assert isinstance(scaling_configuration.marker_weights["RASIS"], MarkerWeight)
+    assert scaling_configuration.marker_weights["RASIS"].weight == 1.0
+    assert scaling_configuration.marker_weights["LPSIS"].weight == 0.5
+
+    # Test that printing the marker weights works
+    scaling_configuration.print_marker_weights()
+
+    # Check that the scaling configuration can be destroyed
+    scaling_configuration.remove_scaling_segment("pelvis")
+    for marker_names in scaling_configuration.marker_weights.keys():
+        scaling_configuration.remove_marker_weight(marker_names)
+
+    # Check that it is actually empty
+    assert scaling_configuration.scaling_segments == []
+    assert scaling_configuration.marker_weights == []

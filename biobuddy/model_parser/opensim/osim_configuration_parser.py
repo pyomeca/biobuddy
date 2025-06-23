@@ -234,7 +234,7 @@ class OsimConfigurationParser:
             SegmentScaling(
                 name=segment_name,
                 scaling_type=SegmentWiseScaling(
-                    segment_name=segment_name, axis=body_scale_set, marker_pairs=marker_pair_set
+                    axis=body_scale_set, marker_pairs=marker_pair_set
                 ),
             )
         )
