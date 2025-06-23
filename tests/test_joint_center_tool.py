@@ -700,16 +700,3 @@ def test_functional_trial_validation():
     marker_0_movement = np.max(marker_positions[:, 0, :], axis=0) - np.min(marker_positions[:, 0, :], axis=0)
     movement_magnitude = np.linalg.norm(marker_0_movement)
     assert movement_magnitude > 0, "Markers should move in functional trial"
-
-
-# TODO: Add integration tests that work with actual C3D files and biomechanical models
-# These would test the complete workflow of Score and Sara algorithms
-# def test_score_with_real_data():
-#     """Test Score algorithm with real C3D data."""
-#     # This would require actual test data files
-#     pass
-
-# def test_sara_with_real_data():
-#     """Test Sara algorithm with real C3D data."""
-#     # This would require actual test data files
-#     pass
