@@ -5,6 +5,7 @@ from scipy import optimize
 from functools import wraps
 
 from ...utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix, point_from_local_to_global
+from ...utils.enums import ViewAs
 
 _logger = logging.getLogger(__name__)
 
@@ -570,3 +571,22 @@ class ModelDynamics:
             muscle_norm += np.linalg.norm(muscle_trajectory[i_point][:3] - muscle_trajectory[i_point + 1][:3])
 
         return muscle_norm
+
+    def animate(self, view_as: ViewAs, model_path: str = None):
+
+        if view_as == ViewAs.BIORBD:
+            try:
+                import pyorerun
+
+                if model_path is None or not model_path.endswith(".bioMod"):
+                    model_path = "temporary.bioMod"
+                    self.to_biomod(model_path, with_mesh=False)
+
+                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
+                animation.options.set_all_labels(False)
+                animation.rerun()
+            except ImportError:
+                _logger.error("pyorerun is not installed. Cannot animate the model.")
+
+        else:
+            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use ViewAs.BIORBD for now.")
