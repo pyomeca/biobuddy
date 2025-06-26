@@ -28,7 +28,7 @@ from .utils import (
     read_bool,
     read_float_vector,
 )
-from ...utils.translations import Translations
+from ...utils.enums import Translations
 
 
 TOKENS_TO_IGNORE_NO_COMPONENTS = ["endscalingsegment"]

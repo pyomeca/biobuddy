@@ -3,8 +3,8 @@ from copy import deepcopy
 # from typing import Self
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
-from ...utils.translations import Translations
-from ...utils.rotations import Rotations
+from ...utils.enums import Translations
+from ...utils.enums import Rotations
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from .model_dynamics import ModelDynamics

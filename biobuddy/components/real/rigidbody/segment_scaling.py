@@ -3,7 +3,7 @@ import numpy as np
 from typing import TypeAlias
 
 from .marker_real import MarkerReal
-from ....utils.translations import Translations
+from ....utils.enums import Translations
 
 
 class MeanMarker:
