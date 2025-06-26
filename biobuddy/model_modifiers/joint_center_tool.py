@@ -7,8 +7,8 @@ from scipy import optimize
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ..utils.translations import Translations
-from ..utils.rotations import Rotations
+from ..utils.enums import Translations
+from ..utils.enums import Rotations
 from ..utils.c3d_data import C3dData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
@@ -16,8 +16,8 @@ from ..utils.linear_algebra import (
     mean_unit_vector,
     RotoTransMatrixTimeSeries,
     point_from_local_to_global,
-    get_rotation_vector_from_sequence,
-    get_sequence_from_rotation_vector,
+    get_vector_from_sequence,
+    get_sequence_from_vector,
     rot2eul,
 )
 
@@ -795,12 +795,12 @@ class Sara(RigidSegmentIdentification):
         if self.child_name + "_rotation_transform" in original_model.segments.keys():
             rot = original_model.segments[self.child_name + "_rotation_transform"].rotations.value
             if self.child_name + "_reset_axis" in original_model.segments.keys():
-                rotation_vector = get_rotation_vector_from_sequence(sequence=rot)
+                rotation_vector = get_vector_from_sequence(sequence=rot)
                 rotation_vector = (
                     original_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs[:3, :3, 0]
                     @ rotation_vector
                 )
-                rot = get_sequence_from_rotation_vector(rotation_vector)
+                rot = get_sequence_from_vector(rotation_vector)
             else:
                 NotImplementedError(
                     "Your model has a _rotation_transform segment without a _reset_axis segment, which is not implemented yet."

@@ -26,8 +26,8 @@ from ...utils.linear_algebra import (
     ortho_norm_basis,
     get_closest_rt_matrix,
 )
-from ...utils.rotations import Rotations
-from ...utils.translations import Translations
+from ...utils.enums import Rotations
+from ...utils.enums import Translations
 
 
 class ForceType(Enum):

@@ -1,4 +1,5 @@
 from typing import Callable
+import numpy as np
 
 from .axis import Axis
 from .marker import Marker
@@ -70,3 +71,21 @@ class SegmentCoordinateSystem:
             self.axis_to_keep,
             parent_scs,
         )
+
+class SegmentCoordinateSystemUtils:
+
+    @staticmethod
+    def mean_markers(marker_names: tuple[str, ...] | list[str]) -> Callable:
+        """
+        Compute the mean position of a set of markers
+
+        Parameters
+        ----------
+        marker_names
+            The names of the markers to compute the mean position from
+
+        Returns
+        -------
+        A lambda function that can be called during the to_real process
+        """
+        return lambda m, bio: np.nanmean(np.nanmean(np.array([m[name] for name in marker_names]), axis=2), axis=0)

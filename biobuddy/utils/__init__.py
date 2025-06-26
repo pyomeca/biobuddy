@@ -1,8 +1,7 @@
 from .aliases import Point, Points
 from .c3d_data import C3dData
 from .protocols import Data, GenericDynamicModel
-from .rotations import Rotations
-from .translations import Translations
+from .enums import Rotations, Translations, ViewAs
 from .linear_algebra import RotoTransMatrix
 
 __all__ = [
@@ -13,5 +12,6 @@ __all__ = [
     GenericDynamicModel.__name__,
     Rotations.__name__,
     Translations.__name__,
+    ViewAs.__name__,
     RotoTransMatrix.__name__,
 ]

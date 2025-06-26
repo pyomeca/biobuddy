@@ -130,13 +130,16 @@ class SegmentCoordinateSystemReal:
             raise ValueError("Name of axis to keep should be one of the two axes")
 
         # Dispatch the result into a matrix
-        n_frames = first_axis_vector.shape[1]
+        n_frames = max(first_axis_vector.shape[1], second_axis_vector.shape[1])
         rt = np.zeros((4, 4, n_frames))
         rt[:3, first_axis.name, :] = first_axis_vector / np.linalg.norm(first_axis_vector, axis=0)
         rt[:3, second_axis.name, :] = second_axis_vector / np.linalg.norm(second_axis_vector, axis=0)
         rt[:3, third_axis_name, :] = third_axis_vector / np.linalg.norm(third_axis_vector, axis=0)
         rt[:3, 3, :] = origin.position[:3, :]
         rt[3, 3, :] = 1
+
+        if n_frames > 1:
+            rt = mean_homogenous_matrix(rt)
 
         return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=False)
 
