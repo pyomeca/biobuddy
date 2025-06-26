@@ -24,7 +24,9 @@ class Mesh:
         self.functions = []
         for f in functions:
             if isinstance(f, str):
-                self.functions += [lambda m, bio, name=f: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)]
+                self.functions += [
+                    lambda m, bio, name=f: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
+                ]
             elif callable(f):
                 self.functions += [f]
             else:

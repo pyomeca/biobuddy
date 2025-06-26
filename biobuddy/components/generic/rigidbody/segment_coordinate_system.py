@@ -72,6 +72,7 @@ class SegmentCoordinateSystem:
             parent_scs,
         )
 
+
 class SegmentCoordinateSystemUtils:
 
     @staticmethod

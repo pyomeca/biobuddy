@@ -38,6 +38,7 @@ class Translations(Enum):
     ZXY = "zxy"
     ZYX = "zyx"
 
+
 class ViewAs(Enum):
     BIORBD = "biorbd"
     # OPENSIM = "opensim"
