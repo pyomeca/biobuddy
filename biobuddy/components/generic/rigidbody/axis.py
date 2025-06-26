@@ -1,4 +1,5 @@
 from typing import Callable
+import numpy as np
 
 from ..rigidbody.marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
@@ -15,8 +16,11 @@ class Axis:
 
         pass
 
-    def __init__(self, name: AxisReal.Name, start: Callable | str, end: Callable | str):
+    def __init__(self, name: AxisReal.Name, start: Callable | str = None, end: Callable | str = None):
         """
+        Defines an axis to create a SegmentCoordinateSystemReal. The axis is defined by a start and an end point.
+        If neither start nor end is provided, the axis is defined as the global coordinate system.
+
         Parameters
         ----------
         name
@@ -28,7 +32,14 @@ class Axis:
             The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the end point of the axis.
             If a str is provided, the position of the corresponding marker is used
         """
+        if start is None and end is not None or start is not None and end is None:
+            raise ValueError("Both start and end must be provided or both must be None.")
+
         self.name = name
+        if start is None and end is None:
+            start = lambda m, model: np.array([0.0, 0.0, 0.0])
+            end = lambda m, model: np.array([0.0 if i != name else 1.0 for i in range(3)])
+
         self.start = Marker(function=start)
         self.end = Marker(function=end)
 

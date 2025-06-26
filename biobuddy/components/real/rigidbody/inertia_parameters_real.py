@@ -93,7 +93,9 @@ class InertiaParametersReal:
 
         p = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
-        com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
+        # com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
+        # @pariterre : I expect the user to give the com in the local ref frame not the global ?
+        com = p
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
         inertia = points_to_array(points=inertia(data.values, model), name="inertia parameter function")

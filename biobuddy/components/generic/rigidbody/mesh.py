@@ -1,4 +1,5 @@
 from typing import Callable
+import numpy as np
 
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.mesh_real import MeshReal
@@ -20,7 +21,14 @@ class Mesh:
             The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the marker with.
             If a str is provided, the position of the corresponding marker is used
         """
-        self.functions = tuple((lambda m, bio, name=f: m[name]) if isinstance(f, str) else f for f in functions)
+        self.functions = []
+        for f in functions:
+            if isinstance(f, str):
+                self.functions += [lambda m, bio, name=f: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)]
+            elif callable(f):
+                self.functions += [f]
+            else:
+                raise TypeError(f"Expected a str or a callable, got {type(f)}")
 
     def to_mesh(
         self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
