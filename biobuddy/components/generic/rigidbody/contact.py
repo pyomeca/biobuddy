@@ -2,7 +2,7 @@ from typing import Callable
 
 from ...real.rigidbody.contact_real import ContactReal
 from ....utils.protocols import Data
-from ....utils.translations import Translations
+from ....utils.enums import Translations
 
 
 class Contact:
