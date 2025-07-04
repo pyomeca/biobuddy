@@ -35,7 +35,7 @@ jobs:
         with:
           miniforge-version: latest
           environment-name: biobuddy
-          create-env-file: false
+          auto-activate-base: false
 
       - name: Set up Python
         run: |
