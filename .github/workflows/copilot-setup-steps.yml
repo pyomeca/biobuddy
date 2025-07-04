@@ -20,6 +20,9 @@ jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
   copilot-setup-steps:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -l {0}
     steps:
       - name: Checkout code with submodule
         uses: actions/checkout@v4
@@ -31,6 +34,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
+          environment-name: biobuddy
+          create-env-file: false
 
       - name: Set up Python
         run: |
@@ -46,4 +51,18 @@ jobs:
           pip install pytest pytest-cov codecov pyomeca black
           conda install -c opensim-org opensim=4.5.1
           conda install -c conda-forge biorbd=1.11.2 deepdiff
-  
+
+      - name: Set environment variables for Copilot
+        run: |
+          conda activate biobuddy
+          echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
+          echo "PYTHONPATH=$CONDA_PREFIX/lib/python3.11/site-packages:$PYTHONPATH" >> $GITHUB_ENV
+          echo "PATH=$CONDA_PREFIX/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Verify environment setup
+        run: |
+          conda activate biobuddy
+          echo "Python location: $(which python)"
+          echo "Conda prefix: $CONDA_PREFIX"
+          echo "Python path: $PYTHONPATH"
+          python -c "import sys; print('Python sys.path:'); [print(f'  {p}') for p in sys.path]"
