@@ -7,7 +7,7 @@ import numpy.testing as npt
 import pytest
 
 from biobuddy import DeLevaTable, Sex, SegmentName, InertiaParameters, BiomechanicalModel
-from biobuddy.characteristics.de_leva import point_on_vector
+from biobuddy.characteristics.de_leva import point_on_vector_in_local
 
 
 MOCK_DATA = {
@@ -167,38 +167,38 @@ def get_biomechanical_model():
 
 
 def test_point_on_vector():
-    """Test point_on_vector function with various inputs."""
+    """Test point_on_vector_in_local function with various inputs."""
     # Test basic functionality
     start = np.array([0, 0, 0])
     end = np.array([10, 0, 0])
 
     # Test at start (coef=0)
-    result = point_on_vector(0.0, start, end)
+    result = point_on_vector_in_local(0.0, start, end)
     npt.assert_almost_equal(result, start)
 
     # Test at end (coef=1)
-    result = point_on_vector(1.0, start, end)
+    result = point_on_vector_in_local(1.0, start, end)
     npt.assert_almost_equal(result, end)
 
     # Test at midpoint (coef=0.5)
-    result = point_on_vector(0.5, start, end)
+    result = point_on_vector_in_local(0.5, start, end)
     expected = np.array([5, 0, 0])
     npt.assert_almost_equal(result, expected)
 
     # Test with 3D vectors
     start = np.array([1, 2, 3])
     end = np.array([4, 6, 9])
-    result = point_on_vector(0.5, start, end)
+    result = point_on_vector_in_local(0.5, start, end)
     expected = np.array([2.5, 4, 6])
     npt.assert_almost_equal(result, expected)
 
     # Test with coefficient > 1 (extrapolation)
-    result = point_on_vector(2.0, start, end)
+    result = point_on_vector_in_local(2.0, start, end)
     expected = np.array([7, 10, 15])
     npt.assert_almost_equal(result, expected)
 
     # Test with negative coefficient
-    result = point_on_vector(-0.5, start, end)
+    result = point_on_vector_in_local(-0.5, start, end)
     expected = np.array([-0.5, 0, 0])
     npt.assert_almost_equal(result, expected)
 

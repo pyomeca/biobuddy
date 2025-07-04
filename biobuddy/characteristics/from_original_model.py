@@ -1,10 +1,3 @@
-import numpy as np
-
-from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
-
-
-def point_on_vector(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
-    return start + coef * (end - start)
 
 
 class FromOriginalModel:

@@ -5,8 +5,7 @@ from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
 from ..utils.protocols import Data
 
 
-def point_on_vector(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
-    # Same I expect local coordinates
+def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
 
 
@@ -40,7 +39,7 @@ class DeLevaTable:
         self.sex = sex
         self.total_mass = total_mass
 
-        # The folowing attributes will be set either by from_data or from_measurements
+        # The following attributes will be set either by from_data or from_measurements
         self.inertial_table = None
         self.top_head_position = None
         self.shoulder_position = None
@@ -62,7 +61,7 @@ class DeLevaTable:
             Sex.MALE: {
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0694 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.5002, start=self.top_head_position, end=self.shoulder_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -74,7 +73,7 @@ class DeLevaTable:
                 ),
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4346 * self.total_mass,
-                    center_of_mass=lambda m, bio: -point_on_vector(
+                    center_of_mass=lambda m, bio: -point_on_vector_in_local(
                         0.5138, start=self.shoulder_position, end=self.pelvis_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -86,7 +85,7 @@ class DeLevaTable:
                 ),
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0271 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.5772, start=self.shoulder_position, end=self.elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -98,7 +97,7 @@ class DeLevaTable:
                 ),
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0162 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4574, start=self.elbow_position, end=self.wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -110,7 +109,7 @@ class DeLevaTable:
                 ),
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0061 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.7900, start=self.wrist_position, end=self.finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -122,7 +121,7 @@ class DeLevaTable:
                 ),
                 SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 0.1416 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4095, start=self.pelvis_position, end=self.knee_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -134,7 +133,7 @@ class DeLevaTable:
                 ),
                 SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 0.0433 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4459, start=self.knee_position, end=self.ankle_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -146,7 +145,7 @@ class DeLevaTable:
                 ),
                 SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 0.0137 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4415, start=self.ankle_position, end=self.toes_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -160,7 +159,7 @@ class DeLevaTable:
             Sex.FEMALE: {
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0669 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4841, start=self.top_head_position, end=self.shoulder_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -172,7 +171,7 @@ class DeLevaTable:
                 ),
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4257 * self.total_mass,
-                    center_of_mass=lambda m, bio: -point_on_vector(
+                    center_of_mass=lambda m, bio: -point_on_vector_in_local(
                         0.4964, start=self.shoulder_position, end=self.pelvis_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -184,7 +183,7 @@ class DeLevaTable:
                 ),
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0255 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.5754, start=self.shoulder_position, end=self.elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -196,7 +195,7 @@ class DeLevaTable:
                 ),
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0138 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4559, start=self.elbow_position, end=self.wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -208,7 +207,7 @@ class DeLevaTable:
                 ),
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0056 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.7474, start=self.wrist_position, end=self.finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -220,7 +219,7 @@ class DeLevaTable:
                 ),
                 SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 0.1478 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.3612, start=self.pelvis_position, end=self.knee_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -232,7 +231,7 @@ class DeLevaTable:
                 ),
                 SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 0.0481 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4416, start=self.knee_position, end=self.ankle_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
@@ -244,7 +243,7 @@ class DeLevaTable:
                 ),
                 SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 0.0129 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector(
+                    center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4014, start=self.ankle_position, end=self.toes_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
