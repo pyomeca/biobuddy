@@ -57,7 +57,7 @@ class RigidSegmentIdentification:
         initialize_whole_trial_reconstruction
             If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
         animate_rt
-            If True, it animates the segment rt reconstruction using pyomeca and pyorerun.
+            If True, it animates the segment rt reconstruction using pyorerun.
         """
 
         # Original attributes
@@ -212,18 +212,18 @@ class RigidSegmentIdentification:
 
         try:
             import pyorerun
-            from pyomeca import Markers
         except:
-            raise ImportError("Please install pyorerun and pyomeca to visualize the segment reconstruction.")
+            raise ImportError("Please install pyorerun to visualize the segment reconstruction.")
 
         # Visualization
         t = np.linspace(0, 1, nb_frames)
 
         # Add the experimental markers from the static trial
         if not without_exp_markers:
-            pyomarkers = Markers(
+            pyomarkers = pyorerun.Pyomarkers(
                 data=np.concatenate((self.parent_markers_global, self.child_markers_global), axis=1),
                 channels=self.parent_marker_names + self.child_marker_names,
+                show_labels=False,
             )
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -238,7 +238,7 @@ class RigidSegmentIdentification:
 
         viz = pyorerun.PhaseRerun(t)
         if not without_exp_markers:
-            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers)
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")

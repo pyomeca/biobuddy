@@ -1,3 +1,7 @@
+"""
+TODO: test scaling configuration
+"""
+
 import os
 import pytest
 import opensim as osim
@@ -60,12 +64,11 @@ def visualize_model_scaling_output(scaled_model, osim_model_scaled, q, marker_na
     osim_model_scaled.to_biomod(osim_path, with_mesh=True)
 
     import pyorerun
-    from pyomeca import Markers
 
     # Compare the result visually
     t = np.linspace(0, 1, marker_positions.shape[2])
     viz = pyorerun.PhaseRerun(t)
-    pyomarkers = Markers(data=marker_positions, channels=marker_names)
+    pyomarkers = pyorerun.Pyomarkers(data=marker_positions, channels=marker_names, show_labels=False)
 
     # Model scaled in BioBuddy
     viz_biomod_model = pyorerun.BiorbdModel(biobuddy_path)
@@ -73,7 +76,6 @@ def visualize_model_scaling_output(scaled_model, osim_model_scaled, q, marker_na
     viz_biomod_model.options.show_gravity = True
     viz_biomod_model.options.show_marker_labels = False
     viz_biomod_model.options.show_center_of_mass_labels = False
-    viz_biomod_model.options.show_experimental_marker_labels = False
     viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers)
 
     # Model scaled in OpenSim
