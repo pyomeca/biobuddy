@@ -1,3 +1,7 @@
+"""
+TODO: test scaling configuration
+"""
+
 import os
 import pytest
 import opensim as osim
@@ -90,6 +94,7 @@ def visualize_model_scaling_output(scaled_model, osim_model_scaled, q, marker_na
 
     os.remove(biobuddy_path)
     os.remove(osim_path)
+
 
 def test_scaling_wholebody():
 
