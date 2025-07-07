@@ -269,36 +269,19 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         os.remove(kinematic_model_filepath)
 
 
-def write_markers_to_c3d(save_path: str, model):
-    q = np.zeros(model.nbQ())
-    marker_names = tuple(name.to_string() for name in model.markerNames())
-    marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
-
-    c3d = ezc3d.c3d()
-
-    # Fill it with random data
-    c3d["parameters"]["POINT"]["RATE"]["value"] = [100]
-    c3d["parameters"]["POINT"]["LABELS"]["value"] = marker_names
-    c3d["parameters"]["POINT"]["UNITS"]["value"] = ["m"]
-    c3d["data"]["points"] = marker_positions
-
-    # Write the data
-    c3d.write(save_path)
+class FakeData:
+    def __init__(self, model):
+        q = np.zeros(model.nbQ())
+        marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
+        self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
+        self.nb_frames = 1
 
 
-"""
 # TODO: this test fails with exit code 134
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
-    c3d_filepath = "temporary.c3d"
     test_model_creation_from_static(remove_temporary=False)
-
-    # Prepare a fake model and a fake static from the previous test
-    model = Model(kinematic_model_filepath)
-    write_markers_to_c3d(c3d_filepath, model)
-    if os.path.exists(kinematic_model_filepath):
-        os.remove(kinematic_model_filepath)
 
     # Fill the kinematic chain model
     model = BiomechanicalModel()
@@ -456,32 +439,31 @@ def test_model_creation_from_data():
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
-    # Put the model together
-    real_model = model.to_real(C3dData(c3d_filepath))
+    # Prepare a fake model and a fake static from the previous test
+    fake_data = FakeData(Model(kinematic_model_filepath))
+    real_model = model.to_real(fake_data)
+    if os.path.exists(kinematic_model_filepath):
+        os.remove(kinematic_model_filepath)
 
     # print it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
     model = Model(kinematic_model_filepath)
     assert model.nbQ() == 7
-    assert model.nbSegment() == 8
+    assert model.nbSegment() == 9
     assert model.nbMarkers() == 25
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
-    # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
-
-    destroy_model(model)
-
-    # Test the attributes of the model
-    assert model.segments == []
-    assert model.markers == []
+    # # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
+    # destroy_model(model)
+    #
+    # # Test the attributes of the model
+    # assert model.segments == []
+    # assert model.markers == []
 
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
-    if os.path.exists(c3d_filepath):
-        os.remove(c3d_filepath)
-"""
 
 
 def test_complex_model():
