@@ -34,12 +34,8 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           miniforge-version: latest
-          environment-name: biobuddy
-          auto-activate-base: false
-
-      - name: Set up Python
-        run: |
-          conda install -cconda-forge python=3.11.11 pip 
+          activate-environment: biobuddy
+          python-version: 3.11.11
 
       - name: Install dependencies
         run: | 
@@ -54,14 +50,12 @@ jobs:
 
       - name: Set environment variables for Copilot
         run: |
-          conda activate biobuddy
           echo "CONDA_PREFIX=$CONDA_PREFIX" >> $GITHUB_ENV
           echo "PYTHONPATH=$CONDA_PREFIX/lib/python3.11/site-packages:$PYTHONPATH" >> $GITHUB_ENV
           echo "PATH=$CONDA_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
       - name: Verify environment setup
         run: |
-          conda activate biobuddy
           echo "Python location: $(which python)"
           echo "Conda prefix: $CONDA_PREFIX"
           echo "Python path: $PYTHONPATH"
