@@ -15,6 +15,7 @@ import numpy.testing as npt
 from test_utils import remove_temporary_biomods
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData
 
+
 def convert_c3d_to_trc(c3d_filepath):
     """
     This function reads the c3d static file and converts it into a trc file that will be used to scale the model in OpenSim.
