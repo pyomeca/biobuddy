@@ -57,6 +57,8 @@ class DeLevaTable:
         """
         # TODO: @pariterre -> Bilateral segments (counts for the right and left sides) should be handled differently to allow for unilateral segments
 
+        # TODO: Addapt to elderly with https://www.sciencedirect.com/science/article/pii/S0021929015004571?via%3Dihub
+        # TODO: add Dumas et al. from https://www.sciencedirect.com/science/article/pii/S0021929006000728
         self.inertial_table = {
             Sex.MALE: {
                 SegmentName.HEAD: InertiaParameters(
@@ -90,7 +92,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0271 * self.total_mass,
-                        coef=(0.285, 0.269, 0.158),  # TODO: check if 2 *
+                        coef=(0.285, 0.269, 0.158),
                         start=self.shoulder_position,
                         end=self.elbow_position,
                     ),
@@ -102,7 +104,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0162 * self.total_mass,
-                        coef=(0.276, 0.265, 0.121),  # TODO: check if 2 *
+                        coef=(0.276, 0.265, 0.121),
                         start=self.elbow_position,
                         end=self.wrist_position,
                     ),
@@ -114,7 +116,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0061 * self.total_mass,
-                        coef=(0.628, 0.513, 0.401),  # TODO: check if 2 *
+                        coef=(0.628, 0.513, 0.401),
                         start=self.wrist_position,
                         end=self.finger_position,
                     ),
@@ -126,7 +128,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.1416 * self.total_mass,
-                        coef=(0.329, 0.329, 0.149),  # TODO: check if 2 *
+                        coef=(0.329, 0.329, 0.149),
                         start=self.pelvis_position,
                         end=self.knee_position,
                     ),
@@ -138,7 +140,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0433 * self.total_mass,
-                        coef=(0.255, 0.249, 0.103),  # TODO: check if 2 *
+                        coef=(0.255, 0.249, 0.103),
                         start=self.knee_position,
                         end=self.ankle_position,
                     ),
@@ -150,7 +152,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0137 * self.total_mass,
-                        coef=(0.257, 0.245, 0.124),  # TODO: check if 2 *
+                        coef=(0.257, 0.245, 0.124),
                         start=self.ankle_position,
                         end=self.toes_position,
                     ),
@@ -188,7 +190,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0255 * self.total_mass,
-                        coef=(0.278, 0.260, 0.148),  # TODO: check if 2 *
+                        coef=(0.278, 0.260, 0.148),
                         start=self.shoulder_position,
                         end=self.elbow_position,
                     ),
@@ -201,7 +203,7 @@ class DeLevaTable:
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0138 * self.total_mass,
                         coef=(0.261, 0.257, 0.094),
-                        start=self.elbow_position,  # TODO: check if 2 *
+                        start=self.elbow_position,
                         end=self.wrist_position,
                     ),
                 ),
@@ -212,7 +214,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0056 * self.total_mass,
-                        coef=(0.531, 0.454, 0.335),  # TODO: check if 2 *
+                        coef=(0.531, 0.454, 0.335),
                         start=self.wrist_position,
                         end=self.finger_position,
                     ),
@@ -224,7 +226,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.1478 * self.total_mass,
-                        coef=(0.369, 0.364, 0.162),  # TODO: check if 2 *
+                        coef=(0.369, 0.364, 0.162),
                         start=self.pelvis_position,
                         end=self.knee_position,
                     ),
@@ -236,7 +238,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0481 * self.total_mass,
-                        coef=(0.271, 0.267, 0.093),  # TODO: check if 2 *
+                        coef=(0.271, 0.267, 0.093),
                         start=self.knee_position,
                         end=self.ankle_position,
                     ),
@@ -248,7 +250,7 @@ class DeLevaTable:
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0129 * self.total_mass,
-                        coef=(0.299, 0.279, 0.124),  # TODO: check if 2 *
+                        coef=(0.299, 0.279, 0.124),
                         start=self.ankle_position,
                         end=self.toes_position,
                     ),
