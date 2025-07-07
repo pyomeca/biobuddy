@@ -44,7 +44,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-cov codecov pyomeca black
+          pip install pytest pytest-cov codecov black
           conda install -c opensim-org opensim=4.5.1
           conda install -c conda-forge biorbd=1.11.2 deepdiff
 

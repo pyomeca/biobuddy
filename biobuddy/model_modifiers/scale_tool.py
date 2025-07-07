@@ -584,7 +584,7 @@ class ScaleTool:
             try:
                 import pyorerun
             except ImportError:
-                raise ImportError("You must install pyorerun and pyomeca to visualize the model")
+                raise ImportError("You must install pyorerun to visualize the model")
 
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
