@@ -42,38 +42,30 @@ class ScaleFactor:
 
 
 class AxisWiseScaling:
-    def __init__(self, axis: list[Translations], marker_pairs: list[list[[str, str], ...]]):
+    def __init__(self, marker_pairs: dict[Translations, list[list[str]]]):
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
 
         Parameters
         ----------
-        axis
-            The axis on which to scale the segment
         marker_pairs
             The pairs of markers used to compute the averaged scaling factor
         """
 
         # Checks for the marker axis definition
-        if not isinstance(marker_pairs, list):
-            raise RuntimeError("marker_pairs must be a list of list of marker names.")
+        if not isinstance(marker_pairs, dict):
+            raise RuntimeError("marker_pairs must be a dict of {Translations: list of marker names}.")
 
-        if len(axis) != 3:
-            raise RuntimeError("All three axis must be specified for the AxisWise scaling.")
-        if len(marker_pairs) != 3:
-            raise RuntimeError("A marker pair must be specified for each of the three axis for the AxisWise scaling.")
-
-        for ax in axis:
-            if ax not in [Translations.X, Translations.Y, Translations.Z]:
+        for key in marker_pairs:
+            if key not in [Translations.X, Translations.Y, Translations.Z]:
                 raise RuntimeError("One axis must be specified at a time.")
-
-        for i in range(3):
-            for pair in marker_pairs[i]:
+            if not isinstance(marker_pairs[key], (list, tuple)):
+                raise RuntimeError("marker_pairs must be a dict of {Translations: list of marker names}.")
+            for pair in marker_pairs[key]:
                 if len(pair) != 2:
-                    raise RuntimeError("Scaling with more than 2 markers is not possible for SegmentWiseScaling.")
+                    raise RuntimeError("Scaling with more than 2 markers is not possible for AxisWiseScaling.")
 
-        self.axis = axis
         self.marker_pairs = marker_pairs
 
     def compute_scale_factors(
@@ -88,10 +80,10 @@ class AxisWiseScaling:
     def to_biomod(self):
         out_string = ""
         out_string += "scalingtype\taxiswisescaling\n"
-        out_string += f"\taxis\t{self.axis.value}\n"
-        for i_ax, ax in enumerate(self.axis.value):
-            for marker_pair in self.marker_pairs[i_ax]:
-                out_string += f"\t{ax}markerpair\t{marker_pair[0]}\t{marker_pair[1]}\n"
+        for axis in self.marker_pairs.keys():
+            out_string += f"\taxis\t{axis.value}\n"
+            for marker_pair in self.marker_pairs[axis]:
+                out_string += f"\t{axis.value}markerpair\t{marker_pair[0]}\t{marker_pair[1]}\n"
         return out_string
 
 
