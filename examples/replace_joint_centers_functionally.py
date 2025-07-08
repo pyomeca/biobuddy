@@ -167,7 +167,9 @@ def main(visualization):
         # Add the experimental markers from the static trial
         static_exp_markers = C3dData(static_filepath, first_frame=500, last_frame=510)
         static_marker_positions = static_exp_markers.get_position(scaled_model.marker_names)
-        pyomarkers = pyorerun.Pyomarkers(data=static_marker_positions, channels=scaled_model.marker_names, show_labels=False)
+        pyomarkers = pyorerun.Pyomarkers(
+            data=static_marker_positions, channels=scaled_model.marker_names, show_labels=False
+        )
 
         # SCoRE model
         viz_scaled_model = pyorerun.BiorbdModel(score_biomod_filepath)

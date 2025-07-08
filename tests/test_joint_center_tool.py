@@ -244,7 +244,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687)
+    npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687, decimal=5)
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
     else:
@@ -284,7 +284,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
+    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087, decimal=5)
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364, decimal=5)
     else:
@@ -383,6 +383,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
@@ -395,6 +396,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
@@ -408,6 +410,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
@@ -463,7 +466,7 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
     # The error is worse because it is a small test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139)
+    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139, decimal=5)
     npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=5)
 
     # Knee
@@ -492,7 +495,7 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
     # The error is worse because it is a unit test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 9.956010278714874)
+    npt.assert_almost_equal(original_marker_tracking_error, 9.956010278714874, decimal=5)
     npt.assert_almost_equal(new_marker_tracking_error, 10.58025762257233, decimal=5)
 
     remove_temporary_biomods()

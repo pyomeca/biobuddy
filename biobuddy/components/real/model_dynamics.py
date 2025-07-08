@@ -360,9 +360,7 @@ class ModelDynamics:
                 viz_scaled_model.options.show_gravity = True
                 viz_scaled_model.options.show_marker_labels = False
                 viz_scaled_model.options.show_center_of_mass_labels = False
-                viz.add_animated_model(
-                    viz_scaled_model, optimal_q, tracked_markers=pyomarkers
-                )
+                viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers)
                 viz.rerun_by_frame("Model output")
 
         return optimal_q
