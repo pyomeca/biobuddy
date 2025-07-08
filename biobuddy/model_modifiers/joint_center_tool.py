@@ -400,6 +400,14 @@ class RigidSegmentIdentification:
                     )
             return nb_markers, nb_frames, static_centered
 
+    def check_marker_labeling(self, markers):
+        marker_movement = np.linalg.norm(markers[:, :, 1:] - markers[:, :, :-1], axis=0)
+        problematic_indices = np.where(marker_movement > 0.03)[0]
+        if problematic_indices.shape[0] > 0:
+            raise RuntimeError(
+                f"The markers seem to be mislabeled as they move more than 3cm between frames."
+            )
+
     def check_marker_positions(self):
         """
         Check that the markers are positioned at the same place on the subject between the static trial and the current functional trial.
