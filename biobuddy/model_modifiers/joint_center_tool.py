@@ -399,12 +399,20 @@ class RigidSegmentIdentification:
                     )
             return nb_markers, nb_frames, static_centered
 
-    def check_marker_labeling(self, markers):
-        marker_movement = np.linalg.norm(markers[:, :, 1:] - markers[:, :, :-1], axis=0)
+    def check_marker_labeling(self):
+        # Parent
+        marker_movement = np.linalg.norm(self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0)
         problematic_indices = np.where(marker_movement > 0.03)[0]
         if problematic_indices.shape[0] > 0:
             raise RuntimeError(
-                f"The markers seem to be mislabeled as they move more than 3cm between frames."
+                f"The parent markers seem to be mislabeled as they move more than 3cm between frames."
+            )
+        # Child
+        marker_movement = np.linalg.norm(self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0)
+        problematic_indices = np.where(marker_movement > 0.03)[0]
+        if problematic_indices.shape[0] > 0:
+            raise RuntimeError(
+                f"The child markers seem to be mislabeled as they move more than 3cm between frames."
             )
 
     def check_marker_positions(self):
@@ -490,40 +498,49 @@ class RigidSegmentIdentification:
         )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
-        init = rt_init[:, :, 0].reshape(4, 4)  # Initailize with the first frame
+        init = rt_init[:, :, 0].reshape(4, 4)  # Initialize with the first frame
         for i_frame in range(nb_frames):
-            init = init.flatten()
 
-            lbx = np.ones((4, 4)) * -5
-            ubx = np.ones((4, 4)) * 5
-            lbx[:3, :3] = -1
-            ubx[:3, :3] = 1
-            lbx[3, :] = [0, 0, 0, 1]
-            ubx[3, :] = [0, 0, 0, 1]
+            if np.isnan(np.sum(markers_in_global[:, :, i_frame])):
+                # If this frame contains NaNs it is best not to use it
+                rt_optimal[:, :, i_frame] = np.ones((4, 4)) * np.nan
 
-            sol = optimize.minimize(
-                fun=lambda rt: self.marker_residual(
-                    optimal_rt=rt,
-                    static_markers_in_local=static_markers_in_local,
-                    functional_markers_in_global=markers_in_global[:, :, i_frame],
-                ),
-                x0=init,
-                method="SLSQP",
-                constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
-                bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
-            )
-            if sol.success:
-                rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                if initialize_whole_trial_reconstruction:
-                    # Use the rt from the reconstruction of the whole trial at the current frame
-                    frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
-                    init = rt_init[:, :, frame].reshape(4, 4)
-                else:
-                    # Use the optimal rt of the previous frame
-                    init = rt_optimal[:, :, i_frame]
             else:
-                init = np.nan
-                print(f"The optimization failed: {sol.message}")
+                init = init.flatten()
+
+                lbx = np.ones((4, 4)) * -5
+                ubx = np.ones((4, 4)) * 5
+                lbx[:3, :3] = -1
+                ubx[:3, :3] = 1
+                lbx[3, :] = [0, 0, 0, 1]
+                ubx[3, :] = [0, 0, 0, 1]
+
+                sol = optimize.minimize(
+                    fun=lambda rt: self.marker_residual(
+                        optimal_rt=rt,
+                        static_markers_in_local=static_markers_in_local,
+                        functional_markers_in_global=markers_in_global[:, :, i_frame],
+                    ),
+                    x0=init,
+                    method="SLSQP",
+                    constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
+                    bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
+                )
+                if sol.success:
+                    rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
+                else:
+                    init = rt_init[:, :, 0].reshape(4, 4)
+                    print(f"The optimization failed: {sol.message}")
+                    continue
+
+            # Setup for the next frame
+            if initialize_whole_trial_reconstruction:
+                # Use the rt from the reconstruction of the whole trial at the current frame
+                frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
+                init = rt_init[:, :, frame].reshape(4, 4)
+            else:
+                # Use the optimal rt of the previous frame
+                init = rt_optimal[:, :, i_frame]
 
         return rt_optimal
 
@@ -1108,6 +1125,7 @@ class JointCenterTool:
             # Marker positions in the global from this functional trial
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
             task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
+            task.check_marker_labeling()
 
             if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:
                 task.animate_the_segment_reconstruction(
