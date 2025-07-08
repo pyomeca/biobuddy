@@ -403,17 +403,32 @@ class RigidSegmentIdentification:
         # Parent
         marker_movement = np.linalg.norm(self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0)
         problematic_indices = np.where(marker_movement > 0.03)[0]
-        if problematic_indices.shape[0] > 0:
-            raise RuntimeError(
-                f"The parent markers seem to be mislabeled as they move more than 3cm between frames."
-            )
+
         # Child
         marker_movement = np.linalg.norm(self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0)
         problematic_indices = np.where(marker_movement > 0.03)[0]
-        if problematic_indices.shape[0] > 0:
-            raise RuntimeError(
-                f"The child markers seem to be mislabeled as they move more than 3cm between frames."
-            )
+
+        if problematic_indices.shape[0] > 0 or problematic_indices.shape[0] > 0:
+
+            try:
+                from pyorerun import c3d
+                c3d(self.experimental_data.c3d_full_file_path,
+                    show_forces=False,
+                    show_events=False,
+                    marker_trajectories=True,
+                    show_marker_labels=False
+                    )
+            except:
+                print("You need to install Pyorerun to see the animation.")
+
+            if problematic_indices.shape[0] > 0:
+                raise RuntimeError(
+                    f"The parent markers seem to be mislabeled as they move more than 3cm between frames."
+                )
+            if problematic_indices.shape[0] > 0:
+                raise RuntimeError(
+                    f"The child markers seem to be mislabeled as they move more than 3cm between frames."
+                )
 
     def check_marker_positions(self):
         """
