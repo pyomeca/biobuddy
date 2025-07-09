@@ -352,7 +352,7 @@ class ModelDynamics:
                 viz = pyorerun.PhaseRerun(t)
 
                 # Add the experimental markers from the static trial
-                pyomarkers = pyorerun.Pyomarkers(data=markers_real, channels=marker_names_reordered, show_labels=False)
+                pyomarkers = pyorerun.PyoMarkers(data=markers_real, channels=marker_names_reordered, show_labels=False)
                 viz_scaled_model = pyorerun.BiorbdModel("temporary.bioMod")
                 viz_scaled_model.options.transparent_mesh = False
                 viz_scaled_model.options.show_gravity = True

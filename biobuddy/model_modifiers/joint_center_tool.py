@@ -222,7 +222,7 @@ class RigidSegmentIdentification:
 
         # Add the experimental markers from the static trial
         if not without_exp_markers:
-            pyomarkers = pyorerun.Pyomarkers(
+            pyomarkers = pyorerun.PyoMarkers(
                 data=np.concatenate((self.parent_markers_global, self.child_markers_global), axis=1),
                 channels=self.parent_marker_names + self.child_marker_names,
                 show_labels=False,

@@ -252,7 +252,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
-    # pyomarkers = pyorerun.Pyomarkers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()), show_labels=False)
+    # pyomarkers = pyorerun.PyoMarkers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()), show_labels=False)
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
     # Knee
@@ -271,7 +271,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
 
     # # For debugging purposes
-    # pyomarkers = pyorerun.Pyomarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
+    # pyomarkers = pyorerun.PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
     markers_index = scaled_model.markers_indices(marker_names)

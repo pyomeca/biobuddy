@@ -84,7 +84,7 @@ def main(visualization):
 
         # Add the experimental markers from the static trial
         fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
-        pyomarkers = pyorerun.Pyomarkers(data=fake_exp_markers, channels=scaled_model.marker_names, show_labels=False)
+        pyomarkers = pyorerun.PyoMarkers(data=fake_exp_markers, channels=scaled_model.marker_names, show_labels=False)
 
         # Model output
         viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_filepath)
