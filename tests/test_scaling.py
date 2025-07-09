@@ -149,6 +149,7 @@ def test_scaling_wholebody():
         mass=69.2,
         q_regularization_weight=1,
         make_static_pose_the_models_zero=False,
+        visualize_optimal_static_pose=False,
     )
     scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)

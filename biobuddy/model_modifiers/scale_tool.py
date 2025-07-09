@@ -605,7 +605,7 @@ class ScaleTool:
             pyomarkers = pyorerun.PyoMarkers(
                 data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False
             )
-            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers, show_tracked_marker_labels=False)
+            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers)
             viz.rerun_by_frame("Model output")
 
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
