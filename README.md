@@ -23,7 +23,7 @@ pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
-pip install pytest pytest-cov codecov pyomeca
+pip install pytest pytest-cov codecov
 conda install -c opensim-org opensim=4.5.1
 conda install -c conda-forge biorbd=1.11.2 deepdiff
 ```
