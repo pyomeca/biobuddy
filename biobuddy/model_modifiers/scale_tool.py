@@ -602,7 +602,7 @@ class ScaleTool:
 
             model_marker_names = model_to_use.marker_names
             marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
-            pyomarkers = pyorerun.Pyomarkers(data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False)
+            pyomarkers = pyorerun.PyoMarkers(data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False)
             viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers, show_tracked_marker_labels=False)
             viz.rerun_by_frame("Model output")
 
