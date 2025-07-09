@@ -212,8 +212,6 @@ class ModelDynamics:
         for i_q in range(nb_q):
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
 
-        # Replace NaN with 0.0
-        vec_jacobian[np.where(np.isnan(vec_jacobian))] = 0.0
         return vec_jacobian
 
     @requires_initialization
