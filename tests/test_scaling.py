@@ -69,7 +69,7 @@ def visualize_model_scaling_output(scaled_model, osim_model_scaled, q, marker_na
     # Compare the result visually
     t = np.linspace(0, 1, marker_positions.shape[2])
     viz = pyorerun.PhaseRerun(t)
-    pyomarkers = pyorerun.Pyomarkers(data=marker_positions, channels=marker_names, show_labels=False)
+    pyomarkers = pyorerun.PyoMarkers(data=marker_positions, channels=marker_names, show_labels=False)
 
     # Model scaled in BioBuddy
     viz_biomod_model = pyorerun.BiorbdModel(biobuddy_path)
@@ -147,7 +147,7 @@ def test_scaling_wholebody():
         first_frame=0,
         last_frame=531,
         mass=69.2,
-        q_regularization_weight=0.1,
+        q_regularization_weight=1,
         make_static_pose_the_models_zero=False,
     )
     scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
@@ -161,8 +161,8 @@ def test_scaling_wholebody():
     q_zeros = np.zeros((42, marker_positions.shape[2]))
     q_random = np.random.rand(42) * 2 * np.pi
 
-    # # For debugging
-    # visualize_model_scaling_output(scaled_model, osim_model_scaled, q_zeros, marker_names, marker_positions)
+    # For debugging
+    visualize_model_scaling_output(scaled_model, osim_model_scaled, q_zeros, marker_names, marker_positions)
 
     # TODO: Find out why there is a discrepancy between the OpenSim and BioBuddy scaling factors of the to the third decimal.
     # Scaling factors from scaling_factors.osim  (TODO: add the scaling factors in the osim parser)

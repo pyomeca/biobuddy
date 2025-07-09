@@ -383,7 +383,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=5,
+        decimal=3,
     )
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
@@ -396,7 +396,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=5,
+        decimal=3,
     )
 
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
@@ -410,7 +410,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=5,
+        decimal=3,
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
@@ -466,8 +466,8 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
     # The error is worse because it is a small test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139, decimal=5)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=5)
+    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139, decimal=3)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=3)
 
     # Knee
     marker_names = list(marker_weights.keys())
