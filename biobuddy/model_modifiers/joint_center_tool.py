@@ -634,7 +634,7 @@ class Score(RigidSegmentIdentification):
             b[3 * i_frame : 3 * (i_frame + 1)] = parent_trans - child_trans
 
         # Remove nans
-        valid_rows = ~np.isnan(A[:, 0])
+        valid_rows = ~np.isnan(np.sum(A, axis=1))
         A_valid = A[valid_rows, :]
         b_valid = b[valid_rows]
 
