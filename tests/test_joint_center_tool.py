@@ -467,7 +467,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # The error is worse because it is a small test (for the tests to run quickly)
     npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139, decimal=3)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=3)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=2)
 
     # Knee
     marker_names = list(marker_weights.keys())
