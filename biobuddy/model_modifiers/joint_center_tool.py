@@ -210,7 +210,6 @@ class RigidSegmentIdentification:
 
         try:
             import pyorerun
-            from pyomeca import Markers
         except:
             raise ImportError("Please install pyorerun and pyomeca to visualize the segment reconstruction.")
 
@@ -219,9 +218,10 @@ class RigidSegmentIdentification:
 
         # Add the experimental markers from the static trial
         if not without_exp_markers:
-            pyomarkers = Markers(
+            pyomarkers = pyorerun.PyoMarkers(
                 data=np.concatenate((self.parent_markers_global, self.child_markers_global), axis=1),
                 channels=self.parent_marker_names + self.child_marker_names,
+                show_labels=False
             )
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -236,7 +236,7 @@ class RigidSegmentIdentification:
 
         viz = pyorerun.PhaseRerun(t)
         if not without_exp_markers:
-            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+            viz.add_animated_model(viz_biomod_model, q, tracked_markers=pyomarkers)
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
