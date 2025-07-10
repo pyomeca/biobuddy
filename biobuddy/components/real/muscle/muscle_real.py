@@ -48,9 +48,9 @@ class MuscleReal:
         muscle_group
             The muscle group the muscle belongs to
         origin_position
-            The origin position of the muscle in the local reference frame of the origin segment @pariterre: please confirm
+            The origin position of the muscle in the local reference frame of the origin segment
         insertion_position
-            The insertion position of the muscle the local reference frame of the insertion segment @pariterre: please confirm
+            The insertion position of the muscle the local reference frame of the insertion segment
         optimal_length
             The optimal length of the muscle
         maximal_force

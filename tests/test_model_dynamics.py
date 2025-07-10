@@ -102,7 +102,7 @@ def test_biomechanics_model_real_utils_functions():
     #     except:
     #         print(f"Marker number {i_marker}, for q {np.where(np.abs(markers_jacobian_biobuddy[:, i_marker, :].reshape(3, nb_q) - markers_jacobian_biorbd[i_marker].to_array()) > 0.0001)}.")
 
-    # # @pariterre TODO: Test muscle length (I only see biorbd.musclesLengthJacobian, or wholebody_model_biorbd.muscle(0).length(joint, q))
+    # TODO: wholebody_model_biorbd.muscle(0).length(wholebody_model_biorbd, np.zeros((wholebody_model_biorbd.nbQ(),)))
     # for i_muscle, muscle_name in enumerate(wholebody_model.muscle_names):
     #     muscle_biobuddy = wholebody_model.muscle_length(muscle_name, q_random)
     #     muscle_biorbd = wholebody_model_biorbd.muscle(i_muscle).length(q_random).to_array()

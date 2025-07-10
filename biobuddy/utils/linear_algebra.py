@@ -475,6 +475,7 @@ class RotoTransMatrixTimeSeries:
         self._rt_time_series = rt_time_series
 
 
+# TODO: test if orthonormal
 class RotoTransMatrix:
     def __init__(self):
         self._rt = None

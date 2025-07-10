@@ -10,6 +10,8 @@ from ...utils.named_list import NamedList
 from .model_dynamics import ModelDynamics
 
 
+# TODO: create an Abstract but do not put the add and remove in it
+
 class BiomechanicalModelReal(ModelDynamics):
     def __init__(self, gravity: Point = None):
 

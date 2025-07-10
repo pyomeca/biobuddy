@@ -260,8 +260,9 @@ class RigidSegmentIdentification:
             new_child_jcs_in_global.inverse @ com_position_global
         )
 
-        # Inertia  TODO: @pariterre could you confirm this one please?
-        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a change in length of the segments due to the displacement of the jcs.
+        # Inertia
+        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
+        # change in length of the segments due to the displacement of the jcs.
         inertia = original_model.segments[self.child_name].inertia_parameters.inertia[:3, :3]
         rotation_transform = new_child_jcs_in_global.inverse[:3, :3] @ original_child_jcs_in_global.rt_matrix[:3, :3]
         new_inertia = rotation_transform @ inertia @ rotation_transform.T

@@ -215,8 +215,6 @@ class SegmentReal:
         rt = np.identity(4)
 
         if self.nb_q != 0:
-            # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
-            # TODO: make the order trans, rot dynamic
             q_counter = 0
             translations = np.zeros((3,))
             rotations = np.zeros((3,))
