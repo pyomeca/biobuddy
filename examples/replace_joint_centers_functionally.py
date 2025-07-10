@@ -125,22 +125,21 @@ def main(visualization):
     # Move the model's joint centers
     joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=True)
     # Hip Right
+    # Marker inversion happening after the 500th frame in the example data!
     joint_center_tool.add(
         Score(
-            filepath=f"{score_directory}/right_hip.c3d",
+            functional_c3d=C3dData(c3d_path=f"{score_directory}/right_hip.c3d", first_frame=1, last_frame=500),
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
             child_marker_names=["RLFE", "RMFE"] + technical_marker_to_add["femur_r"],
-            first_frame=1,
-            last_frame=500,  # Marker inversion happening after this frame in the example data!
             initialize_whole_trial_reconstruction=True,
             animate_rt=True,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=f"{score_directory}/right_knee.c3d",
+            functional_c3d=C3dData(c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100),
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT"] + technical_marker_to_add["femur_r"],
@@ -148,8 +147,6 @@ def main(visualization):
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=300,
-            last_frame=922 - 100,
             initialize_whole_trial_reconstruction=True,
             animate_rt=False,
         )

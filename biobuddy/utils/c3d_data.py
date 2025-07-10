@@ -1,5 +1,14 @@
+from enum import Enum
 import numpy as np
 import ezc3d
+
+
+class ReferenceFrame(Enum):
+    """
+    The reference frame for the C3D data.
+    """
+    Z_UP = "z-up"
+    Y_UP = "y-up"
 
 
 class C3dData:
@@ -68,3 +77,34 @@ class C3dData:
         data /= factor
         data[3] = 1
         return data
+
+    def change_ref_frame(self, ref_from: ReferenceFrame, ref_to: ReferenceFrame) -> None:
+        """
+        Change the reference frame of the data.
+        """
+        if ref_from == ref_to:
+            return
+
+        if ref_from == ReferenceFrame.Z_UP and ref_to == ReferenceFrame.Y_UP:
+            temporary_data = self.ezc3d_data["data"]["points"].copy()
+            self.ezc3d_data["data"]["points"][0, self.first_frame: self.last_frame, :] = temporary_data[0, self.first_frame: self.last_frame, :]  # X = X
+            self.ezc3d_data["data"]["points"][1, self.first_frame: self.last_frame, :] = temporary_data[2, self.first_frame: self.last_frame, :]  # Y = Z
+            self.ezc3d_data["data"]["points"][2, self.first_frame: self.last_frame, :] = -temporary_data[1, self.first_frame: self.last_frame, :]  # Z = -Y
+
+        elif ref_from == ReferenceFrame.Y_UP and ref_to == ReferenceFrame.Z_UP:
+            temporary_data = self.ezc3d_data["data"]["points"].copy()
+            self.ezc3d_data["data"]["points"][0, self.first_frame: self.last_frame, :] = temporary_data[0, self.first_frame: self.last_frame, :]  # X = X
+            self.ezc3d_data["data"]["points"][1, self.first_frame: self.last_frame, :] = -temporary_data[2, self.first_frame: self.last_frame, :]  # Y = -Z
+            self.ezc3d_data["data"]["points"][2, self.first_frame: self.last_frame, :] = temporary_data[1, self.first_frame: self.last_frame, :]  # Z = Y
+
+        else:
+            raise ValueError(f"Cannot change from {ref_from} to {ref_to}.")
+
+    def save(self, new_path: str):
+        """
+        Save the changes made to the C3D file.
+        """
+        if "meta_points" in self.ezc3d_data["data"]:
+            # Remove meta points if they exist as it might cause issues with some C3D writer
+            del self.ezc3d_data["data"]["meta_points"]
+        self.ezc3d_data.write(new_path)

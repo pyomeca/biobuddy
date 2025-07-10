@@ -95,20 +95,18 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Hip Right
     joint_center_tool.add(
         Score(
-            filepath=hip_c3d.c3d_path,
+            functional_c3d=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
             child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-            first_frame=hip_c3d.first_frame,
-            last_frame=hip_c3d.last_frame,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=knee_c3d.c3d_path,
+            functional_c3d=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -116,8 +114,6 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=knee_c3d.first_frame,
-            last_frame=knee_c3d.last_frame,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -340,20 +336,18 @@ def test_score_and_sara_with_ghost_segments():
     # Hip Right
     joint_center_tool.add(
         Score(
-            filepath=hip_c3d.c3d_path,
+            functional_c3d=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
             child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-            first_frame=hip_c3d.first_frame,
-            last_frame=hip_c3d.last_frame,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=knee_c3d.c3d_path,
+            functional_c3d=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -361,8 +355,6 @@ def test_score_and_sara_with_ghost_segments():
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=knee_c3d.first_frame,
-            last_frame=knee_c3d.last_frame,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
         )
