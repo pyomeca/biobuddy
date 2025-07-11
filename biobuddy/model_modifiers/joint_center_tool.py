@@ -98,6 +98,8 @@ class RigidSegmentIdentification:
         std = []
         for marker_name in self.parent_marker_names + self.child_marker_names:
             std += self.c3d_data.std_marker_position(marker_name)
+        if len(std) == 0:
+            raise RuntimeError("There are no markers in the functional trial. Please check the trial again.")
         if all(np.array(std) < 0.01):
             raise RuntimeError(
                 f"The markers {self.parent_marker_names + self.child_marker_names} are not moving in the functional trial (markers std = {std}). "
