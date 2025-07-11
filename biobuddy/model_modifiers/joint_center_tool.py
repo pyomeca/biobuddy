@@ -382,6 +382,46 @@ class RigidSegmentIdentification:
                     )
             return nb_markers, nb_frames, static_centered
 
+    def check_marker_labeling(self):
+        # Parent
+        marker_movement_parent = np.linalg.norm(
+            self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0
+        )
+        problematic_indices_parent = np.where(np.nanmax(marker_movement_parent, axis=0) > 0.03)[0]
+
+        # Child
+        marker_movement_child = np.linalg.norm(
+            self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0
+        )
+        problematic_indices_child = np.where(np.nanmax(marker_movement_child, axis=0) > 0.03)[0]
+
+        if problematic_indices_parent.shape[0] > 0 or problematic_indices_child.shape[0] > 0:
+            try:
+                from pyorerun import c3d
+
+                c3d(
+                    self.filepath,
+                    show_forces=False,
+                    show_events=False,
+                    marker_trajectories=True,
+                    show_marker_labels=False,
+                )
+            except:
+                print("You need to install Pyorerun to see the animation.")
+
+            if problematic_indices_parent.shape[0] > 0:
+                problematic_markers = np.where(np.nanmax(marker_movement_parent, axis=1) > 0.03)[0]
+                problematic_marker_names = [self.parent_marker_names[i] for i in problematic_markers]
+                raise RuntimeError(
+                    f"The parent markers {problematic_marker_names} seem to be mislabeled as they move more than 3cm between frames {problematic_indices_parent}."
+                )
+            if problematic_indices_child.shape[0] > 0:
+                problematic_markers = np.where(np.nanmax(marker_movement_child, axis=1) > 0.03)[0]
+                problematic_marker_names = [self.parent_marker_names[i] for i in problematic_markers]
+                raise RuntimeError(
+                    f"The child markers {problematic_marker_names} seem to be mislabeled as they move more than 3cm between frames {problematic_indices_child}."
+                )
+
     def check_marker_positions(self):
         """
         Check that the markers are positioned at the same place on the subject between the static trial and the current functional trial.
@@ -435,6 +475,17 @@ class RigidSegmentIdentification:
         return np.sum(vect_pos_markers)
 
     @staticmethod
+    def get_good_frames(residuals, nb_frames):
+        """
+        The frames where the residual is below a threshold are considered good frames (not outliers).
+        Only these frames will be used in the second pass of the algorithm
+        """
+        threshold = np.nanmean(residuals) + 1.0 * np.nanstd(residuals)
+        valid = residuals < threshold
+        _logger.info(f"\nRemoving {nb_frames - np.sum(valid)} frames")
+        return valid
+
+    @staticmethod
     def rt_constraints(optimal_rt: np.ndarray) -> np.ndarray:
         rt_matrix = optimal_rt.reshape(4, 4)
         R = rt_matrix[:3, :3]
@@ -465,40 +516,49 @@ class RigidSegmentIdentification:
         )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
-        init = rt_init[:, :, 0].reshape(4, 4)  # Initailize with the first frame
+        init = rt_init[:, :, 0].reshape(4, 4)  # Initialize with the first frame
         for i_frame in range(nb_frames):
-            init = init.flatten()
 
-            lbx = np.ones((4, 4)) * -5
-            ubx = np.ones((4, 4)) * 5
-            lbx[:3, :3] = -1
-            ubx[:3, :3] = 1
-            lbx[3, :] = [0, 0, 0, 1]
-            ubx[3, :] = [0, 0, 0, 1]
+            if np.isnan(np.sum(markers_in_global[:, :, i_frame])):
+                # If this frame contains NaNs it is best not to use it
+                rt_optimal[:, :, i_frame] = np.ones((4, 4)) * np.nan
 
-            sol = optimize.minimize(
-                fun=lambda rt: self.marker_residual(
-                    optimal_rt=rt,
-                    static_markers_in_local=static_markers_in_local,
-                    functional_markers_in_global=markers_in_global[:, :, i_frame],
-                ),
-                x0=init,
-                method="SLSQP",
-                constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
-                bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
-            )
-            if sol.success:
-                rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
-                if initialize_whole_trial_reconstruction:
-                    # Use the rt from the reconstruction of the whole trial at the current frame
-                    frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
-                    init = rt_init[:, :, frame].reshape(4, 4)
-                else:
-                    # Use the optimal rt of the previous frame
-                    init = rt_optimal[:, :, i_frame]
             else:
-                init = np.nan
-                print(f"The optimization failed: {sol.message}")
+                init = init.flatten()
+
+                lbx = np.ones((4, 4)) * -5
+                ubx = np.ones((4, 4)) * 5
+                lbx[:3, :3] = -1
+                ubx[:3, :3] = 1
+                lbx[3, :] = [0, 0, 0, 1]
+                ubx[3, :] = [0, 0, 0, 1]
+
+                sol = optimize.minimize(
+                    fun=lambda rt: self.marker_residual(
+                        optimal_rt=rt,
+                        static_markers_in_local=static_markers_in_local,
+                        functional_markers_in_global=markers_in_global[:, :, i_frame],
+                    ),
+                    x0=init,
+                    method="SLSQP",
+                    constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
+                    bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
+                )
+                if sol.success:
+                    rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
+                else:
+                    init = rt_init[:, :, 0].reshape(4, 4)
+                    print(f"The optimization failed: {sol.message}")
+                    continue
+
+            # Setup for the next frame
+            if initialize_whole_trial_reconstruction:
+                # Use the rt from the reconstruction of the whole trial at the current frame
+                frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
+                init = rt_init[:, :, frame].reshape(4, 4)
+            else:
+                # Use the optimal rt of the previous frame
+                init = rt_optimal[:, :, i_frame]
 
         return rt_optimal
 
@@ -563,7 +623,7 @@ class Score(RigidSegmentIdentification):
             b[3 * i_frame : 3 * (i_frame + 1)] = parent_trans - child_trans
 
         # Remove nans
-        valid_rows = ~np.isnan(A[:, 0])
+        valid_rows = ~np.isnan(np.sum(A, axis=1))
         A_valid = A[valid_rows, :]
         b_valid = b[valid_rows]
 
@@ -587,14 +647,8 @@ class Score(RigidSegmentIdentification):
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
         if recursive_outlier_removal:
-            # The first time, remove the outliers
-            threshold = np.mean(residuals) + 1.0 * np.std(residuals)
-            valid = residuals < threshold
-            if np.sum(valid) < nb_frames:
-                _logger.info(f"\nRemoving {nb_frames - np.sum(valid)} frames")
-                return self._score_algorithm(
-                    rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False
-                )
+            valid = self.get_good_frames(residuals, nb_frames)
+            return self._score_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -685,7 +739,9 @@ class Sara(RigidSegmentIdentification):
         self.distal_markers = distal_markers
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
 
-    def _sara_algorithm(self, rt_parent: np.ndarray, rt_child: np.ndarray) -> np.ndarray:
+    def _sara_algorithm(
+        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
+    ) -> np.ndarray:
         """
         Perform the SARA algorithm (Ehrig et al., 2007) to estimate the axis of rotation (AoR)
         between two segments over time using homogeneous transformation matrices.
@@ -696,12 +752,20 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : ndarray (4, 4, N)
             Homogeneous transformation matrices from the global frame to the child segment.
+        recursive_outlier_removal : bool
+            If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
         Returns
         -------
         aor_global : ndarray (3, N)
             Orientation of the axis of rotation expressed in the global frame at each frame.
         """
+
+        # Remove nans
+        valid_rows = ~(np.logical_or(np.isnan(rt_parent[0, 0, :]), np.isnan(rt_child[0, 0, :])))
+        rt_parent = rt_parent[:, :, valid_rows]
+        rt_child = rt_child[:, :, valid_rows]
+
         nb_frames = rt_parent.shape[2]
 
         # Build block matrix system R * [rCsi; rCsj] = (p_j - p_i)
@@ -737,13 +801,17 @@ class Sara(RigidSegmentIdentification):
                 / (np.linalg.norm(a_parent_global[:, i_frame]) * np.linalg.norm(a_child_global[:, i_frame]))
             )
 
+        if recursive_outlier_removal:
+            valid = self.get_good_frames(residual_angle, nb_frames)
+            return self._sara_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
+
         aor_global = 0.5 * (a_parent_global + a_child_global)
 
         _logger.info(
             f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residual_angle)*180/np.pi} +- {np.nanstd(residual_angle)*180/np.pi} degrees."
         )
 
-        return aor_global
+        return aor_global, rt_parent, rt_child
 
     def _longitudinal_axis(self, original_model: BiomechanicalModelReal) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -872,10 +940,11 @@ class Sara(RigidSegmentIdentification):
         This function computes the axis of rotation in the local frame of the parent segment.
         It assumes that the axis or rotation does not move much over time in the local reference frame of the parent.
         """
-        nb_frames = self.c3d_data.nb_frames
-        aor_in_local = np.ones((4, self.c3d_data.nb_frames))
+        nb_frames = rt_parent_functional.shape[2]
+        aor_in_local = np.ones((4, nb_frames))
         for i_frame in range(nb_frames):
             if np.any(np.isnan(aor_global[:, i_frame])):
+                # This should not happen, but we should make sure
                 aor_in_local[:, i_frame] = np.nan
             else:
                 # Extract the axis of rotation in local frame
@@ -903,9 +972,11 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global = self._sara_algorithm(rt_parent_functional, rt_child_functional)
+        aor_global, rt_parent_valid_frames, rt_child_valid_frames = self._sara_algorithm(
+            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+        )
         aor_global = self._check_aor(original_model, aor_global)
-        aor_local = self._get_aor_local(aor_global, rt_parent_functional)
+        aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
@@ -1079,6 +1150,7 @@ class JointCenterTool:
             # Marker positions in the global from this functional trial
             task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
             task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
+            task.check_marker_labeling()
 
             if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:
                 task.animate_the_segment_reconstruction(
