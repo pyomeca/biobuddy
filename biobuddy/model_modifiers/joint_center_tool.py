@@ -384,22 +384,28 @@ class RigidSegmentIdentification:
 
     def check_marker_labeling(self):
         # Parent
-        marker_movement_parent = np.linalg.norm(self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0)
+        marker_movement_parent = np.linalg.norm(
+            self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0
+        )
         problematic_indices_parent = np.where(np.nanmax(marker_movement_parent, axis=0) > 0.03)[0]
 
         # Child
-        marker_movement_child = np.linalg.norm(self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0)
+        marker_movement_child = np.linalg.norm(
+            self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0
+        )
         problematic_indices_child = np.where(np.nanmax(marker_movement_child, axis=0) > 0.03)[0]
 
         if problematic_indices_parent.shape[0] > 0 or problematic_indices_child.shape[0] > 0:
             try:
                 from pyorerun import c3d
-                c3d(self.filepath,
+
+                c3d(
+                    self.filepath,
                     show_forces=False,
                     show_events=False,
                     marker_trajectories=True,
-                    show_marker_labels=False
-                    )
+                    show_marker_labels=False,
+                )
             except:
                 print("You need to install Pyorerun to see the animation.")
 
@@ -642,9 +648,7 @@ class Score(RigidSegmentIdentification):
 
         if recursive_outlier_removal:
             valid = self.get_good_frames(residuals, nb_frames)
-            return self._score_algorithm(
-                rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False
-            )
+            return self._score_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -735,7 +739,9 @@ class Sara(RigidSegmentIdentification):
         self.distal_markers = distal_markers
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
 
-    def _sara_algorithm(self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True) -> np.ndarray:
+    def _sara_algorithm(
+        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
+    ) -> np.ndarray:
         """
         Perform the SARA algorithm (Ehrig et al., 2007) to estimate the axis of rotation (AoR)
         between two segments over time using homogeneous transformation matrices.
@@ -797,9 +803,7 @@ class Sara(RigidSegmentIdentification):
 
         if recursive_outlier_removal:
             valid = self.get_good_frames(residual_angle, nb_frames)
-            return self._sara_algorithm(
-                rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False
-            )
+            return self._sara_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
 
         aor_global = 0.5 * (a_parent_global + a_child_global)
 
@@ -968,7 +972,9 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global, rt_parent_valid_frames, rt_child_valid_frames = self._sara_algorithm(rt_parent_functional, rt_child_functional, recursive_outlier_removal=True)
+        aor_global, rt_parent_valid_frames, rt_child_valid_frames = self._sara_algorithm(
+            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+        )
         aor_global = self._check_aor(original_model, aor_global)
         aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
 
