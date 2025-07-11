@@ -147,7 +147,7 @@ def test_scaling_wholebody():
     scaled_model = scale_tool.scale(
         static_c3d=c3d_data,
         mass=69.2,
-        q_regularization_weight=1,
+        q_regularization_weight=0.1,
         make_static_pose_the_models_zero=False,
         visualize_optimal_static_pose=False,
     )
