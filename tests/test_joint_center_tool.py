@@ -396,10 +396,14 @@ def test_score_and_sara_with_ghost_segments():
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[ 0.94226275,  0.13844706, -0.30491525,  0.00539646],
-                [-0.15881239,  0.98637613, -0.04290413, -0.38268824],
-                [ 0.29482118,  0.08885128,  0.95141259, -0.00965356],
-                [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+        np.array(
+            [
+                [0.94226275, 0.13844706, -0.30491525, 0.00539646],
+                [-0.15881239, 0.98637613, -0.04290413, -0.38268824],
+                [0.29482118, 0.08885128, 0.95141259, -0.00965356],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
         decimal=5,
     )
 

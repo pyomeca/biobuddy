@@ -7,6 +7,7 @@ class ReferenceFrame(Enum):
     """
     The reference frame for the C3D data.
     """
+
     Z_UP = "z-up"
     Y_UP = "y-up"
 
@@ -87,15 +88,27 @@ class C3dData:
 
         if ref_from == ReferenceFrame.Z_UP and ref_to == ReferenceFrame.Y_UP:
             temporary_data = self.ezc3d_data["data"]["points"].copy()
-            self.ezc3d_data["data"]["points"][0, self.first_frame: self.last_frame, :] = temporary_data[0, self.first_frame: self.last_frame, :]  # X = X
-            self.ezc3d_data["data"]["points"][1, self.first_frame: self.last_frame, :] = temporary_data[2, self.first_frame: self.last_frame, :]  # Y = Z
-            self.ezc3d_data["data"]["points"][2, self.first_frame: self.last_frame, :] = -temporary_data[1, self.first_frame: self.last_frame, :]  # Z = -Y
+            self.ezc3d_data["data"]["points"][0, self.first_frame : self.last_frame, :] = temporary_data[
+                0, self.first_frame : self.last_frame, :
+            ]  # X = X
+            self.ezc3d_data["data"]["points"][1, self.first_frame : self.last_frame, :] = temporary_data[
+                2, self.first_frame : self.last_frame, :
+            ]  # Y = Z
+            self.ezc3d_data["data"]["points"][2, self.first_frame : self.last_frame, :] = -temporary_data[
+                1, self.first_frame : self.last_frame, :
+            ]  # Z = -Y
 
         elif ref_from == ReferenceFrame.Y_UP and ref_to == ReferenceFrame.Z_UP:
             temporary_data = self.ezc3d_data["data"]["points"].copy()
-            self.ezc3d_data["data"]["points"][0, self.first_frame: self.last_frame, :] = temporary_data[0, self.first_frame: self.last_frame, :]  # X = X
-            self.ezc3d_data["data"]["points"][1, self.first_frame: self.last_frame, :] = -temporary_data[2, self.first_frame: self.last_frame, :]  # Y = -Z
-            self.ezc3d_data["data"]["points"][2, self.first_frame: self.last_frame, :] = temporary_data[1, self.first_frame: self.last_frame, :]  # Z = Y
+            self.ezc3d_data["data"]["points"][0, self.first_frame : self.last_frame, :] = temporary_data[
+                0, self.first_frame : self.last_frame, :
+            ]  # X = X
+            self.ezc3d_data["data"]["points"][1, self.first_frame : self.last_frame, :] = -temporary_data[
+                2, self.first_frame : self.last_frame, :
+            ]  # Y = -Z
+            self.ezc3d_data["data"]["points"][2, self.first_frame : self.last_frame, :] = temporary_data[
+                1, self.first_frame : self.last_frame, :
+            ]  # Z = Y
 
         else:
             raise ValueError(f"Cannot change from {ref_from} to {ref_to}.")
