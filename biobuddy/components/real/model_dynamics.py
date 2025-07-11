@@ -173,6 +173,8 @@ class ModelDynamics:
                 ),
             )
         )
+        # Replace NaN with 0.0
+        out[np.where(np.isnan(out))] = 0.0
         return out
 
     @staticmethod

@@ -50,7 +50,7 @@ class RigidSegmentIdentification:
         initialize_whole_trial_reconstruction
             If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
         animate_rt
-            If True, it animates the segment rt reconstruction using pyomeca and pyorerun.
+            If True, it animates the segment rt reconstruction using pyorerun.
         """
 
         # Original attributes
@@ -194,7 +194,7 @@ class RigidSegmentIdentification:
         try:
             import pyorerun
         except:
-            raise ImportError("Please install pyorerun and pyomeca to visualize the segment reconstruction.")
+            raise ImportError("Please install pyorerun to visualize the segment reconstruction.")
 
         # Visualization
         t = np.linspace(0, 1, nb_frames)

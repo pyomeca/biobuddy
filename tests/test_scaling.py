@@ -1,5 +1,5 @@
 """
-TODO: Add tests for the scaling configuration
+TODO: test scaling configuration
 """
 
 import os
