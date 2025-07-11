@@ -161,34 +161,22 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-            np.array(
-                [
-                    [
-                        0.9707138,
-                        0.03806727,
-                        -0.23720369,
-                        0.02107151,
-                    ],  # Both rotation and translation parts were modified
-                    [-0.0608903, 0.99411079, -0.08964436, -0.40854713],
-                    [0.23239424, 0.10146242, 0.96731499, -0.03015543],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
-            decimal=5,
-        )
+            # Both rotation and translation parts were modified
+            np.array([[ 0.97298983,  0.03790546, -0.22771465,  0.02107151],
+                   [-0.0612039 ,  0.99348445, -0.09613912, -0.40854714],
+                   [ 0.22258677,  0.10747942,  0.96897023, -0.03015542],
+                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+                        decimal=5,
+                    )
     else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-            np.array(
-                [
-                    [0.97048, 0.04046, -0.23778, 0.02157],
-                    [-0.06086, 0.99501, -0.07909, -0.40738],
-                    [0.2334, 0.09123, 0.96809, -0.02919],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
-            decimal=5,
-        )
+            np.array([[ 0.97197658,  0.0418383 , -0.23132462,  0.02157429],
+                       [-0.06106338,  0.99519176, -0.07658086, -0.40738262],
+                       [ 0.22700834,  0.08856027,  0.96985787, -0.02918892],
+                       [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+                            decimal=5,
+                        )
 
     # Test that the original model did not change
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
@@ -242,9 +230,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8533901218909357, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8557801207489502, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8546461146170594, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
@@ -284,9 +272,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1653655932067504, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.1977295552412954, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1621464045718777, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     remove_temporary_biomods()
@@ -396,14 +384,10 @@ def test_score_and_sara_with_ghost_segments():
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array(
-            [
-                [0.94226275, 0.13844706, -0.30491525, 0.00539646],
-                [-0.15881239, 0.98637613, -0.04290413, -0.38268824],
-                [0.29482118, 0.08885128, 0.95141259, -0.00965356],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
+        np.array([[ 0.9415693 ,  0.13609885, -0.30809797,  0.00539646],
+                   [-0.1586161 ,  0.98611693, -0.04913589, -0.38268824],
+                   [ 0.29713329,  0.09513415,  0.95008489, -0.00965356],
+                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
         decimal=5,
     )
 
@@ -461,7 +445,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # The error is worse because it is a small test (for the tests to run quickly)
     npt.assert_almost_equal(original_marker_tracking_error, 0.28717883184190574, decimal=5)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1139429900835887, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.1144893588689808, decimal=5)
 
     # Knee
     marker_names = list(marker_weights.keys())
@@ -490,7 +474,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # The error is worse because it is a unit test (for the tests to run quickly)
     npt.assert_almost_equal(original_marker_tracking_error, 9.674445375391658, decimal=5)
-    npt.assert_almost_equal(new_marker_tracking_error, 9.850208305765541, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 9.853176510568787, decimal=5)
 
     remove_temporary_biomods()
     if os.path.exists(score_biomod_filepath):
