@@ -70,9 +70,7 @@ class ScaleTool:
 
     def scale(
         self,
-        filepath: str,
-        first_frame: int,
-        last_frame: int,
+        static_c3d: C3dData,
         mass: float,
         q_regularization_weight: float = None,
         initial_static_pose: np.ndarray = None,
@@ -85,12 +83,8 @@ class ScaleTool:
 
         Parameters
         ----------
-        filepath
+        static_c3d
             The .c3d or .trc file of the static trial to use for the scaling
-        first_frame
-            The index of the first frame to use in the .c3d file.
-        last_frame
-            The index of the last frame to use in the .c3d file.
         mass
             The mass of the subject
         q_regularization_weight
@@ -105,18 +99,9 @@ class ScaleTool:
         method
             The lease square method to use. (default: "lm", other options: "trf" or "dogbox")
         """
+        exp_marker_names = static_c3d.marker_names
+        exp_marker_positions = static_c3d.all_marker_positions[:3, :, :]
 
-        # Check file format
-        if filepath.endswith(".c3d"):
-            # Load the c3d file
-            c3d_data = C3dData(filepath, first_frame, last_frame)
-            exp_marker_names = c3d_data.marker_names
-            exp_marker_positions = c3d_data.all_marker_positions[:3, :, :]
-        else:
-            if filepath.endswith(".trc"):
-                raise NotImplementedError(".trc files cannot be read yet.")
-            else:
-                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
         marker_indices = [idx for idx, m in enumerate(exp_marker_names) if m in self.original_model.marker_names]
         marker_names = [exp_marker_names[idx] for idx in marker_indices]
         marker_positions = exp_marker_positions[:, marker_indices, :]
@@ -584,7 +569,7 @@ class ScaleTool:
             try:
                 import pyorerun
             except ImportError:
-                raise ImportError("You must install pyorerun and pyomeca to visualize the model")
+                raise ImportError("You must install pyorerun to visualize the model")
 
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
@@ -602,8 +587,10 @@ class ScaleTool:
 
             model_marker_names = model_to_use.marker_names
             marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
-            pyomarkers = pyorerun.PyoMarkers(data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False)
-            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers, show_tracked_marker_labels=False)
+            pyomarkers = pyorerun.PyoMarkers(
+                data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False
+            )
+            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers)
             viz.rerun_by_frame("Model output")
 
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):

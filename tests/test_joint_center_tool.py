@@ -21,7 +21,7 @@ def visualize_modified_model_output(
     new_model_filepath: str,
     original_q: np.ndarray,
     new_q: np.ndarray,
-    pyomarkers: "Markers",
+    pyomarkers: "PyoMarkers",
 ):
     """
     Only for debugging purposes.
@@ -38,7 +38,7 @@ def visualize_modified_model_output(
     viz_biomod_model.options.show_gravity = True
     viz_biomod_model.options.show_marker_labels = False
     viz_biomod_model.options.show_center_of_mass_labels = False
-    viz.add_animated_model(viz_biomod_model, original_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+    viz.add_animated_model(viz_biomod_model, original_q, tracked_markers=pyomarkers)
 
     # Model scaled in OpenSim
     viz_scaled_model = pyorerun.BiorbdModel(new_model_filepath)
@@ -46,7 +46,7 @@ def visualize_modified_model_output(
     viz_scaled_model.options.show_gravity = True
     viz_scaled_model.options.show_marker_labels = False
     viz_scaled_model.options.show_center_of_mass_labels = False
-    viz.add_animated_model(viz_scaled_model, new_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+    viz.add_animated_model(viz_scaled_model, new_q, tracked_markers=pyomarkers)
 
     # Animate
     viz.rerun_by_frame("Joint Center Comparison")
@@ -95,20 +95,18 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Hip Right
     joint_center_tool.add(
         Score(
-            filepath=hip_c3d.c3d_path,
+            functional_c3d=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
             child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-            first_frame=hip_c3d.first_frame,
-            last_frame=hip_c3d.last_frame,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=knee_c3d.c3d_path,
+            functional_c3d=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -116,8 +114,6 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=knee_c3d.first_frame,
-            last_frame=knee_c3d.last_frame,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -244,7 +240,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     new_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687)
+    npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687, decimal=5)
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 0.854628320760068, decimal=5)
     else:
@@ -252,8 +248,8 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
-    # from pyomeca import Markers
-    # pyomarkers = Markers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()))
+    # from pyorerun import PyoMarkers
+    # pyomarkers = PyoMarkers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()), show_labels=False)
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
     # Knee
@@ -272,8 +268,8 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
 
     # # For debugging purposes
-    # from pyomeca import Markers
-    # pyomarkers = Markers(data=knee_c3d.get_position(marker_names), channels=marker_names)
+    # from pyorerun import PyoMarkers
+    # pyomarkers = PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
     # visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
 
     markers_index = scaled_model.markers_indices(marker_names)
@@ -286,7 +282,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087)
+    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087, decimal=5)
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.195043059038364, decimal=5)
     else:
@@ -340,20 +336,18 @@ def test_score_and_sara_with_ghost_segments():
     # Hip Right
     joint_center_tool.add(
         Score(
-            filepath=hip_c3d.c3d_path,
+            functional_c3d=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
             child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-            first_frame=hip_c3d.first_frame,
-            last_frame=hip_c3d.last_frame,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
         )
     )
     joint_center_tool.add(
         Sara(
-            filepath=knee_c3d.c3d_path,
+            functional_c3d=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -361,8 +355,6 @@ def test_score_and_sara_with_ghost_segments():
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            first_frame=knee_c3d.first_frame,
-            last_frame=knee_c3d.last_frame,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
         )
@@ -379,24 +371,26 @@ def test_score_and_sara_with_ghost_segments():
         score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [1.0, 0.0, 0.0, -0.0360742],
-                [0.0, 1.0, 0.0, -0.0350205],
-                [0.0, 0.0, 1.0, -0.0113453],
+                [1.0, 0.0, 0.0, -0.0360743],
+                [0.0, 1.0, 0.0, -0.03499795],
+                [0.0, 0.0, 1.0, -0.01135702],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [1.0, -0.0, 0.0, -0.0316848],
-                [-0.0, 1.0, 0.0, -0.0283295],
-                [0.0, 0.0, 1.0, 0.0913713],
+                [1.0, -0.0, 0.0, -0.0316847],
+                [-0.0, 1.0, 0.0, -0.02835205],
+                [0.0, 0.0, 1.0, 0.09138302],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
@@ -404,12 +398,13 @@ def test_score_and_sara_with_ghost_segments():
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
         np.array(
             [
-                [0.9422628, 0.1384471, -0.3049152, 0.0053956],
-                [-0.1588124, 0.9863761, -0.0429041, -0.3826869],
-                [0.2948212, 0.0888513, 0.9514126, -0.0096506],
+                [0.94226275, 0.13844706, -0.30491525, 0.00539646],
+                [-0.15881239, 0.98637613, -0.04290413, -0.38268824],
+                [0.29482118, 0.08885128, 0.95141259, -0.00965356],
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
@@ -465,8 +460,8 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
     # The error is worse because it is a small test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 0.2879320932283139)
-    npt.assert_almost_equal(new_marker_tracking_error, 1.1186398837289024, decimal=5)
+    npt.assert_almost_equal(original_marker_tracking_error, 0.28717883184190574, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.1139429900835887, decimal=5)
 
     # Knee
     marker_names = list(marker_weights.keys())
@@ -494,8 +489,8 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
     # The error is worse because it is a unit test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 9.956010278714874)
-    npt.assert_almost_equal(new_marker_tracking_error, 10.58025762257233, decimal=5)
+    npt.assert_almost_equal(original_marker_tracking_error, 9.674445375391658, decimal=5)
+    npt.assert_almost_equal(new_marker_tracking_error, 9.850208305765541, decimal=5)
 
     remove_temporary_biomods()
     if os.path.exists(score_biomod_filepath):

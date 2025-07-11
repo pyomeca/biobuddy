@@ -212,8 +212,6 @@ class ModelDynamics:
         for i_q in range(nb_q):
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
 
-        # Replace NaN with 0.0
-        vec_jacobian[np.where(np.isnan(vec_jacobian))] = 0.0
         return vec_jacobian
 
     @requires_initialization
@@ -360,9 +358,7 @@ class ModelDynamics:
                 viz_scaled_model.options.show_gravity = True
                 viz_scaled_model.options.show_marker_labels = False
                 viz_scaled_model.options.show_center_of_mass_labels = False
-                viz.add_animated_model(
-                    viz_scaled_model, optimal_q, tracked_markers=pyomarkers
-                )
+                viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers)
                 viz.rerun_by_frame("Model output")
 
         return optimal_q
