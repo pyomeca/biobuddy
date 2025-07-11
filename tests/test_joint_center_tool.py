@@ -162,21 +162,29 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
             # Both rotation and translation parts were modified
-            np.array([[ 0.97298983,  0.03790546, -0.22771465,  0.02107151],
-                   [-0.0612039 ,  0.99348445, -0.09613912, -0.40854714],
-                   [ 0.22258677,  0.10747942,  0.96897023, -0.03015542],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
-                        decimal=5,
-                    )
+            np.array(
+                [
+                    [0.97298983, 0.03790546, -0.22771465, 0.02107151],
+                    [-0.0612039, 0.99348445, -0.09613912, -0.40854714],
+                    [0.22258677, 0.10747942, 0.96897023, -0.03015542],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+            decimal=5,
+        )
     else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
-            np.array([[ 0.97197658,  0.0418383 , -0.23132462,  0.02157429],
-                       [-0.06106338,  0.99519176, -0.07658086, -0.40738262],
-                       [ 0.22700834,  0.08856027,  0.96985787, -0.02918892],
-                       [ 0.        ,  0.        ,  0.        ,  1.        ]]),
-                            decimal=5,
-                        )
+            np.array(
+                [
+                    [0.97197658, 0.0418383, -0.23132462, 0.02157429],
+                    [-0.06106338, 0.99519176, -0.07658086, -0.40738262],
+                    [0.22700834, 0.08856027, 0.96985787, -0.02918892],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+            decimal=5,
+        )
 
     # Test that the original model did not change
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
@@ -384,10 +392,14 @@ def test_score_and_sara_with_ghost_segments():
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
-        np.array([[ 0.9415693 ,  0.13609885, -0.30809797,  0.00539646],
-                   [-0.1586161 ,  0.98611693, -0.04913589, -0.38268824],
-                   [ 0.29713329,  0.09513415,  0.95008489, -0.00965356],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+        np.array(
+            [
+                [0.9415693, 0.13609885, -0.30809797, 0.00539646],
+                [-0.1586161, 0.98611693, -0.04913589, -0.38268824],
+                [0.29713329, 0.09513415, 0.95008489, -0.00965356],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
         decimal=5,
     )
 
