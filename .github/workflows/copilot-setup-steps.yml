@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
+          conda install -c conda-forge install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 
       - name: Install test dependencies
         run: |
