@@ -9,8 +9,8 @@ from biobuddy.utils.linear_algebra import (
     rot_x_matrix,
     rot_y_matrix,
     rot_z_matrix,
-    get_rotation_vector_from_sequence,
-    get_sequence_from_rotation_vector,
+    get_vector_from_sequence,
+    get_sequence_from_vector,
     euler_and_translation_to_matrix,
     mean_homogenous_matrix,
     mean_unit_vector,
@@ -91,26 +91,26 @@ def test_rotation_matrices():
 
 def test_rotation_vector_sequences():
     """Test rotation vector and sequence conversion functions."""
-    # Test get_rotation_vector_from_sequence
-    npt.assert_almost_equal(get_rotation_vector_from_sequence("x"), np.array([1, 0, 0]))
-    npt.assert_almost_equal(get_rotation_vector_from_sequence("y"), np.array([0, 1, 0]))
-    npt.assert_almost_equal(get_rotation_vector_from_sequence("z"), np.array([0, 0, 1]))
+    # Test get_vector_from_sequence
+    npt.assert_almost_equal(get_vector_from_sequence("x"), np.array([1, 0, 0]))
+    npt.assert_almost_equal(get_vector_from_sequence("y"), np.array([0, 1, 0]))
+    npt.assert_almost_equal(get_vector_from_sequence("z"), np.array([0, 0, 1]))
 
     # Test invalid sequence
     with pytest.raises(RuntimeError, match="Rotation sequence .* not recognized"):
-        get_rotation_vector_from_sequence("invalid")
+        get_vector_from_sequence("invalid")
 
-    # Test get_sequence_from_rotation_vector
-    assert get_sequence_from_rotation_vector(np.array([1, 0, 0])) == "x"
-    assert get_sequence_from_rotation_vector(np.array([0, 1, 0])) == "y"
-    assert get_sequence_from_rotation_vector(np.array([0, 0, 1])) == "z"
+    # Test get_sequence_from_vector
+    assert get_sequence_from_vector(np.array([1, 0, 0])) == "x"
+    assert get_sequence_from_vector(np.array([0, 1, 0])) == "y"
+    assert get_sequence_from_vector(np.array([0, 0, 1])) == "z"
 
     # Test with 4D vector (should use first 3 components)
-    assert get_sequence_from_rotation_vector(np.array([1, 0, 0, 5])) == "x"
+    assert get_sequence_from_vector(np.array([1, 0, 0, 5])) == "x"
 
     # Test invalid rotation vector
     with pytest.raises(RuntimeError, match="Rotation vector .* not recognized"):
-        get_sequence_from_rotation_vector(np.array([1, 1, 0]))
+        get_sequence_from_vector(np.array([1, 1, 0]))
 
 
 def test_euler_and_translation_to_matrix():

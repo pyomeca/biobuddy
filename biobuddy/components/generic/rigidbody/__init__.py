@@ -5,7 +5,7 @@ from .marker import Marker
 from .mesh import Mesh
 from .mesh_file import MeshFile
 from ..rigidbody.range_of_motion import RangeOfMotion, Ranges
-from .segment_coordinate_system import SegmentCoordinateSystem
+from .segment_coordinate_system import SegmentCoordinateSystem, SegmentCoordinateSystemUtils
 from .segment import Segment
 
 
@@ -19,5 +19,6 @@ __all__ = [
     Ranges.__name__,
     RangeOfMotion.__name__,
     SegmentCoordinateSystem.__name__,
+    SegmentCoordinateSystemUtils.__name__,
     Segment.__name__,
 ]
