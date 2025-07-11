@@ -62,7 +62,7 @@ jobs:
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          pip install scipy==1.15.2 numpy==1.25.2 lxml ezc3d matplotlib
+          pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d matplotlib
 
       - name: Install test dependencies
         run: |

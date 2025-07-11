@@ -12,7 +12,6 @@ from ..utils.rotations import Rotations
 from ..utils.c3d_data import C3dData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
-    get_closest_rt_matrix,
     mean_unit_vector,
     RotoTransMatrixTimeSeries,
     point_from_local_to_global,
@@ -27,21 +26,19 @@ _logger = logging.getLogger(__name__)
 class RigidSegmentIdentification:
     def __init__(
         self,
-        filepath: str,
+        functional_c3d: C3dData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
         child_marker_names: list[str],
-        first_frame: int = None,
-        last_frame: int = None,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
         """
         Parameters
         ----------
-        filepath
-            The path to the .c3d file containing the functional trial.
+        functional_c3d
+            The .c3d file containing the functional trial.
         parent_name
             The name of the joint's parent segment.
         child_name
@@ -50,10 +47,6 @@ class RigidSegmentIdentification:
             The name of the markers in the parent segment to consider during the SCoRE algorithm.
         child_marker_names
             The name of the markers in the child segment to consider during the SCoRE algorithm.
-        first_frame
-            The first frame to consider in the functional trial.
-        last_frame
-            The last frame to consider in the functional trial.
         initialize_whole_trial_reconstruction
             If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
         animate_rt
@@ -61,13 +54,11 @@ class RigidSegmentIdentification:
         """
 
         # Original attributes
-        self.filepath = filepath
+        self.c3d_data = functional_c3d
         self.parent_name = parent_name
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
         self.child_marker_names = child_marker_names
-        self.first_frame = first_frame
-        self.last_frame = last_frame
         self.initialize_whole_trial_reconstruction = initialize_whole_trial_reconstruction
         self.animate_rt = animate_rt
 
@@ -78,7 +69,6 @@ class RigidSegmentIdentification:
         self.child_static_markers_in_local: np.ndarray = None
         self.parent_markers_global: np.ndarray = None
         self.child_markers_global: np.ndarray = None
-        self.c3d_data: C3dData = None
         self.marker_name: list[str] = None
         self.marker_positions: np.ndarray = None
 
@@ -101,26 +91,15 @@ class RigidSegmentIdentification:
         """
         Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
         """
-        # Check file format
-        if self.filepath.endswith(".c3d"):
-            # Load the c3d file
-            self.c3d_data = C3dData(self.filepath, self.first_frame, self.last_frame)
-            self.marker_names = self.c3d_data.marker_names
-            self.marker_positions = self.c3d_data.all_marker_positions[:3, :, :]
-        else:
-            if self.filepath.endswith(".trc"):
-                raise NotImplementedError(".trc files cannot be read yet.")
-            else:
-                raise RuntimeError("The filepath (static trial) must be a .c3d file in a static posture.")
+        self.marker_names = self.c3d_data.marker_names
+        self.marker_positions = self.c3d_data.all_marker_positions[:3, :, :]
 
         # Check that the markers move
         std = []
         for marker_name in self.parent_marker_names + self.child_marker_names:
             std += self.c3d_data.std_marker_position(marker_name)
         if len(std) == 0:
-            raise RuntimeError(
-                f"There are no markers in the current functional trial setup. Please review the `parent_marker_names` and `child_marker_names`."
-            )
+            raise RuntimeError("There are no markers in the functional trial. Please check the trial again.")
         if all(np.array(std) < 0.01):
             raise RuntimeError(
                 f"The markers {self.parent_marker_names + self.child_marker_names} are not moving in the functional trial (markers std = {std}). "
@@ -680,7 +659,7 @@ class Score(RigidSegmentIdentification):
 class Sara(RigidSegmentIdentification):
     def __init__(
         self,
-        filepath: str,
+        functional_c3d: C3dData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -688,20 +667,16 @@ class Sara(RigidSegmentIdentification):
         joint_center_markers: list[str],
         distal_markers: list[str],
         is_longitudinal_axis_from_jcs_to_distal_markers: bool,
-        first_frame: int = None,
-        last_frame: int = None,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
 
         super(Sara, self).__init__(
-            filepath=filepath,
+            functional_c3d=functional_c3d,
             parent_name=parent_name,
             child_name=child_name,
             parent_marker_names=parent_marker_names,
             child_marker_names=child_marker_names,
-            first_frame=first_frame,
-            last_frame=last_frame,
             animate_rt=animate_rt,
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
         )

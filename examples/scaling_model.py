@@ -69,6 +69,8 @@ def main(visualization):
     biorbd.Model(scaled_biomod_filepath)
 
     if visualization:
+        import pyorerun
+
         # Compare the result visually
         t = np.linspace(0, 1, 10)
         viz = pyorerun.PhaseRerun(t)
