@@ -59,7 +59,7 @@ class MeshReal:
         # Get the position of the all the mesh points and do some sanity checks
         all_p = points_to_array(points=None, name="mesh_real")
         for f in functions:
-            p = point_to_array(point=f(data.values, model), name="mesh function")
+            p = point_to_array(point=f(data.mean_values(), model), name="mesh function")
             p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
             projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
             if np.isnan(projected_p).all():
