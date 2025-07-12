@@ -43,7 +43,7 @@ class SegmentCoordinateSystemReal:
 
     @scs.setter
     def scs(self, value: np.ndarray):
-        if value.shape not in ((4, 4), (4, 4, 1)):
+        if value.shape[:2] not in ((4, 4), (4, 4, 1)):
             raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
 
         if len(value.shape) == 2:

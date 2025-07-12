@@ -1,6 +1,5 @@
 """
 Example taken from biorbd.model_creation
-# TODO: This example should be replace with an actual biomechanics example.
 """
 
 import os
