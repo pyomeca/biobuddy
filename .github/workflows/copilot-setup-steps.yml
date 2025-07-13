@@ -39,12 +39,11 @@ jobs:
 
       - name: Install dependencies
         run: | 
-          pip install . && pip uninstall -y biobuddy
           conda install -c conda-forge scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 
       - name: Install test dependencies
         run: |
-          pip install pytest pytest-cov codecov black
+          conda install -c conda-forge pytest pytest-cov codecov black
           conda install -c opensim-org opensim=4.5.1
           conda install -c conda-forge biorbd=1.11.2 deepdiff
 
