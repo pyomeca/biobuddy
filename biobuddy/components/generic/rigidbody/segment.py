@@ -149,4 +149,3 @@ class Segment(SegmentUtils):
 
     def remove_contact(self, contact: Contact):
         self.contacts._remove(contact)
-

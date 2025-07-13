@@ -5,7 +5,7 @@ from ..utils.named_list import NamedList
 
 
 class SegmentUtils:
-    def __init__(self,/):
+    def __init__(self):
         self.name = None
         self.parent_name = None
         self.segment_coordinate_system = None

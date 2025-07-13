@@ -18,7 +18,7 @@ from ....utils.linear_algebra import (
 class SegmentCoordinateSystemReal:
     def __init__(
         self,
-        scs: np.ndarray = np.identity(4) ,  # TODO: Should be a RotoTransMatrix ?
+        scs: np.ndarray = np.identity(4),  # TODO: Should be a RotoTransMatrix ?
         parent_scs: "Self" = None,  # TODO: remove
         is_scs_local: bool = False,
     ):

@@ -1,5 +1,5 @@
-
 ILLEGAL_NAMES = ["ROOT"]
+
 
 def check_name(name: str) -> str:
     if "name" in ILLEGAL_NAMES:
