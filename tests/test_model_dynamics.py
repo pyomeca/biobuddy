@@ -307,7 +307,7 @@ def test_base_segment_coordinate_system():
 
     # Test the values
     npt.assert_almost_equal(
-        scs_local,
+        scs_local.rt_matrix,
         np.array(
             [
                 [0.941067, 0.334883, 0.047408, -0.067759],

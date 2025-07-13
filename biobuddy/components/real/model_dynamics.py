@@ -538,11 +538,13 @@ class ModelDynamics:
         return jac
 
     @requires_initialization
-    def muscle_length(self, muscle_name: str, q: np.ndarray) -> np.ndarray:
+    def muscle_length(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
         """
         Please note that the muscle trajectory is computed based on the order of declaration of the via points in the model.
         """
-        if len(q.shape) == 1:
+        if q is None:
+            q = np.zeros((self.nb_q, 1))
+        elif len(q.shape) == 1:
             q = q[:, np.newaxis]
         elif len(q.shape) > 2:
             raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
