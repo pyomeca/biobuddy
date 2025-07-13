@@ -87,7 +87,6 @@ class ModelDynamics:
             while current_segment.segment_coordinate_system.is_in_local:
                 current_parent_name = current_segment.parent_name
                 if current_parent_name == "base":
-                    # TODO: change for "ROOT" ?
                     break
                 current_segment = self.segments[current_parent_name]
                 rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global

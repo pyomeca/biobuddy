@@ -13,6 +13,7 @@ from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 from ....utils.named_list import NamedList
 from ...segment_utils import SegmentUtils
+from ....utils.checks import check_name
 
 
 class SegmentReal(SegmentUtils):
@@ -33,8 +34,8 @@ class SegmentReal(SegmentUtils):
     ):
 
         super().__init__()
-        self.name = name
-        self.parent_name = parent_name
+        self.name = check_name(name)
+        self.parent_name = check_name(parent_name)
         self.segment_coordinate_system = segment_coordinate_system
         self.translations = translations
         self.rotations = rotations

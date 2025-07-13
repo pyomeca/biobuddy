@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy as np
 
 from ....utils.linear_algebra import mean_homogenous_matrix, transpose_homogenous_matrix
+from ....utils.checks import check_name
 
 
 class InertialMeasurementUnitReal:
@@ -37,7 +38,7 @@ class InertialMeasurementUnitReal:
 
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
 
         self.scs = scs
         self.is_technical = is_technical

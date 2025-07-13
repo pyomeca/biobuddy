@@ -6,6 +6,7 @@ from .protocols import CoordinateSystemRealProtocol
 from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
+from ....utils.checks import check_name
 
 
 class MarkerReal:
@@ -32,7 +33,7 @@ class MarkerReal:
             If the marker should be flagged as an anatomical marker
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.position = position
 
         self.is_technical = is_technical

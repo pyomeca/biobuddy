@@ -4,6 +4,7 @@ import numpy as np
 
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
+from ....utils.checks import check_name
 
 
 class ViaPointReal:
@@ -30,7 +31,7 @@ class ViaPointReal:
             The 3d position of the via point in the local reference frame
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
         self.position = position
