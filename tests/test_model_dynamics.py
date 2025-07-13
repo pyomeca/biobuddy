@@ -44,7 +44,7 @@ def test_biomechanics_model_real_utils_functions():
     assert wholebody_model_biorbd.nbMuscles() == wholebody_model.nb_muscles
 
     q_random = np.random.rand(nb_q)
-    q_zeros = np.zeros((nb_q, ))
+    q_zeros = np.zeros((nb_q,))
 
     # Forward kinematics
     jcs_biobuddy = wholebody_model.forward_kinematics(q_random)
@@ -143,7 +143,9 @@ def test_biomechanics_model_real_utils_functions():
     p4_global = rt_torso @ p4
 
     # This is OK :)
-    muscle_points_in_global = [m.to_array() for m in wholebody_model_biorbd.muscle(0).musclesPointsInGlobal(wholebody_model_biorbd, q_zeros)]
+    muscle_points_in_global = [
+        m.to_array() for m in wholebody_model_biorbd.muscle(0).musclesPointsInGlobal(wholebody_model_biorbd, q_zeros)
+    ]
     npt.assert_almost_equal(muscle_points_in_global[0], p1_global[:3])
     npt.assert_almost_equal(muscle_points_in_global[1], p2_global[:3])
     npt.assert_almost_equal(muscle_points_in_global[2], p3_global[:3])
@@ -155,7 +157,11 @@ def test_biomechanics_model_real_utils_functions():
     npt.assert_almost_equal(np.array([-0.0807, 0.4715, 0.07]), p4_global[:3])
 
     # But this is not :(
-    length = np.linalg.norm(p2_global[:3] - p1_global[:3]) + np.linalg.norm(p3_global[:3] - p2_global[:3]) + np.linalg.norm(p4_global[:3] - p3_global[:3])
+    length = (
+        np.linalg.norm(p2_global[:3] - p1_global[:3])
+        + np.linalg.norm(p3_global[:3] - p2_global[:3])
+        + np.linalg.norm(p4_global[:3] - p3_global[:3])
+    )
     total = 0.01131794150894941 + 0.1346970534198874 + 0.10536367507352808
     # There is a large difference between the sum of the partial length (explaining the decimal=3)
     biobuddy_length = wholebody_model.muscle_length("ant_delt_r", q_zeros)
@@ -164,7 +170,6 @@ def test_biomechanics_model_real_utils_functions():
     npt.assert_almost_equal(biorbd_length, length, decimal=3)  # :(
     npt.assert_almost_equal(biorbd_length, biobuddy_length, decimal=3)  # :(
     # TODO: remove above --------------------
-
 
     # --- leg_without_ghost_parents.bioMod --- #
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"

@@ -552,7 +552,7 @@ class ModelDynamics:
         muscle_insertion_parent_name = self.muscle_groups[muscle_group_name].insertion_parent_name
 
         nb_frames = q.shape[1]
-        muscle_length = np.zeros((nb_frames, ))
+        muscle_length = np.zeros((nb_frames,))
         global_jcs = self.forward_kinematics(q)
         for i_frame in range(nb_frames):
             # Get all the points composing the muscle
@@ -561,13 +561,9 @@ class ModelDynamics:
                 if via_point.muscle_name == muscle_name:
                     rt = global_jcs[via_point.parent_name][i_frame]
                     muscle_via_points += [rt @ via_point.position]
-            origin_position = (
-                global_jcs[muscle_origin_parent_name][i_frame]
-                @ self.muscles[muscle_name].origin_position
-            )
+            origin_position = global_jcs[muscle_origin_parent_name][i_frame] @ self.muscles[muscle_name].origin_position
             insertion_position = (
-                global_jcs[muscle_insertion_parent_name][i_frame]
-                @ self.muscles[muscle_name].insertion_position
+                global_jcs[muscle_insertion_parent_name][i_frame] @ self.muscles[muscle_name].insertion_position
             )
 
             muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
