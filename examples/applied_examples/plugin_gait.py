@@ -25,12 +25,13 @@ from biobuddy import (
 
 # Generic functions
 def chord_function(
-        offset: np.ndarray, 
-        known_center_of_rotation: np.ndarray, 
-        center_of_rotation_marker: np.ndarray, 
-        plane_marker: np.ndarray, 
-        direction: int = 1) -> np.ndarray:
-    
+    offset: np.ndarray,
+    known_center_of_rotation: np.ndarray,
+    center_of_rotation_marker: np.ndarray,
+    plane_marker: np.ndarray,
+    direction: int = 1,
+) -> np.ndarray:
+
     n_frames = center_of_rotation_marker.shape[1]
 
     # Create a coordinate system from the markers
@@ -115,16 +116,17 @@ def project_point_on_line(start_line: np.ndarray, end_line: np.ndarray, point: n
 
 
 class PlugInGait(BiomechanicalModel):
-    def __init__(self,
-                body_mass: float,
-                shoulder_offset: float = None,
-                elbow_width: float = None,
-                wrist_width: float = None,
-                hand_thickness: float = None,
-                leg_length: dict[str, float] = None,
-                ankle_width: float = None,
-                include_upper_body: bool = True,
-                 ):
+    def __init__(
+        self,
+        body_mass: float,
+        shoulder_offset: float = None,
+        elbow_width: float = None,
+        wrist_width: float = None,
+        hand_thickness: float = None,
+        leg_length: dict[str, float] = None,
+        ankle_width: float = None,
+        include_upper_body: bool = True,
+    ):
 
         super().__init__()
         self.body_mass = body_mass
@@ -385,7 +387,6 @@ class PlugInGait(BiomechanicalModel):
 
         return (m[f"{side}ANK"] + m[f"{side}ANKM"]) / 2
 
-
     def build_plug_in_gait(self) -> BiomechanicalModel:
         """
         Actually building the kinematic model.
@@ -430,7 +431,7 @@ class PlugInGait(BiomechanicalModel):
                         end=self.get_pelvis_center_of_mass(m, bio),
                     ),
                 ),
-         )
+            )
         )
 
         # model.segments["Pelvis"].add_marker("Pelvis", "SACR", is_technical=False, is_anatomical=True)  # @pariterre: remove ?
@@ -537,7 +538,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.028 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.564, start=self.get_humerus_joint_center(m, bio, "R"), end=self.get_elbow_joint_center(m, bio, "R")
+                        0.564,
+                        start=self.get_humerus_joint_center(m, bio, "R"),
+                        end=self.get_elbow_joint_center(m, bio, "R"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.028 * self.body_mass,
@@ -580,7 +583,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.016 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.57, start=self.get_elbow_joint_center(m, bio, "R"), end=self.get_wrist_joint_center(m, bio, "R")
+                        0.57,
+                        start=self.get_elbow_joint_center(m, bio, "R"),
+                        end=self.get_wrist_joint_center(m, bio, "R"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.016 * self.body_mass,
@@ -656,7 +661,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.028 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.564, start=self.get_humerus_joint_center(m, bio, "L"), end=self.get_elbow_joint_center(m, bio, "L")
+                        0.564,
+                        start=self.get_humerus_joint_center(m, bio, "L"),
+                        end=self.get_elbow_joint_center(m, bio, "L"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.028 * self.body_mass,
@@ -700,7 +707,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.016 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.57, start=self.get_elbow_joint_center(m, bio, "L"), end=self.get_wrist_joint_center(m, bio, "L")
+                        0.57,
+                        start=self.get_elbow_joint_center(m, bio, "L"),
+                        end=self.get_wrist_joint_center(m, bio, "L"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.016 * self.body_mass,
@@ -811,7 +820,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.0465 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.567, start=self.get_knee_joint_center(m, bio, "R"), end=self.get_ankle_joint_center(m, bio, "R")
+                        0.567,
+                        start=self.get_knee_joint_center(m, bio, "R"),
+                        end=self.get_ankle_joint_center(m, bio, "R"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0465 * self.body_mass,
@@ -923,7 +934,9 @@ class PlugInGait(BiomechanicalModel):
                 inertia_parameters=InertiaParameters(
                     mass=lambda m, bio: 0.0465 * self.body_mass,
                     center_of_mass=lambda m, bio: point_on_vector(
-                        0.567, start=self.get_knee_joint_center(m, bio, "L"), end=self.get_ankle_joint_center(m, bio, "L")
+                        0.567,
+                        start=self.get_knee_joint_center(m, bio, "L"),
+                        end=self.get_ankle_joint_center(m, bio, "L"),
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0465 * self.body_mass,
@@ -972,7 +985,7 @@ class PlugInGait(BiomechanicalModel):
 
         return model
 
-    
+
 def main():
 
     # Create the model from user defined dimensions
