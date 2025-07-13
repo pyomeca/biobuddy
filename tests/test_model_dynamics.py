@@ -44,6 +44,7 @@ def test_biomechanics_model_real_utils_functions():
     assert wholebody_model_biorbd.nbMuscles() == wholebody_model.nb_muscles
 
     q_random = np.random.rand(nb_q)
+    q_zeros = np.zeros((nb_q, ))
 
     # Forward kinematics
     jcs_biobuddy = wholebody_model.forward_kinematics(q_random)
@@ -102,15 +103,68 @@ def test_biomechanics_model_real_utils_functions():
     #     except:
     #         print(f"Marker number {i_marker}, for q {np.where(np.abs(markers_jacobian_biobuddy[:, i_marker, :].reshape(3, nb_q) - markers_jacobian_biorbd[i_marker].to_array()) > 0.0001)}.")
 
-    # TODO: wholebody_model_biorbd.muscle(0).length(wholebody_model_biorbd, np.zeros((wholebody_model_biorbd.nbQ(),)))
-    # for i_muscle, muscle_name in enumerate(wholebody_model.muscle_names):
-    #     muscle_biobuddy = wholebody_model.muscle_length(muscle_name, q_random)
-    #     muscle_biorbd = wholebody_model_biorbd.muscle(i_muscle).length(q_random).to_array()
-    #     npt.assert_array_almost_equal(
-    #         muscle_biobuddy,
-    #         muscle_biorbd,
-    #         decimal=4,
-    #     )
+    # Test muscle length
+    for i_muscle, muscle_name in enumerate(wholebody_model.muscle_names):
+        if muscle_name != wholebody_model_biorbd.muscle(i_muscle).name().to_string():
+            raise RuntimeError("The muscles are not in the same order so we cannot check the muscle length this way.")
+
+        # In the Zero configuration
+        muscle_biobuddy = wholebody_model.muscle_length(muscle_name, q_zeros)
+        muscle_biorbd = wholebody_model_biorbd.muscle(i_muscle).length(wholebody_model_biorbd, q_zeros)
+        npt.assert_array_almost_equal(
+            muscle_biobuddy,
+            muscle_biorbd,
+            decimal=4,
+        )
+
+        # In a random configuration
+        muscle_biobuddy = wholebody_model.muscle_length(muscle_name, q_random)
+        muscle_biorbd = wholebody_model_biorbd.muscle(i_muscle).length(wholebody_model_biorbd, q_random)
+        npt.assert_array_almost_equal(
+            muscle_biobuddy,
+            muscle_biorbd,
+            decimal=4,
+        )
+
+    # TODO: remove bellow --------------------
+    # Example of how I compute it:
+    # Humerus
+    rt_humerus = jcs_biobuddy["humerus_r"][0].rt_matrix
+    p1 = np.array([0.009, -0.1188, 0.0058, 1])
+    p2 = np.array([0.01623, -0.11033, 0.00412, 1])
+    p3 = np.array([0.05, 0.02, 0.0, 1])
+    # Torso
+    rt_torso = jcs_biobuddy["torso"][0].rt_matrix
+    p4 = np.array([0.02, 0.39, 0.07, 1])
+
+    p1_global = rt_humerus @ p1
+    p2_global = rt_humerus @ p2
+    p3_global = rt_humerus @ p3
+    p4_global = rt_torso @ p4
+
+    # This is OK :)
+    muscle_points_in_global = [m.to_array() for m in wholebody_model_biorbd.muscle(0).musclesPointsInGlobal(wholebody_model_biorbd, q_zeros)]
+    npt.assert_almost_equal(muscle_points_in_global[0], p1_global[:3])
+    npt.assert_almost_equal(muscle_points_in_global[1], p2_global[:3])
+    npt.assert_almost_equal(muscle_points_in_global[2], p3_global[:3])
+    npt.assert_almost_equal(muscle_points_in_global[3], p4_global[:3])
+
+    npt.assert_almost_equal(np.array([-0.088585, 0.33417, 0.17585]), p1_global[:3])
+    npt.assert_almost_equal(np.array([-0.081315, 0.34267, 0.17412]), p2_global[:3])
+    npt.assert_almost_equal(np.array([-0.047545, 0.473, 0.17]), p3_global[:3])
+    npt.assert_almost_equal(np.array([-0.0807, 0.4715, 0.07]), p4_global[:3])
+
+    # But this is not :(
+    length = np.linalg.norm(p2_global[:3] - p1_global[:3]) + np.linalg.norm(p3_global[:3] - p2_global[:3]) + np.linalg.norm(p4_global[:3] - p3_global[:3])
+    total = 0.01131794150894941 + 0.1346970534198874 + 0.10536367507352808
+    # There is a large difference between the sum of the partial length (explaining the decimal=3)
+    biobuddy_length = wholebody_model.muscle_length("ant_delt_r", q_zeros)
+    biorbd_length = wholebody_model_biorbd.muscle(0).length(wholebody_model_biorbd, q_zeros)
+    npt.assert_almost_equal(biobuddy_length, length, decimal=3)  # :)
+    npt.assert_almost_equal(biorbd_length, length, decimal=3)  # :(
+    npt.assert_almost_equal(biorbd_length, biobuddy_length, decimal=3)  # :(
+    # TODO: remove above --------------------
+
 
     # --- leg_without_ghost_parents.bioMod --- #
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"

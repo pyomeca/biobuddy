@@ -538,33 +538,42 @@ class ModelDynamics:
         return jac
 
     @requires_initialization
-    def muscle_length(self, muscle_name: str) -> np.ndarray:
+    def muscle_length(self, muscle_name: str, q: np.ndarray) -> np.ndarray:
         """
         Please note that the muscle trajectory is computed based on the order of declaration of the via points in the model.
         """
-        # TODO: consider computing the muscle length in other configurations than the zero position.
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
         muscle_group_name = self.muscles[muscle_name].muscle_group
         muscle_origin_parent_name = self.muscle_groups[muscle_group_name].origin_parent_name
         muscle_insertion_parent_name = self.muscle_groups[muscle_group_name].insertion_parent_name
 
-        # Get all the points composing the muscle
-        muscle_via_points = []
-        for via_point in self.via_points:
-            if via_point.muscle_name == muscle_name:
-                rt = self.segment_coordinate_system_in_global(via_point.parent_name)
-                muscle_via_points += [rt @ via_point.position]
-        origin_position = (
-            self.segment_coordinate_system_in_global(muscle_origin_parent_name)
-            @ self.muscles[muscle_name].origin_position
-        )
-        insertion_position = (
-            self.segment_coordinate_system_in_global(muscle_insertion_parent_name)
-            @ self.muscles[muscle_name].insertion_position
-        )
+        nb_frames = q.shape[1]
+        muscle_length = np.zeros((nb_frames, ))
+        global_jcs = self.forward_kinematics(q)
+        for i_frame in range(nb_frames):
+            # Get all the points composing the muscle
+            muscle_via_points = []
+            for via_point in self.via_points:
+                if via_point.muscle_name == muscle_name:
+                    rt = global_jcs[via_point.parent_name][i_frame]
+                    muscle_via_points += [rt @ via_point.position]
+            origin_position = (
+                global_jcs[muscle_origin_parent_name][i_frame]
+                @ self.muscles[muscle_name].origin_position
+            )
+            insertion_position = (
+                global_jcs[muscle_insertion_parent_name][i_frame]
+                @ self.muscles[muscle_name].insertion_position
+            )
 
-        muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
-        muscle_norm = 0
-        for i_point in range(len(muscle_trajectory) - 1):
-            muscle_norm += np.linalg.norm(muscle_trajectory[i_point][:3] - muscle_trajectory[i_point + 1][:3])
+            muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
+            muscle_norm = 0
+            for i_point in range(len(muscle_trajectory) - 1):
+                muscle_norm += np.linalg.norm(muscle_trajectory[i_point + 1][:3] - muscle_trajectory[i_point][:3])
+            muscle_length[i_frame] = muscle_norm
 
-        return muscle_norm
+        return muscle_length
