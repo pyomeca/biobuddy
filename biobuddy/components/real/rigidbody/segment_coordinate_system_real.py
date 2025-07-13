@@ -7,10 +7,6 @@ import numpy as np
 from .axis_real import AxisReal
 from .marker_real import MarkerReal
 from ....utils.aliases import Point, Points
-from ....utils.linear_algebra import (
-    transpose_homogenous_matrix,
-    multiply_homogeneous_matrix,
-)
 from ....utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries
 
 

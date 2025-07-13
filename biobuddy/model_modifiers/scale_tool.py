@@ -645,8 +645,7 @@ class ScaleTool:
                 marker_name = marker.name
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                rt = RotoTransMatrix()
-                rt.from_rt_matrix(deepcopy(jcs_in_global[segment.name]))
+                rt = jcs_in_global[segment.name][0]
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(

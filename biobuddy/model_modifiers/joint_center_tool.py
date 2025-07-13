@@ -512,7 +512,7 @@ class RigidSegmentIdentification:
         )
 
         rt_optimal = np.zeros((4, 4, nb_frames))
-        init = rt_init[:, :, 0].reshape(4, 4)  # Initialize with the first frame
+        init = rt_init[0].rt_matrix  # Initialize with the first frame
         for i_frame in range(nb_frames):
 
             if np.isnan(np.sum(markers_in_global[:, :, i_frame])):
@@ -551,7 +551,7 @@ class RigidSegmentIdentification:
             if initialize_whole_trial_reconstruction:
                 # Use the rt from the reconstruction of the whole trial at the current frame
                 frame = i_frame + 1 if i_frame + 1 < nb_frames else i_frame
-                init = rt_init[:, :, frame].reshape(4, 4)
+                init = rt_init[frame].rt_matrix
             else:
                 # Use the optimal rt of the previous frame
                 init = rt_optimal[:, :, i_frame]

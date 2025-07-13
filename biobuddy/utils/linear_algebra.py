@@ -164,16 +164,6 @@ def transpose_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     out[3, :3, :] = 0
     return out
 
-
-def multiply_homogeneous_matrix(self: np.ndarray, other: np.ndarray) -> np.ndarray:
-    if len(other.shape) == 3:  # If it is a RT @ RT
-        return np.einsum("ijk,jlk->ilk", self.scs, other)
-    elif len(other.shape) == 2:  # if it is a RT @ vector
-        return np.einsum("ijk,jk->ik", self.scs, other)
-    else:
-        NotImplementedError("This multiplication is not implemented yet")
-
-
 def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
