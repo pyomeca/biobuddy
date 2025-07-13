@@ -164,6 +164,7 @@ def transpose_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
     out[3, :3, :] = 0
     return out
 
+
 def norm2(v) -> np.ndarray:
     """Compute the squared norm of each row of the matrix v."""
     return np.sum(v**2, axis=1)
@@ -435,7 +436,9 @@ class RotoTransMatrix:
             # Matrix multiplication of a RotoTransMatrix with a Point (np.array vector) gives a Point (np.array vector)
             out = self.rt_matrix @ point_to_array(point=other)
         else:
-            raise NotImplementedError(f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet.")
+            raise NotImplementedError(
+                f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
+            )
         return out
 
     def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
@@ -448,7 +451,9 @@ class RotoTransMatrix:
                 f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
             )
         if np.abs(np.linalg.det(rotation_matrix) - 1.0) > 1e-6:
-            raise ValueError(f"The rotation matrix provided {rotation_matrix} is not a valid rotation matrix (det = {np.linalg.det(rotation_matrix)}, and should be 1.0).")
+            raise ValueError(
+                f"The rotation matrix provided {rotation_matrix} is not a valid rotation matrix (det = {np.linalg.det(rotation_matrix)}, and should be 1.0)."
+            )
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
@@ -517,7 +522,9 @@ class RotoTransMatrix:
                 f"The rotation_matrix used to set a RotoTransMatrix should be of shape (3, 3). You have {rot.shape}"
             )
         if np.abs(np.linalg.det(rot) - 1.0) > 1e-6:
-            raise ValueError(f"The rotation matrix provided {rot} is not a valid rotation matrix (det = {np.linalg.det(rot)}, and should be 1.0).")
+            raise ValueError(
+                f"The rotation matrix provided {rot} is not a valid rotation matrix (det = {np.linalg.det(rot)}, and should be 1.0)."
+            )
         self._rt[:3, :3] = rot
 
     def euler_angles(self, angle_sequence: str) -> np.ndarray:
@@ -545,6 +552,7 @@ class RotoTransMatrixTimeSeries:
     """
     This class is a list of nb_frames RotoTranMatrix so that it is possible to define a RotoTranMatrix for each frame.
     """
+
     def __init__(self, nb_frames: int):
         self._rt_time_series = [RotoTransMatrix() for _ in range(nb_frames)]
 
@@ -563,7 +571,9 @@ class RotoTransMatrixTimeSeries:
                 f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
             )
         if rotation_matrix.shape[2] != len(self):
-            raise ValueError(f"You must provide as many rotation matrices as the number of frames ({len(self)}). You have {rotation_matrix.shape[2]} rotation matrices.")
+            raise ValueError(
+                f"You must provide as many rotation matrices as the number of frames ({len(self)}). You have {rotation_matrix.shape[2]} rotation matrices."
+            )
 
         rt_time_series = []
         for i_frame in range(rotation_matrix.shape[2]):
@@ -579,7 +589,9 @@ class RotoTransMatrixTimeSeries:
                 f"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rt.shape}"
             )
         if rt.shape[2] != len(self):
-            raise ValueError(f"You must provide as many rt matrices as the number of frames ({len(self)}). You have {rt.shape[2]} rotation matrices.")
+            raise ValueError(
+                f"You must provide as many rt matrices as the number of frames ({len(self)}). You have {rt.shape[2]} rotation matrices."
+            )
 
         rt_time_series = []
         for i_frame in range(rt.shape[2]):

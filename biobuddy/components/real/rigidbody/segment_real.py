@@ -172,7 +172,9 @@ class SegmentReal(SegmentUtils):
                 rotations = local_q[q_counter:]
                 angle_sequence = self.rotations.value
 
-            rt.from_euler_angles_and_translation(angle_sequence=angle_sequence, angles=rotations, translation=translations)
+            rt.from_euler_angles_and_translation(
+                angle_sequence=angle_sequence, angles=rotations, translation=translations
+            )
 
         return rt
 

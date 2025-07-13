@@ -298,9 +298,7 @@ class ScaleTool:
                         scs_scaled = SegmentCoordinateSystemReal(
                             scs=self.scale_rt(
                                 deepcopy(
-                                    self.original_model.segments[
-                                        segment_name + ghost_key
-                                    ].segment_coordinate_system.scs
+                                    self.original_model.segments[segment_name + ghost_key].segment_coordinate_system.scs
                                 ),
                                 offset_parent_scale_factor,
                             ),
@@ -408,7 +406,7 @@ class ScaleTool:
         rt_matrix[:3, 3] *= scale_factor[:3].reshape(
             3,
         )
-        out =  RotoTransMatrix()
+        out = RotoTransMatrix()
         out.from_rt_matrix(rt_matrix)
         return out
 

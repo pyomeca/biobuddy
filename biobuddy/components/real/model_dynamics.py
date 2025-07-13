@@ -4,7 +4,12 @@ import numpy as np
 from scipy import optimize
 from functools import wraps
 
-from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, get_closest_rt_matrix, point_from_local_to_global
+from ...utils.linear_algebra import (
+    RotoTransMatrix,
+    RotoTransMatrixTimeSeries,
+    get_closest_rt_matrix,
+    point_from_local_to_global,
+)
 
 _logger = logging.getLogger(__name__)
 

@@ -84,7 +84,9 @@ class InertialMeasurementUnitReal:
         out_string = f"imu\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
 
-        mean_rt = self.scs.rt_matrix  # See if we want to do like SegmentCoordinateSystemReal and use mean_homogenous_matrix
+        mean_rt = (
+            self.scs.rt_matrix
+        )  # See if we want to do like SegmentCoordinateSystemReal and use mean_homogenous_matrix
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
         out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"

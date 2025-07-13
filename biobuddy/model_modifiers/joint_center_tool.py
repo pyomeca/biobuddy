@@ -114,9 +114,7 @@ class RigidSegmentIdentification:
             parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
             rt_parent_functional_offsetted = np.zeros_like(rt_parent_functional)
             for i_frame in range(rt_parent_functional.shape[2]):
-                rt_parent_functional_offsetted[i_frame] = (
-                    rt_parent_functional[i_frame] @ parent_offset_rt.inverse
-                )
+                rt_parent_functional_offsetted[i_frame] = rt_parent_functional[i_frame] @ parent_offset_rt.inverse
         else:
             rt_parent_functional_offsetted = rt_parent_functional
 
@@ -124,9 +122,7 @@ class RigidSegmentIdentification:
             child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
             rt_child_functional_offsetted = np.zeros_like(rt_child_functional)
             for i_frame in range(rt_parent_functional.shape[2]):
-                rt_child_functional_offsetted[i_frame] = (
-                    rt_child_functional[i_frame] @ child_offset_rt.inverse
-                )
+                rt_child_functional_offsetted[i_frame] = rt_child_functional[i_frame] @ child_offset_rt.inverse
         else:
             child_offset_rt = RotoTransMatrix()
             child_offset_rt.from_rt_matrix(np.identity(4))
@@ -244,7 +240,9 @@ class RigidSegmentIdentification:
         # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
         # change in length of the segments due to the displacement of the jcs.
         inertia = original_model.segments[self.child_name].inertia_parameters.inertia[:3, :3]
-        rotation_transform = new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+        rotation_transform = (
+            new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+        )
         new_inertia = rotation_transform @ inertia @ rotation_transform.T
         new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
 
@@ -838,7 +836,9 @@ class Sara(RigidSegmentIdentification):
             if self.child_name + "_reset_axis" in original_model.segments.keys():
                 rotation_vector = get_rotation_vector_from_sequence(sequence=rot)
                 rotation_vector = (
-                    original_model.segments[self.child_name + "_reset_axis"].segment_coordinate_system.scs.rotation_matrix
+                    original_model.segments[
+                        self.child_name + "_reset_axis"
+                    ].segment_coordinate_system.scs.rotation_matrix
                     @ rotation_vector
                 )
                 rot = get_sequence_from_rotation_vector(rotation_vector)
