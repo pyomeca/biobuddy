@@ -31,7 +31,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model = BiomechanicalModelReal()
 
     # The trunk segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="TRUNK",
             translations=Translations.YZ,
@@ -42,7 +42,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["TRUNK"].add_marker(MarkerReal(name="PELVIS", parent_name="TRUNK"))
 
     # The head segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="HEAD",
             parent_name="TRUNK",
@@ -58,7 +58,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["HEAD"].add_marker(MarkerReal(name="HEAD_XZ", parent_name="HEAD", position=(0.24, 0, 0.24)))
 
     # The arm segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="UPPER_ARM",
             parent_name="TRUNK",
@@ -77,7 +77,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
         MarkerReal(name="SHOULDER_XY", parent_name="UPPER_ARM", position=(1, 1, 0))
     )
 
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
@@ -91,7 +91,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["LOWER_ARM"].add_marker(MarkerReal(name="ELBOW_Y", parent_name="LOWER_ARM", position=(0, 1, 0)))
     bio_model.segments["LOWER_ARM"].add_marker(MarkerReal(name="ELBOW_XY", parent_name="LOWER_ARM", position=(1, 1, 0)))
 
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="HAND",
             parent_name="LOWER_ARM",
@@ -107,7 +107,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["HAND"].add_marker(MarkerReal(name="HAND_YZ", parent_name="HAND", position=(0, 1, 1)))
 
     # The thigh segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="THIGH",
             parent_name="TRUNK",
@@ -120,7 +120,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["THIGH"].add_marker(MarkerReal(name="THIGH_Y", parent_name="THIGH", position=(0, 1, 0)))
 
     # The shank segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="SHANK",
             parent_name="THIGH",
@@ -136,7 +136,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     bio_model.segments["SHANK"].add_marker(MarkerReal(name="KNEE_XZ", parent_name="SHANK", position=(1, 0, 1)))
 
     # The foot segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         SegmentReal(
             name="FOOT",
             parent_name="SHANK",

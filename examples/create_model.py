@@ -37,10 +37,10 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     bio_model = BiomechanicalModel()
 
     # The ground segment
-    bio_model.segments.append(Segment(name="GROUND"))
+    bio_model.add_segment(Segment(name="GROUND"))
 
     # The pendulum segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         Segment(
             name="PENDULUM",
             translations=Translations.XYZ,
@@ -69,12 +69,12 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     )
 
     # The pendulum muscle group
-    bio_model.muscle_groups.append(
+    bio_model.add_muscle_group(
         MuscleGroup(name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM")
     )
 
     # The pendulum muscle
-    bio_model.muscles.append(
+    bio_model.add_muscle(
         Muscle(
             "PENDULUM_MUSCLE",
             muscle_type=MuscleType.HILL_THELEN,
@@ -89,7 +89,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             maximal_excitation=1,
         )
     )
-    bio_model.via_points.append(
+    bio_model.add_via_point(
         ViaPoint(
             "PENDULUM_MUSCLE",
             position_function=lambda m, model: np.array([0, 0, 0.5]),

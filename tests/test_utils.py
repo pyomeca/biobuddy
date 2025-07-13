@@ -1,8 +1,8 @@
 import os
-from biobuddy import BiomechanicalModelReal
+from biobuddy import BiomechanicalModelReal, BiomechanicalModel
 
 
-def destroy_model(bio_model: BiomechanicalModelReal):
+def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):
     """
     Let's test the remove functions and make sure that there is nothing left in the model.
     """

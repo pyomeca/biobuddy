@@ -1,7 +1,6 @@
 import os
 import pytest
 
-import ezc3d
 import numpy as np
 from biorbd import Model
 
@@ -277,7 +276,6 @@ class FakeData:
         self.nb_frames = 1
 
 
-# TODO: this test fails with exit code 134
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
@@ -287,10 +285,9 @@ def test_model_creation_from_data():
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="TRUNK",
-            parent_name="base",
             segment_coordinate_system=SegmentCoordinateSystem(
                 lambda m, k: np.array([0, 0, 0]),
                 first_axis=Axis(
@@ -312,7 +309,7 @@ def test_model_creation_from_data():
     )
     model.segments["TRUNK"].add_marker(Marker("PELVIS"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HEAD",
             parent_name="TRUNK",
@@ -331,7 +328,7 @@ def test_model_creation_from_data():
     model.segments["HEAD"].add_marker(Marker("HEAD_Z"))
     model.segments["HEAD"].add_marker(Marker("HEAD_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="UPPER_ARM",
             parent_name="TRUNK",
@@ -349,7 +346,7 @@ def test_model_creation_from_data():
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_X"))
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
@@ -366,7 +363,7 @@ def test_model_creation_from_data():
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_Y"))
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HAND",
             parent_name="LOWER_ARM",
@@ -384,7 +381,7 @@ def test_model_creation_from_data():
     model.segments["HAND"].add_marker(Marker("HAND_Y"))
     model.segments["HAND"].add_marker(Marker("HAND_YZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="THIGH",
             parent_name="TRUNK",
@@ -402,7 +399,7 @@ def test_model_creation_from_data():
     model.segments["THIGH"].add_marker(Marker("THIGH_X"))
     model.segments["THIGH"].add_marker(Marker("THIGH_Y"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="SHANK",
             parent_name="THIGH",
@@ -420,7 +417,7 @@ def test_model_creation_from_data():
     model.segments["SHANK"].add_marker(Marker("KNEE_Z"))
     model.segments["SHANK"].add_marker(Marker("KNEE_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="FOOT",
             parent_name="SHANK",
@@ -448,19 +445,23 @@ def test_model_creation_from_data():
     # print it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
-    model = Model(kinematic_model_filepath)
-    assert model.nbQ() == 7
-    assert model.nbSegment() == 9
-    assert model.nbMarkers() == 25
-    value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
-    np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
+    biorbd_model = Model(kinematic_model_filepath)
+    assert biorbd_model.nbQ() == 7
+    assert real_model.nb_q == 7
+    assert model.nb_q == 7
+    assert biorbd_model.nbSegment() == 9
+    assert real_model.nb_segments == 9
+    assert model.nb_segments == 9
+    assert biorbd_model.nbMarkers() == 25
+    assert real_model.nb_markers == 25
+    assert model.nb_markers == 25
+    biorbd_markers = biorbd_model.markers(np.zeros((biorbd_model.nbQ(),)))[-3].to_array()
+    np.testing.assert_almost_equal(biorbd_markers, [0, 0.25, -0.85], decimal=4)
+    biobuddy_markers = real_model.markers_in_global(np.zeros((real_model.nb_q,)))[:3, -3, 0]
+    np.testing.assert_almost_equal(biobuddy_markers, [0, 0.25, -0.85], decimal=4)
 
-    # # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
-    # destroy_model(model)
-    #
-    # # Test the attributes of the model
-    # assert model.segments == []
-    # assert model.markers == []
+    destroy_model(model)
+    destroy_model(real_model)
 
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
