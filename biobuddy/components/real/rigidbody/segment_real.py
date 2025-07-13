@@ -22,7 +22,7 @@ class SegmentReal(SegmentUtils):
         name: str,
         parent_name: str = "base",
         segment_coordinate_system: SegmentCoordinateSystemReal = SegmentCoordinateSystemReal(
-            scs=np.identity(4), is_scs_local=True
+            scs=RotoTransMatrix(), is_scs_local=True
         ),
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
@@ -149,13 +149,13 @@ class SegmentReal(SegmentUtils):
     def remove_imu(self, imu: InertialMeasurementUnitReal):
         self.imus._remove(imu)
 
-    def rt_from_local_q(self, local_q: np.ndarray) -> np.ndarray:
+    def rt_from_local_q(self, local_q: np.ndarray) -> RotoTransMatrix:
 
         if local_q.shape[0] != self.nb_q:
             raise RuntimeError(
                 f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
             )
-        rt = np.identity(4)
+        rt = RotoTransMatrix()
 
         if self.nb_q != 0:
             q_counter = 0
@@ -172,9 +172,7 @@ class SegmentReal(SegmentUtils):
                 rotations = local_q[q_counter:]
                 angle_sequence = self.rotations.value
 
-            rt = euler_and_translation_to_matrix(
-                angles=rotations, angle_sequence=angle_sequence, translations=translations
-            )
+            rt.from_euler_angles_and_translation(angle_sequence=angle_sequence, angles=rotations, translation=translations)
 
         return rt
 

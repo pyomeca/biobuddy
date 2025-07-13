@@ -8,17 +8,16 @@ from .axis_real import AxisReal
 from .marker_real import MarkerReal
 from ....utils.aliases import Point, Points
 from ....utils.linear_algebra import (
-    euler_and_translation_to_matrix,
-    mean_homogenous_matrix,
     transpose_homogenous_matrix,
     multiply_homogeneous_matrix,
 )
+from ....utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries
 
 
 class SegmentCoordinateSystemReal:
     def __init__(
         self,
-        scs: np.ndarray = np.identity(4),  # TODO: Should be a RotoTransMatrix ?
+        scs: RotoTransMatrix = RotoTransMatrix(),
         parent_scs: "Self" = None,  # TODO: remove
         is_scs_local: bool = False,
     ):
@@ -38,16 +37,11 @@ class SegmentCoordinateSystemReal:
         self.is_in_global = not is_scs_local
 
     @property
-    def scs(self) -> np.ndarray:
+    def scs(self) -> RotoTransMatrix:
         return self._scs
 
     @scs.setter
-    def scs(self, value: np.ndarray):
-        if value.shape not in ((4, 4), (4, 4, 1)):
-            raise ValueError("The scs must be a 4x4 or a 4x4x1 matrix")
-
-        if len(value.shape) == 2:
-            value = value[:, :, np.newaxis]
+    def scs(self, value: RotoTransMatrix):
         self._scs = value
 
     @property
@@ -137,8 +131,11 @@ class SegmentCoordinateSystemReal:
         rt[:3, third_axis_name, :] = third_axis_vector / np.linalg.norm(third_axis_vector, axis=0)
         rt[:3, 3, :] = origin.position[:3, :]
         rt[3, 3, :] = 1
+        all_scs = RotoTransMatrixTimeSeries(n_frames)
+        all_scs.from_rt_matrix(rt)
+        scs = all_scs.mean_homogenous_matrix()
 
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=False)
+        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=False)
 
     @staticmethod
     def from_rt_matrix(
@@ -159,13 +156,15 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
-        return SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=is_scs_local)
+        scs = RotoTransMatrix()
+        scs.from_rt_matrix(rt_matrix)
+        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
     @staticmethod
     def from_euler_and_translation(
         angles: Points,
         angle_sequence: str,
-        translations: Point,
+        translation: Point,
         parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
@@ -186,25 +185,31 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
+        scs = RotoTransMatrix()
+        scs.from_euler_angles_and_translation(angles=angles, angle_sequence=angle_sequence, translation=translation)
+        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=is_scs_local)
 
-        rt = euler_and_translation_to_matrix(angles=angles, angle_sequence=angle_sequence, translations=translations)
-        return SegmentCoordinateSystemReal(scs=rt, parent_scs=parent_scs, is_scs_local=is_scs_local)
+    # def __matmul__(self, other) -> np.ndarray:
+    #     if isinstance(other, SegmentCoordinateSystemReal):
+    #         other = other.scs
+    #
+    #     if not isinstance(other, np.ndarray):
+    #         raise ValueError(
+    #             "SCS multiplication must be performed against np.narray or SegmentCoordinateSystemReal classes"
+    #         )
+    #
+    #     return multiply_homogeneous_matrix(self=self, other=other)
 
     @property
-    def mean_scs(self) -> np.ndarray:
-        """
-        Computes the closest homogenous matrix that approximates all the scs
-
-        Returns
-        -------
-        The mean homogenous matrix
-        """
-        return mean_homogenous_matrix(self.scs)
+    def inverse(self) -> "Self":
+        out = deepcopy(self)
+        out.scs = out.scs.inverse
+        return out
 
     def to_biomod(self):
 
         out_string = ""
-        mean_rt = mean_homogenous_matrix(self.scs) if self.scs.shape[2] > 1 else self.scs[:, :, 0]
+        mean_rt = self.scs.rt_matrix
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
         out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
@@ -213,20 +218,3 @@ class SegmentCoordinateSystemReal:
         out_string += f"\t\t{mean_rt[3, 0]:0.6f}\t{mean_rt[3, 1]:0.6f}\t{mean_rt[3, 2]:0.6f}\t{mean_rt[3, 3]:0.6f}\n"
 
         return out_string
-
-    def __matmul__(self, other) -> np.ndarray:
-        if isinstance(other, SegmentCoordinateSystemReal):
-            other = other.scs
-
-        if not isinstance(other, np.ndarray):
-            raise ValueError(
-                "SCS multiplication must be performed against np.narray or SegmentCoordinateSystemReal classes"
-            )
-
-        return multiply_homogeneous_matrix(self=self, other=other)
-
-    @property
-    def transpose(self) -> "Self":
-        out = deepcopy(self)
-        out.scs = transpose_homogenous_matrix(out.scs)
-        return out

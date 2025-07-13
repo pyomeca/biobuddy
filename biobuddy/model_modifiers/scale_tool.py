@@ -315,7 +315,7 @@ class ScaleTool:
                                 deepcopy(
                                     self.original_model.segments[
                                         segment_name + ghost_key
-                                    ].segment_coordinate_system.scs[:, :, 0]
+                                    ].segment_coordinate_system.scs
                                 ),
                                 offset_parent_scale_factor,
                             ),
@@ -418,12 +418,14 @@ class ScaleTool:
         return
 
     @staticmethod
-    def scale_rt(rt: np.ndarray, scale_factor: np.ndarray) -> np.ndarray:
-        rt_matrix = deepcopy(rt)
+    def scale_rt(rt: RotoTransMatrix, scale_factor: np.ndarray) -> RotoTransMatrix:
+        rt_matrix = rt.rt_matrix
         rt_matrix[:3, 3] *= scale_factor[:3].reshape(
             3,
         )
-        return rt_matrix
+        out =  RotoTransMatrix()
+        out.from_rt_matrix(rt_matrix)
+        return out
 
     def scale_segment(
         self,
@@ -446,7 +448,7 @@ class ScaleTool:
             )
 
         segment_coordinate_system_scaled = SegmentCoordinateSystemReal(
-            scs=self.scale_rt(original_segment.segment_coordinate_system.scs[:, :, 0], parent_scale_factor),
+            scs=self.scale_rt(original_segment.segment_coordinate_system.scs, parent_scale_factor),
             is_scs_local=True,
         )
 
@@ -509,7 +511,7 @@ class ScaleTool:
         return InertialMeasurementUnitReal(
             name=deepcopy(original_imu.name),
             parent_name=deepcopy(original_imu.parent_name),
-            scs=self.scale_rt(original_imu.scs[:, :, 0], scale_factor),
+            scs=self.scale_rt(original_imu.scs, scale_factor),
             is_technical=deepcopy(original_imu.is_technical),
             is_anatomical=deepcopy(original_imu.is_anatomical),
         )
@@ -636,7 +638,7 @@ class ScaleTool:
         jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name][:, :, 0],
+                scs=jcs_in_global[segment_name],
                 parent_scs=None,
                 is_scs_local=(
                     segment_name == "base"
@@ -658,7 +660,7 @@ class ScaleTool:
                 marker_index = marker_names.index(marker_name)
                 this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
                 rt = RotoTransMatrix()
-                rt.from_rt_matrix(deepcopy(jcs_in_global[segment.name][:, :, 0]))
+                rt.from_rt_matrix(deepcopy(jcs_in_global[segment.name]))
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(

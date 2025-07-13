@@ -50,7 +50,7 @@ def test_biomechanics_model_real_utils_functions():
     for i_segment in range(nb_segments):
         jcs_biorbd = wholebody_model_biorbd.globalJCS(q_random, i_segment).to_array()
         npt.assert_array_almost_equal(
-            jcs_biobuddy[wholebody_model.segments[i_segment].name][:, :, 0],
+            jcs_biobuddy[wholebody_model.segments[i_segment].name][0].rt_matrix,
             jcs_biorbd,
             decimal=5,
         )
@@ -139,7 +139,7 @@ def test_biomechanics_model_real_utils_functions():
         for i_segment in range(nb_segments):
             jcs_biorbd = leg_model_biorbd.globalJCS(q_random[:, i_frame], i_segment).to_array()
             npt.assert_array_almost_equal(
-                jcs_biobuddy[leg_model.segments[i_segment].name][:, :, i_frame],
+                jcs_biobuddy[leg_model.segments[i_segment].name][i_frame].rt_matrix,
                 jcs_biorbd,
                 decimal=5,
             )
@@ -260,7 +260,7 @@ def test_base_segment_coordinate_system():
         decimal=5,
     )
     npt.assert_almost_equal(
-        scs_global[:, :, 0],
+        scs_global.rt_matrix,
         np.array(
             [
                 [0.99525177, 0.0957537, -0.01746835, 0.64714318],

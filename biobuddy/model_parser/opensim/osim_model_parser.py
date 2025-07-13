@@ -511,7 +511,7 @@ class OsimModelParser:
             segment_coordinate_system = SegmentCoordinateSystemReal.from_euler_and_translation(
                 angles=np.array(frame_offset[1]),
                 angle_sequence="xyz",
-                translations=np.array(frame_offset[0]),
+                translation=np.array(frame_offset[0]),
                 is_scs_local=True,
             )
         else:
@@ -519,6 +519,7 @@ class OsimModelParser:
             translation_vector = frame_offset.get_translation().tolist()
             rotation_matrix = frame_offset.get_rotation_matrix()
             rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
+            # TODO: Charbie -> rt_matrix is not always orthogonal, should be handled differently !!!!!!!!
             segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
                 rt_matrix=get_closest_rt_matrix(rt_matrix), is_scs_local=True
             )

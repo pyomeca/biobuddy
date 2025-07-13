@@ -4,7 +4,7 @@ import numpy as np
 from scipy import optimize
 from functools import wraps
 
-from ...utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix, point_from_local_to_global
+from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, get_closest_rt_matrix, point_from_local_to_global
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class ModelDynamics:
 
     # TODO: The two following functions should be handled differently
     @requires_initialization
-    def segment_coordinate_system_in_local(self, segment_name: str) -> np.ndarray:
+    def segment_coordinate_system_in_local(self, segment_name: str) -> RotoTransMatrix:
         """
         Transforms a SegmentCoordinateSystemReal expressed in the global reference frame into a SegmentCoordinateSystemReal expressed in the local reference frame.
 
@@ -48,20 +48,18 @@ class ModelDynamics:
         """
 
         if segment_name == "base":
-            return np.identity(4)
+            return RotoTransMatrix()
         elif self.segments[segment_name].segment_coordinate_system.is_in_local:
-            return self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+            return self.segments[segment_name].segment_coordinate_system.scs
         else:
 
             parent_name = self.segments[segment_name].parent_name
-            parent_scs = RotoTransMatrix()
-            parent_scs.from_rt_matrix(self.segment_coordinate_system_in_global(segment_name=parent_name))
-            inv_parent_scs = parent_scs.inverse
-            scs_in_local = inv_parent_scs @ self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
-            return get_closest_rt_matrix(scs_in_local)[:, :, np.newaxis]
+            parent_scs = self.segment_coordinate_system_in_global(segment_name=parent_name)
+            scs_in_local = parent_scs.inverse @ self.segments[segment_name].segment_coordinate_system.scs
+            return scs_in_local
 
     @requires_initialization
-    def segment_coordinate_system_in_global(self, segment_name: str) -> np.ndarray:
+    def segment_coordinate_system_in_global(self, segment_name: str) -> RotoTransMatrix:
         """
         Transforms a SegmentCoordinateSystemReal expressed in the local reference frame into a SegmentCoordinateSystemReal expressed in the global reference frame.
 
@@ -76,22 +74,21 @@ class ModelDynamics:
         """
 
         if segment_name == "base":
-            return np.identity(4)
+            return RotoTransMatrix()
         elif self.segments[segment_name].segment_coordinate_system.is_in_global:
-            return self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+            return self.segments[segment_name].segment_coordinate_system.scs
 
         else:
-
             current_segment = self.segments[segment_name]
-            rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0]
+            rt_to_global = current_segment.segment_coordinate_system.scs
             while current_segment.segment_coordinate_system.is_in_local:
                 current_parent_name = current_segment.parent_name
                 if current_parent_name == "base":
                     break
                 current_segment = self.segments[current_parent_name]
-                rt_to_global = current_segment.segment_coordinate_system.scs[:, :, 0] @ rt_to_global
+                rt_to_global = current_segment.segment_coordinate_system.scs @ rt_to_global
 
-            return get_closest_rt_matrix(rt_to_global)[:, :, np.newaxis]
+            return rt_to_global
 
     @requires_initialization
     def rt_from_parent_offset_to_real_segment(self, segment_name: str) -> RotoTransMatrix:
@@ -110,16 +107,14 @@ class ModelDynamics:
                 out_rt.from_rt_matrix(np.identity(4))
                 return out_rt
         else:
-            rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0] @ np.identity(4)
+            rt = self.segments[segment_name].segment_coordinate_system.scs @ RotoTransMatrix()
             while parent_name != parent_offset_name:
                 if parent_name == "base":
                     raise RuntimeError(f"The parent offset of segment {segment_name} was not found.")
-                rt = self.segments[parent_name].segment_coordinate_system.scs[:, :, 0] @ rt
+                rt = self.segments[parent_name].segment_coordinate_system.scs @ rt
                 parent_name = self.segments[parent_name].parent_name
 
-            out_rt = RotoTransMatrix()
-            out_rt.from_rt_matrix(rt)
-            return out_rt
+            return rt
 
     def segment_has_ghost_parents(self, segment_name: str) -> bool:
         """
@@ -364,7 +359,7 @@ class ModelDynamics:
         return optimal_q
 
     @requires_initialization
-    def forward_kinematics(self, q: np.ndarray = None) -> dict[str, np.ndarray]:
+    def forward_kinematics(self, q: np.ndarray = None) -> dict[str, RotoTransMatrixTimeSeries]:
         """
         Applied the generalized coordinates to move find the position and orientation of the model's segments.
         Here, we assume that the parent is always defined before the child in the model.
@@ -385,21 +380,21 @@ class ModelDynamics:
                     "The function forward_kinematics is not implemented yet for global rt. They should be converted to local."
                 )
 
-            segment_rt_in_global[segment_name] = np.ones((4, 4, nb_frames))
+            segment_rt_in_global[segment_name] = RotoTransMatrixTimeSeries(nb_frames)
             for i_frame in range(nb_frames):
-                segment_rt = self.segments[segment_name].segment_coordinate_system.scs[:, :, 0]
+                segment_rt = self.segments[segment_name].segment_coordinate_system.scs
                 parent_name = self.segments[segment_name].parent_name
                 if parent_name == "base":
-                    parent_rt = np.identity(4)
+                    parent_rt = RotoTransMatrix()
                 else:
-                    parent_rt = segment_rt_in_global[parent_name][:, :, i_frame]
+                    parent_rt = segment_rt_in_global[parent_name][i_frame]
 
                 if self.segments[segment_name].nb_q == 0:
-                    segment_rt_in_global[segment_name][:, :, i_frame] = parent_rt @ segment_rt
+                    segment_rt_in_global[segment_name][i_frame] = parent_rt @ segment_rt
                 else:
                     local_q = q[self.dof_indices(segment_name), i_frame]
                     rt_caused_by_q = self.segments[segment_name].rt_from_local_q(local_q)
-                    segment_rt_in_global[segment_name][:, :, i_frame] = parent_rt @ segment_rt @ rt_caused_by_q
+                    segment_rt_in_global[segment_name][i_frame] = parent_rt @ segment_rt @ rt_caused_by_q
 
         return segment_rt_in_global
 
@@ -421,7 +416,7 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for marker in segment.markers:
                     marker_in_global = point_from_local_to_global(
-                        point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
+                        point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name][i_frame]
                     )
                     marker_positions[:, i_marker, i_frame] = marker_in_global.reshape(
                         -1,
@@ -449,7 +444,7 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for contact in segment.contacts:
                     contact_in_global = point_from_local_to_global(
-                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment.name][:, :, i_frame]
+                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment.name][i_frame]
                     )
                     contact_positions[:, i_contact, i_frame] = contact_in_global.reshape(
                         -1,
@@ -476,7 +471,7 @@ class ModelDynamics:
             for i_frame in range(nb_frames):
                 segment_com_in_global = point_from_local_to_global(
                     point_in_local=self.segments[segment_name].inertia_parameters.center_of_mass,
-                    jcs_in_global=jcs_in_global[segment_name][:, :, i_frame],
+                    jcs_in_global=jcs_in_global[segment_name][i_frame],
                 )
                 com_position[:, i_frame] = segment_com_in_global.reshape(
                     -1,
@@ -552,14 +547,14 @@ class ModelDynamics:
         muscle_via_points = []
         for via_point in self.via_points:
             if via_point.muscle_name == muscle_name:
-                rt = self.segment_coordinate_system_in_global(via_point.parent_name)[:, :, 0]
+                rt = self.segment_coordinate_system_in_global(via_point.parent_name)
                 muscle_via_points += [rt @ via_point.position]
         origin_position = (
-            self.segment_coordinate_system_in_global(muscle_origin_parent_name)[:, :, 0]
+            self.segment_coordinate_system_in_global(muscle_origin_parent_name)
             @ self.muscles[muscle_name].origin_position
         )
         insertion_position = (
-            self.segment_coordinate_system_in_global(muscle_insertion_parent_name)[:, :, 0]
+            self.segment_coordinate_system_in_global(muscle_insertion_parent_name)
             @ self.muscles[muscle_name].insertion_position
         )
 

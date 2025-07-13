@@ -7,6 +7,7 @@ from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.checks import check_name
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class MarkerReal:
@@ -118,7 +119,7 @@ class MarkerReal:
         # Get the position of the markers and do some sanity checks
         p = points_to_array(points=function(data.values, model), name=f"marker function")
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
-        projected_p = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
+        projected_p = (parent_scs.scs.inverse if parent_scs is not None else RotoTransMatrix()) @ p
         if np.isnan(projected_p).all():
             raise RuntimeError(f"All the values for {function} returned nan which is not permitted")
         return MarkerReal(name, parent_name, projected_p, is_technical=is_technical, is_anatomical=is_anatomical)
