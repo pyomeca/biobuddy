@@ -605,7 +605,7 @@ class ScaleTool:
         return q_static, model_to_use
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
-        if q_static.shape != (self.scaled_model.nb_q, ):
+        if q_static.shape != (self.scaled_model.nb_q,):
             raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
 
         # Remove the fake root degrees of freedom if needed
@@ -631,10 +631,8 @@ class ScaleTool:
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-    def replace_markers_on_segments_local_scs(
-        self, q: np.ndarray, model_to_use: BiomechanicalModelReal
-    ):
-        if q.shape != (self.scaled_model.nb_q, ):
+    def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
+        if q.shape != (self.scaled_model.nb_q,):
             raise RuntimeError(f"The shape of q must be (nb_q, ), you have {q.shape}.")
 
         model_marker_names = self.scaled_model.marker_names

@@ -208,9 +208,17 @@ class SegmentCoordinateSystemReal:
         closest_rt = get_closest_rt_matrix(self.scs.rt_matrix)
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
-        out_string += f"\t\t{closest_rt[0, 0]:0.6f}\t{closest_rt[0, 1]:0.6f}\t{closest_rt[0, 2]:0.6f}\t{closest_rt[0, 3]:0.6f}\n"
-        out_string += f"\t\t{closest_rt[1, 0]:0.6f}\t{closest_rt[1, 1]:0.6f}\t{closest_rt[1, 2]:0.6f}\t{closest_rt[1, 3]:0.6f}\n"
-        out_string += f"\t\t{closest_rt[2, 0]:0.6f}\t{closest_rt[2, 1]:0.6f}\t{closest_rt[2, 2]:0.6f}\t{closest_rt[2, 3]:0.6f}\n"
-        out_string += f"\t\t{closest_rt[3, 0]:0.6f}\t{closest_rt[3, 1]:0.6f}\t{closest_rt[3, 2]:0.6f}\t{closest_rt[3, 3]:0.6f}\n"
+        out_string += (
+            f"\t\t{closest_rt[0, 0]:0.6f}\t{closest_rt[0, 1]:0.6f}\t{closest_rt[0, 2]:0.6f}\t{closest_rt[0, 3]:0.6f}\n"
+        )
+        out_string += (
+            f"\t\t{closest_rt[1, 0]:0.6f}\t{closest_rt[1, 1]:0.6f}\t{closest_rt[1, 2]:0.6f}\t{closest_rt[1, 3]:0.6f}\n"
+        )
+        out_string += (
+            f"\t\t{closest_rt[2, 0]:0.6f}\t{closest_rt[2, 1]:0.6f}\t{closest_rt[2, 2]:0.6f}\t{closest_rt[2, 3]:0.6f}\n"
+        )
+        out_string += (
+            f"\t\t{closest_rt[3, 0]:0.6f}\t{closest_rt[3, 1]:0.6f}\t{closest_rt[3, 2]:0.6f}\t{closest_rt[3, 3]:0.6f}\n"
+        )
 
         return out_string
