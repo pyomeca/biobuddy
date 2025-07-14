@@ -55,9 +55,10 @@ class ModelDynamics:
         if segment_name == "base":
             return RotoTransMatrix()
         elif self.segments[segment_name].segment_coordinate_system.is_in_local:
+            # Already in local
             return self.segments[segment_name].segment_coordinate_system.scs
         else:
-
+            # In global -> need to transform it into local coordinates
             parent_name = self.segments[segment_name].parent_name
             parent_scs = self.segment_coordinate_system_in_global(segment_name=parent_name)
             scs_in_local = parent_scs.inverse @ self.segments[segment_name].segment_coordinate_system.scs
@@ -81,9 +82,10 @@ class ModelDynamics:
         if segment_name == "base":
             return RotoTransMatrix()
         elif self.segments[segment_name].segment_coordinate_system.is_in_global:
+            # Already in global
             return self.segments[segment_name].segment_coordinate_system.scs
-
         else:
+            # In local -> need to transform it into global coordinates
             current_segment = self.segments[segment_name]
             rt_to_global = current_segment.segment_coordinate_system.scs
             while current_segment.segment_coordinate_system.is_in_local:

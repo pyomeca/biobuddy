@@ -7,7 +7,7 @@ import numpy as np
 from .axis_real import AxisReal
 from .marker_real import MarkerReal
 from ....utils.aliases import Point, Points
-from ....utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries
+from ....utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, get_closest_rt_matrix
 
 
 class SegmentCoordinateSystemReal:
@@ -205,12 +205,12 @@ class SegmentCoordinateSystemReal:
     def to_biomod(self):
 
         out_string = ""
-        mean_rt = self.scs.rt_matrix
+        closest_rt = get_closest_rt_matrix(self.scs.rt_matrix)
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
-        out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
-        out_string += f"\t\t{mean_rt[1, 0]:0.6f}\t{mean_rt[1, 1]:0.6f}\t{mean_rt[1, 2]:0.6f}\t{mean_rt[1, 3]:0.6f}\n"
-        out_string += f"\t\t{mean_rt[2, 0]:0.6f}\t{mean_rt[2, 1]:0.6f}\t{mean_rt[2, 2]:0.6f}\t{mean_rt[2, 3]:0.6f}\n"
-        out_string += f"\t\t{mean_rt[3, 0]:0.6f}\t{mean_rt[3, 1]:0.6f}\t{mean_rt[3, 2]:0.6f}\t{mean_rt[3, 3]:0.6f}\n"
+        out_string += f"\t\t{closest_rt[0, 0]:0.6f}\t{closest_rt[0, 1]:0.6f}\t{closest_rt[0, 2]:0.6f}\t{closest_rt[0, 3]:0.6f}\n"
+        out_string += f"\t\t{closest_rt[1, 0]:0.6f}\t{closest_rt[1, 1]:0.6f}\t{closest_rt[1, 2]:0.6f}\t{closest_rt[1, 3]:0.6f}\n"
+        out_string += f"\t\t{closest_rt[2, 0]:0.6f}\t{closest_rt[2, 1]:0.6f}\t{closest_rt[2, 2]:0.6f}\t{closest_rt[2, 3]:0.6f}\n"
+        out_string += f"\t\t{closest_rt[3, 0]:0.6f}\t{closest_rt[3, 1]:0.6f}\t{closest_rt[3, 2]:0.6f}\t{closest_rt[3, 3]:0.6f}\n"
 
         return out_string

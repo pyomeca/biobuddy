@@ -605,6 +605,8 @@ class ScaleTool:
         return q_static, model_to_use
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
+        if q_static.shape != (self.scaled_model.nb_q, ):
+            raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
 
         # Remove the fake root degrees of freedom if needed
         if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
@@ -622,7 +624,7 @@ class ScaleTool:
         jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name],
+                scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
                 parent_scs=None,
                 is_scs_local=(
                     segment_name == "base"
@@ -630,9 +632,12 @@ class ScaleTool:
             )
 
     def replace_markers_on_segments_local_scs(
-        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray, model_to_use: BiomechanicalModelReal
+        self, q: np.ndarray, model_to_use: BiomechanicalModelReal
     ):
+        if q.shape != (self.scaled_model.nb_q, ):
+            raise RuntimeError(f"The shape of q must be (nb_q, ), you have {q.shape}.")
 
+        model_marker_names = self.scaled_model.marker_names
         jcs_in_global = model_to_use.forward_kinematics(q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
@@ -640,10 +645,9 @@ class ScaleTool:
                     "Something went wrong. Since make_static_pose_the_models_zero was set to False, the segment's coordinate system should be in the local reference frames."
                 )
             for marker in segment.markers:
-                marker_name = marker.name
-                marker_index = marker_names.index(marker_name)
-                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                rt = jcs_in_global[segment.name][0]
+                marker_index = model_marker_names.index(marker.name)
+                this_marker_position = self.mean_experimental_markers[:, marker_index]
+                rt = jcs_in_global[segment.name][0]  # We can take the 0th since there is just one frame in q
                 marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
 
     def place_model_in_static_pose(
@@ -669,10 +673,10 @@ class ScaleTool:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
             self.replace_markers_on_segments_local_scs(
-                marker_positions, marker_names, q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
+                q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
             )
         else:
-            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
+            self.replace_markers_on_segments_local_scs(q_static, model_to_use)
 
     def modify_muscle_parameters(self):
         """
