@@ -20,8 +20,8 @@ from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
-from ..utils.translations import Translations
-from ..utils.rotations import Rotations
+from ..utils.enums import Translations
+from ..utils.enums import Rotations
 
 _logger = logging.getLogger(__name__)
 
