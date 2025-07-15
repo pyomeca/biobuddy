@@ -2,24 +2,11 @@ import xml.etree.cElementTree as ET
 import numpy as np
 from typing import TypeAlias
 
-from .marker_real import MarkerReal
 from ....utils.translations import Translations
 
 
-class MeanMarker:
-    def __init__(self, marker_names: list[str]):
-        self.marker_names = marker_names
-
-    def get_position(self, markers_list: list[MarkerReal]) -> np.ndarray:
-        position_mean = np.zeros((3, 1))
-        for i_marker in range(len(self.marker_names)):
-            position_mean += markers_list[i_marker].position
-        position_mean /= len(self.marker_names)
-        return position_mean
-
-
 class ScaleFactor:
-    def __init__(self, x: float = None, y: float = None, z: float = None, mass: float = None):
+    def __init__(self, x: float = 1.0, y: float = 1.0, z: float = 1.0, mass: float = 1.0):
         self.x = x
         self.y = y
         self.z = z
@@ -46,11 +33,15 @@ class AxisWiseScaling:
         """
         A scaling factor is applied to each axis from each segment.
         Each marker pair is used to compute a scaling factor used to scale the segment on the axis specified by axis.
+        The mass scaling factor is computed as the cubic root of the product of the scaling factors on each axis.
 
         Parameters
         ----------
         marker_pairs
             The pairs of markers used to compute the averaged scaling factor
+
+        *WARNING*: This method was only tested on mock data/ mock model. If you use it on a real world application,
+        please contact the developers on GitHub so that we make sure together that it behaves as you expect.
         """
 
         # Checks for the marker axis definition
@@ -74,8 +65,38 @@ class AxisWiseScaling:
         marker_positions: np.ndarray,
         marker_names: list[str],
     ) -> ScaleFactor:
-        raise NotImplementedError("AxisWiseScaling is not implemented yet.")
-        # scale_factor_per_axis["mass"] = mean_scale_factor based on volume difference
+
+        original_marker_names = original_model.marker_names
+        q_zeros = np.zeros((original_model.nb_q, 1))
+        markers = original_model.markers_in_global(q_zeros)
+        scale_factor_per_axis = ScaleFactor()
+
+        for axis in self.marker_pairs.keys():
+            scale_factor = []
+            for marker_pair in self.marker_pairs[axis]:
+
+                # Distance between the marker pairs in the static file
+                marker1_position_subject = marker_positions[:, marker_names.index(marker_pair[0]), :]
+                marker2_position_subject = marker_positions[:, marker_names.index(marker_pair[1]), :]
+                mean_distance_subject = np.nanmean(
+                    np.linalg.norm(marker2_position_subject - marker1_position_subject, axis=0)
+                )
+
+                # Distance between the marker pairs in the original model
+                marker1_position_original = markers[:3, original_marker_names.index(marker_pair[0]), 0]
+                marker2_position_original = markers[:3, original_marker_names.index(marker_pair[1]), 0]
+                distance_original = np.linalg.norm(marker2_position_original - marker1_position_original)
+
+                scale_factor += [mean_distance_subject / distance_original]
+
+            mean_scale_factor = np.mean(scale_factor)
+            scale_factor_per_axis[axis.value] = mean_scale_factor
+
+        # Compute the mass scale factor based on the volume difference
+        scale_factor_per_axis["mass"] = (scale_factor_per_axis.x * scale_factor_per_axis.y * scale_factor_per_axis.z) ** (1/3)
+
+        return scale_factor_per_axis
+
 
     def to_biomod(self):
         out_string = ""
@@ -168,17 +189,20 @@ class SegmentWiseScaling:
 
 
 class BodyWiseScaling:
-    def __init__(self, height: float):
+    def __init__(self, subject_height: float):
         """
         One scaling factor is applied for the whole body based on the total height.
         It scales all segments on all three axis with one global scaling factor.
 
         Parameters
         ----------
-        height
+        subject_height
             The height of the subject
+
+        *WARNING*: This method was only tested on mock data/ mock model. If you use it on a real world application,
+        please contact the developers on GitHub so that we make sure together that it behaves as you expect.
         """
-        self.height = height
+        self.subject_height = subject_height
 
     def compute_scale_factors(
         self,
@@ -186,7 +210,18 @@ class BodyWiseScaling:
         marker_positions: np.ndarray,
         marker_names: list[str],
     ) -> ScaleFactor:
-        raise NotImplementedError("BodyWiseScaling is not implemented yet.")
+
+        if original_model.height is None:
+            raise RuntimeError(f"The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`.")
+        scale_factor = self.subject_height / original_model.height
+
+        scale_factor_per_axis = ScaleFactor()
+        for ax in ["x", "y", "z"]:
+            scale_factor_per_axis[ax] = scale_factor
+        scale_factor_per_axis["mass"] = scale_factor
+
+        return scale_factor_per_axis
+
 
     def to_biomod(self):
         raise NotImplementedError("BodyWiseScaling to_biomod is not implemented yet.")
@@ -201,11 +236,6 @@ class SegmentScaling:
         name: str,
         scaling_type: ScalingType,
     ):
-
-        # Checks for scaling_type
-        if scaling_type is not None and not isinstance(scaling_type, SegmentWiseScaling):
-            raise NotImplementedError("Only the SegmentWiseScaling scaling is implemented yet.")
-
         self.name = name
         self.scaling_type = scaling_type
 

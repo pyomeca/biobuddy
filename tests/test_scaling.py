@@ -736,15 +736,14 @@ def test_scaling_factors_and_masses_axiswise():
         mass=20,
         original_mass=15.0,  # 10 + 5
     )
-    npt.assert_almost_equal(segment_masses["root"], 11.759414918809005)
-    npt.assert_almost_equal(segment_masses["child"], 8.240585081190993)
-    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.84065206, 1.84065206, 1.84065206, 1.]))
-    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([2.57972867, 2.57972867, 2.57972867, 1.]))
+    npt.assert_almost_equal(segment_masses["root"], 12.298699379214955)
+    npt.assert_almost_equal(segment_masses["child"], 7.701300620785044)
+    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.84065206, 1.84065206, 1.0, 1.]))
+    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([2.57972867, 2.57972867, 1.0, 1.]))
 
 
-
-def test_scaling_factors_and_masses_segmentwise():
-    """Test getting scaling factors and masses"""
+def test_scaling_factors_and_masses_bodywise():
+    """Test getting scaling factors and masses for body-wise scaling"""
     mock_c3d_data = MockC3dData()
     simple_model = create_simple_model()
     scale_tool = ScaleTool(original_model=simple_model)
@@ -752,14 +751,23 @@ def test_scaling_factors_and_masses_segmentwise():
     # Add scaling segments
     scale_tool.add_scaling_segment(SegmentScaling(
             name="root",
-            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
+            scaling_type=BodyWiseScaling(subject_height=1.01),
         )
     )
     scale_tool.add_scaling_segment(SegmentScaling(
             name="child",
-            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["child_marker", "child_marker2"]]),
+            scaling_type=BodyWiseScaling(subject_height=1.01),
         )
     )
+
+    # Test that it raises if the original_model has not height
+    with pytest.raises(RuntimeError, match="The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`."):
+        scale_tool.scaling_segments["root"].compute_scaling_factors(
+            simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
+        )
+
+    # Set the height of the original model
+    simple_model.height = 1.0
 
     # Compute the scaling factors
     for segment in scale_tool.scaling_segments:
@@ -774,18 +782,19 @@ def test_scaling_factors_and_masses_segmentwise():
         mass=20,
         original_mass=15.0,  # 10 + 5
     )
-    npt.assert_almost_equal(segment_masses["root"], 11.759414918809005)
-    npt.assert_almost_equal(segment_masses["child"], 8.240585081190993)
-    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.84065206, 1.84065206, 1.84065206, 1.]))
-    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([2.57972867, 2.57972867, 2.57972867, 1.]))
+    npt.assert_almost_equal(segment_masses["root"], 13.333333333333336)
+    npt.assert_almost_equal(segment_masses["child"], 6.666666666666668)
+    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.01, 1.01, 1.01, 1.]))
+    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([1.01, 1.01, 1.01, 1.]))
 
 
 def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
-    rt_matrix = np.eye(4)
-    rt_matrix[0, 3] = 1.0
-    rt_matrix[1, 3] = 2.0
-    rt_matrix[2, 3] = 3.0
+    rt_matrix = np.array([[1.0, 0.0, 0.0, 1.0],
+                          [0.0, 0.0, -1.0, 2.0],
+                          [0.0, 1.0, 0.0, 3.0],
+                          [0.0, 0.0, 0.0, 1.0]]
+                         )
 
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
@@ -796,13 +805,13 @@ def test_scale_rt():
     assert result[2, 3] == 12.0  # 3.0 * 4.0
 
     # Rotation part should remain unchanged
-    assert np.array_equal(result[:3, :3], np.eye(3))
+    assert np.array_equal(result[:3, :3], rt_matrix[:3, :3])
 
 
 def test_scale_marker():
     """Test scaling of markers"""
     simple_model = create_simple_model()
-    original_marker = create_simple_model.segments["root"].markers[0]
+    original_marker = simple_model.segments["root"].markers[0]
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
     result = ScaleTool(simple_model).scale_marker(original_marker,
@@ -814,6 +823,12 @@ def test_scale_marker():
     assert result.is_anatomical == original_marker.is_anatomical
 
     # Check scaled position
-    assert result.position[0] == original_marker.position[0] * scale_factor[0]
-    assert result.position[1] == original_marker.position[1] * scale_factor[1]
-    assert result.position[2] == original_marker.position[2] * scale_factor[2]
+    expected_0 = original_marker.position[0] * scale_factor
+    expected_1 = original_marker.position[1] * scale_factor
+    expected_2 = original_marker.position[2] * scale_factor
+    npt.assert_almost_equal(expected_0, np.array([0.2, 0.3, 0.4, 0.1]))
+    npt.assert_almost_equal(result.position[0], expected_0)
+    npt.assert_almost_equal(expected_1, np.array([0.4, 0.6, 0.8, 0.2]))
+    npt.assert_almost_equal(result.position[1], expected_1)
+    npt.assert_almost_equal(expected_2, np.array([0.6, 0.9, 1.2, 0.3]))
+    npt.assert_almost_equal(result.position[2], expected_2)
