@@ -39,10 +39,17 @@ class C3dData:
 
         # Not a property to avoid recomputing each time
         self.nb_frames = self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame].shape[2]
+        self.nb_markers = self.ezc3d_data["data"]["points"].shape[1]
 
     @property
     def all_marker_positions(self) -> np.ndarray:
         return self.get_position(marker_names=self.marker_names)
+
+    @all_marker_positions.setter
+    def all_marker_positions(self, value: np.ndarray):
+        if value.shape != (3, self.nb_markers, self.nb_frames):
+            raise ValueError(f"Expected shape (3, {self.nb_markers}, {self.nb_frames}), got {value.shape}.")
+        self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame] = value
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
         """Get the geometrical center position between markers"""

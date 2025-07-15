@@ -12,7 +12,7 @@ import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from test_utils import remove_temporary_biomods
+from test_utils import remove_temporary_biomods, create_simple_model
 from biobuddy import (
     BiomechanicalModelReal,
     MuscleType,
@@ -58,78 +58,6 @@ class MockC3dData:
         ])
         # child_marker1 positions are all zeros
 
-
-def create_simple_model():
-    """Create a simple model for testing"""
-    model = BiomechanicalModelReal()
-
-    # Add a root segment
-    model.add_segment(SegmentReal(
-            name="root",
-            segment_coordinate_system=SegmentCoordinateSystemReal(
-                scs=np.eye(4),
-                is_scs_local=True
-            ),
-            inertia_parameters=InertiaParametersReal(
-                mass=10.0,
-                center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]),
-                inertia=np.eye(3) * 0.3
-            )
-        )
-    )
-
-    # Add a child segment
-    segment_coordinate_system_child = SegmentCoordinateSystemReal()
-    segment_coordinate_system_child.from_euler_and_translation(np.zeros((3, )), "xyz", np.array([0.0, 0.0, 1.0, 1.0]))
-    segment_coordinate_system_child.is_in_local = True
-    model.add_segment(SegmentReal(
-            name="child",
-            parent_name="root",
-            segment_coordinate_system=segment_coordinate_system_child,
-            inertia_parameters=InertiaParametersReal(
-                mass=5.0,
-                center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]),
-                inertia=np.eye(3) * 0.01
-            )
-        )
-    )
-
-    # Add markers to segments
-    model.segments["root"].add_marker(MarkerReal(
-            name="root_marker",
-            parent_name="root",
-            position=np.array([0.1, 0.2, 0.3, 1.0]),
-            is_technical=True,
-            is_anatomical=False
-        )
-    )
-    model.segments["root"].add_marker(MarkerReal(
-            name="root_marker2",
-            parent_name="root",
-            position=np.array([0.2, 0.2, 0.1, 1.0]),
-            is_technical=True,
-            is_anatomical=False
-        )
-    )
-
-    model.segments["child"].add_marker(MarkerReal(
-            name="child_marker",
-            parent_name="child",
-            position=np.array([0.4, 0.5, 0.6, 1.0]),
-            is_technical=True,
-            is_anatomical=False
-        )
-    )
-    model.segments["child"].add_marker(MarkerReal(
-            name="child_marker2",
-            parent_name="child",
-            position=np.array([0.1, 0.3, 0.5, 1.0]),
-            is_technical=True,
-            is_anatomical=False
-        )
-    )
-
-    return model
 
 def convert_c3d_to_trc(c3d_filepath):
     """
