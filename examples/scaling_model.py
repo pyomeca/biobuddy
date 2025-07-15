@@ -52,14 +52,15 @@ def main(visualization):
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
 
     # Note that it is also possible to initialize the ScaleTool from scratch like this
-    from biobuddy import (SegmentScaling, BodyWiseScaling, SegmentWiseScaling, AxisWiseScaling, Translations)
+    from biobuddy import SegmentScaling, BodyWiseScaling, SegmentWiseScaling, AxisWiseScaling, Translations
+
     # BodyWise scaling
     scale_tool.add_scaling_segment(
         SegmentScaling(
             name="pelvis",
             scaling_type=BodyWiseScaling(
                 height=1.70,
-            )
+            ),
         )
     )
     # SegmentWise scaling
@@ -73,8 +74,8 @@ def main(visualization):
                     ["RPSIS", "LPSIS"],
                     ["RASIS", "RPSIS"],
                     ["LASIS", "LPSIS"],
-                ]
-            )
+                ],
+            ),
         )
     )
     # AxisWise scaling
@@ -82,9 +83,11 @@ def main(visualization):
         SegmentScaling(
             name="pelvis",
             scaling_type=AxisWiseScaling(
-                marker_pairs={Translations.X: [["RASIS", "LASIS"], ["RPSIS", "LPSIS"]],
-                              Translations.Y: [["RASIS", "RPSIS"], ["LASIS", "LPSIS"]]},
-            )
+                marker_pairs={
+                    Translations.X: [["RASIS", "LASIS"], ["RPSIS", "LPSIS"]],
+                    Translations.Y: [["RASIS", "RPSIS"], ["LASIS", "LPSIS"]],
+                },
+            ),
         )
     )
 

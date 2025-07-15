@@ -330,7 +330,6 @@ def test_scaling_wholebody():
     remove_temporary_biomods()
 
 
-
 def test_translation_of_scaling_configuration():
 
     # Paths
@@ -385,22 +384,22 @@ def test_creation_of_scaling_configuration():
     scaling_configuration.add_scaling_segment(
         SegmentScaling(
             name="pelvis",
-            scaling_type= SegmentWiseScaling(
+            scaling_type=SegmentWiseScaling(
                 axis=Translations.XYZ,
                 marker_pairs=[
                     ["RASIS", "LASIS"],
                     ["RPSIS", "LPSIS"],
-                ]
-            )
+                ],
+            ),
         )
     )
     assert scaling_configuration.scaling_segments.keys() == ["pelvis"]
     assert isinstance(scaling_configuration.scaling_segments["pelvis"].scaling_type, SegmentWiseScaling)
     assert scaling_configuration.scaling_segments["pelvis"].scaling_type.axis == Translations.XYZ
     assert scaling_configuration.scaling_segments["pelvis"].scaling_type.marker_pairs == [
-                                                                                            ["RASIS", "LASIS"],
-                                                                                            ["RPSIS", "LPSIS"],
-                                                                                        ]
+        ["RASIS", "LASIS"],
+        ["RPSIS", "LPSIS"],
+    ]
 
     # Add marker weights for the pelvis segment
     scaling_configuration.add_marker_weight(MarkerWeight(name="RASIS", weight=1.0))
