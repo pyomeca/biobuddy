@@ -17,7 +17,7 @@ Currently, the only way to install `BioBuddy` is from source. But it will be ava
 If you are a user, you can set up your environment with minimal dependencies.
 ```bash
 conda install -c conda-forge python=3.11.11 pip
-pip install scipy==1.15.1 numpy lxml ezc3d
+pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 ```
 Note: On mac, you might need to add `conda install conda-forge::libcxx`
 
