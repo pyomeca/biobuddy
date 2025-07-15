@@ -19,11 +19,12 @@ If you are a user, you can set up your environment with minimal dependencies.
 conda install -c conda-forge python=3.11.11 pip
 pip install scipy==1.15.1 numpy lxml ezc3d
 ```
+Note: On mac, you might need to add `conda install conda-forge::libcxx`
 
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
-pip install pytest pytest-cov codecov pyomeca
+pip install pytest pytest-cov codecov
 conda install -c opensim-org opensim=4.5.1
 conda install -c conda-forge biorbd=1.11.2 deepdiff
 ```
@@ -125,7 +126,7 @@ mass of your participant using the `ScaleTool.scale` like this:
 ```python3
 # Performing the scaling based on a static trial
 scale_tool = ScaleTool.from_biomod(biomod_filepath)
-scaled_model = scale_tool.scale(filepath=static_c3d_filepath, first_frame=100, last_frame=200, mass=mass)
+scaled_model = scale_tool.scale(static_c3d=C3dData(filepath), mass=mass)
 ```
 
 For now, there are three scaling methods available:
@@ -148,25 +149,21 @@ joint_center_tool = JointCenterTool(scaled_model)
 # Example for the right hip
 joint_center_tool.add(
     Score(
-        filepath=hip_movement_c3d_filepath,
+        functional_c3d=C3dData(c3d_filepath, first_frame=100, last_frame=900),
         parent_name="pelvis",
         child_name="femur_r",
         parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
         child_marker_names=["RGT", "RUB_Leg", "RUF_Leg", "FBF_Leg", "RMFE", "RLFE"],
-        first_frame=100,
-        last_frame=900,
     )
 )
 # Example for the right knee
 joint_center_tool.add(
     Sara(
-        filepath=knee_movement_c3d_filepath,
+        functional_c3d=C3dData(c3d_filepath),
         parent_name="femur_r",
         child_name="tibia_r",
         parent_marker_names=["RGT", "RUB_Leg", "RUF_Leg", "FBF_Leg"],
         child_marker_names=["RATT", "RUB_Tib", "RDF_Tib", "RDB_Tib", "RSPH", "RLM"],
-        first_frame=100,
-        last_frame=900,
     )
 )
 

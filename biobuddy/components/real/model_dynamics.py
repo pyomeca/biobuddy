@@ -173,6 +173,8 @@ class ModelDynamics:
                 ),
             )
         )
+        # Replace NaN with 0.0
+        out[np.where(np.isnan(out))] = 0.0
         return out
 
     @staticmethod
@@ -345,21 +347,18 @@ class ModelDynamics:
 
                 # Compare the result visually
                 import pyorerun
-                from pyomeca import Markers
 
                 t = np.linspace(0, 1, optimal_q.shape[1])
                 viz = pyorerun.PhaseRerun(t)
 
                 # Add the experimental markers from the static trial
-                pyomarkers = Markers(data=markers_real, channels=marker_names_reordered)
+                pyomarkers = pyorerun.PyoMarkers(data=markers_real, channels=marker_names_reordered, show_labels=False)
                 viz_scaled_model = pyorerun.BiorbdModel("temporary.bioMod")
                 viz_scaled_model.options.transparent_mesh = False
                 viz_scaled_model.options.show_gravity = True
                 viz_scaled_model.options.show_marker_labels = False
                 viz_scaled_model.options.show_center_of_mass_labels = False
-                viz.add_animated_model(
-                    viz_scaled_model, optimal_q, tracked_markers=pyomarkers, show_tracked_marker_labels=False
-                )
+                viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers)
                 viz.rerun_by_frame("Model output")
 
         return optimal_q
