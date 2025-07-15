@@ -14,7 +14,6 @@ class MuscleType(Enum):
     HILL_THELEN = "hillthelen"
     HILL_DE_GROOTE = "hilldegroote"
 
-
 class MuscleStateType(Enum):
     DEGROOTE = "degroote"
     DEFAULT = "default"

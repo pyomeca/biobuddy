@@ -486,6 +486,30 @@ class ModelDynamics:
         return com_position
 
     @requires_initialization
+    def via_points_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        via_points_position = np.ones((4, 0, nb_frames))
+        jcs_in_global = self.forward_kinematics(q)
+        for via_point in self.via_points:
+            if via_point.muscle_name == muscle_name:
+                this_via_point = np.ones((4, nb_frames))
+                for i_frame in range(nb_frames):
+                    this_via_point[:, i_frame] = point_from_local_to_global(
+                        point_in_local=via_point.position,
+                        jcs_in_global=jcs_in_global[via_point.parent_name][i_frame],
+                    ).reshape(-1, )
+                via_points_position = np.concatenate((via_points_position, this_via_point[:, np.newaxis, :]), axis=1)
+
+        return via_points_position
+
+    @requires_initialization
     def total_com_in_global(self, q: np.ndarray = None) -> np.ndarray:
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:
@@ -539,9 +563,11 @@ class ModelDynamics:
 
         return jac
 
+
     @requires_initialization
-    def muscle_length(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+    def muscle_tendon_length(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
         """
+        Computes the length of the muscle + tendon unit.
         Please note that the muscle trajectory is computed based on the order of declaration of the via points in the model.
         """
         if q is None:
@@ -577,3 +603,20 @@ class ModelDynamics:
             muscle_length[i_frame] = muscle_norm
 
         return muscle_length
+
+    # TODO: implement tendons
+    # @requires_initialization
+    # def tendon_length(self, muscle_name: str) -> np.ndarray:
+    #     """
+    #     Returns the length of the tendon only.
+    #     *WARNING* For now, the tendons are assumed rigid, but the tendon length should be variable and thus computed here.
+    #     """
+    #     return self.muscles[muscle_name].tendon_slack_length
+    #
+    # @requires_initialization
+    # def muscle_length(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+    #     """
+    #     Computes the length of the muscle only (without tendon).
+    #     Please note that the muscle trajectory is computed based on the order of declaration of the via points in the model.
+    #     """
+    #     return self.muscle_tendon_length(muscle_name, q) - self.tendon_length(muscle_name)
