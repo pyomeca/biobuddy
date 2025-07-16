@@ -100,7 +100,7 @@ class ScaleTool:
             The lease square method to use. (default: "lm", other options: "trf" or "dogbox")
         """
         exp_marker_names = static_c3d.marker_names
-        exp_marker_positions = static_c3d.all_marker_positions[:3, :, :]
+        exp_marker_positions = static_c3d.all_marker_positions
 
         marker_indices = [idx for idx, m in enumerate(exp_marker_names) if m in self.original_model.marker_names]
         marker_names = [exp_marker_names[idx] for idx in marker_indices]
@@ -213,7 +213,7 @@ class ScaleTool:
 
     def define_mean_experimental_markers(self, marker_positions, marker_names):
         model_marker_names = self.original_model.marker_names
-        self.mean_experimental_markers = np.zeros((3, len(model_marker_names)))
+        self.mean_experimental_markers = np.zeros((4, len(model_marker_names)))
         for i_marker, name in enumerate(model_marker_names):
             marker_index = marker_names.index(name)
             this_marker_position = marker_positions[:, marker_index, :]
@@ -646,7 +646,7 @@ class ScaleTool:
                 marker_index = model_marker_names.index(marker.name)
                 this_marker_position = self.mean_experimental_markers[:, marker_index]
                 rt = jcs_in_global[segment.name][0]  # We can take the 0th since there is just one frame in q
-                marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
+                marker.position = rt.inverse @ this_marker_position
 
     def place_model_in_static_pose(
         self,
@@ -690,18 +690,18 @@ class ScaleTool:
                     f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
                 )
 
-            original_muscle_length = self.original_model.muscle_length(muscle_name)
-            scaled_muscle_length = self.scaled_model.muscle_length(muscle_name)
+            original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
+            scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
 
             self.scaled_model.muscles[muscle_name].optimal_length = (
                 deepcopy(self.original_model.muscles[muscle_name].optimal_length)
-                * scaled_muscle_length
-                / original_muscle_length
+                * scaled_muscle_tendon_length
+                / original_muscle_tendon_length
             )
             self.scaled_model.muscles[muscle_name].tendon_slack_length = (
                 deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)
-                * scaled_muscle_length
-                / original_muscle_length
+                * scaled_muscle_tendon_length
+                / original_muscle_tendon_length
             )
 
     def from_biomod(

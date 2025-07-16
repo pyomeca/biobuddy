@@ -582,7 +582,7 @@ class ModelDynamics:
         muscle_insertion_parent_name = self.muscle_groups[muscle_group_name].insertion_parent_name
 
         nb_frames = q.shape[1]
-        muscle_length = np.zeros((nb_frames,))
+        muscle_tendon_length = np.zeros((nb_frames,))
         global_jcs = self.forward_kinematics(q)
         for i_frame in range(nb_frames):
             # Get all the points composing the muscle
@@ -600,9 +600,9 @@ class ModelDynamics:
             muscle_norm = 0
             for i_point in range(len(muscle_trajectory) - 1):
                 muscle_norm += np.linalg.norm(muscle_trajectory[i_point + 1][:3] - muscle_trajectory[i_point][:3])
-            muscle_length[i_frame] = muscle_norm
+            muscle_tendon_length[i_frame] = muscle_norm
 
-        return muscle_length
+        return muscle_tendon_length
 
     # TODO: implement tendons
     # @requires_initialization
