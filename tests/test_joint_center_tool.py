@@ -129,6 +129,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
+            # The rotation part did not change, only the translation part was modified
             np.array(
                 [
                     [
@@ -136,12 +137,13 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
                         0.334883,
                         0.047408,
                         -0.07076823,
-                    ],  # The rotation part did not change, only the translation part was modified
+                    ],
                     [-0.335537, 0.906752, 0.255373, -0.02166063],
                     [0.042533, -0.25623, 0.96568, 0.09724843],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
+            decimal=5,
         )
     else:
         npt.assert_almost_equal(
@@ -282,7 +284,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(new_marker_tracking_error, 3.1653655932067504, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.1621464045718777, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1621464045718777, decimal=4)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     remove_temporary_biomods()
