@@ -66,10 +66,10 @@ class ScaleTool:
         self.warnings = ""
 
     def add_marker_weight(self, marker_weight: MarkerWeight):
-        self.marker_weights.append(marker_weight)
+        self.marker_weights._append(marker_weight)
 
     def remove_marker_weight(self, marker_name: str):
-        self.marker_weights.remove(marker_name)
+        self.marker_weights._remove(marker_name)
 
     def add_scaling_segment(self, scaling_segment: SegmentScaling):
         """
@@ -83,7 +83,7 @@ class ScaleTool:
 
         if not isinstance(scaling_segment, SegmentScaling):
             raise RuntimeError("The scaling segment must be of type SegmentScaling.")
-        self.scaling_segments.append(scaling_segment)
+        self.scaling_segments._append(scaling_segment)
 
     def remove_scaling_segment(self, segment_scaling_name: str):
         """
@@ -94,7 +94,7 @@ class ScaleTool:
         segment_scaling_name
             The name of the scaling segment to remove
         """
-        self.scaling_segments.remove(segment_scaling_name)
+        self.scaling_segments._remove(segment_scaling_name)
 
     def print_marker_weights(self):
         """

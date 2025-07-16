@@ -441,12 +441,12 @@ class RotoTransMatrix:
             )
         return out
 
-    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: Point):
         if rotation_matrix.shape != (3, 3):
             raise ValueError(
                 f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
-        if translation.shape != (3,):
+        if translation.shape != (3,) and translation.shape != (4,):
             raise ValueError(
                 f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
             )
