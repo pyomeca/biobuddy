@@ -1,5 +1,14 @@
 import os
-from biobuddy import BiomechanicalModelReal
+import numpy as np
+
+from biobuddy import (
+    BiomechanicalModelReal,
+    SegmentReal,
+    MarkerReal,
+    InertiaParametersReal,
+    SegmentCoordinateSystemReal,
+    C3dData,
+)
 
 
 def destroy_model(bio_model: BiomechanicalModelReal):
@@ -64,3 +73,105 @@ def remove_temporary_biomods():
                     os.remove(full_path)
                 except:
                     print(f"File {full_path} could not be deleted.")
+
+
+def create_simple_model():
+    """Create a simple model for testing"""
+    model = BiomechanicalModelReal()
+
+    # Add a root segment
+    model.add_segment(
+        SegmentReal(
+            name="root",
+            segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.eye(4), is_scs_local=True),
+            inertia_parameters=InertiaParametersReal(
+                mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
+            ),
+        )
+    )
+
+    # Add a child segment
+    segment_coordinate_system_child = SegmentCoordinateSystemReal()
+    segment_coordinate_system_child.from_euler_and_translation(np.zeros((3,)), "xyz", np.array([0.0, 0.0, 1.0, 1.0]))
+    segment_coordinate_system_child.is_in_local = True
+    model.add_segment(
+        SegmentReal(
+            name="child",
+            parent_name="root",
+            segment_coordinate_system=segment_coordinate_system_child,
+            inertia_parameters=InertiaParametersReal(
+                mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01
+            ),
+        )
+    )
+
+    # Add markers to segments
+    model.segments["root"].add_marker(
+        MarkerReal(
+            name="root_marker",
+            parent_name="root",
+            position=np.array([0.1, 0.2, 0.3, 1.0]),
+            is_technical=True,
+            is_anatomical=False,
+        )
+    )
+    model.segments["root"].add_marker(
+        MarkerReal(
+            name="root_marker2",
+            parent_name="root",
+            position=np.array([0.2, 0.2, 0.1, 1.0]),
+            is_technical=True,
+            is_anatomical=False,
+        )
+    )
+
+    model.segments["child"].add_marker(
+        MarkerReal(
+            name="child_marker",
+            parent_name="child",
+            position=np.array([0.4, 0.5, 0.6, 1.0]),
+            is_technical=True,
+            is_anatomical=False,
+        )
+    )
+    model.segments["child"].add_marker(
+        MarkerReal(
+            name="child_marker2",
+            parent_name="child",
+            position=np.array([0.1, 0.3, 0.5, 1.0]),
+            is_technical=True,
+            is_anatomical=False,
+        )
+    )
+
+    return model
+
+
+class MockEmptyC3dData(C3dData):
+    def __init__(self):
+
+        parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+        C3dData.__init__(self, c3d_path=knee_functional_trial_path, first_frame=0, last_frame=0)
+
+    @property
+    def all_marker_positions(self) -> np.ndarray:
+        return self.get_position(marker_names=self.marker_names)
+
+    @all_marker_positions.setter
+    def all_marker_positions(self, value: np.ndarray):
+        # Removing the check for shape to allow empty data
+        self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame] = value
+
+
+class MockC3dData(C3dData):
+    def __init__(self, c3d_path):
+
+        super().__init__(self, c3d_path)
+
+        # Fix the seed for reproducibility
+        np.random.seed(42)
+
+        self.marker_names = ["marker1", "marker2", "marker3", "marker4", "marker5"]
+        # Create marker positions for 10 frames
+        self.all_marker_positions = np.random.rand(4, 5, 10)

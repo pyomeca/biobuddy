@@ -1,19 +1,66 @@
-"""
-TODO: test scaling configuration
-"""
-
 import os
 import pytest
 import opensim as osim
 import shutil
+from deepdiff import DeepDiff
+from copy import deepcopy
+import io
+from contextlib import redirect_stdout
 
 import ezc3d
 import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from test_utils import remove_temporary_biomods
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, ScaleTool, C3dData, ReferenceFrame
+from test_utils import remove_temporary_biomods, create_simple_model
+from biobuddy import (
+    BiomechanicalModelReal,
+    MuscleType,
+    MuscleStateType,
+    ScaleTool,
+    C3dData,
+    SegmentScaling,
+    SegmentWiseScaling,
+    AxisWiseScaling,
+    BodyWiseScaling,
+    Translations,
+    MarkerWeight,
+    ScaleFactor,
+    SegmentReal,
+    MarkerReal,
+    ContactReal,
+    InertialMeasurementUnitReal,
+    InertiaParametersReal,
+    SegmentCoordinateSystemReal,
+    MuscleReal,
+)
+
+from biobuddy.utils.named_list import NamedList
+
+
+class MockC3dData:
+    def __init__(self):
+        self.marker_names = ["root_marker", "root_marker2", "child_marker", "child_marker2"]
+        # Create marker positions for 10 frames
+        self.all_marker_positions = np.zeros((3, 4, 10))
+        # root_marker positions
+        self.all_marker_positions[:, 0, :] = np.array(
+            [
+                [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11],  # x
+                [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],  # y
+                [0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33],  # z
+            ]
+        )
+        # root_marker1 positions are all zeros
+        # child_marker positions
+        self.all_marker_positions[:, 2, :] = np.array(
+            [
+                [0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44],  # x
+                [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55],  # y
+                [0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66],  # z
+            ]
+        )
+        # child_marker1 positions are all zeros
 
 
 def convert_c3d_to_trc(c3d_filepath):
@@ -321,3 +368,441 @@ def test_scaling_wholebody():
     os.remove("wholebody.osim")
     os.remove(parent_path + "/examples/models/scaled.osim")
     remove_temporary_biomods()
+
+
+def test_translation_of_scaling_configuration():
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    biomod_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.bioMod"
+    biomod_config_filepath_new = parent_path + f"/examples/models/arm26_allbiceps_1dof_new.bioMod"
+    osim_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.xml"
+
+    # --- Reading a .bioMod scaling configuration and translating it into a .xml configuration --- #
+    # Read an .bioMod file
+    original_model = BiomechanicalModelReal().from_biomod(filepath=biomod_config_filepath)
+
+    scaling_configuration = ScaleTool(original_model).from_biomod(
+        filepath=biomod_config_filepath,
+    )
+
+    # And convert it to a .xml file
+    scaling_configuration.to_xml(osim_config_filepath)
+
+    # Read the .xml file back
+    new_xml_scaling_configuration = ScaleTool(original_model).from_xml(filepath=osim_config_filepath)
+
+    # Rewrite it into a .bioMod to compare with the original one
+    new_xml_scaling_configuration.to_biomod(biomod_config_filepath_new, append=False)
+
+    # Reread the .biomod configuration we just printed
+    new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
+
+    diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
+
+    # If the two objects are the same, there are no fields in diff
+    assert diff == {}
+
+    os.remove(osim_config_filepath)
+    os.remove(biomod_config_filepath_new)
+
+
+def test_creation_of_scaling_configuration():
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    biomod_config_filepath = parent_path + f"/examples/models/arm26_allbiceps_1dof.bioMod"
+
+    # --- Creating a scaling configuration --- #
+    # Read a biomod file to construct a BiomechanicalModelReal object
+    original_model = BiomechanicalModelReal().from_biomod(filepath=biomod_config_filepath)
+
+    # Create the scaling configuration
+    scaling_configuration = ScaleTool(original_model)
+
+    # Add a scaling segment for the pelvis
+    scaling_configuration.add_scaling_segment(
+        SegmentScaling(
+            name="pelvis",
+            scaling_type=SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[
+                    ["RASIS", "LASIS"],
+                    ["RPSIS", "LPSIS"],
+                ],
+            ),
+        )
+    )
+    assert scaling_configuration.scaling_segments.keys() == ["pelvis"]
+    assert isinstance(scaling_configuration.scaling_segments["pelvis"].scaling_type, SegmentWiseScaling)
+    assert scaling_configuration.scaling_segments["pelvis"].scaling_type.axis == Translations.XYZ
+    assert scaling_configuration.scaling_segments["pelvis"].scaling_type.marker_pairs == [
+        ["RASIS", "LASIS"],
+        ["RPSIS", "LPSIS"],
+    ]
+
+    # Add marker weights for the pelvis segment
+    scaling_configuration.add_marker_weight(MarkerWeight(name="RASIS", weight=1.0))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="LASIS", weight=1.0))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="RPSIS", weight=0.5))
+    scaling_configuration.add_marker_weight(MarkerWeight(name="LPSIS", weight=0.5))
+    assert scaling_configuration.marker_weights.keys() == ["RASIS", "LASIS", "RPSIS", "LPSIS"]
+    assert isinstance(scaling_configuration.marker_weights["RASIS"], MarkerWeight)
+    assert scaling_configuration.marker_weights["RASIS"].weight == 1.0
+    assert scaling_configuration.marker_weights["LPSIS"].weight == 0.5
+
+    # Test that printing the marker weights works
+    scaling_configuration.print_marker_weights()
+
+    # Check that the scaling configuration can be destroyed
+    scaling_configuration.remove_scaling_segment("pelvis")
+    for marker_names in scaling_configuration.marker_weights.keys():
+        scaling_configuration.remove_marker_weight(marker_names)
+
+    # Check that it is actually empty
+    assert scaling_configuration.scaling_segments == []
+    assert scaling_configuration.marker_weights == []
+
+
+def test_init():
+    """Test initialization of ScaleTool"""
+    scale_tool = ScaleTool(original_model=create_simple_model())
+
+    # Test the default values
+    assert scale_tool.personalize_mass_distribution is True
+    assert scale_tool.max_marker_movement == 0.1
+    assert isinstance(scale_tool.scaled_model, BiomechanicalModelReal)
+    assert scale_tool.mean_experimental_markers is None
+    assert scale_tool.header == ""
+    assert scale_tool.original_mass is None
+    assert isinstance(scale_tool.scaling_segments, NamedList)
+    assert isinstance(scale_tool.marker_weights, NamedList)
+    assert scale_tool.warnings == ""
+
+
+def test_add_and_remove_marker_weight():
+    """Test adding marker weights"""
+    scale_tool = ScaleTool(original_model=create_simple_model())
+
+    # There is no marker weights at the beginning
+    assert scale_tool.marker_weights == []
+
+    # Add a marker weight
+    marker_weight1 = MarkerWeight(name="root_marker", weight=1.5)
+    marker_weight2 = MarkerWeight(name="child_marker", weight=2.0)
+    scale_tool.add_marker_weight(marker_weight1)
+    scale_tool.add_marker_weight(marker_weight2)
+
+    assert len(scale_tool.marker_weights) == 2
+    assert scale_tool.marker_weights["root_marker"].weight == 1.5
+    assert scale_tool.marker_weights["child_marker"].weight == 2.0
+
+    # Test that printing the marker weights works
+    buffer = io.StringIO()
+    # Redirect stdout into the buffer
+    with redirect_stdout(buffer):
+        scale_tool.print_marker_weights()
+    assert buffer.getvalue() == "root_marker : 1.50\nchild_marker : 2.00\n"
+
+    # Remove the marker weight
+    scale_tool.remove_marker_weight("root_marker")
+
+    assert len(scale_tool.marker_weights) == 1
+    assert "child_marker" in scale_tool.marker_weights.keys()
+    assert "root_marker" not in scale_tool.marker_weights.keys()
+
+
+def test_add_and_remove_scaling_segment():
+    """Test adding scaling segments"""
+    scale_tool = ScaleTool(original_model=create_simple_model())
+
+    # There are no scaling segments at the beginning
+    assert scale_tool.scaling_segments == []
+
+    # Add segment scaling
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="root",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="child",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["child_marker", "child_marker2"]]),
+        )
+    )
+    assert len(scale_tool.scaling_segments) == 2
+    assert scale_tool.scaling_segments.keys() == ["root", "child"]
+
+    # Remove the scaling segment
+    scale_tool.remove_scaling_segment("root")
+    assert len(scale_tool.scaling_segments) == 1
+    assert "child" in scale_tool.scaling_segments.keys()
+    assert "root" not in scale_tool.scaling_segments.keys()
+
+
+def test_check_that_makers_do_not_move():
+    """Test checking that markers don't move too much"""
+    mock_c3d_data = MockC3dData()
+    scale_tool = ScaleTool(original_model=create_simple_model(), max_marker_movement=0.1)
+
+    # Add marker weights
+    marker_weight1 = MarkerWeight(name="root_marker", weight=1.0)
+    marker_weight2 = MarkerWeight(name="child_marker", weight=1.0)
+    scale_tool.add_marker_weight(marker_weight1)
+    scale_tool.add_marker_weight(marker_weight2)
+
+    # This should not raise an error since markers don't move in our mock data
+    scale_tool.check_that_makers_do_not_move(mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
+
+    # Now make a marker move too much
+    moving_data = deepcopy(mock_c3d_data)
+    moving_data.all_marker_positions[0, 0, -1] += 0.2  # Move x-coordinate of root_marker in last frame
+
+    # This should raise an error
+    with pytest.raises(
+        RuntimeError,
+        match="The marker root_marker moves of approximately 0.2 m during the static trial, which is above the maximal limit of 0.1 m.",
+    ):
+        scale_tool.check_that_makers_do_not_move(moving_data.all_marker_positions, moving_data.marker_names)
+
+
+def test_define_mean_experimental_markers():
+    """Test defining mean experimental markers"""
+    mock_c3d_data = MockC3dData()
+    scale_tool = ScaleTool(original_model=create_simple_model())
+
+    scale_tool.define_mean_experimental_markers(mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
+
+    assert scale_tool.mean_experimental_markers is not None
+    assert scale_tool.mean_experimental_markers.shape == (3, 4)  # 3D coordinates for 2 markers
+
+    # Check mean values
+    assert np.isclose(scale_tool.mean_experimental_markers[0, 0], 0.11)  # root_marker x
+    assert np.isclose(scale_tool.mean_experimental_markers[1, 0], 0.22)  # root_marker y
+    assert np.isclose(scale_tool.mean_experimental_markers[2, 0], 0.33)  # root_marker z
+
+    assert np.isclose(scale_tool.mean_experimental_markers[0, 2], 0.44)  # child_marker x
+    assert np.isclose(scale_tool.mean_experimental_markers[1, 2], 0.55)  # child_marker y
+    assert np.isclose(scale_tool.mean_experimental_markers[2, 2], 0.66)  # child_marker z
+
+
+def test_scaling_factors_and_masses_segmentwise():
+    """Test getting scaling factors and masses for segment-wise scaling"""
+    mock_c3d_data = MockC3dData()
+    simple_model = create_simple_model()
+    scale_tool = ScaleTool(original_model=simple_model)
+
+    # Add scaling segments
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="root",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="child",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["child_marker", "child_marker2"]]),
+        )
+    )
+
+    # Compute the scaling factors
+    for segment in scale_tool.scaling_segments:
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
+
+    # Test the values form get scaling factors and masses
+    scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
+        mock_c3d_data.all_marker_positions,
+        mock_c3d_data.marker_names,
+        mass=20,
+        original_mass=15.0,  # 10 + 5
+    )
+    npt.assert_almost_equal(segment_masses["root"], 11.759414918809005)
+    npt.assert_almost_equal(segment_masses["child"], 8.240585081190993)
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.84065206, 1.84065206, 1.84065206, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([2.57972867, 2.57972867, 2.57972867, 1.0]),
+    )
+
+
+def test_scaling_factors_and_masses_axiswise():
+    """
+    Test getting scaling factors and masses for axis-wise scaling.
+    Since the X and Y axis are defined the same way as in the segment-wise scaling, the values should be the same.
+    However, the Z axis is not defined, so the scaling factors should be different.
+    """
+    mock_c3d_data = MockC3dData()
+    simple_model = create_simple_model()
+    scale_tool = ScaleTool(original_model=simple_model)
+
+    # Add scaling segments
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="root",
+            scaling_type=AxisWiseScaling(
+                marker_pairs={
+                    Translations.X: [["root_marker", "root_marker2"]],
+                    Translations.Y: [["root_marker", "root_marker2"]],
+                }
+            ),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="child",
+            scaling_type=AxisWiseScaling(
+                marker_pairs={
+                    Translations.X: [["child_marker", "child_marker2"]],
+                    Translations.Y: [["child_marker", "child_marker2"]],
+                }
+            ),
+        )
+    )
+
+    # Compute the scaling factors
+    for segment in scale_tool.scaling_segments:
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
+
+    # Test the values form get scaling factors and masses
+    scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
+        mock_c3d_data.all_marker_positions,
+        mock_c3d_data.marker_names,
+        mass=20,
+        original_mass=15.0,  # 10 + 5
+    )
+    npt.assert_almost_equal(segment_masses["root"], 12.298699379214955)
+    npt.assert_almost_equal(segment_masses["child"], 7.701300620785044)
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.84065206, 1.84065206, 1.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([2.57972867, 2.57972867, 1.0, 1.0]),
+    )
+
+
+def test_scaling_factors_and_masses_bodywise():
+    """Test getting scaling factors and masses for body-wise scaling"""
+    mock_c3d_data = MockC3dData()
+    simple_model = create_simple_model()
+    scale_tool = ScaleTool(original_model=simple_model)
+
+    # Add scaling segments
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="root",
+            scaling_type=BodyWiseScaling(subject_height=1.01),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="child",
+            scaling_type=BodyWiseScaling(subject_height=1.01),
+        )
+    )
+
+    # Test that it raises if the original_model has not height
+    with pytest.raises(
+        RuntimeError,
+        match="The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`.",
+    ):
+        scale_tool.scaling_segments["root"].compute_scaling_factors(
+            simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
+        )
+
+    # Set the height of the original model
+    simple_model.height = 1.0
+
+    # Compute the scaling factors
+    for segment in scale_tool.scaling_segments:
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
+
+    # Test the values form get scaling factors and masses
+    scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
+        mock_c3d_data.all_marker_positions,
+        mock_c3d_data.marker_names,
+        mass=20,
+        original_mass=15.0,  # 10 + 5
+    )
+    npt.assert_almost_equal(segment_masses["root"], 13.333333333333336)
+    npt.assert_almost_equal(segment_masses["child"], 6.666666666666668)
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.01, 1.01, 1.01, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.01, 1.01, 1.01, 1.0]),
+    )
+
+
+def test_scale_rt():
+    """Test scaling of rotation-translation matrix"""
+    rt_matrix = np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
+
+    scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
+
+    result = ScaleTool.scale_rt(rt_matrix, scale_factor)
+
+    assert result[0, 3] == 2.0  # 1.0 * 2.0
+    assert result[1, 3] == 6.0  # 2.0 * 3.0
+    assert result[2, 3] == 12.0  # 3.0 * 4.0
+
+    # Rotation part should remain unchanged
+    assert np.array_equal(result[:3, :3], rt_matrix[:3, :3])
+
+
+def test_scale_marker():
+    """Test scaling of markers"""
+    simple_model = create_simple_model()
+    original_marker = simple_model.segments["root"].markers[0]
+    scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
+
+    result = ScaleTool(simple_model).scale_marker(original_marker, scale_factor)
+
+    assert result.name == original_marker.name
+    assert result.parent_name == original_marker.parent_name
+    assert result.is_technical == original_marker.is_technical
+    assert result.is_anatomical == original_marker.is_anatomical
+
+    # Check scaled position
+    expected_0 = original_marker.position[0] * scale_factor
+    expected_1 = original_marker.position[1] * scale_factor
+    expected_2 = original_marker.position[2] * scale_factor
+    npt.assert_almost_equal(expected_0, np.array([0.2, 0.3, 0.4, 0.1]))
+    npt.assert_almost_equal(result.position[0], expected_0)
+    npt.assert_almost_equal(expected_1, np.array([0.4, 0.6, 0.8, 0.2]))
+    npt.assert_almost_equal(result.position[1], expected_1)
+    npt.assert_almost_equal(expected_2, np.array([0.6, 0.9, 1.2, 0.3]))
+    npt.assert_almost_equal(result.position[2], expected_2)

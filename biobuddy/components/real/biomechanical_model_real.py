@@ -22,6 +22,7 @@ class BiomechanicalModelReal(ModelDynamics):
         super().__init__()
         self.is_initialized = True  # So we can now use the ModelDynamics functions
 
+        # Model core attributes
         self.header = ""
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
@@ -30,7 +31,9 @@ class BiomechanicalModelReal(ModelDynamics):
         self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
+        # Meta-data
         self.filepath = None  # The path to the file from which the model was read, if any
+        self.height = None
 
     def add_segment(self, segment: "SegmentReal") -> None:
         """
@@ -339,6 +342,16 @@ class BiomechanicalModelReal(ModelDynamics):
             if segment.inertia_parameters is not None:
                 total_mass += segment.inertia_parameters.mass
         return total_mass
+
+    @property
+    def height(self) -> float:
+        return self._height
+
+    @height.setter
+    def height(self, value: float) -> None:
+        if value is not None and not isinstance(value, float):
+            raise ValueError("height must be a float.")
+        self._height = value
 
     def segments_rt_to_local(self):
         """

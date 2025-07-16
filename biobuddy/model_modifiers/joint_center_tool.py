@@ -97,42 +97,14 @@ class RigidSegmentIdentification:
         # Check that the markers move
         std = []
         for marker_name in self.parent_marker_names + self.child_marker_names:
-            std += self.c3d_data.std_marker_position(marker_name)
+            std += [self.c3d_data.std_marker_position(marker_name)]
         if len(std) == 0:
             raise RuntimeError("There are no markers in the functional trial. Please check the trial again.")
-        if all(np.array(std) < 0.01):
+        if np.all(np.array(std) < 0.01):
             raise RuntimeError(
                 f"The markers {self.parent_marker_names + self.child_marker_names} are not moving in the functional trial (markers std = {std}). "
                 f"Please check the trial again."
             )
-
-    def remove_offset_from_optimal_rt(
-        self, original_model: BiomechanicalModelReal, rt_parent_functional: np.ndarray, rt_child_functional: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, RotoTransMatrix]:
-
-        if original_model.has_parent_offset(self.parent_name):
-            parent_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.parent_name)
-            rt_parent_functional_offsetted = np.zeros_like(rt_parent_functional)
-            for i_frame in range(rt_parent_functional.shape[2]):
-                rt_parent_functional_offsetted[:, :, i_frame] = (
-                    rt_parent_functional[:, :, i_frame] @ parent_offset_rt.inverse
-                )
-        else:
-            rt_parent_functional_offsetted = rt_parent_functional
-
-        if original_model.has_parent_offset(self.child_name):
-            child_offset_rt = original_model.rt_from_parent_offset_to_real_segment(self.child_name)
-            rt_child_functional_offsetted = np.zeros_like(rt_child_functional)
-            for i_frame in range(rt_parent_functional.shape[2]):
-                rt_child_functional_offsetted[:, :, i_frame] = (
-                    rt_child_functional[:, :, i_frame] @ child_offset_rt.inverse
-                )
-        else:
-            child_offset_rt = RotoTransMatrix()
-            child_offset_rt.from_rt_matrix(np.identity(4))
-            rt_child_functional_offsetted = rt_child_functional
-
-        return rt_parent_functional_offsetted, rt_child_functional_offsetted, child_offset_rt
 
     def animate_the_segment_reconstruction(
         self,
