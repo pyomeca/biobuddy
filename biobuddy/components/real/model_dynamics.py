@@ -504,7 +504,9 @@ class ModelDynamics:
                     this_via_point[:, i_frame] = point_from_local_to_global(
                         point_in_local=via_point.position,
                         jcs_in_global=jcs_in_global[via_point.parent_name][i_frame],
-                    ).reshape(-1, )
+                    ).reshape(
+                        -1,
+                    )
                 via_points_position = np.concatenate((via_points_position, this_via_point[:, np.newaxis, :]), axis=1)
 
         return via_points_position
@@ -562,7 +564,6 @@ class ModelDynamics:
                 jac[:, i_marker, i_q] = (f1[:, i_marker] - f0[:, i_marker]) / epsilon
 
         return jac
-
 
     @requires_initialization
     def muscle_tendon_length(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:

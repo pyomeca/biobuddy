@@ -870,10 +870,14 @@ def test_roto_trans_matrix():
     npt.assert_almost_equal(rt_obj2.rotation_matrix, new_rotation)
 
     # Test the rt_matrix
-    rt_expected = np.array([[ 1.        ,  0.        ,  0.,        1.0],
-                                                         [ 0.        ,  0.70710678, -0.70710678, 2.0],
-                                                         [ 0.        ,  0.70710678,  0.70710678, 3.0],
-                                                         [ 0.        ,  0.0,  0.0, 1.0]])
+    rt_expected = np.array(
+        [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 0.70710678, -0.70710678, 2.0],
+            [0.0, 0.70710678, 0.70710678, 3.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
     npt.assert_almost_equal(rt_obj2.rt_matrix, rt_expected)
 
     # Test the multiplication by a matrix
@@ -886,10 +890,20 @@ def test_roto_trans_matrix():
     # Test the multiplication by a vector
     point_4D = np.array([0.01, 0.2, 3.3, 1.0])
     mult_res = rt_obj2 @ point_4D
-    npt.assert_almost_equal(mult_res.reshape(4, ), rt_expected @ point_4D)
+    npt.assert_almost_equal(
+        mult_res.reshape(
+            4,
+        ),
+        rt_expected @ point_4D,
+    )
     point_3D = np.array([0.01, 0.2, 3.3])
     mult_res = rt_obj2 @ point_3D
-    npt.assert_almost_equal(mult_res.reshape(4, ), rt_expected @ point_4D)
+    npt.assert_almost_equal(
+        mult_res.reshape(
+            4,
+        ),
+        rt_expected @ point_4D,
+    )
 
     # Test OrthoMatrix methods
     ortho = OrthoMatrix(translation=(1, 2, 3))

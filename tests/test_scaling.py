@@ -325,16 +325,33 @@ def test_scaling_wholebody():
     biobuddy_markers = scaled_model.markers_in_global(q_zeros[:, 0])
     for i_marker in range(scaled_model.nb_markers):
         theoretical_position_from_exp = np.nanmean(marker_positions[:, i_marker, :], axis=1)
-        marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(scaled_model.marker_names[i_marker])
-        theoretical_position_from_local = jcs_in_global[marker_parent[i_marker]][0] @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
+        marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(
+            scaled_model.marker_names[i_marker]
+        )
+        theoretical_position_from_local = (
+            jcs_in_global[marker_parent[i_marker]][0]
+            @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
+        )
         if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
             # TODO: fix -> There is still a problem with the fingers in BioBuddy
             decimal = 2
         else:
             decimal = 5
         npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_markers[:, i_marker, 0], decimal=decimal)
-        npt.assert_almost_equal(exp_markers[:, i_marker], theoretical_position_from_exp.reshape(4, ), decimal=decimal)
-        npt.assert_almost_equal(exp_markers[:, i_marker], theoretical_position_from_local.reshape(4, ), decimal=decimal)
+        npt.assert_almost_equal(
+            exp_markers[:, i_marker],
+            theoretical_position_from_exp.reshape(
+                4,
+            ),
+            decimal=decimal,
+        )
+        npt.assert_almost_equal(
+            exp_markers[:, i_marker],
+            theoretical_position_from_local.reshape(
+                4,
+            ),
+            decimal=decimal,
+        )
 
     os.remove(scaled_biomod_filepath)
     os.remove(converted_scaled_osim_filepath)
