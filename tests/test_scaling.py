@@ -309,10 +309,32 @@ def test_scaling_wholebody():
     scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
 
     # Seems like we loose some precision with the RT transformations
-    exp_markers = scale_tool.mean_experimental_markers[:, :]
+    jcs_in_global = scaled_model.forward_kinematics(q_zeros[:, 0])
+
+    marker_parent = []
+    marker_positions = np.zeros((4, scaled_model.nb_markers, c3d_data.nb_frames))
+    for i_marker, marker_name in enumerate(scaled_model.marker_names):
+        for segment in scaled_model.segments:
+            if marker_name in segment.marker_names:
+                marker_parent += [segment.name]
+                break
+        marker_index = c3d_data.marker_names.index(marker_name)
+        marker_positions[:, i_marker, :] = c3d_data.all_marker_positions[:, marker_index, :]
+
+    exp_markers = scale_tool.mean_experimental_markers
     biobuddy_markers = scaled_model.markers_in_global(q_zeros[:, 0])
-    for i_marker in range(exp_markers.shape[1]):
-        npt.assert_almost_equal(np.round(exp_markers[:, i_marker], 2), np.round(biobuddy_markers[:3, i_marker, 0], 2))
+    for i_marker in range(scaled_model.nb_markers):
+        theoretical_position_from_exp = np.nanmean(marker_positions[:, i_marker, :], axis=1)
+        marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(scaled_model.marker_names[i_marker])
+        theoretical_position_from_local = jcs_in_global[marker_parent[i_marker]][0] @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
+        if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
+            # TODO: fix -> There is still a problem with the fingers in BioBuddy
+            decimal = 2
+        else:
+            decimal = 5
+        npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_markers[:, i_marker, 0], decimal=decimal)
+        npt.assert_almost_equal(exp_markers[:, i_marker], theoretical_position_from_exp.reshape(4, ), decimal=decimal)
+        npt.assert_almost_equal(exp_markers[:, i_marker], theoretical_position_from_local.reshape(4, ), decimal=decimal)
 
     os.remove(scaled_biomod_filepath)
     os.remove(converted_scaled_osim_filepath)
