@@ -11,6 +11,7 @@ from biobuddy import (
     C3dData,
 )
 
+
 def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):
     """
     Let's test the remove functions and make sure that there is nothing left in the model.
