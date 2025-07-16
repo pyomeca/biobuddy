@@ -1,6 +1,5 @@
 """
-Example taken from biorbd.model_creation
-# TODO: This example should be replace with an actual biomechanics example.
+This example shows how to add different components to a model from scratch.
 """
 
 import os

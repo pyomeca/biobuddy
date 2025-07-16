@@ -8,7 +8,7 @@ from .mesh_real import MeshReal
 from .protocols import CoordinateSystemRealProtocol
 from .segment_real import SegmentReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
-from .segment_scaling import SegmentScaling, ScaleFactor
+from .segment_scaling import SegmentScaling, ScaleFactor, SegmentWiseScaling, AxisWiseScaling, BodyWiseScaling
 from .marker_weight import MarkerWeight
 
 
@@ -25,5 +25,8 @@ __all__ = [
     SegmentCoordinateSystemReal.__name__,
     SegmentScaling.__name__,
     ScaleFactor.__name__,
+    SegmentWiseScaling.__name__,
+    AxisWiseScaling.__name__,
+    BodyWiseScaling.__name__,
     MarkerWeight.__name__,
 ]
