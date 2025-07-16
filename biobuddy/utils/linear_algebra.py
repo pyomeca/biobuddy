@@ -448,7 +448,7 @@ class RotoTransMatrix:
             )
         if translation.shape != (3,) and translation.shape != (4,):
             raise ValueError(
-                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,) or (4,). You have {translation.shape}"
             )
         if np.abs(np.linalg.det(rotation_matrix) - 1.0) > 1e-6:
             raise ValueError(
@@ -457,7 +457,7 @@ class RotoTransMatrix:
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
-        rt_matrix[:3, 3] = translation
+        rt_matrix[:3, 3] = translation[:3]
         rt_matrix[3, 3] = 1.0
         self._rt = rt_matrix
 
@@ -466,9 +466,9 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The angles used to initialize a RotoTransMatrix should be of shape (nb_angles, ). You have {angles.shape}"
             )
-        if translation.shape != (3,):
+        if translation.shape != (3,) and translation.shape != (4,):
             raise ValueError(
-                f"The translation used to initialize a RotoTransMatrix should be of shape (3,). You have {translation.shape}"
+                f"The translation used to initialize a RotoTransMatrix should be of shape (3,) or (4, ). You have {translation.shape}"
             )
         if len(angle_sequence) != angles.shape[0]:
             raise ValueError(
