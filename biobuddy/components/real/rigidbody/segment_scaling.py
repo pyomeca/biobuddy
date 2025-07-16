@@ -93,10 +93,11 @@ class AxisWiseScaling:
             scale_factor_per_axis[axis.value] = mean_scale_factor
 
         # Compute the mass scale factor based on the volume difference
-        scale_factor_per_axis["mass"] = (scale_factor_per_axis.x * scale_factor_per_axis.y * scale_factor_per_axis.z) ** (1/3)
+        scale_factor_per_axis["mass"] = (
+            scale_factor_per_axis.x * scale_factor_per_axis.y * scale_factor_per_axis.z
+        ) ** (1 / 3)
 
         return scale_factor_per_axis
-
 
     def to_biomod(self):
         out_string = ""
@@ -212,7 +213,9 @@ class BodyWiseScaling:
     ) -> ScaleFactor:
 
         if original_model.height is None:
-            raise RuntimeError(f"The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`.")
+            raise RuntimeError(
+                f"The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`."
+            )
         scale_factor = self.subject_height / original_model.height
 
         scale_factor_per_axis = ScaleFactor()
@@ -221,7 +224,6 @@ class BodyWiseScaling:
         scale_factor_per_axis["mass"] = scale_factor
 
         return scale_factor_per_axis
-
 
     def to_biomod(self):
         raise NotImplementedError("BodyWiseScaling to_biomod is not implemented yet.")

@@ -1,11 +1,10 @@
 import os
-from copy import deepcopy
 import pytest
 import numpy as np
 import numpy.testing as npt
 
 from biobuddy.utils.named_list import NamedList
-from test_utils import remove_temporary_biomods, create_simple_model, MockEmptyC3dData
+from test_utils import remove_temporary_biomods, MockEmptyC3dData
 from biobuddy import (
     BiomechanicalModelReal,
     JointCenterTool,
@@ -13,7 +12,7 @@ from biobuddy import (
     Sara,
     C3dData,
     MarkerWeight,
-    RotoTransMatrix,
+    Rotations,
 )
 from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification
 
@@ -502,10 +501,6 @@ def test_init_rigid_segment_identification():
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
     c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
-    mock_model = create_simple_model()
-
-    # create JointCenterTool instance
-    joint_center_tool = JointCenterTool(mock_model)
 
     # Create a test instance
     parent_name = "femur_r"
@@ -524,7 +519,10 @@ def test_init_rigid_segment_identification():
     rsi._check_segment_names()  # Should not raise an error
 
     # Test with invalid names
-    with pytest.raises(RuntimeError, match="The names _reset_axis are not allowed in the parent or child names. Please change the segment named parent_reset_axis from the Score configuration."):
+    with pytest.raises(
+        RuntimeError,
+        match="The names _reset_axis are not allowed in the parent or child names. Please change the segment named parent_reset_axis from the Score configuration.",
+    ):
         RigidSegmentIdentification(
             c3d_data,
             "parent_reset_axis",
@@ -533,7 +531,10 @@ def test_init_rigid_segment_identification():
             child_marker_names,
         )
 
-    with pytest.raises(RuntimeError, match="The names _translation are not allowed in the parent or child names. Please change the segment named child_translation from the Score configuration."):
+    with pytest.raises(
+        RuntimeError,
+        match="The names _translation are not allowed in the parent or child names. Please change the segment named child_translation from the Score configuration.",
+    ):
         RigidSegmentIdentification(
             c3d_data,
             parent_name,
@@ -546,43 +547,65 @@ def test_init_rigid_segment_identification():
     rsi._check_c3d_functional_trial_file()  # Should not raise an error
 
     # Test with no markers
-    empty_c3d_data = deepcopy(c3d_data)
-    empty_c3d_data.all_marker_positions = np.empty((4, empty_c3d_data.nb_markers, empty_c3d_data.nb_frames))
-    rsi_no_markers = RigidSegmentIdentification(
-        MockEmptyC3dData(),
+    with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
+        rsi_no_markers = RigidSegmentIdentification(
+            MockEmptyC3dData(),
+            parent_name,
+            child_name,
+            parent_marker_names,
+            child_marker_names,
+        )
+
+    # Test with no movement
+    c3d_data.all_marker_positions = np.ones_like(c3d_data.all_marker_positions)
+    with pytest.raises(
+        RuntimeError,
+        match=r"The markers \['RGT', 'RTHI1', 'RTHI2', 'RTHI3', 'RATT', 'RLM', 'RSPH', 'RLEG1', 'RLEG2', 'RLEG3'\] are not moving in the functional trial ",
+    ):
+        rsi = RigidSegmentIdentification(
+            c3d_data,
+            parent_name,
+            child_name,
+            parent_marker_names,
+            child_marker_names,
+        )
+
+
+def test_marker_residual():
+
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
+
+    # Create a test instance
+    parent_name = "femur_r"
+    child_name = "tibia_r"
+    parent_marker_names = ["RGT", "RTHI1", "RTHI2", "RTHI3"]
+    child_marker_names = ["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"]
+    rsi = RigidSegmentIdentification(
+        c3d_data,
         parent_name,
         child_name,
         parent_marker_names,
         child_marker_names,
     )
-    with pytest.raises(RuntimeError, match="There are no markers in the functional trial"):
-        rsi_no_markers._check_c3d_functional_trial_file()
 
-    # Test with no movement
-    c3d_data.std_marker_position.return_value = [0.005, 0.005]  # All < 0.01
-    with pytest.raises(RuntimeError, match="are not moving in the functional trial"):
-        rsi._check_c3d_functional_trial_file()
-
-def test_marker_residual():
     # Create test data
     optimal_rt = np.eye(4).flatten()
     static_markers_in_local = np.ones((4, 2))  # 4D, 2 markers
     functional_markers_in_global = np.ones((4, 2))  # 4D, 2 markers
 
     # When RT is identity and markers match, residual should be 0
-    residual = rsi.marker_residual(
-        optimal_rt, static_markers_in_local, functional_markers_in_global
-    )
+    residual = rsi.marker_residual(optimal_rt, static_markers_in_local, functional_markers_in_global)
     assert residual == 0
 
     # When markers don't match, residual should be positive
     functional_markers_in_global = np.ones((4, 2)) * 2
-    residual = rsi.marker_residual(
-        optimal_rt, static_markers_in_local, functional_markers_in_global
-    )
+    residual = rsi.marker_residual(optimal_rt, static_markers_in_local, functional_markers_in_global)
     assert residual > 0
 
-def test_get_good_frames():
+    # Test get_good_frames
     # Create test residuals
     residuals = np.array([1.0, 1.1, 1.2, 5.0, 1.3])  # One outlier at index 3
     nb_frames = len(residuals)
@@ -592,7 +615,7 @@ def test_get_good_frames():
     assert np.sum(valid_frames) == 4  # Should remove one frame
     assert not valid_frames[3]  # The outlier should be removed
 
-def test_rt_constraints():
+    # Test rt_constraints
     # Test with a valid rotation matrix (orthonormal)
     rt_matrix = np.eye(4)
     constraints = rsi.rt_constraints(rt_matrix.flatten())
@@ -604,11 +627,11 @@ def test_rt_constraints():
     constraints = rsi.rt_constraints(rt_matrix.flatten())
     assert not np.allclose(constraints, np.zeros(6))
 
-def test_check_optimal_rt_inputs():
+    # Test check_optimal_rt_inputs
     # Create valid test data
-    markers = np.random.rand(3, 2, 10)  # 3D, 2 markers, 10 frames
+    markers = np.random.rand(3, 2, 10) * 0.0001  # 3D, 2 markers, 10 frames
     markers = np.vstack((markers, np.ones((1, 2, 10))))  # Add homogeneous coordinate
-    static_markers = np.random.rand(3, 2)  # 3D, 2 markers
+    static_markers = np.random.rand(3, 2) * 0.0001  # 3D, 2 markers
     static_markers = np.vstack((static_markers, np.ones((1, 2))))  # Add homogeneous coordinate
     marker_names = ["marker1", "marker2"]
 
@@ -616,274 +639,126 @@ def test_check_optimal_rt_inputs():
     result = rsi.check_optimal_rt_inputs(markers, static_markers, marker_names)
     assert result is not None
     assert len(result) == 3
+    assert result[0] == 2  # Number of markers
+    assert result[1] == 10  # Number of frames
+    npt.assert_almost_equal(result[2], np.zeros((3, 2)), decimal=3)  # Static centered
 
     # Test with mismatched marker names
-    with pytest.raises(RuntimeError, match="do not match the number of markers"):
+    with pytest.raises(RuntimeError, match=r"The marker_names \['marker1'\] do not match the number of markers 2."):
         rsi.check_optimal_rt_inputs(markers, static_markers, ["marker1"])
 
     # Test with marker movement
     # Make markers move significantly between static and functional
     static_markers[0, 0] = 0
     markers[0, 0, :] = 1.0  # Large difference in position
-    with pytest.raises(RuntimeError, match="seem to move during the functional trial"):
+    with pytest.raises(
+        RuntimeError,
+        match="The marker marker1 seem to move during the functional trial.The distance between the center and this marker is ",
+    ):
         rsi.check_optimal_rt_inputs(markers, static_markers, marker_names)
-
-def test_remove_offset_from_optimal_rt():
-    # Create a mock model
-    model = MagicMock(spec=BiomechanicalModelReal)
-
-    # Test without parent offset
-    model.has_parent_offset.return_value = False
-    rt_parent = np.random.rand(4, 4, 5)  # 4x4 RT matrices for 5 frames
-    rt_child = np.random.rand(4, 4, 5)
-
-    result_parent, result_child, _ = rsi.remove_offset_from_optimal_rt(model, rt_parent, rt_child)
-    assert np.array_equal(result_parent, rt_parent)
-    assert np.array_equal(result_child, rt_child)
-
-    # Test with parent offset
-    model.has_parent_offset.return_value = True
-    offset_rt = RotoTransMatrix()
-    offset_rt.from_rt_matrix(np.eye(4))
-    model.rt_from_parent_offset_to_real_segment.return_value = offset_rt
-
-    result_parent, result_child, _ = rsi.remove_offset_from_optimal_rt(model, rt_parent, rt_child)
-    assert not np.array_equal(result_parent, rt_parent)  # Should be different with offset
 
 
 # Test SCoRE
-def setup_method():
-    # Create a mock C3dData object
-    c3d_data = MagicMock(spec=C3dData)
-    c3d_data.marker_names = ["marker1", "marker2", "marker3", "marker4"]
-    c3d_data.all_marker_positions = np.random.rand(3, 4, 10)  # 3D, 4 markers, 10 frames
-    c3d_data.std_marker_position.return_value = [0.02, 0.03]  # Return values > 0.01 to pass check
-    c3d_data.get_position.return_value = np.random.rand(4, 2, 10)  # 4D, 2 markers, 10 frames
-
-    # Create a test instance
-    parent_name = "parent"
-    child_name = "child"
-    parent_marker_names = ["marker1", "marker2"]
-    child_marker_names = ["marker3", "marker4"]
-    score = Score(
-        c3d_data,
-        parent_name,
-        child_name,
-        parent_marker_names,
-        child_marker_names,
-    )
-
 def test_score_algorithm():
-    # Create test RT matrices
-    nb_frames = 5
-    rt_parent = np.zeros((4, 4, nb_frames))
-    rt_child = np.zeros((4, 4, nb_frames))
 
-    # Set up RT matrices for a known center of rotation
-    cor_parent_local = np.array([0.1, 0.2, 0.3])
-    cor_child_local = np.array([0.4, 0.5, 0.6])
-
-    for i in range(nb_frames):
-        # Create rotation matrices (identity for simplicity)
-        rt_parent[:3, :3, i] = np.eye(3)
-        rt_child[:3, :3, i] = np.eye(3)
-
-        # Set translations to place the CoR at the same global position
-        rt_parent[:3, 3, i] = np.array([i*0.1, i*0.1, i*0.1])
-        rt_child[:3, 3, i] = rt_parent[:3, 3, i] + cor_parent_local - cor_child_local
-
-        # Set homogeneous coordinate
-        rt_parent[3, 3, i] = 1
-        rt_child[3, 3, i] = 1
-
-    # Run the SCoRE algorithm
-    cor_global, cor_parent, cor_child, _, _ = score._score_algorithm(
-        rt_parent, rt_child, recursive_outlier_removal=False
-    )
-
-    # Check that the estimated CoR is close to the expected values
-    assert np.allclose(cor_parent, cor_parent_local, atol=1e-2)
-    assert np.allclose(cor_child, cor_child_local, atol=1e-2)
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
+    hip_c3d = C3dData(
+        hip_functional_trial_path, first_frame=250, last_frame=350
+    )  # Marker inversion happening after the 500th frame in the example data!
 
 
 # Test SARA
-def setup_method():
-    # Create a mock C3dData object
-    c3d_data = MagicMock(spec=C3dData)
-    c3d_data.marker_names = ["marker1", "marker2", "marker3", "marker4", "marker5", "marker6"]
-    c3d_data.all_marker_positions = np.random.rand(3, 6, 10)  # 3D, 6 markers, 10 frames
-    c3d_data.std_marker_position.return_value = [0.02, 0.03]  # Return values > 0.01 to pass check
-    c3d_data.get_position.return_value = np.random.rand(4, 2, 10)  # 4D, 2 markers, 10 frames
-
-    # Create a test instance
-    parent_name = "parent"
-    child_name = "child"
-    parent_marker_names = ["marker1", "marker2"]
-    child_marker_names = ["marker3", "marker4"]
-    joint_center_markers = ["marker5"]
-    distal_markers = ["marker6"]
-    sara = Sara(
-        c3d_data,
-        parent_name,
-        child_name,
-        parent_marker_names,
-        child_marker_names,
-        joint_center_markers,
-        distal_markers,
-        is_longitudinal_axis_from_jcs_to_distal_markers=True,
-    )
-
-def test_sara_algorithm():
-    # Create test RT matrices for a known axis of rotation
-    nb_frames = 5
-    rt_parent = np.zeros((4, 4, nb_frames))
-    rt_child = np.zeros((4, 4, nb_frames))
-
-    # Define axis of rotation in local frames
-    aor_parent_local = np.array([0, 0, 1])  # Z-axis
-    aor_child_local = np.array([0, 0, 1])  # Z-axis
-
-    for i in range(nb_frames):
-        # Create rotation matrices (identity for simplicity)
-        rt_parent[:3, :3, i] = np.eye(3)
-        rt_child[:3, :3, i] = np.eye(3)
-
-        # Set translations
-        rt_parent[:3, 3, i] = np.array([0, 0, 0])
-        rt_child[:3, 3, i] = np.array([0.1, 0.1, 0])  # Offset in X and Y, but not Z
-
-        # Set homogeneous coordinate
-        rt_parent[3, 3, i] = 1
-        rt_child[3, 3, i] = 1
-
-    # Run the SARA algorithm
-    aor_global, _, _ = sara._sara_algorithm(
-        rt_parent, rt_child, recursive_outlier_removal=False
-    )
-
-    # The estimated axis should be close to the Z-axis in global frame
-    mean_aor = np.mean(aor_global, axis=1)
-    mean_aor = mean_aor / np.linalg.norm(mean_aor)
-    assert np.allclose(mean_aor, np.array([0, 0, 1]), atol=1e-2)
-
 def test_longitudinal_axis():
-    # Create a mock model
-    model = MagicMock(spec=BiomechanicalModelReal)
 
-    # Set up the forward kinematics result
-    rt = RotoTransMatrix()
-    rt.from_rt_matrix(np.eye(4))
-    model.forward_kinematics.return_value = {parent_name: np.eye(4)}
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
 
-    # Set up markers
-    joint_center_marker = np.array([0, 0, 0, 1])
-    distal_marker = np.array([0, 0, 1, 1])
-
-    model.markers_indices.side_effect = lambda x: [0] if x == joint_center_markers else [1]
-    model.markers_in_global.return_value = np.column_stack((joint_center_marker, distal_marker))
+    child_name = "tibia_r"
+    parent_name = "femur_r"
+    scaled_model = BiomechanicalModelReal().from_biomod(
+        filepath=leg_model_filepath,
+    )
+    sara = Sara(
+        functional_c3d=knee_c3d,
+        parent_name=parent_name,
+        child_name=child_name,
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        initialize_whole_trial_reconstruction=False,
+        animate_rt=False,
+    )
 
     # Test the longitudinal axis calculation
-    joint_center, longitudinal_axis = sara._longitudinal_axis(model)
+    joint_center, longitudinal_axis = sara._longitudinal_axis(scaled_model)
+    npt.assert_almost_equal(
+        joint_center.reshape(
+            4,
+        ),
+        np.array([0.00498378, -0.37616598, -0.00302045, 1.0]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        longitudinal_axis.reshape(
+            4,
+        ),
+        np.array([0.06652103, 0.99764921, -0.01646222, 1.0]),
+        decimal=6,
+    )
 
-    # The joint center should be at the origin
-    assert np.allclose(joint_center[:3], np.array([0, 0, 0]))
+    # TODO: test the other configurations when I have a model to test it correctly
 
-    # The longitudinal axis should point in the Z direction
-    assert np.allclose(longitudinal_axis[:3, 0], np.array([0, 0, 1]))
-
-    # Test with reversed direction
-    sara.longitudinal_axis_sign = -1
-    joint_center, longitudinal_axis = sara._longitudinal_axis(model)
-    assert np.allclose(longitudinal_axis[:3, 0], np.array([0, 0, -1]))
-
-def test_get_rotation_index():
-    # Create a mock model with X rotation
-    model = MagicMock(spec=BiomechanicalModelReal)
-    model.segments = {
-        child_name: MagicMock(rotations=MagicMock(value="x"))
-    }
-
-    # Test X rotation
-    aor_index, perp_index, long_index = sara.get_rotation_index(model)
-    assert aor_index == 0
-    assert perp_index == 1
-    assert long_index == 2
-
+    # Test get_rotation_index
     # Test Z rotation
-    model.segments[child_name].rotations.value = "z"
-    aor_index, perp_index, long_index = sara.get_rotation_index(model)
+    aor_index, perp_index, long_index = sara.get_rotation_index(scaled_model)
     assert aor_index == 2
     assert perp_index == 0
     assert long_index == 1
 
+    # Test X rotation
+    scaled_model.segments[child_name].rotations = Rotations.X
+    aor_index, perp_index, long_index = sara.get_rotation_index(scaled_model)
+    assert aor_index == 0
+    assert perp_index == 1
+    assert long_index == 2
+
     # Test Y rotation (should raise NotImplementedError)
-    model.segments[child_name].rotations.value = "y"
-    with pytest.raises(NotImplementedError):
-        sara.get_rotation_index(model)
+    scaled_model.segments[child_name].rotations = Rotations.Y
+    with pytest.raises(
+        NotImplementedError,
+        match=r"This axis combination has not been tested yet. Please make sure that the cross product make sense \(correct order and correct sign\).",
+    ):
+        sara.get_rotation_index(scaled_model)
 
     # Test multiple rotations (should raise RuntimeError)
-    model.segments[child_name].rotations.value = "xyz"
-    with pytest.raises(RuntimeError):
-        sara.get_rotation_index(model)
+    scaled_model.segments[child_name].rotations = Rotations.XYZ
+    with pytest.raises(
+        RuntimeError,
+        match="The Sara algorithm is meant to be used with a one DoF joint, you have defined rotations Rotations.XYZ for segment tibia_r.",
+    ):
+        sara.get_rotation_index(scaled_model)
 
 
 # Test Joint Center Tool
-def test_init():
-    # Create a mock model
-    model = MagicMock(spec=BiomechanicalModelReal)
-    model.segments = []
-
-    # Test initialization
-    jct = JointCenterTool(model)
-    assert jct.original_model == model
-    assert jct.animate_reconstruction is False
-    assert len(jct.joint_center_tasks) == 0
-
 def test_add():
-    # Create a mock model
-    model = MagicMock(spec=BiomechanicalModelReal)
 
-    # Set up segments for parent-child relationship
-    parent_segment = MagicMock()
-    parent_segment.name = "parent"
-    parent_segment.parent_name = "base"
-
-    child_segment = MagicMock()
-    child_segment.name = "child"
-    child_segment.parent_name = "parent"
-
-    model.segments = {"parent": parent_segment, "child": child_segment}
-    model.get_chain_between_segments.return_value = ["parent", "child"]
-
-    # Create a mock Score object
-    c3d_data = MagicMock(spec=C3dData)
-    score = Score(
-        c3d_data,
-        "parent",
-        "child",
-        ["marker1", "marker2"],
-        ["marker3", "marker4"],
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    scaled_model = BiomechanicalModelReal().from_biomod(
+        filepath=leg_model_filepath,
     )
 
     # Test adding a Score task
-    jct = JointCenterTool(model)
-    jct.add(score)
-    assert len(jct.joint_center_tasks) == 1
-    assert jct.joint_center_tasks[0] == score
+    jct = JointCenterTool(scaled_model)
 
     # Test adding an invalid task
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="The joint center must be a Score or Sara object."):
         jct.add("not a Score or Sara object")
-
-    # Test adding a task with invalid parent-child relationship
-    invalid_score = Score(
-        c3d_data,
-        "parent",
-        "nonexistent",
-        ["marker1", "marker2"],
-        ["marker3", "marker4"],
-    )
-    model.get_chain_between_segments.side_effect = lambda p, c: []
-    with pytest.raises(RuntimeError):
-        jct.add(invalid_score)
-

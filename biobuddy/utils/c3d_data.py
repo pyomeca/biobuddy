@@ -47,21 +47,32 @@ class C3dData:
 
     @all_marker_positions.setter
     def all_marker_positions(self, value: np.ndarray):
-        if value.shape != (3, self.nb_markers, self.nb_frames):
-            raise ValueError(f"Expected shape (3, {self.nb_markers}, {self.nb_frames}), got {value.shape}.")
+        if value.shape != (4, self.nb_markers, self.nb_frames):
+            raise ValueError(f"Expected shape (4, {self.nb_markers}, {self.nb_frames}), got {value.shape}.")
         self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame] = value
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
         """Get the geometrical center position between markers"""
-        return np.nanmean(self.get_position(marker_names), axis=1)
+        marker_position = self.get_position(marker_names)
+        if marker_position.size == 0:
+            raise RuntimeError(
+                f"The marker position is empty (shape: {marker_position.shape}), cannot compute marker center position."
+            )
+        return np.nanmean(marker_position, axis=1)
 
     def mean_marker_position(self, marker_name: str) -> np.ndarray:
         """Get the mean position of a marker"""
-        return np.nanmean(self.get_position((marker_name,)), axis=2)
+        marker_position = self.get_position((marker_name,))
+        if marker_position.size == 0:
+            raise RuntimeError(f"The marker position is empty (shape: {marker_position.shape}), cannot compute mean.")
+        return np.nanmean(marker_position, axis=2)
 
     def std_marker_position(self, marker_name: str) -> np.ndarray:
         """Get the std from the position of a marker"""
-        return np.nanstd(self.get_position((marker_name,)), axis=2)
+        marker_position = self.get_position((marker_name,))
+        if marker_position.size == 0:
+            raise RuntimeError(f"The marker position is empty (shape: {marker_position.shape}), cannot compute std.")
+        return np.nanstd(marker_position, axis=2)
 
     def _indices_in_c3d(self, from_markers: tuple[str, ...] | list[str]) -> tuple[int, ...]:
         return tuple(self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"].index(n) for n in from_markers)

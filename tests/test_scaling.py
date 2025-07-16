@@ -44,18 +44,22 @@ class MockC3dData:
         # Create marker positions for 10 frames
         self.all_marker_positions = np.zeros((3, 4, 10))
         # root_marker positions
-        self.all_marker_positions[:, 0, :] = np.array([
-            [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11],  # x
-            [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],  # y
-            [0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33]  # z
-        ])
+        self.all_marker_positions[:, 0, :] = np.array(
+            [
+                [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11],  # x
+                [0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22, 0.22],  # y
+                [0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33],  # z
+            ]
+        )
         # root_marker1 positions are all zeros
         # child_marker positions
-        self.all_marker_positions[:, 2, :] = np.array([
-            [0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44],  # x
-            [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55],  # y
-            [0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66]  # z
-        ])
+        self.all_marker_positions[:, 2, :] = np.array(
+            [
+                [0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44, 0.44],  # x
+                [0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55, 0.55],  # y
+                [0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66, 0.66],  # z
+            ]
+        )
         # child_marker1 positions are all zeros
 
 
@@ -498,7 +502,7 @@ def test_add_and_remove_marker_weight():
     # Redirect stdout into the buffer
     with redirect_stdout(buffer):
         scale_tool.print_marker_weights()
-    assert buffer.getvalue() == 'root_marker : 1.50\nchild_marker : 2.00\n'
+    assert buffer.getvalue() == "root_marker : 1.50\nchild_marker : 2.00\n"
 
     # Remove the marker weight
     scale_tool.remove_marker_weight("root_marker")
@@ -516,12 +520,14 @@ def test_add_and_remove_scaling_segment():
     assert scale_tool.scaling_segments == []
 
     # Add segment scaling
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="root",
             scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
         )
     )
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="child",
             scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["child_marker", "child_marker2"]]),
         )
@@ -548,21 +554,18 @@ def test_check_that_makers_do_not_move():
     scale_tool.add_marker_weight(marker_weight2)
 
     # This should not raise an error since markers don't move in our mock data
-    scale_tool.check_that_makers_do_not_move(
-        mock_c3d_data.all_marker_positions,
-        mock_c3d_data.marker_names
-    )
+    scale_tool.check_that_makers_do_not_move(mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     # Now make a marker move too much
     moving_data = deepcopy(mock_c3d_data)
     moving_data.all_marker_positions[0, 0, -1] += 0.2  # Move x-coordinate of root_marker in last frame
 
     # This should raise an error
-    with pytest.raises(RuntimeError, match="The marker root_marker moves of approximately 0.2 m during the static trial, which is above the maximal limit of 0.1 m."):
-        scale_tool.check_that_makers_do_not_move(
-            moving_data.all_marker_positions,
-            moving_data.marker_names
-        )
+    with pytest.raises(
+        RuntimeError,
+        match="The marker root_marker moves of approximately 0.2 m during the static trial, which is above the maximal limit of 0.1 m.",
+    ):
+        scale_tool.check_that_makers_do_not_move(moving_data.all_marker_positions, moving_data.marker_names)
 
 
 def test_define_mean_experimental_markers():
@@ -570,10 +573,7 @@ def test_define_mean_experimental_markers():
     mock_c3d_data = MockC3dData()
     scale_tool = ScaleTool(original_model=create_simple_model())
 
-    scale_tool.define_mean_experimental_markers(
-        mock_c3d_data.all_marker_positions,
-        mock_c3d_data.marker_names
-    )
+    scale_tool.define_mean_experimental_markers(mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     assert scale_tool.mean_experimental_markers is not None
     assert scale_tool.mean_experimental_markers.shape == (3, 4)  # 3D coordinates for 2 markers
@@ -595,12 +595,14 @@ def test_scaling_factors_and_masses_segmentwise():
     scale_tool = ScaleTool(original_model=simple_model)
 
     # Add scaling segments
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="root",
             scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
         )
     )
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="child",
             scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["child_marker", "child_marker2"]]),
         )
@@ -608,9 +610,7 @@ def test_scaling_factors_and_masses_segmentwise():
 
     # Compute the scaling factors
     for segment in scale_tool.scaling_segments:
-        segment.compute_scaling_factors(
-            simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
-    )
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     # Test the values form get scaling factors and masses
     scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
@@ -621,8 +621,22 @@ def test_scaling_factors_and_masses_segmentwise():
     )
     npt.assert_almost_equal(segment_masses["root"], 11.759414918809005)
     npt.assert_almost_equal(segment_masses["child"], 8.240585081190993)
-    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.84065206, 1.84065206, 1.84065206, 1.]))
-    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([2.57972867, 2.57972867, 2.57972867, 1.]))
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.84065206, 1.84065206, 1.84065206, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([2.57972867, 2.57972867, 2.57972867, 1.0]),
+    )
 
 
 def test_scaling_factors_and_masses_axiswise():
@@ -636,26 +650,32 @@ def test_scaling_factors_and_masses_axiswise():
     scale_tool = ScaleTool(original_model=simple_model)
 
     # Add scaling segments
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="root",
-            scaling_type=AxisWiseScaling(marker_pairs={Translations.X: [["root_marker", "root_marker2"]],
-                                                       Translations.Y: [["root_marker", "root_marker2"]],
-                                                       }),
+            scaling_type=AxisWiseScaling(
+                marker_pairs={
+                    Translations.X: [["root_marker", "root_marker2"]],
+                    Translations.Y: [["root_marker", "root_marker2"]],
+                }
+            ),
         )
     )
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="child",
-            scaling_type=AxisWiseScaling(marker_pairs={Translations.X: [["child_marker", "child_marker2"]],
-                                                       Translations.Y: [["child_marker", "child_marker2"]],
-                                                       }),
+            scaling_type=AxisWiseScaling(
+                marker_pairs={
+                    Translations.X: [["child_marker", "child_marker2"]],
+                    Translations.Y: [["child_marker", "child_marker2"]],
+                }
+            ),
         )
     )
 
     # Compute the scaling factors
     for segment in scale_tool.scaling_segments:
-        segment.compute_scaling_factors(
-            simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
-    )
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     # Test the values form get scaling factors and masses
     scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
@@ -666,8 +686,22 @@ def test_scaling_factors_and_masses_axiswise():
     )
     npt.assert_almost_equal(segment_masses["root"], 12.298699379214955)
     npt.assert_almost_equal(segment_masses["child"], 7.701300620785044)
-    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.84065206, 1.84065206, 1.0, 1.]))
-    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([2.57972867, 2.57972867, 1.0, 1.]))
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.84065206, 1.84065206, 1.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([2.57972867, 2.57972867, 1.0, 1.0]),
+    )
 
 
 def test_scaling_factors_and_masses_bodywise():
@@ -677,19 +711,24 @@ def test_scaling_factors_and_masses_bodywise():
     scale_tool = ScaleTool(original_model=simple_model)
 
     # Add scaling segments
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="root",
             scaling_type=BodyWiseScaling(subject_height=1.01),
         )
     )
-    scale_tool.add_scaling_segment(SegmentScaling(
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
             name="child",
             scaling_type=BodyWiseScaling(subject_height=1.01),
         )
     )
 
     # Test that it raises if the original_model has not height
-    with pytest.raises(RuntimeError, match="The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`."):
+    with pytest.raises(
+        RuntimeError,
+        match="The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`.",
+    ):
         scale_tool.scaling_segments["root"].compute_scaling_factors(
             simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
         )
@@ -699,9 +738,7 @@ def test_scaling_factors_and_masses_bodywise():
 
     # Compute the scaling factors
     for segment in scale_tool.scaling_segments:
-        segment.compute_scaling_factors(
-            simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
-    )
+        segment.compute_scaling_factors(simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     # Test the values form get scaling factors and masses
     scaling_factors, segment_masses = scale_tool.get_scaling_factors_and_masses(
@@ -712,17 +749,27 @@ def test_scaling_factors_and_masses_bodywise():
     )
     npt.assert_almost_equal(segment_masses["root"], 13.333333333333336)
     npt.assert_almost_equal(segment_masses["child"], 6.666666666666668)
-    npt.assert_almost_equal(scaling_factors["root"].to_vector().reshape(4, ), np.array([1.01, 1.01, 1.01, 1.]))
-    npt.assert_almost_equal(scaling_factors["child"].to_vector().reshape(4, ), np.array([1.01, 1.01, 1.01, 1.]))
+    npt.assert_almost_equal(
+        scaling_factors["root"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.01, 1.01, 1.01, 1.0]),
+    )
+    npt.assert_almost_equal(
+        scaling_factors["child"]
+        .to_vector()
+        .reshape(
+            4,
+        ),
+        np.array([1.01, 1.01, 1.01, 1.0]),
+    )
 
 
 def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
-    rt_matrix = np.array([[1.0, 0.0, 0.0, 1.0],
-                          [0.0, 0.0, -1.0, 2.0],
-                          [0.0, 1.0, 0.0, 3.0],
-                          [0.0, 0.0, 0.0, 1.0]]
-                         )
+    rt_matrix = np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
 
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
@@ -742,8 +789,7 @@ def test_scale_marker():
     original_marker = simple_model.segments["root"].markers[0]
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
-    result = ScaleTool(simple_model).scale_marker(original_marker,
-                                                  scale_factor)
+    result = ScaleTool(simple_model).scale_marker(original_marker, scale_factor)
 
     assert result.name == original_marker.name
     assert result.parent_name == original_marker.parent_name
