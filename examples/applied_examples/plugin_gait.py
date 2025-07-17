@@ -983,7 +983,6 @@ class PlugInGait(BiomechanicalModel):
         self.segments["LFoot"].add_marker(Marker("LHEE", is_technical=True, is_anatomical=True))
 
 
-
 def main():
 
     # Create the model from user defined dimensions

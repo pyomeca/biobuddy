@@ -11,7 +11,7 @@ from biobuddy import C3dData
 
 def test_plug_in_gait_example():
     from examples.applied_examples.plugin_gait import PlugInGait
-    
+
     # Create the generic model
     plugin_gait_model = PlugInGait(
         body_mass=70.0,
@@ -34,9 +34,7 @@ def test_plug_in_gait_example():
 
     # @pariterre: Change the test values
     # Total mass
-    npt.assert_almost_equal(
-        biomechanical_model_real.mass, 70.0, decimal=4
-    )
+    npt.assert_almost_equal(biomechanical_model_real.mass, 70.0, decimal=4)
 
     value_to_change = 0.0  # Jut for now
     assert biomechanical_model_real.nb_q == value_to_change
@@ -46,15 +44,12 @@ def test_plug_in_gait_example():
     assert biomechanical_model_real.nb_muscles == value_to_change
 
     nb_q = biomechanical_model_real.nb_q
-    q_zeros = np.zeros((nb_q, ))
+    q_zeros = np.zeros((nb_q,))
 
     # Joint coordinate system in global
     jcs = biomechanical_model_real.forward_kinematics(q_zeros)
-    npt.assert_almost_equal(jcs["LFemur"].rt_matrix, 
-                            np.array([[value_to_change]]), decimal=5)
-    npt.assert_almost_equal(jcs["RRadius"].rt_matrix, 
-                            np.array([[value_to_change]]), decimal=5)
-
+    npt.assert_almost_equal(jcs["LFemur"].rt_matrix, np.array([[value_to_change]]), decimal=5)
+    npt.assert_almost_equal(jcs["RRadius"].rt_matrix, np.array([[value_to_change]]), decimal=5)
 
     # Markers position in global
     markers = biomechanical_model_real.markers_in_global(q_zeros)
@@ -84,4 +79,3 @@ def test_plug_in_gait_example():
     npt.assert_almost_equal(inertia_1, np.array([value_to_change]), decimal=5)
     inertia_2 = biomechanical_model_real.segments["Thorax"].inertia_parameters.inertia
     npt.assert_almost_equal(inertia_2, np.array([value_to_change]), decimal=5)
-
