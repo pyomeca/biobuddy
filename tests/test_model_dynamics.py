@@ -44,13 +44,14 @@ def test_biomechanics_model_real_utils_functions():
     assert wholebody_model_biorbd.nbMuscles() == wholebody_model.nb_muscles
 
     q_random = np.random.rand(nb_q)
+    q_zeros = np.zeros((nb_q,))
 
     # Forward kinematics
     jcs_biobuddy = wholebody_model.forward_kinematics(q_random)
     for i_segment in range(nb_segments):
         jcs_biorbd = wholebody_model_biorbd.globalJCS(q_random, i_segment).to_array()
         npt.assert_array_almost_equal(
-            jcs_biobuddy[wholebody_model.segments[i_segment].name][:, :, 0],
+            jcs_biobuddy[wholebody_model.segments[i_segment].name][0].rt_matrix,
             jcs_biorbd,
             decimal=5,
         )
@@ -102,15 +103,46 @@ def test_biomechanics_model_real_utils_functions():
     #     except:
     #         print(f"Marker number {i_marker}, for q {np.where(np.abs(markers_jacobian_biobuddy[:, i_marker, :].reshape(3, nb_q) - markers_jacobian_biorbd[i_marker].to_array()) > 0.0001)}.")
 
-    # # @pariterre TODO: Test muscle length (I only see biorbd.musclesLengthJacobian, or wholebody_model_biorbd.muscle(0).length(joint, q))
-    # for i_muscle, muscle_name in enumerate(wholebody_model.muscle_names):
-    #     muscle_biobuddy = wholebody_model.muscle_length(muscle_name, q_random)
-    #     muscle_biorbd = wholebody_model_biorbd.muscle(i_muscle).length(q_random).to_array()
-    #     npt.assert_array_almost_equal(
-    #         muscle_biobuddy,
-    #         muscle_biorbd,
-    #         decimal=4,
-    #     )
+    # Test forward kinematics (here because it resets the model with q_zeros before the muscle evaluation below)
+    jcs_biobuddy = wholebody_model.forward_kinematics(q_zeros)
+    for i_segment in range(nb_segments):
+        jcs_biorbd = wholebody_model_biorbd.globalJCS(q_zeros, i_segment).to_array()
+        npt.assert_array_almost_equal(
+            jcs_biobuddy[wholebody_model.segments[i_segment].name][0].rt_matrix,
+            jcs_biorbd,
+            decimal=5,
+        )
+
+    # Test muscle length
+    muscle_names = [m.to_string() for m in wholebody_model_biorbd.muscleNames()]
+    for i_muscle, muscle_name in enumerate(muscle_names):
+
+        # Via point positions
+        muscle_points_in_global_biobuddy = wholebody_model.via_points_in_global(muscle_name, q_zeros)
+        muscle_points_in_global_biorbd = [
+            m.to_array()
+            for m in wholebody_model_biorbd.muscle(i_muscle).musclesPointsInGlobal(wholebody_model_biorbd, q_zeros)
+        ]
+        for i_via_point in range(len(muscle_points_in_global_biorbd) - 2):
+            try:
+                npt.assert_array_almost_equal(
+                    muscle_points_in_global_biobuddy[:3, i_via_point, 0],
+                    muscle_points_in_global_biorbd[i_via_point + 1],
+                    decimal=5,
+                )
+            except:
+                print(muscle_name)
+
+        # Muscle tendon length
+        muscle_tendon_biobuddy = wholebody_model.muscle_tendon_length(muscle_name, q_zeros)
+        muscle_tendon_biorbd = wholebody_model_biorbd.muscle(i_muscle).musculoTendonLength(
+            wholebody_model_biorbd, q_zeros
+        )
+        npt.assert_array_almost_equal(
+            muscle_tendon_biobuddy,
+            muscle_tendon_biorbd,
+            decimal=4,
+        )
 
     # --- leg_without_ghost_parents.bioMod --- #
     leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
@@ -139,7 +171,7 @@ def test_biomechanics_model_real_utils_functions():
         for i_segment in range(nb_segments):
             jcs_biorbd = leg_model_biorbd.globalJCS(q_random[:, i_frame], i_segment).to_array()
             npt.assert_array_almost_equal(
-                jcs_biobuddy[leg_model.segments[i_segment].name][:, :, i_frame],
+                jcs_biobuddy[leg_model.segments[i_segment].name][i_frame].rt_matrix,
                 jcs_biorbd,
                 decimal=5,
             )
@@ -248,7 +280,7 @@ def test_base_segment_coordinate_system():
 
     # Test the values
     npt.assert_almost_equal(
-        scs_local,
+        scs_local.rt_matrix,
         np.array(
             [
                 [0.941067, 0.334883, 0.047408, -0.067759],
@@ -260,7 +292,7 @@ def test_base_segment_coordinate_system():
         decimal=5,
     )
     npt.assert_almost_equal(
-        scs_global[:, :, 0],
+        scs_global.rt_matrix,
         np.array(
             [
                 [0.99525177, 0.0957537, -0.01746835, 0.64714318],

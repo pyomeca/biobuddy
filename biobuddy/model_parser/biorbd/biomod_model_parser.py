@@ -388,4 +388,4 @@ def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarr
         scs = SegmentCoordinateSystemReal.from_euler_and_translation(
             angles=angles, angle_sequence=angle_sequence, translations=translations, is_scs_local=True
         )
-    return scs.scs[:, :, 0]
+    return scs.scs

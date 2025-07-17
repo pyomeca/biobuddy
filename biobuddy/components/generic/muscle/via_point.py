@@ -2,6 +2,7 @@ from typing import Callable
 
 from ...real.muscle.via_point_real import ViaPointReal
 from ....utils.protocols import Data
+from ....utils.checks import check_name
 
 
 class ViaPoint:
@@ -32,7 +33,7 @@ class ViaPoint:
         self.position_function = (
             (lambda m, bio: m[position_function]) if isinstance(position_function, str) else position_function
         )
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
 

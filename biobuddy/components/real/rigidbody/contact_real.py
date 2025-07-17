@@ -5,6 +5,7 @@ import numpy as np
 from ....utils.aliases import Point, point_to_array, Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.translations import Translations
+from ....utils.checks import check_name
 
 
 class ContactReal:
@@ -28,7 +29,7 @@ class ContactReal:
             The axis of the contact
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.position = position
         self.axis = axis
 

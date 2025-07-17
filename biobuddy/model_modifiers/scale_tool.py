@@ -22,6 +22,7 @@ from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
 from ..utils.translations import Translations
 from ..utils.rotations import Rotations
+from ..utils.aliases import Point, point_to_array
 
 _logger = logging.getLogger(__name__)
 
@@ -66,10 +67,10 @@ class ScaleTool:
         self.warnings = ""
 
     def add_marker_weight(self, marker_weight: MarkerWeight):
-        self.marker_weights.append(marker_weight)
+        self.marker_weights._append(marker_weight)
 
     def remove_marker_weight(self, marker_name: str):
-        self.marker_weights.remove(marker_name)
+        self.marker_weights._remove(marker_name)
 
     def add_scaling_segment(self, scaling_segment: SegmentScaling):
         """
@@ -83,7 +84,7 @@ class ScaleTool:
 
         if not isinstance(scaling_segment, SegmentScaling):
             raise RuntimeError("The scaling segment must be of type SegmentScaling.")
-        self.scaling_segments.append(scaling_segment)
+        self.scaling_segments._append(scaling_segment)
 
     def remove_scaling_segment(self, segment_scaling_name: str):
         """
@@ -94,7 +95,7 @@ class ScaleTool:
         segment_scaling_name
             The name of the scaling segment to remove
         """
-        self.scaling_segments.remove(segment_scaling_name)
+        self.scaling_segments._remove(segment_scaling_name)
 
     def print_marker_weights(self):
         """
@@ -135,7 +136,7 @@ class ScaleTool:
             The lease square method to use. (default: "lm", other options: "trf" or "dogbox")
         """
         exp_marker_names = static_c3d.marker_names
-        exp_marker_positions = static_c3d.all_marker_positions[:3, :, :]
+        exp_marker_positions = static_c3d.all_marker_positions
 
         marker_indices = [idx for idx, m in enumerate(exp_marker_names) if m in self.original_model.marker_names]
         marker_names = [exp_marker_names[idx] for idx in marker_indices]
@@ -223,11 +224,11 @@ class ScaleTool:
 
     def define_mean_experimental_markers(self, marker_positions, marker_names):
         model_marker_names = self.original_model.marker_names
-        self.mean_experimental_markers = np.zeros((3, len(model_marker_names)))
+        self.mean_experimental_markers = np.ones((4, len(model_marker_names)))
         for i_marker, name in enumerate(model_marker_names):
             marker_index = marker_names.index(name)
-            this_marker_position = marker_positions[:, marker_index, :]
-            self.mean_experimental_markers[:, i_marker] = np.nanmean(this_marker_position, axis=1)
+            this_marker_position = marker_positions[:3, marker_index, :]
+            self.mean_experimental_markers[:3, i_marker] = np.nanmean(this_marker_position, axis=1)
 
     def get_scaling_factors_and_masses(
         self,
@@ -308,9 +309,7 @@ class ScaleTool:
                         scs_scaled = SegmentCoordinateSystemReal(
                             scs=self.scale_rt(
                                 deepcopy(
-                                    self.original_model.segments[
-                                        segment_name + ghost_key
-                                    ].segment_coordinate_system.scs[:, :, 0]
+                                    self.original_model.segments[segment_name + ghost_key].segment_coordinate_system.scs
                                 ),
                                 offset_parent_scale_factor,
                             ),
@@ -413,18 +412,20 @@ class ScaleTool:
         return
 
     @staticmethod
-    def scale_rt(rt: np.ndarray, scale_factor: np.ndarray) -> np.ndarray:
-        rt_matrix = deepcopy(rt)
+    def scale_rt(rt: RotoTransMatrix, scale_factor: Point) -> RotoTransMatrix:
+        rt_matrix = rt.rt_matrix
         rt_matrix[:3, 3] *= scale_factor[:3].reshape(
             3,
         )
-        return rt_matrix
+        out = RotoTransMatrix()
+        out.from_rt_matrix(rt_matrix)
+        return out
 
     def scale_segment(
         self,
         original_segment: SegmentReal,
-        parent_scale_factor: np.ndarray,
-        scale_factor: np.ndarray,
+        parent_scale_factor: Point,
+        scale_factor: Point,
         segment_mass: float,
     ) -> SegmentReal:
         """
@@ -441,7 +442,7 @@ class ScaleTool:
             )
 
         segment_coordinate_system_scaled = SegmentCoordinateSystemReal(
-            scs=self.scale_rt(original_segment.segment_coordinate_system.scs[:, :, 0], parent_scale_factor),
+            scs=self.scale_rt(original_segment.segment_coordinate_system.scs, parent_scale_factor),
             is_scs_local=True,
         )
 
@@ -481,7 +482,7 @@ class ScaleTool:
             mesh_file=mesh_file_scaled,
         )
 
-    def scale_marker(self, original_marker: MarkerReal, scale_factor: np.ndarray) -> MarkerReal:
+    def scale_marker(self, original_marker: MarkerReal, scale_factor: Point) -> MarkerReal:
         return MarkerReal(
             name=deepcopy(original_marker.name),
             parent_name=deepcopy(original_marker.parent_name),
@@ -490,27 +491,25 @@ class ScaleTool:
             is_anatomical=deepcopy(original_marker.is_anatomical),
         )
 
-    def scale_contact(self, original_contact: ContactReal, scale_factor: np.ndarray) -> ContactReal:
+    def scale_contact(self, original_contact: ContactReal, scale_factor: Point) -> ContactReal:
         return ContactReal(
             name=deepcopy(original_contact.name),
             parent_name=deepcopy(original_contact.parent_name),
-            position=deepcopy(original_contact) * scale_factor,
+            position=deepcopy(original_contact.position) * scale_factor,
             axis=deepcopy(original_contact.axis),
         )
 
-    def scale_imu(
-        self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
-    ) -> InertialMeasurementUnitReal:
+    def scale_imu(self, original_imu: InertialMeasurementUnitReal, scale_factor: Point) -> InertialMeasurementUnitReal:
         return InertialMeasurementUnitReal(
             name=deepcopy(original_imu.name),
             parent_name=deepcopy(original_imu.parent_name),
-            scs=self.scale_rt(original_imu.scs[:, :, 0], scale_factor),
+            scs=self.scale_rt(original_imu.scs, scale_factor),
             is_technical=deepcopy(original_imu.is_technical),
             is_anatomical=deepcopy(original_imu.is_anatomical),
         )
 
     def scale_muscle(
-        self, original_muscle: MuscleReal, origin_scale_factor: np.ndarray, insertion_scale_factor: np.ndarray
+        self, original_muscle: MuscleReal, origin_scale_factor: Point, insertion_scale_factor: Point
     ) -> MuscleReal:
         return MuscleReal(
             name=deepcopy(original_muscle.name),
@@ -526,7 +525,7 @@ class ScaleTool:
             maximal_excitation=deepcopy(original_muscle.maximal_excitation),
         )
 
-    def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
+    def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: Point) -> ViaPointReal:
         return ViaPointReal(
             name=deepcopy(original_via_point.name),
             parent_name=deepcopy(original_via_point.parent_name),
@@ -615,6 +614,8 @@ class ScaleTool:
         return q_static, model_to_use
 
     def make_static_pose_the_zero(self, q_static: np.ndarray):
+        if q_static.shape != (self.scaled_model.nb_q,):
+            raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
 
         # Remove the fake root degrees of freedom if needed
         if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
@@ -632,17 +633,18 @@ class ScaleTool:
         jcs_in_global = self.scaled_model.forward_kinematics(q_original)
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name][:, :, 0],
+                scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
                 parent_scs=None,
                 is_scs_local=(
                     segment_name == "base"
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
             )
 
-    def replace_markers_on_segments_local_scs(
-        self, marker_positions: np.ndarray, marker_names: list[str], q: np.ndarray, model_to_use: BiomechanicalModelReal
-    ):
+    def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
+        if q.shape != (self.scaled_model.nb_q,):
+            raise RuntimeError(f"The shape of q must be (nb_q, ), you have {q.shape}.")
 
+        model_marker_names = self.scaled_model.marker_names
         jcs_in_global = model_to_use.forward_kinematics(q)
         for i_segment, segment in enumerate(self.scaled_model.segments):
             if segment.segment_coordinate_system is None or segment.segment_coordinate_system.is_in_global:
@@ -650,12 +652,10 @@ class ScaleTool:
                     "Something went wrong. Since make_static_pose_the_models_zero was set to False, the segment's coordinate system should be in the local reference frames."
                 )
             for marker in segment.markers:
-                marker_name = marker.name
-                marker_index = marker_names.index(marker_name)
-                this_marker_position = np.nanmean(marker_positions[:, marker_index], axis=1)
-                rt = RotoTransMatrix()
-                rt.from_rt_matrix(deepcopy(jcs_in_global[segment.name][:, :, 0]))
-                marker.position = rt.inverse @ np.hstack((this_marker_position, 1))
+                marker_index = model_marker_names.index(marker.name)
+                this_marker_position = self.mean_experimental_markers[:, marker_index]
+                rt = jcs_in_global[segment.name][0]  # We can take the 0th since there is just one frame in q
+                marker.position = rt.inverse @ this_marker_position
 
     def place_model_in_static_pose(
         self,
@@ -680,10 +680,10 @@ class ScaleTool:
             self.make_static_pose_the_zero(q_static)
             self.scaled_model.segments_rt_to_local()
             self.replace_markers_on_segments_local_scs(
-                marker_positions, marker_names, q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
+                q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
             )
         else:
-            self.replace_markers_on_segments_local_scs(marker_positions, marker_names, q_static, model_to_use)
+            self.replace_markers_on_segments_local_scs(q_static, model_to_use)
 
     def modify_muscle_parameters(self):
         """
@@ -699,18 +699,18 @@ class ScaleTool:
                     f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
                 )
 
-            original_muscle_length = self.original_model.muscle_length(muscle_name)
-            scaled_muscle_length = self.scaled_model.muscle_length(muscle_name)
+            original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
+            scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
 
             self.scaled_model.muscles[muscle_name].optimal_length = (
                 deepcopy(self.original_model.muscles[muscle_name].optimal_length)
-                * scaled_muscle_length
-                / original_muscle_length
+                * scaled_muscle_tendon_length
+                / original_muscle_tendon_length
             )
             self.scaled_model.muscles[muscle_name].tendon_slack_length = (
                 deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)
-                * scaled_muscle_length
-                / original_muscle_length
+                * scaled_muscle_tendon_length
+                / original_muscle_tendon_length
             )
 
     def from_biomod(

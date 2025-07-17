@@ -129,24 +129,21 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
-            score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+            score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
+            # The rotation part did not change, only the translation part was modified
             np.array(
                 [
-                    [
-                        0.941067,
-                        0.334883,
-                        0.047408,
-                        -0.07076823,
-                    ],  # The rotation part did not change, only the translation part was modified
+                    [0.941067, 0.334883, 0.047408, -0.07076823],
                     [-0.335537, 0.906752, 0.255373, -0.02166063],
                     [0.042533, -0.25623, 0.96568, 0.09724843],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
+            decimal=5,
         )
     else:
         npt.assert_almost_equal(
-            score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+            score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
             np.array(
                 [
                     [0.941067, 0.334883, 0.047408, -0.07167634],
@@ -161,13 +158,13 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     if initialize_whole_trial_reconstruction:
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
             # Both rotation and translation parts were modified
             np.array(
                 [
-                    [0.97298983, 0.03790546, -0.22771465, 0.02107151],
-                    [-0.0612039, 0.99348445, -0.09613912, -0.40854714],
-                    [0.22258677, 0.10747942, 0.96897023, -0.03015542],
+                    [0.9729903, 0.03790419, -0.22771286, 0.02107178],
+                    [-0.06120388, 0.99348383, -0.09614557, -0.40854228],
+                    [0.22258472, 0.10748562, 0.96897001, -0.03014],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -175,12 +172,12 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         )
     else:
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
             np.array(
                 [
-                    [0.97197658, 0.0418383, -0.23132462, 0.02157429],
-                    [-0.06106338, 0.99519176, -0.07658086, -0.40738262],
-                    [0.22700834, 0.08856027, 0.96985787, -0.02918892],
+                    [0.97197658, 0.04183821, -0.23132465, 0.02157433],
+                    [-0.06106329, 0.99519176, -0.0765809, -0.40738251],
+                    [0.22700838, 0.08856029, 0.96985786, -0.02918886],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -190,7 +187,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Test that the original model did not change
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [
                 [0.941067, 0.334883, 0.047408, -0.067759],
@@ -203,7 +200,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
     assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [
                 [0.998166, 0.06054, -0.0, 0.0],
@@ -239,7 +236,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8533901218909357, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8534216909413301, decimal=5)
     else:
         npt.assert_almost_equal(new_marker_tracking_error, 0.8546461146170594, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
@@ -281,9 +278,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.1653655932067504, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.16564612806039, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.1621464045718777, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1621662489880955, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     remove_temporary_biomods()
@@ -365,7 +362,7 @@ def test_score_and_sara_with_ghost_segments():
     # Test the joints' new RT
     assert score_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [
                 [1.0, 0.0, 0.0, -0.0360743],
@@ -378,7 +375,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        score_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+        score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [
                 [1.0, -0.0, 0.0, -0.0316847],
@@ -392,7 +389,7 @@ def test_score_and_sara_with_ghost_segments():
 
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [
                 [0.9415693, 0.13609885, -0.30809797, 0.00539646],
@@ -406,31 +403,31 @@ def test_score_and_sara_with_ghost_segments():
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        score_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+        score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
         np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
     )
 
     # Test that the original model did not change
     assert scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
         np.array(
             [[1.0, 0.0, 0.0, -0.067759], [0.0, 1.0, 0.0, -0.06335], [0.0, 0.0, 1.0, 0.080026], [0.0, 0.0, 0.0, 1.0]]
         ),
     )
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["femur_r"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
         np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
     )
     assert scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
         np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.387741], [0.0, 0.0, 1.0, -0.0], [0.0, 0.0, 0.0, 1.0]]),
     )
     assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
-        scaled_model.segments["tibia_r"].segment_coordinate_system.scs[:, :, 0],
+        scaled_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
         np.array([[1.0, -0.0, 0.0, 0.0], [-0.0, 1.0, 0.0, -0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
     )
 

@@ -10,10 +10,12 @@ from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSys
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
+from ..model_utils import ModelUtils
 
 
-class BiomechanicalModel:
+class BiomechanicalModel(ModelUtils):
     def __init__(self):
+        super().__init__()
         self.segments = NamedList[Segment]()
         self.muscle_groups = NamedList[MuscleGroup]()
         self.muscles = NamedList[Muscle]()
@@ -28,7 +30,17 @@ class BiomechanicalModel:
         segment
             The segment to add
         """
-        self.segments.append(segment)
+        # If there is no root segment, declare one before adding other segments
+        if len(self.segments) == 0 and segment.name != "root":
+            self.segments._append(Segment(name="root"))
+            segment.parent_name = "root"
+
+        if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
+            raise ValueError(
+                f"Parent segment should be declared before the child segments. "
+                f"Please declare the parent {segment.parent_name} before declaring the child segment {segment.name}."
+            )
+        self.segments._append(segment)
 
     def remove_segment(self, segment_name: str):
         """
@@ -39,7 +51,7 @@ class BiomechanicalModel:
         segment_name
             The name of the segment to remove
         """
-        self.segments.remove(segment_name)
+        self.segments._remove(segment_name)
 
     def add_muscle_group(self, muscle_group: "MuscleGroup"):
         """
@@ -50,7 +62,7 @@ class BiomechanicalModel:
         muscle_group
             The muscle group to add
         """
-        self.muscle_groups.append(muscle_group)
+        self.muscle_groups._append(muscle_group)
 
     def remove_muscle_group(self, muscle_group_name: str):
         """
@@ -61,7 +73,7 @@ class BiomechanicalModel:
         muscle_group_name
             The name of the muscle group to remove
         """
-        self.muscle_groups.remove(muscle_group_name)
+        self.muscle_groups._remove(muscle_group_name)
 
     def add_muscle(self, muscle: "MuscleReal"):
         """
@@ -72,7 +84,7 @@ class BiomechanicalModel:
         muscle
             The muscle to add
         """
-        self.muscles.append(muscle)
+        self.muscles._append(muscle)
 
     def remove_muscle(self, muscle_name: str):
         """
@@ -83,7 +95,7 @@ class BiomechanicalModel:
         muscle_name
             The name of the muscle to remove
         """
-        self.muscles.remove(muscle_name)
+        self.muscles._remove(muscle_name)
 
     def add_via_point(self, via_point: "ViaPointReal"):
         """
@@ -94,7 +106,7 @@ class BiomechanicalModel:
         via_point
             The via point to add
         """
-        self.via_points.append(via_point)
+        self.via_points._append(via_point)
 
     def remove_via_point(self, via_point_name: str):
         """
@@ -105,7 +117,7 @@ class BiomechanicalModel:
         via_point_name
             The name of the via point to remove
         """
-        self.via_points.remove(via_point_name)
+        self.via_points._remove(via_point_name)
 
     def to_real(self, data: Data, gravity: Point = None) -> BiomechanicalModelReal:
         """

@@ -14,12 +14,12 @@ class NamedList(list[T]):
             new_list.append(item)
         return new_list
 
-    def append(self, item: T) -> None:
-        if "name" not in item.__dict__ and "name" not in type(item).__dict__:
+    def _append(self, item: T) -> None:
+        if "name" not in item.__dict__ and "_name" not in item.__dict__ and "name" not in type(item).__dict__:
             raise AttributeError("The appended item must have a name attribute")
         return super().append(item)
 
-    def remove(self, name: str) -> None:
+    def _remove(self, name: str) -> None:
         if name not in self.keys():
             raise AttributeError(f"The item named {name} cannot be removed because it it not in the list.")
         element_index = self.keys().index(name)

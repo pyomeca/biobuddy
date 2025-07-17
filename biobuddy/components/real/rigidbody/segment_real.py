@@ -12,15 +12,17 @@ from ....utils.linear_algebra import RotoTransMatrix, euler_and_translation_to_m
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 from ....utils.named_list import NamedList
+from ...segment_utils import SegmentUtils
+from ....utils.checks import check_name
 
 
-class SegmentReal:
+class SegmentReal(SegmentUtils):
     def __init__(
         self,
         name: str,
         parent_name: str = "base",
         segment_coordinate_system: SegmentCoordinateSystemReal = SegmentCoordinateSystemReal(
-            scs=np.identity(4), is_scs_local=True
+            scs=RotoTransMatrix(), is_scs_local=True
         ),
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
@@ -30,8 +32,10 @@ class SegmentReal:
         mesh: MeshReal = None,
         mesh_file: MeshFileReal = None,
     ):
-        self.name = name
-        self.parent_name = parent_name
+
+        super().__init__()
+        self.name = check_name(name)
+        self.parent_name = check_name(parent_name)
         self.segment_coordinate_system = segment_coordinate_system
         self.translations = translations
         self.rotations = rotations
@@ -45,80 +49,6 @@ class SegmentReal:
         self.mesh_file = mesh_file
 
     @property
-    def name(self) -> str:
-        return self._name
-
-    @name.setter
-    def name(self, value: str):
-        self._name = value
-
-    @property
-    def parent_name(self) -> str:
-        return self._parent_name
-
-    @parent_name.setter
-    def parent_name(self, value: str):
-        self._parent_name = value
-
-    @property
-    def translations(self) -> Translations:
-        return self._translations
-
-    @translations.setter
-    def translations(self, value: Translations | str | None):
-        if value is None or isinstance(value, str):
-            value = Translations(value)
-        self._translations = value
-
-    @property
-    def rotations(self) -> Rotations:
-        return self._rotations
-
-    @rotations.setter
-    def rotations(self, value: Rotations | str | None):
-        if value is None or isinstance(value, str):
-            value = Rotations(value)
-        self._rotations = value
-
-    @property
-    def q_ranges(self) -> RangeOfMotion:
-        return self._q_ranges
-
-    @q_ranges.setter
-    def q_ranges(self, value: RangeOfMotion):
-        self._q_ranges = value
-
-    @property
-    def qdot_ranges(self) -> RangeOfMotion:
-        return self._qdot_ranges
-
-    @qdot_ranges.setter
-    def qdot_ranges(self, value: RangeOfMotion):
-        self._qdot_ranges = value
-
-    @property
-    def marker_names(self):
-        return [marker.name for marker in self.markers]
-
-    @property
-    def contact_names(self):
-        return [contact.name for contact in self.contacts]
-
-    @property
-    def imu_names(self):
-        return [imu.name for imu in self.imus]
-
-    @property
-    def nb_q(self):
-        nb_translations = 0
-        if self.translations is not None and self.translations != Translations.NONE:
-            nb_translations = len(self.translations.value)
-        nb_rotations = 0
-        if self.rotations is not None and self.rotations != Rotations.NONE:
-            nb_rotations = len(self.rotations.value)
-        return nb_translations + nb_rotations
-
-    @property
     def markers(self) -> NamedList[MarkerReal]:
         return self._markers
 
@@ -127,10 +57,6 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._markers = value
-
-    @property
-    def nb_markers(self):
-        return len(self.markers)
 
     @property
     def contacts(self) -> NamedList[ContactReal]:
@@ -143,10 +69,6 @@ class SegmentReal:
         self._contacts = value
 
     @property
-    def nb_contacts(self):
-        return len(self.contacts)
-
-    @property
     def imus(self) -> NamedList[InertialMeasurementUnitReal]:
         return self._imus
 
@@ -155,10 +77,6 @@ class SegmentReal:
         if isinstance(value, list) and not isinstance(value, NamedList):
             value = NamedList.from_list(value)
         self._imus = value
-
-    @property
-    def nb_imus(self):
-        return len(self.imus)
 
     @property
     def segment_coordinate_system(self) -> SegmentCoordinateSystemReal:
@@ -185,38 +103,61 @@ class SegmentReal:
         self._mesh = value
 
     def add_marker(self, marker: MarkerReal):
-        self.markers.append(marker)
+        """
+        Add a new marker to the segment
+
+        Parameters
+        ----------
+        marker
+            The marker to add
+        """
+        if marker.parent_name is not None and marker.parent_name != self.name:
+            raise ValueError(
+                "The marker name should be the same as the 'key'. Alternatively, marker.name can be left undefined"
+            )
+
+        marker.parent_name = self.name
+        self.markers._append(marker)
 
     def remove_marker(self, marker: MarkerReal):
-        self.markers.remove(marker)
+        self.markers._remove(marker)
 
     def add_contact(self, contact: ContactReal):
+        """
+        Add a new contact to the segment
+
+        Parameters
+        ----------
+        contact
+            The contact to add
+        """
         if contact.parent_name is None:
-            raise RuntimeError(f"Contacts must have parents, but {contact.name} does not.")
-        self.contacts.append(contact)
+            raise ValueError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
+        elif contact.parent_name != self.name:
+            raise ValueError("The contact name should be the same as the 'key'.")
+        contact.parent_name = self.name
+        self.contacts._append(contact)
 
     def remove_contact(self, contact: ContactReal):
-        self.contacts.remove(contact)
+        self.contacts._remove(contact)
 
     def add_imu(self, imu: InertialMeasurementUnitReal):
         if imu.parent_name is None:
             raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
-        self.imus.append(imu)
+        self.imus._append(imu)
 
     def remove_imu(self, imu: InertialMeasurementUnitReal):
-        self.imus.remove(imu)
+        self.imus._remove(imu)
 
-    def rt_from_local_q(self, local_q: np.ndarray) -> np.ndarray:
+    def rt_from_local_q(self, local_q: np.ndarray) -> RotoTransMatrix:
 
         if local_q.shape[0] != self.nb_q:
             raise RuntimeError(
                 f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
             )
-        rt = np.identity(4)
+        rt = RotoTransMatrix()
 
         if self.nb_q != 0:
-            # @pariterre: is it possible to add translations, then rotations, then again translations in biorbd ?
-            # TODO: make the order trans, rot dynamic
             q_counter = 0
             translations = np.zeros((3,))
             rotations = np.zeros((3,))
@@ -231,8 +172,8 @@ class SegmentReal:
                 rotations = local_q[q_counter:]
                 angle_sequence = self.rotations.value
 
-            rt = euler_and_translation_to_matrix(
-                angles=rotations, angle_sequence=angle_sequence, translations=translations
+            rt.from_euler_angles_and_translation(
+                angle_sequence=angle_sequence, angles=rotations, translation=translations
             )
 
         return rt

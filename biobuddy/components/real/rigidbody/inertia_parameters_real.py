@@ -6,6 +6,7 @@ from .protocols import CoordinateSystemRealProtocol
 from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class InertiaParametersReal:
@@ -93,7 +94,7 @@ class InertiaParametersReal:
 
         p = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
         p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
-        com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
+        com = (parent_scs.scs.inverse.rt_matrix if parent_scs is not None else RotoTransMatrix()) @ p
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
         inertia = points_to_array(points=inertia(data.values, model), name="inertia parameter function")

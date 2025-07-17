@@ -3,6 +3,7 @@ from typing import Callable
 from ...real.rigidbody.contact_real import ContactReal
 from ....utils.protocols import Data
 from ....utils.translations import Translations
+from ....utils.checks import check_name
 
 
 class Contact:
@@ -28,7 +29,7 @@ class Contact:
         self.name = name
         function = function if function is not None else self.name
         self.function = (lambda m, bio: m[function]) if isinstance(function, str) else function
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.axis = axis
 
     def to_contact(self, data: Data) -> ContactReal:

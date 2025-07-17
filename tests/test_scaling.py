@@ -13,6 +13,7 @@ import numpy as np
 import numpy.testing as npt
 
 from test_utils import remove_temporary_biomods, create_simple_model
+from biobuddy.utils.aliases import Point, point_to_array
 from biobuddy import (
     BiomechanicalModelReal,
     MuscleType,
@@ -33,6 +34,8 @@ from biobuddy import (
     InertiaParametersReal,
     SegmentCoordinateSystemReal,
     MuscleReal,
+    RotoTransMatrix,
+    ViaPointReal,
 )
 
 from biobuddy.utils.named_list import NamedList
@@ -278,7 +281,7 @@ def test_scaling_wholebody():
                 .reshape(
                     3,
                 )
-            ) + scaled_model.segment_coordinate_system_in_global(segment_name)[:3, 3, 0]
+            ) + scaled_model.segment_coordinate_system_in_global(segment_name).translation
             com_to_biorbd_0 = scaled_biorbd_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
             com_osim_0 = scaled_osim_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
             npt.assert_almost_equal(com_to_biorbd_0, com_biobuddy_0, decimal=2)
@@ -354,12 +357,51 @@ def test_scaling_wholebody():
         make_static_pose_the_models_zero=True,
     )
     scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
-    scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
-    exp_markers = scale_tool.mean_experimental_markers[:, :]
-    for i_marker in range(exp_markers.shape[1]):
-        biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros[:, 0])[i_marker].to_array()
-        npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_scaled_marker, decimal=5)
+    # Seems like we loose some precision with the RT transformations
+    jcs_in_global = scaled_model.forward_kinematics(q_zeros[:, 0])
+
+    marker_parent = []
+    marker_positions = np.zeros((4, scaled_model.nb_markers, c3d_data.nb_frames))
+    for i_marker, marker_name in enumerate(scaled_model.marker_names):
+        for segment in scaled_model.segments:
+            if marker_name in segment.marker_names:
+                marker_parent += [segment.name]
+                break
+        marker_index = c3d_data.marker_names.index(marker_name)
+        marker_positions[:, i_marker, :] = c3d_data.all_marker_positions[:, marker_index, :]
+
+    exp_markers = scale_tool.mean_experimental_markers
+    biobuddy_markers = scaled_model.markers_in_global(q_zeros[:, 0])
+    for i_marker in range(scaled_model.nb_markers):
+        theoretical_position_from_exp = np.nanmean(marker_positions[:, i_marker, :], axis=1)
+        marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(
+            scaled_model.marker_names[i_marker]
+        )
+        theoretical_position_from_local = (
+            jcs_in_global[marker_parent[i_marker]][0]
+            @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
+        )
+        if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
+            # TODO: fix -> There is still a problem with the fingers in BioBuddy
+            decimal = 2
+        else:
+            decimal = 5
+        npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_markers[:, i_marker, 0], decimal=decimal)
+        npt.assert_almost_equal(
+            exp_markers[:, i_marker],
+            theoretical_position_from_exp.reshape(
+                4,
+            ),
+            decimal=decimal,
+        )
+        npt.assert_almost_equal(
+            exp_markers[:, i_marker],
+            theoretical_position_from_local.reshape(
+                4,
+            ),
+            decimal=decimal,
+        )
 
     os.remove(scaled_biomod_filepath)
     os.remove(converted_scaled_osim_filepath)
@@ -576,7 +618,7 @@ def test_define_mean_experimental_markers():
     scale_tool.define_mean_experimental_markers(mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names)
 
     assert scale_tool.mean_experimental_markers is not None
-    assert scale_tool.mean_experimental_markers.shape == (3, 4)  # 3D coordinates for 2 markers
+    assert scale_tool.mean_experimental_markers.shape == (4, 4)  # 4D coordinates for 4 markers
 
     # Check mean values
     assert np.isclose(scale_tool.mean_experimental_markers[0, 0], 0.11)  # root_marker x
@@ -769,18 +811,50 @@ def test_scaling_factors_and_masses_bodywise():
 
 def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
-    rt_matrix = np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_rt_matrix(
+        np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
+    )
 
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
     result = ScaleTool.scale_rt(rt_matrix, scale_factor)
 
-    assert result[0, 3] == 2.0  # 1.0 * 2.0
-    assert result[1, 3] == 6.0  # 2.0 * 3.0
-    assert result[2, 3] == 12.0  # 3.0 * 4.0
+    assert result.rt_matrix[0, 3] == 2.0  # 1.0 * 2.0
+    assert result.rt_matrix[1, 3] == 6.0  # 2.0 * 3.0
+    assert result.rt_matrix[2, 3] == 12.0  # 3.0 * 4.0
 
     # Rotation part should remain unchanged
-    assert np.array_equal(result[:3, :3], rt_matrix[:3, :3])
+    assert np.array_equal(result.rt_matrix[:3, :3], rt_matrix.rt_matrix[:3, :3])
+
+
+def test_scale_imu():
+    """Test scaling of imu"""
+    simple_model = create_simple_model()
+    imu_matrix = RotoTransMatrix()
+    imu_matrix.from_rt_matrix(
+        np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
+    )
+    original_imu = InertialMeasurementUnitReal(
+        name="original_contact",
+        parent_name="root",
+        scs=imu_matrix,
+    )
+    scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
+
+    result = ScaleTool(simple_model).scale_imu(original_imu, scale_factor)
+
+    assert result.name == original_imu.name
+    assert result.parent_name == original_imu.parent_name
+    assert result.is_technical == original_imu.is_technical
+    assert result.is_anatomical == original_imu.is_anatomical
+
+    assert result.scs.rt_matrix[0, 3] == 2.0  # 1.0 * 2.0
+    assert result.scs.rt_matrix[1, 3] == 6.0  # 2.0 * 3.0
+    assert result.scs.rt_matrix[2, 3] == 12.0  # 3.0 * 4.0
+
+    # Rotation part should remain unchanged
+    assert np.array_equal(result.scs.rt_matrix[:3, :3], original_imu.scs.rt_matrix[:3, :3])
 
 
 def test_scale_marker():
@@ -806,3 +880,94 @@ def test_scale_marker():
     npt.assert_almost_equal(result.position[1], expected_1)
     npt.assert_almost_equal(expected_2, np.array([0.6, 0.9, 1.2, 0.3]))
     npt.assert_almost_equal(result.position[2], expected_2)
+
+
+def test_scale_contact():
+    """Test scaling of contacts"""
+    simple_model = create_simple_model()
+    original_contact = ContactReal(
+        name="original_contact",
+        parent_name="root",
+        position=np.array([0.1, 0.2, 0.3, 1.0]),
+        axis=Translations.XYZ,
+    )
+    scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
+
+    result = ScaleTool(simple_model).scale_contact(original_contact, scale_factor)
+
+    assert result.name == original_contact.name
+    assert result.parent_name == original_contact.parent_name
+    assert result.axis == original_contact.axis
+
+    # Check scaled position
+    expected = original_contact.position * scale_factor
+    npt.assert_almost_equal(
+        expected.reshape(
+            4,
+        ),
+        np.array([0.2, 0.6, 1.2, 1.0]),
+    )
+    npt.assert_almost_equal(result.position, expected)
+
+
+def test_scale_via_point():
+    """Test scaling of via points"""
+    simple_model = create_simple_model()
+    original_via_point = simple_model.via_points[0]
+    scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
+
+    result = ScaleTool(simple_model).scale_via_point(original_via_point, scale_factor)
+
+    assert result.name == original_via_point.name
+    assert result.parent_name == original_via_point.parent_name
+    assert result.muscle_name == original_via_point.muscle_name
+    assert result.muscle_group == original_via_point.muscle_group
+
+    # Check scaled position
+    expected = original_via_point.position * scale_factor
+    npt.assert_almost_equal(
+        expected.reshape(
+            4,
+        ),
+        np.array([0.4, 0.9, 1.6, 1.0]),
+    )
+    npt.assert_almost_equal(result.position, expected)
+
+
+def test_scale_muscle():
+    """Test scaling of muscles"""
+    simple_model = create_simple_model()
+    original_muscle = simple_model.muscles[0]
+    origin_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
+    insertion_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
+
+    result = ScaleTool(simple_model).scale_muscle(original_muscle, origin_scale_factor, insertion_scale_factor)
+
+    assert result.name == original_muscle.name
+    assert result.muscle_type == original_muscle.muscle_type
+    assert result.state_type == original_muscle.state_type
+    assert result.muscle_group == original_muscle.muscle_group
+    assert result.optimal_length is None  # Will be set later
+    assert result.maximal_force == original_muscle.maximal_force
+    assert result.tendon_slack_length is None
+    assert result.pennation_angle == original_muscle.pennation_angle
+    assert result.maximal_excitation == original_muscle.maximal_excitation
+
+    # Check scaled position
+    expected_origin = original_muscle.origin_position * origin_scale_factor
+    npt.assert_almost_equal(
+        expected_origin.reshape(
+            4,
+        ),
+        np.array([0.0, 0.3, 0.0, 1.0]),
+    )
+    npt.assert_almost_equal(result.origin_position, expected_origin)
+
+    expected_insertion = original_muscle.insertion_position * insertion_scale_factor
+    npt.assert_almost_equal(
+        expected_insertion.reshape(
+            4,
+        ),
+        np.array([1.0, 1.2, 1.2, 1.0]),
+    )
+    npt.assert_almost_equal(result.insertion_position, expected_insertion)

@@ -1,6 +1,7 @@
 from typing import Protocol
 
 import numpy as np
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class CoordinateSystemRealProtocol(Protocol):
@@ -9,8 +10,11 @@ class CoordinateSystemRealProtocol(Protocol):
     It is declare to prevent circular imports of SegmentCoordinateSystemReal
     """
 
+    def __init__(self):
+        self.scs: RotoTransMatrix = RotoTransMatrix()
+
     @property
-    def transpose(self) -> np.ndarray:
+    def inverse(self) -> np.ndarray:
         """
         Get the transpose of the coordinate system
         """

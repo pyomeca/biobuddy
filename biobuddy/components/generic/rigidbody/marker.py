@@ -4,6 +4,7 @@ from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.marker_real import MarkerReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ....utils.protocols import Data
+from ....utils.checks import check_name
 
 
 class Marker:
@@ -35,7 +36,7 @@ class Marker:
         self.name = name
         function = function if function is not None else self.name
         self.function = (lambda m, model: m[function]) if isinstance(function, str) else function
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.is_technical = is_technical
         self.is_anatomical = is_anatomical
 
