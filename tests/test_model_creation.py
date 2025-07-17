@@ -277,10 +277,9 @@ class FakeData:
         self.nb_frames = 1
 
     def mean_values(self):
-        return {name: np.nanmean(self.values[name][:, i_marker, :], axis=1) for i_marker, name in enumerate(self.values.keys())}
+        return {name: self.values[name] for name in self.values.keys()}
 
 
-# TODO: this test fails with exit code 134
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
