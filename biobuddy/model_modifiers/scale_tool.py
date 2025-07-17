@@ -224,10 +224,10 @@ class ScaleTool:
 
     def define_mean_experimental_markers(self, marker_positions, marker_names):
         model_marker_names = self.original_model.marker_names
-        self.mean_experimental_markers = np.zeros((4, len(model_marker_names)))
+        self.mean_experimental_markers = np.ones((4, len(model_marker_names)))
         for i_marker, name in enumerate(model_marker_names):
             marker_index = marker_names.index(name)
-            this_marker_position = marker_positions[:, marker_index, :]
+            this_marker_position = marker_positions[:3, marker_index, :]
             self.mean_experimental_markers[:3, i_marker] = np.nanmean(this_marker_position, axis=1)
 
     def get_scaling_factors_and_masses(
