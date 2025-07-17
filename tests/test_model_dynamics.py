@@ -461,6 +461,22 @@ def test_inverse_kinematics_basic():
     # Check that the solution is close to the true q
     npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
 
+    # Test that it also works when there are NaNs in the exp data
+    marker_positions_with_nan = marker_positions_true.copy()
+    marker_positions_with_nan[0, 0, 0] = np.nan  # Introduce NaN in the first marker position
+    q_reconstructed_nan = leg_model.inverse_kinematics(
+        marker_positions=marker_positions_with_nan[:3, :, :],
+        marker_names=marker_names,
+        q_regularization_weight=0.01,
+        q_target=None,
+        marker_weights=None,
+        method="lm",
+        animate_reconstruction=False,
+    )
+
+    # Check that the solution is still close to the true q
+    npt.assert_array_almost_equal(q_reconstructed_nan, q_true, decimal=3)
+
     # Delete the temporary model created
     os.remove(tempo_leg_filepath)
 
