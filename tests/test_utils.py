@@ -1,14 +1,20 @@
 import os
 import numpy as np
-from biobuddy import BiomechanicalModelReal, BiomechanicalModel
 
 from biobuddy import (
     BiomechanicalModelReal,
+    BiomechanicalModel,
     SegmentReal,
     MarkerReal,
     InertiaParametersReal,
     SegmentCoordinateSystemReal,
     C3dData,
+    RotoTransMatrix,
+    MuscleGroup,
+    MuscleReal,
+    ViaPointReal,
+    MuscleType,
+    MuscleStateType,
 )
 
 
@@ -84,7 +90,7 @@ def create_simple_model():
     model.add_segment(
         SegmentReal(
             name="root",
-            segment_coordinate_system=SegmentCoordinateSystemReal(scs=np.eye(4), is_scs_local=True),
+            segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
             inertia_parameters=InertiaParametersReal(
                 mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
             ),
@@ -142,6 +148,37 @@ def create_simple_model():
             position=np.array([0.1, 0.3, 0.5, 1.0]),
             is_technical=True,
             is_anatomical=False,
+        )
+    )
+
+    model.add_muscle_group(MuscleGroup(
+        name="root_to_child",
+        origin_parent_name="root",
+        insertion_parent_name="child")
+    )
+    model.add_muscle(
+        MuscleReal(
+            name="muscle1",
+            muscle_type=MuscleType.HILL_DE_GROOTE,
+            state_type=MuscleStateType.DEGROOTE,
+            muscle_group="root_to_child",
+            origin_position=np.array([0.0, 0.1, 0.0, 1.0]),
+            insertion_position=np.array([0.5, 0.4, 0.3, 1.0]),
+            optimal_length=0.5,
+            maximal_force=1000,
+            tendon_slack_length=0.2,
+            pennation_angle=0.1,
+            maximal_excitation=1.0,
+        )
+    )
+
+    model.add_via_point(
+        ViaPointReal(
+            name="via_point1",
+            parent_name="child",
+            muscle_name="muscle1",
+            muscle_group="root_to_child",
+            position=np.array([0.2, 0.3, 0.4, 1.0]),
         )
     )
 

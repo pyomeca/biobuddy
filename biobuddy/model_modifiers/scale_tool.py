@@ -22,6 +22,7 @@ from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
 from ..utils.translations import Translations
 from ..utils.rotations import Rotations
+from ..utils.aliases import Point, point_to_array
 
 _logger = logging.getLogger(__name__)
 
@@ -227,7 +228,7 @@ class ScaleTool:
         for i_marker, name in enumerate(model_marker_names):
             marker_index = marker_names.index(name)
             this_marker_position = marker_positions[:, marker_index, :]
-            self.mean_experimental_markers[:, i_marker] = np.nanmean(this_marker_position, axis=1)
+            self.mean_experimental_markers[:3, i_marker] = np.nanmean(this_marker_position, axis=1)
 
     def get_scaling_factors_and_masses(
         self,
@@ -411,7 +412,7 @@ class ScaleTool:
         return
 
     @staticmethod
-    def scale_rt(rt: RotoTransMatrix, scale_factor: np.ndarray) -> RotoTransMatrix:
+    def scale_rt(rt: RotoTransMatrix, scale_factor: Point) -> RotoTransMatrix:
         rt_matrix = rt.rt_matrix
         rt_matrix[:3, 3] *= scale_factor[:3].reshape(
             3,
@@ -423,8 +424,8 @@ class ScaleTool:
     def scale_segment(
         self,
         original_segment: SegmentReal,
-        parent_scale_factor: np.ndarray,
-        scale_factor: np.ndarray,
+        parent_scale_factor: Point,
+        scale_factor: Point,
         segment_mass: float,
     ) -> SegmentReal:
         """
@@ -481,7 +482,7 @@ class ScaleTool:
             mesh_file=mesh_file_scaled,
         )
 
-    def scale_marker(self, original_marker: MarkerReal, scale_factor: np.ndarray) -> MarkerReal:
+    def scale_marker(self, original_marker: MarkerReal, scale_factor: Point) -> MarkerReal:
         return MarkerReal(
             name=deepcopy(original_marker.name),
             parent_name=deepcopy(original_marker.parent_name),
@@ -490,16 +491,16 @@ class ScaleTool:
             is_anatomical=deepcopy(original_marker.is_anatomical),
         )
 
-    def scale_contact(self, original_contact: ContactReal, scale_factor: np.ndarray) -> ContactReal:
+    def scale_contact(self, original_contact: ContactReal, scale_factor: Point) -> ContactReal:
         return ContactReal(
             name=deepcopy(original_contact.name),
             parent_name=deepcopy(original_contact.parent_name),
-            position=deepcopy(original_contact) * scale_factor,
+            position=deepcopy(original_contact.position) * scale_factor,
             axis=deepcopy(original_contact.axis),
         )
 
     def scale_imu(
-        self, original_imu: InertialMeasurementUnitReal, scale_factor: np.ndarray
+        self, original_imu: InertialMeasurementUnitReal, scale_factor: Point
     ) -> InertialMeasurementUnitReal:
         return InertialMeasurementUnitReal(
             name=deepcopy(original_imu.name),
@@ -510,7 +511,7 @@ class ScaleTool:
         )
 
     def scale_muscle(
-        self, original_muscle: MuscleReal, origin_scale_factor: np.ndarray, insertion_scale_factor: np.ndarray
+        self, original_muscle: MuscleReal, origin_scale_factor: Point, insertion_scale_factor: Point
     ) -> MuscleReal:
         return MuscleReal(
             name=deepcopy(original_muscle.name),
@@ -526,7 +527,7 @@ class ScaleTool:
             maximal_excitation=deepcopy(original_muscle.maximal_excitation),
         )
 
-    def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: np.ndarray) -> ViaPointReal:
+    def scale_via_point(self, original_via_point: ViaPointReal, parent_scale_factor: Point) -> ViaPointReal:
         return ViaPointReal(
             name=deepcopy(original_via_point.name),
             parent_name=deepcopy(original_via_point.parent_name),

@@ -4,7 +4,7 @@ import numpy as np
 
 from .protocols import CoordinateSystemRealProtocol
 from ..biomechanical_model_real import BiomechanicalModelReal
-from ....utils.aliases import Points, points_to_array
+from ....utils.aliases import Points, points_to_array, point_to_array
 from ....utils.protocols import Data
 from ....utils.checks import check_name
 from ....utils.linear_algebra import RotoTransMatrix
