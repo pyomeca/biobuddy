@@ -276,8 +276,10 @@ class FakeData:
         self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
         self.nb_frames = 1
 
+    def mean_values(self):
+        return {name: self.values[name] for name in self.values.keys()}
 
-# TODO: this test fails with exit code 134
+
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
