@@ -435,7 +435,9 @@ class RotoTransMatrix:
         elif isinstance(other, np.ndarray):
             # Matrix multiplication of a RotoTransMatrix with a Point (np.array vector) gives a Point (np.array vector)
             if other.shape == (4, 4):
-                raise ValueError("You seem to be trying to multiply two RotoTransMatrix objects. Please use RotoTransMatrix @ RotoTransMatrix instead.")
+                raise ValueError(
+                    "You seem to be trying to multiply two RotoTransMatrix objects. Please use RotoTransMatrix @ RotoTransMatrix instead."
+                )
             out = self.rt_matrix @ point_to_array(point=other)
         else:
             raise NotImplementedError(

@@ -499,9 +499,7 @@ class ScaleTool:
             axis=deepcopy(original_contact.axis),
         )
 
-    def scale_imu(
-        self, original_imu: InertialMeasurementUnitReal, scale_factor: Point
-    ) -> InertialMeasurementUnitReal:
+    def scale_imu(self, original_imu: InertialMeasurementUnitReal, scale_factor: Point) -> InertialMeasurementUnitReal:
         return InertialMeasurementUnitReal(
             name=deepcopy(original_imu.name),
             parent_name=deepcopy(original_imu.parent_name),

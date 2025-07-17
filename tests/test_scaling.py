@@ -813,11 +813,7 @@ def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
     rt_matrix = RotoTransMatrix()
     rt_matrix.from_rt_matrix(
-        np.array([[1.0, 0.0, 0.0, 1.0],
-                  [0.0, 0.0, -1.0, 2.0],
-                  [0.0, 1.0, 0.0, 3.0],
-                  [0.0, 0.0, 0.0, 1.0]]
-                 )
+        np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
 
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
@@ -833,15 +829,11 @@ def test_scale_rt():
 
 
 def test_scale_imu():
-    """Test scaling of imu """
+    """Test scaling of imu"""
     simple_model = create_simple_model()
     imu_matrix = RotoTransMatrix()
     imu_matrix.from_rt_matrix(
-        np.array([[1.0, 0.0, 0.0, 1.0],
-                  [0.0, 0.0, -1.0, 2.0],
-                  [0.0, 1.0, 0.0, 3.0],
-                  [0.0, 0.0, 0.0, 1.0]]
-                 )
+        np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
     original_imu = InertialMeasurementUnitReal(
         name="original_contact",
@@ -909,7 +901,12 @@ def test_scale_contact():
 
     # Check scaled position
     expected = original_contact.position * scale_factor
-    npt.assert_almost_equal(expected.reshape(4, ), np.array([0.2, 0.6, 1.2, 1.0]))
+    npt.assert_almost_equal(
+        expected.reshape(
+            4,
+        ),
+        np.array([0.2, 0.6, 1.2, 1.0]),
+    )
     npt.assert_almost_equal(result.position, expected)
 
 
@@ -928,8 +925,14 @@ def test_scale_via_point():
 
     # Check scaled position
     expected = original_via_point.position * scale_factor
-    npt.assert_almost_equal(expected.reshape(4, ), np.array([0.4, 0.9, 1.6, 1.0]))
+    npt.assert_almost_equal(
+        expected.reshape(
+            4,
+        ),
+        np.array([0.4, 0.9, 1.6, 1.0]),
+    )
     npt.assert_almost_equal(result.position, expected)
+
 
 def test_scale_muscle():
     """Test scaling of muscles"""
@@ -952,9 +955,19 @@ def test_scale_muscle():
 
     # Check scaled position
     expected_origin = original_muscle.origin_position * origin_scale_factor
-    npt.assert_almost_equal(expected_origin.reshape(4, ), np.array([0., 0.3, 0., 1.0]))
+    npt.assert_almost_equal(
+        expected_origin.reshape(
+            4,
+        ),
+        np.array([0.0, 0.3, 0.0, 1.0]),
+    )
     npt.assert_almost_equal(result.origin_position, expected_origin)
 
     expected_insertion = original_muscle.insertion_position * insertion_scale_factor
-    npt.assert_almost_equal(expected_insertion.reshape(4, ), np.array([1.0, 1.2, 1.2, 1.0]))
+    npt.assert_almost_equal(
+        expected_insertion.reshape(
+            4,
+        ),
+        np.array([1.0, 1.2, 1.2, 1.0]),
+    )
     npt.assert_almost_equal(result.insertion_position, expected_insertion)
