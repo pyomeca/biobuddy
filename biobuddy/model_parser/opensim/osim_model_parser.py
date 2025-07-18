@@ -1,3 +1,10 @@
+"""
+Note to the developers: This OpenSim parser is in an intermediary state. We have implemented temporary classes
+(like body.py) to handle the features that are present in OpenSim but that are not implemented yet in BioBuddy.
+There are other casses (like muscle.py) where all the features are implemented so we can directly use the BioBuddy classes.
+The long term goal it to switch all the temporary classes to BioBuddy classes, but this will take time.
+"""
+
 from enum import Enum
 from time import strftime
 
@@ -771,7 +778,8 @@ class OsimModelParser:
                     muscle_groups += [muscle_group] if muscle_group is not None else []
                     muscles += [muscle] if muscle is not None else []
                     via_points += via_point if via_point is not None else []
-                    self.warnings += warnings
+                    if len(warnings) > 0:
+                        self.warnings.append(warnings)
 
                 elif "Force" in element.tag or "Actuator" in element.tag:
                     self.warnings.append(

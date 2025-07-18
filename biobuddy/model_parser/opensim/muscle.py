@@ -85,11 +85,16 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
         path_points.append(via_point)
 
     muscle_group_name = f"{path_points[0].body}_to_{path_points[-1].body}"
-    muscle_group = MuscleGroup(
-        name=muscle_group_name,
-        origin_parent_name=path_points[0].body,
-        insertion_parent_name=path_points[-1].body,
-    )
+    try:
+        muscle_group = MuscleGroup(
+            name=muscle_group_name,
+            origin_parent_name=path_points[0].body,
+            insertion_parent_name=path_points[-1].body,
+        )
+    except Exception as e:
+        # This error is raised when the origin and insertion parent names are the same which is accepted in OpenSim.
+        warnings += f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
+        return None, None, None, warnings
 
     for i in range(len(via_points)):
         via_points[i].muscle_group = muscle_group_name
