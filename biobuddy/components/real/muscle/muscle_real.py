@@ -3,9 +3,7 @@ from typing import Callable
 import numpy as np
 from enum import Enum
 
-from .via_point_real import ViaPointReal
 from ....utils.aliases import Points, point_to_array, points_to_array
-from ....utils.named_list import NamedList
 from ....utils.protocols import Data
 
 
@@ -30,11 +28,12 @@ class MuscleReal:
         muscle_group: str,
         origin_position: Points,
         insertion_position: Points,
-        optimal_length: float,
-        maximal_force: float,
-        tendon_slack_length: float,
-        pennation_angle: float,
-        maximal_excitation: float,
+        optimal_length: float = None,
+        maximal_force: float = None,
+        tendon_slack_length: float = None,
+        pennation_angle: float = None,
+        maximal_velocity: float = None,
+        maximal_excitation: float = None,
     ):
         """
         Parameters
@@ -59,6 +58,8 @@ class MuscleReal:
             The length of the tendon at rest
         pennation_angle
             The pennation angle of the muscle
+        maximal_velocity
+            The maximal contraction velocity of the muscle (a common value is 10 m/s)
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
@@ -66,8 +67,10 @@ class MuscleReal:
             raise ValueError("The optimal length of the muscle must be greater than 0.")
         if maximal_force is not None and maximal_force <= 0:
             raise ValueError("The maximal force of the muscle must be greater than 0.")
+        if maximal_velocity is not None and maximal_velocity <= 0:
+            raise ValueError("The maximal contraction velocity of the muscle must be greater than 0.")
         if maximal_excitation is not None and maximal_excitation <= 0:
-            raise ValueError("The maximal excitation of the muscle must be greater than 1.")
+            raise ValueError("The maximal excitation of the muscle must be greater than 0.")
 
         self.name = name
         self.muscle_type = muscle_type
@@ -79,8 +82,9 @@ class MuscleReal:
         self.maximal_force = maximal_force
         self.tendon_slack_length = tendon_slack_length
         self.pennation_angle = pennation_angle
+        self.maximal_velocity = maximal_velocity
         self.maximal_excitation = maximal_excitation
-        # TODO: missing PCSA and  maxVelocity
+        # TODO: missing PCSA and
 
     @property
     def name(self) -> str:
@@ -167,6 +171,14 @@ class MuscleReal:
         self._pennation_angle = value
 
     @property
+    def maximal_velocity(self) -> float:
+        return self._maximal_velocity
+
+    @maximal_velocity.setter
+    def maximal_velocity(self, value: float):
+        self._maximal_velocity = value
+
+    @property
     def maximal_excitation(self) -> float:
         return self._maximal_excitation
 
@@ -174,17 +186,6 @@ class MuscleReal:
     def maximal_excitation(self, value: float):
         self._maximal_excitation = value
 
-    @property
-    def via_points(self) -> NamedList[ViaPointReal]:
-        return self._via_points
-
-    @via_points.setter
-    def via_points(self, value: NamedList[ViaPointReal] | None):
-        if value is None:
-            value = NamedList[ViaPointReal]()
-        if isinstance(value, list) and not isinstance(value, NamedList):
-            value = NamedList.from_list(value)
-        self._via_points = value
 
     @staticmethod
     def from_data(
@@ -267,9 +268,13 @@ class MuscleReal:
         if isinstance(self.optimal_length, (float, int)):
             out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
         out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
-        if isinstance(self.optimal_length, (float, int)):
+        if isinstance(self.tendon_slack_length, (float, int)):
             out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
-        if isinstance(self.optimal_length, (float, int)):
+        if isinstance(self.pennation_angle, (float, int)):
             out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
+        if isinstance(self.maximal_velocity, (float, int)):
+            out_string += f"\tmaxvelocity\t{self.maximal_velocity:0.4f}\n"
+        if isinstance(self.maximal_excitation, (float, int)):
+            out_string += f"\tmaxexcitation\t{self.maximal_excitation:0.4f}\n"
         out_string += "endmuscle\n"
         return out_string
