@@ -7,6 +7,7 @@ class SimmSpline:
     Python implementation of SIMM (Software for Interactive Musculoskeletal Modeling) cubic spline interpolation.
     Translated from opensim-core/OpenSim/Common/SimmSpline.cpp
     """
+
     def __init__(self, x_points: np.ndarray, y_points: np.ndarray):
         """
         Initialize the SimmSpline with x and y data points.
@@ -49,9 +50,9 @@ class SimmSpline:
             return
 
         # Initialize coefficient arrays
-        self.b = np.zeros((self.nb_nodes, ))
-        self.c = np.zeros((self.nb_nodes, ))
-        self.d = np.zeros((self.nb_nodes, ))
+        self.b = np.zeros((self.nb_nodes,))
+        self.c = np.zeros((self.nb_nodes,))
+        self.d = np.zeros((self.nb_nodes,))
 
         # Handle the case with only 2 points (linear interpolation)
         if self.nb_nodes == 2:
@@ -108,12 +109,14 @@ class SimmSpline:
             self.c[i] = (self.c[i] - self.d[i] * self.c[i + 1]) / self.b[i]
 
         # Compute polynomial coefficients
-        self.b[nm1] = ((self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] +
-                        self.d[nm2] * (self.c[nm2] + 2.0 * self.c[nm1]))
+        self.b[nm1] = (self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] + self.d[nm2] * (
+            self.c[nm2] + 2.0 * self.c[nm1]
+        )
 
         for i in range(nm1):
-            self.b[i] = ((self.y_points[i + 1] - self.y_points[i]) / self.d[i] -
-                          self.d[i] * (self.c[i + 1] + 2.0 * self.c[i]))
+            self.b[i] = (self.y_points[i + 1] - self.y_points[i]) / self.d[i] - self.d[i] * (
+                self.c[i + 1] + 2.0 * self.c[i]
+            )
             self.d[i] = (self.c[i + 1] - self.c[i]) / self.d[i]
             self.c[i] *= 3.0
 
@@ -134,15 +137,14 @@ class SimmSpline:
             The x coordinate to evaluate the spline at
         """
         # Handle both scalar and array inputs
-        if hasattr(x, '__len__') and not isinstance(x, str):
+        if hasattr(x, "__len__") and not isinstance(x, str):
             aX = x[0]  # Use first element if array-like
         else:
             aX = x
 
         # Check for valid data
-        if (len(self.y_points) == 0 or len(self.b) == 0 or
-                len(self.c) == 0 or len(self.d) == 0):
-            return float('nan')
+        if len(self.y_points) == 0 or len(self.b) == 0 or len(self.c) == 0 or len(self.d) == 0:
+            return float("nan")
 
         n = len(self.x_points)
 
@@ -190,18 +192,19 @@ class SimmSpline:
             The order of the derivative (1 or 2)
         """
         if order != 1.0:
-            raise NotImplementedError("Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative.")
+            raise NotImplementedError(
+                "Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative."
+            )
 
         # Handle both scalar and array inputs
-        if hasattr(x, '__len__') and not isinstance(x, str):
+        if hasattr(x, "__len__") and not isinstance(x, str):
             aX = x[0]  # Use first element if array-like
         else:
             aX = x
 
         # Check for valid data
-        if (len(self.y_points) == 0 or len(self.b) == 0 or
-                len(self.c) == 0 or len(self.d) == 0):
-            return float('nan')
+        if len(self.y_points) == 0 or len(self.b) == 0 or len(self.c) == 0 or len(self.d) == 0:
+            return float("nan")
 
         if order < 1 or order > 2:
             raise ValueError("Derivative order must be 1 or 2")

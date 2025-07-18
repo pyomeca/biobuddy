@@ -14,9 +14,16 @@ def condition_from_element(element: etree.ElementTree) -> PathPointCondition:
         range_max=find_in_tree(element, "range").split(" ")[1],
     )
 
+
 def movement_from_element(element: etree.ElementTree) -> PathPointMovement:
-    coordinate_elts = find_sub_elements_in_tree(element=element, parent_element_name=[], sub_element_names=["socket_x_coordinate", "socket_y_coordinate", "socket_z_coordinate"])
-    location_elts = find_sub_elements_in_tree(element=element, parent_element_name=[], sub_element_names=["x_location", "y_location", "z_location"])
+    coordinate_elts = find_sub_elements_in_tree(
+        element=element,
+        parent_element_name=[],
+        sub_element_names=["socket_x_coordinate", "socket_y_coordinate", "socket_z_coordinate"],
+    )
+    location_elts = find_sub_elements_in_tree(
+        element=element, parent_element_name=[], sub_element_names=["x_location", "y_location", "z_location"]
+    )
     dof_names = []
     locations = []
     for coord, loc in zip(coordinate_elts, location_elts):
@@ -32,22 +39,22 @@ def movement_from_element(element: etree.ElementTree) -> PathPointMovement:
 
 class PathPoint:
     def __init__(
-            self,
-            name: str,
-            muscle: str,
-            body: str,
-            muscle_group: str,
-            position: list,
-            condition: PathPointCondition | None = None,
-            movement: PathPointMovement | None = None
+        self,
+        name: str,
+        muscle: str,
+        body: str,
+        muscle_group: str,
+        position: list,
+        condition: PathPointCondition | None = None,
+        movement: PathPointMovement | None = None,
     ):
         self.name = name
         self.muscle = muscle
         self.body = body
         self.muscle_group = muscle_group
         self.position = position
-        self.condition = condition,
-        self.movement = movement,
+        self.condition = (condition,)
+        self.movement = (movement,)
 
     @staticmethod
     def from_element(element: etree.ElementTree) -> "Self":

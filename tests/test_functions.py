@@ -34,9 +34,15 @@ def test_simm_spline():
     order_1.append(1)
 
     npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
-    npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), opensim_spline.calcDerivative(order_1, osim_vector), decimal=6)
+    npt.assert_almost_equal(
+        biobuddy_spline.evaluate_derivative(test_x, order=1),
+        opensim_spline.calcDerivative(order_1, osim_vector),
+        decimal=6,
+    )
     # There is a mismatch for order 2 :(
-    with pytest.raises(NotImplementedError, match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative."):
+    with pytest.raises(
+        NotImplementedError,
+        match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative.",
+    ):
         biobuddy_spline.evaluate_derivative(test_x, order=2)
     # npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=2), opensim_spline.calcDerivative(order_2, osim_vector), decimal=3)
-

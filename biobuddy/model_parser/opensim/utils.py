@@ -7,6 +7,7 @@ def find_in_tree(element: etree.ElementTree, string: str):
     else:
         return None
 
+
 def get_etree_without_comments(element: etree.ElementTree) -> etree.ElementTree:
     element_list: list[etree.ElementTree] = []
     for sub_element in element:
@@ -14,7 +15,10 @@ def get_etree_without_comments(element: etree.ElementTree) -> etree.ElementTree:
             element_list += [sub_element]
     return element_list
 
-def find_sub_elements_in_tree(element: etree.ElementTree, parent_element_name: list[str] | str, sub_element_names: list[str] | str) -> list[etree.ElementTree] | None:
+
+def find_sub_elements_in_tree(
+    element: etree.ElementTree, parent_element_name: list[str] | str, sub_element_names: list[str] | str
+) -> list[etree.ElementTree] | None:
     parent_element = element
     for parent_name in parent_element_name:
         parent_element = parent_element.find(parent_name)
@@ -27,6 +31,7 @@ def find_sub_elements_in_tree(element: etree.ElementTree, parent_element_name: l
         return None
     else:
         return sub_elements
+
 
 def is_element_empty(element):
     if element is not None:

@@ -363,7 +363,6 @@ class OsimModelParser:
         for via_point in self.via_points:
             self.biomechanical_model_real.add_via_point(via_point)
 
-
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
         rotomatrix = OrthoMatrix([0, 0, 0])
@@ -433,7 +432,7 @@ class OsimModelParser:
                         frame_offset=rotomatrix,
                         q_range=q_ranges_rot,
                         rot_dof=rot_axis,
-                        dof_names=effective_rot_dof_names
+                        dof_names=effective_rot_dof_names,
                     )
                     parent = body_name
                 else:
@@ -512,17 +511,17 @@ class OsimModelParser:
         return segment_coordinate_system
 
     def write_ortho_segment(
-            self,
-            axis,
-            axis_offset,
-            name,
-            parent,
-            rt_in_matrix,
-            frame_offset,
-            q_range=None,
-            trans_dof="",
-            rot_dof="",
-            dof_names: list[str]=None,
+        self,
+        axis,
+        axis_offset,
+        name,
+        parent,
+        rt_in_matrix,
+        frame_offset,
+        q_range=None,
+        trans_dof="",
+        rot_dof="",
+        dof_names: list[str] = None,
     ):
         x = axis[0]
         y = axis[1]
@@ -793,7 +792,9 @@ class OsimModelParser:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
                     original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
-                    muscle_group, muscle, via_point, warnings = get_muscle_from_element(element, self.ignore_muscle_applied_tag)
+                    muscle_group, muscle, via_point, warnings = get_muscle_from_element(
+                        element, self.ignore_muscle_applied_tag
+                    )
                     muscle_groups += [muscle_group] if muscle_group is not None else []
                     muscles += [muscle] if muscle is not None else []
                     via_points += via_point if via_point is not None else []

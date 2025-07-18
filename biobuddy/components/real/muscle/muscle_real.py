@@ -186,7 +186,6 @@ class MuscleReal:
     def maximal_excitation(self, value: float):
         self._maximal_excitation = value
 
-
     @staticmethod
     def from_data(
         data: Data,

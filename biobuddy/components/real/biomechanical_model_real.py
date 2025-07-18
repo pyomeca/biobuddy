@@ -235,11 +235,15 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         if len(q.shape) == 2:
             if q.shape[1] != 1:
-                raise RuntimeError("fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1).")
+                raise RuntimeError(
+                    "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
+                )
         elif len(q.shape) == 1:
             q = q[:, np.newaxis]
         else:
-            raise RuntimeError("fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1).")
+            raise RuntimeError(
+                "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
+            )
 
         original_via_points = deepcopy(self.via_points)
         for via_point in original_via_points:
@@ -259,7 +263,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 # Get the position of the via point in this configuration
                 via_point.position = via_point.movement.evaluate(q)
                 via_point.movement = None
-
 
     def from_biomod(
         self,

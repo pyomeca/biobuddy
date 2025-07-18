@@ -17,7 +17,7 @@ class PathPointMovement:
 
     def evaluate(self, angles: np.ndarray) -> np.ndarray:
         """Evaluate the condition based on the current joint angles."""
-        position = np.zeros((angles.shape[0], ))
+        position = np.zeros((angles.shape[0],))
         for i_angle, angle in enumerate(angles):
             position[i_angle] = self.locations[i_angle].evaluate(angle)
         return position
@@ -35,6 +35,7 @@ class PathPointCondition:
             return True
         else:
             return False
+
 
 class ViaPointReal:
     def __init__(
@@ -178,7 +179,9 @@ class ViaPointReal:
             return f"\n// WARNING: biorbd doe not support conditional via points, so the via point {self.name} was ignored.\n"
         if self.movement is not None:
             # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q)
-            return f"\n// WARNING: biorbd doe not support moving via points, so the via point {self.name} was ignored.\n"
+            return (
+                f"\n// WARNING: biorbd doe not support moving via points, so the via point {self.name} was ignored.\n"
+            )
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
         out_string += f"\tmuscle\t{self.muscle_name}\n"

@@ -36,7 +36,16 @@ def check_for_wrappings(element: etree.ElementTree, name: str) -> str:
 
 def check_for_unsupported_elements(element: etree.ElementTree, name: str) -> str:
     warnings = ""
-    not_implemented_elements = ["FmaxTendonStrain", "FmaxMuscleStrain", "KshapeActive", "KshapePassive", "Af", "Flen", "activation_time_constant", "deactivation_time_constant"]
+    not_implemented_elements = [
+        "FmaxTendonStrain",
+        "FmaxMuscleStrain",
+        "KshapeActive",
+        "KshapePassive",
+        "Af",
+        "Flen",
+        "activation_time_constant",
+        "deactivation_time_constant",
+    ]
     for elt_name in not_implemented_elements:
         if find_in_tree(element, elt_name):
             warnings += f"\nAn element {elt_name} was found in the muscle {name}, but this feature is not implemented yet so it will be ignored.\n"
@@ -50,7 +59,9 @@ def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
     return applied
 
 
-def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) -> tuple[MuscleGroup, MuscleReal, list[ViaPointReal], str]:
+def get_muscle_from_element(
+    element: etree.ElementTree, ignore_applied: bool
+) -> tuple[MuscleGroup, MuscleReal, list[ViaPointReal], str]:
     """
     TODO: Better handle ignore_applied parameter. MuscleReal should have a applied parameter, a remove_unapplied_muscle method, and we should remove unapplied muscles in to_biomod.
     """
@@ -75,11 +86,17 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
 
     path_points: list[PathPoint] = []
     via_points: list[PathPoint] = []
-    path_point_elts = find_sub_elements_in_tree(element=element, parent_element_name=["GeometryPath", "PathPointSet", "objects"], sub_element_names=["PathPoint", "ConditionalPathPoint", "MovingPathPoint"])
+    path_point_elts = find_sub_elements_in_tree(
+        element=element,
+        parent_element_name=["GeometryPath", "PathPointSet", "objects"],
+        sub_element_names=["PathPoint", "ConditionalPathPoint", "MovingPathPoint"],
+    )
     for path_point_elt in path_point_elts:
         via_point = PathPoint.from_element(path_point_elt)
         via_point.muscle = name
-        via_point.condition = condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
+        via_point.condition = (
+            condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
+        )
         via_point.movement = movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else None
         via_points.append(via_point)
         path_points.append(via_point)
@@ -93,7 +110,9 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
         )
     except Exception as e:
         # This error is raised when the origin and insertion parent names are the same which is accepted in OpenSim.
-        warnings += f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
+        warnings += (
+            f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
+        )
         return None, None, None, warnings
 
     for via_point in via_points:
@@ -106,7 +125,9 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
         origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
         insersion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
         if origin_problem or insersion_problem:
-            warnings += f"\nThe muscle {name} has a conditional or moving insersion or origin, it is not implemented yet."
+            warnings += (
+                f"\nThe muscle {name} has a conditional or moving insersion or origin, it is not implemented yet."
+            )
             return muscle_group, None, None, warnings
 
         insersion_position = np.array([float(v) for v in via_points[-1].position.split()])
@@ -143,4 +164,3 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
             )
 
         return muscle_group, muscle, via_points_real, warnings
-
