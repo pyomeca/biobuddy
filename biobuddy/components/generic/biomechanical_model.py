@@ -186,26 +186,11 @@ class BiomechanicalModel(ModelUtils):
                 )
             )
 
-        for muscle in self.muscles:
-            if muscle.muscle_group not in model.muscle_groups.keys():
-                raise RuntimeError(
-                    f"Please create the muscle group {muscle.muscle_group} before putting the muscle {muscle.name} in it."
-                )
+            for muscle in muscle_group.muscles:
+                model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model))
 
-            model.add_muscle(muscle.to_muscle(model, data))
+                for via_point in muscle.via_points:
+                    model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(via_point.to_via_point(data, model))
 
-        for via_point in self.via_points:
-            if via_point.muscle_name not in model.muscles.keys():
-                raise RuntimeError(
-                    f"Please create the muscle {via_point.muscle_name} before putting the via point {via_point.name} in it."
-                )
-
-            if via_point.muscle_group not in model.muscle_groups.keys():
-                raise RuntimeError(
-                    f"Please create the muscle group {via_point.muscle_group} before putting the via point {via_point.name} in it."
-                )
-
-            model.add_via_point(via_point.to_via_point(data, model))
-
-        model.segments_rt_to_local()
+        model.validate_model()
         return model

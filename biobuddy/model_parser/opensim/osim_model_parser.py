@@ -114,7 +114,6 @@ class OsimModelParser:
         self.bodies: list[Body] = []
         self.muscle_groups: list[MuscleGroup] = []
         self.muscles: list[MuscleReal] = []
-        self.via_points: list[ViaPointReal] = []
         self.joints: list[Joint] = []
         self.markers: list[Marker] = []
         self.constraint_set = []  # Not implemented
@@ -354,14 +353,6 @@ class OsimModelParser:
             if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
                 self.biomechanical_model_real.add_muscle_group(muscle_group)
 
-        for muscle in self.muscles:
-            # TODO: The muscle types should represent the opensim types instead of setting them to a fixed type
-            muscle.muscle_type = self.muscle_type
-            muscle.state_type = self.muscle_state_type
-            self.biomechanical_model_real.add_muscle(muscle)
-
-        for via_point in self.via_points:
-            self.biomechanical_model_real.add_via_point(via_point)
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
@@ -753,7 +744,7 @@ class OsimModelParser:
         """
 
         # Read the .osim file
-        self.muscle_groups, self.muscles, self.via_points = self._get_force_set()
+        self.muscle_groups, self.muscles = self._get_force_set()
         self.joints = self._get_joint_set()
         self.bodies = self._get_body_set()
         self.markers = self._get_marker_set()
@@ -781,23 +772,19 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal], list[ViaPointReal]]:
+    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal]]:
         muscle_groups = []
         muscles = []
-        via_points = []
-        original_muscle_names = []
         if is_element_empty(self.forceset_elt):
-            return None
+            return None, None
         else:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
-                    original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
-                    muscle_group, muscle, via_point, warnings = get_muscle_from_element(
+                    muscle_group, muscle, warnings = get_muscle_from_element(
                         element, self.ignore_muscle_applied_tag
                     )
                     muscle_groups += [muscle_group] if muscle_group is not None else []
                     muscles += [muscle] if muscle is not None else []
-                    via_points += via_point if via_point is not None else []
                     if len(warnings) > 0:
                         self.warnings.append(warnings)
 
@@ -807,7 +794,7 @@ class OsimModelParser:
                         "Only muscles are supported so they will be ignored."
                     )
 
-            return muscle_groups, muscles, via_points
+            return muscle_groups, muscles
 
     def _get_transformation_parameters(self, spatial_transform):
         translations = []

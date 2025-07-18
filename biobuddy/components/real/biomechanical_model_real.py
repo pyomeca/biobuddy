@@ -27,9 +27,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.header = ""
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()  # Should be moved in MuscleReal
-        self.muscles = NamedList[MuscleReal]()
-        self.via_points = NamedList[ViaPointReal]()  # Should be moved in MuscleReal
+        self.muscle_groups = NamedList[MuscleGroup]()
         self.warnings = ""
 
         # Meta-data
@@ -102,71 +100,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
-    def add_muscle(self, muscle: "MuscleReal") -> None:
-        """
-        Add a muscle to the model
-
-        Parameters
-        ----------
-        muscle
-            The muscle to add
-        """
-        if muscle.muscle_group not in self.muscle_group_names:
-            raise ValueError(
-                f"The muscle group must be declared before the muscle."
-                f"Please declare the muscle_group  {muscle.muscle_group} before declaring the muscle {muscle.name}."
-            )
-        self.muscles._append(muscle)
-
-    def remove_muscle(self, muscle_name: str) -> None:
-        """
-        Remove a muscle from the model
-
-        Parameters
-        ----------
-        muscle_name
-            The name of the muscle to remove
-        """
-        self.muscles._remove(muscle_name)
-
-    def add_via_point(self, via_point: "ViaPointReal") -> None:
-        """
-        Add a via point to the model
-
-        Parameters
-        ----------
-        via_point
-            The via point to add
-        """
-        if via_point.parent_name not in self.segment_names:
-            raise ValueError(
-                f"The parent segment of a via point must be declared before the via point."
-                f"Please declare the segment {via_point.parent_name} before declaring the via point {via_point.name}."
-            )
-        elif via_point.muscle_group not in self.muscle_group_names:
-            raise ValueError(
-                f"The muscle group of a via point must be declared before the via point."
-                f"Please declare the muscle group {via_point.muscle_group} before declaring the via point {via_point.name}."
-            )
-        elif via_point.muscle_name not in self.muscle_names:
-            raise ValueError(
-                f"The muscle of a via point must be declared before the via point."
-                f"Please declare the muscle {via_point.muscle_name} before declaring the via point {via_point.name}."
-            )
-
-        self.via_points._append(via_point)
-
-    def remove_via_point(self, via_point_name: str) -> None:
-        """
-        Remove a via point from the model
-
-        Parameters
-        ----------
-        via_point_name
-            The name of the via point to remove
-        """
-        self.via_points._remove(via_point_name)
-
     @property
     def mass(self) -> float:
         """
@@ -200,6 +133,22 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 scs=deepcopy(self.segment_coordinate_system_in_local(segment.name)),
                 is_scs_local=True,
             )
+
+    def validate_parents(self):
+        """
+        Validate that all via points have a valid parent segment.
+        """
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name not in self.segment_names:
+                        raise ValueError(
+                            f"The via point {via_point.name} has a parent segment that does not exist in the model {via_point.parent_name}. "
+                        )
+
+    def validate_model(self):
+        self.segments_rt_to_local()
+        self.validate_parents()
 
     def muscle_origin_on_this_segment(self, segment_name: str) -> list[str]:
         """
@@ -303,7 +252,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
-        model.segments_rt_to_local()
+        model.validate_model()
         return model
 
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
@@ -320,7 +269,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.biorbd.biorbd_model_writer import BiorbdModelWriter
 
         writer = BiorbdModelWriter(filepath=filepath, with_mesh=with_mesh)
-        self.segments_rt_to_local()
+        self.validate_model()
         writer.write(self)
 
     def to_osim(self, filepath: str, with_mesh: bool = False) -> None:
@@ -330,5 +279,5 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.opensim.opensim_model_writer import OpensimModelWriter
 
         writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
-        self.segments_rt_to_local()
+        self.validate_model()
         writer.write(self)

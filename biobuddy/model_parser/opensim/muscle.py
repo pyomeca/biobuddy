@@ -7,7 +7,7 @@ from .utils import find_in_tree, find_sub_elements_in_tree
 from .path_point import PathPoint, condition_from_element, movement_from_element
 from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.real.muscle.via_point_real import ViaPointReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 
 
 OPENSIM_MUSCLE_TYPE = {
@@ -61,7 +61,7 @@ def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
 
 def get_muscle_from_element(
     element: etree.ElementTree, ignore_applied: bool
-) -> tuple[MuscleGroup, MuscleReal, list[ViaPointReal], str]:
+) -> tuple[MuscleGroupReal, MuscleReal, str]:
     """
     TODO: Better handle ignore_applied parameter. MuscleReal should have a applied parameter, a remove_unapplied_muscle method, and we should remove unapplied muscles in to_biomod.
     """
@@ -103,7 +103,7 @@ def get_muscle_from_element(
 
     muscle_group_name = f"{path_points[0].body}_to_{path_points[-1].body}"
     try:
-        muscle_group = MuscleGroup(
+        muscle_group = MuscleGroupReal(
             name=muscle_group_name,
             origin_parent_name=path_points[0].body,
             insertion_parent_name=path_points[-1].body,
@@ -113,13 +113,13 @@ def get_muscle_from_element(
         warnings += (
             f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
         )
-        return None, None, None, warnings
+        return None, None, warnings
 
     for via_point in via_points:
         via_point.muscle_group = muscle_group_name
 
     if not is_applied(element, ignore_applied):
-        return muscle_group, None, None, ""
+        return muscle_group, None, ""
     else:
 
         origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
@@ -128,7 +128,7 @@ def get_muscle_from_element(
             warnings += (
                 f"\nThe muscle {name} has a conditional or moving insersion or origin, it is not implemented yet."
             )
-            return muscle_group, None, None, warnings
+            return muscle_group, None, warnings
 
         insersion_position = np.array([float(v) for v in via_points[-1].position.split()])
         origin_position = np.array([float(v) for v in via_points[0].position.split()])
@@ -148,12 +148,11 @@ def get_muscle_from_element(
             maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation?
         )
 
-        via_points_real: list[ViaPointReal] = []
         for via_point in via_points[1:-1]:
 
             position = np.array([float(v) for v in via_point.position.split()])
 
-            via_points_real.append(
+            muscle.add_via_point(
                 ViaPointReal(
                     name=via_point.name,
                     parent_name=via_point.body,
@@ -163,4 +162,4 @@ def get_muscle_from_element(
                 )
             )
 
-        return muscle_group, muscle, via_points_real, warnings
+        return muscle_group, muscle, warnings

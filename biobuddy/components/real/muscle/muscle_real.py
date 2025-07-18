@@ -5,6 +5,8 @@ from enum import Enum
 
 from ....utils.aliases import Points, point_to_array, points_to_array
 from ....utils.protocols import Data
+from ....utils.named_list import NamedList
+from .via_point_real import ViaPointReal
 
 
 class MuscleType(Enum):
@@ -85,6 +87,36 @@ class MuscleReal:
         self.maximal_velocity = maximal_velocity
         self.maximal_excitation = maximal_excitation
         # TODO: missing PCSA and
+
+        self.via_points = NamedList[ViaPointReal]()
+
+    def add_via_point(self, via_point: ViaPointReal) -> None:
+        """
+        Add a via point to the model
+
+        Parameters
+        ----------
+        via_point
+            The via point to add
+        """
+        if via_point.muscle_name is not None and via_point.muscle_name != self.name:
+            raise ValueError(
+                f"The via points's muscle {via_point.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
+            )
+
+        via_point.muscle_name = self.name
+        self.via_points._append(via_point)
+
+    def remove_via_point(self, via_point_name: str) -> None:
+        """
+        Remove a via point from the model
+
+        Parameters
+        ----------
+        via_point_name
+            The name of the via point to remove
+        """
+        self.via_points._remove(via_point_name)
 
     @property
     def name(self) -> str:
@@ -276,4 +308,11 @@ class MuscleReal:
         if isinstance(self.maximal_excitation, (float, int)):
             out_string += f"\tmaxexcitation\t{self.maximal_excitation:0.4f}\n"
         out_string += "endmuscle\n"
+        out_string += "\n\n"
+
+
+        out_string += "\n // ------ VIA POINTS ------\n"
+        for via_point in self.via_points:
+            out_string += via_point.to_biomod()
+
         return out_string

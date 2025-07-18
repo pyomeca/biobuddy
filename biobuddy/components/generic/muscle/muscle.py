@@ -1,7 +1,9 @@
 from typing import Callable
 
 from ...real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ..muscle.via_point import ViaPoint
 from ....utils.protocols import Data
+from ....utils.named_list import NamedList
 
 
 class Muscle:
@@ -38,6 +40,36 @@ class Muscle:
         self.tendon_slack_length_function = tendon_slack_length_function
         self.pennation_angle_function = pennation_angle_function
         self.maximal_excitation = 1.0 if maximal_excitation is None else maximal_excitation
+
+        self.via_points = NamedList[ViaPoint]()
+
+    def add_via_point(self, via_point: ViaPoint) -> None:
+        """
+        Add a via point to the model
+
+        Parameters
+        ----------
+        via_point
+            The via point to add
+        """
+        if via_point.muscle_name is not None and via_point.muscle_name != self.name:
+            raise ValueError(
+                "The via points's muscle should be the same as the 'key'. Alternatively, via_point.muscle_name can be left undefined"
+            )
+
+        via_point.muscle_name = self.name
+        self.via_points._append(via_point)
+
+    def remove_via_point(self, via_point_name: str) -> None:
+        """
+        Remove a via point from the model
+
+        Parameters
+        ----------
+        via_point_name
+            The name of the via point to remove
+        """
+        self.via_points._remove(via_point_name)
 
     def to_muscle(self, model, data: Data) -> MuscleReal:
         return MuscleReal.from_data(
