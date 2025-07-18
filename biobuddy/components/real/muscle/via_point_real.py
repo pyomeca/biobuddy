@@ -5,6 +5,22 @@ import numpy as np
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.checks import check_name
+from ...functions import Functions
+
+
+class PathPointMovement:
+    def __init__(self, dof_names: list[str], locations: list[Functions]):
+        if len(dof_names) != len(locations):
+            raise RuntimeError("Mismatch between number of DoF names and locations.")
+        self.dof_names = dof_names
+        self.locations = locations
+
+
+class PathPointCondition:
+    def __init__(self, dof_name: str, range_min: float, range_max: float):
+        self.dof_name = dof_name
+        self.range_min = range_min
+        self.range_max = range_max
 
 
 class ViaPointReal:
@@ -15,6 +31,8 @@ class ViaPointReal:
         muscle_name: str,
         muscle_group: str,
         position: Points = None,
+        condition: PathPointCondition | None = None,
+        movement: PathPointMovement | None = None,
     ):
         """
         Parameters
@@ -29,12 +47,18 @@ class ViaPointReal:
             The muscle group the muscle belongs to
         position
             The 3d position of the via point in the local reference frame
+        condition
+            The condition that must be fulfilled for the via point to be active
+        movement
+            The movement that defines how the via point moves in the local reference frame
         """
         self.name = name
         self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
         self.position = position
+        self.condition = condition
+        self.movement = movement
 
     @property
     def name(self) -> str:
@@ -75,6 +99,22 @@ class ViaPointReal:
     @position.setter
     def position(self, value: Points) -> None:
         self._position = points_to_array(points=value, name="viapoint")
+
+    @property
+    def condition(self) -> PathPointCondition:
+        return self._condition
+
+    @condition.setter
+    def condition(self, value: PathPointCondition) -> None:
+        self._condition = value
+
+    @property
+    def movement(self) -> PathPointMovement:
+        return self._movement
+
+    @movement.setter
+    def movement(self, value: PathPointMovement) -> None:
+        self._movement = value
 
     @staticmethod
     def from_data(
