@@ -310,7 +310,6 @@ class MuscleReal:
         out_string += "endmuscle\n"
         out_string += "\n\n"
 
-
         out_string += "\n // ------ VIA POINTS ------\n"
         for via_point in self.via_points:
             out_string += via_point.to_biomod()

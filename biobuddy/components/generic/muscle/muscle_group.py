@@ -61,4 +61,3 @@ class MuscleGroup:
             The name of the muscle to remove
         """
         self.muscles._remove(muscle_name)
-

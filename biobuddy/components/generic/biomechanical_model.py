@@ -190,7 +190,9 @@ class BiomechanicalModel(ModelUtils):
                 model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model))
 
                 for via_point in muscle.via_points:
-                    model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(via_point.to_via_point(data, model))
+                    model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
+                        via_point.to_via_point(data, model)
+                    )
 
         model.validate_model()
         return model
