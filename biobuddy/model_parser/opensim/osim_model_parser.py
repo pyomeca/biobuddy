@@ -380,15 +380,15 @@ class OsimModelParser:
             (
                 translations,
                 q_ranges_trans,
-                is_dof_trans,
+                trans_dof_names,
                 default_value_trans,
                 rotations,
                 q_ranges_rot,
-                is_dof_rot,
+                rot_dof_names,
                 default_value_rot,
             ) = self._get_transformation_parameters(dof.spatial_transform)
 
-            is_dof_trans, is_dof_rot = np.array(is_dof_trans), np.array(is_dof_rot)
+            trans_dof_names, rot_dof_names = np.array(trans_dof_names), np.array(rot_dof_names)
             dof_axis = np.array(["x", "y", "z"])
 
             # Translations
@@ -396,8 +396,10 @@ class OsimModelParser:
                 body_name = body.name + "_translation"
                 if is_ortho_basis(translations):
                     trans_axis = ""
-                    for idx in np.where(is_dof_trans != None)[0]:
+                    effective_trans_dof_names = []
+                    for idx in np.where(trans_dof_names != None)[0]:
                         trans_axis += dof_axis[idx]
+                        effective_trans_dof_names += [trans_dof_names[idx]]
                     axis_offset = self.write_ortho_segment(
                         axis=translations,
                         axis_offset=axis_offset,
@@ -407,6 +409,7 @@ class OsimModelParser:
                         frame_offset=rotomatrix,
                         q_range=q_ranges_trans,
                         trans_dof=trans_axis,
+                        dof_names=effective_trans_dof_names,
                     )
                     parent = body_name
                 else:
@@ -416,8 +419,10 @@ class OsimModelParser:
             if len(rotations) != 0:
                 if is_ortho_basis(rotations):
                     rot_axis = ""
-                    for idx in np.where(is_dof_rot != None)[0]:
+                    effective_rot_dof_names = []
+                    for idx in np.where(rot_dof_names != None)[0]:
                         rot_axis += dof_axis[idx]
+                        effective_rot_dof_names += [rot_dof_names[idx]]
                     body_name = body.name + "_rotation_transform"
                     axis_offset = self.write_ortho_segment(
                         axis=rotations,
@@ -428,6 +433,7 @@ class OsimModelParser:
                         frame_offset=rotomatrix,
                         q_range=q_ranges_rot,
                         rot_dof=rot_axis,
+                        dof_names=effective_rot_dof_names
                     )
                     parent = body_name
                 else:
@@ -506,7 +512,17 @@ class OsimModelParser:
         return segment_coordinate_system
 
     def write_ortho_segment(
-        self, axis, axis_offset, name, parent, rt_in_matrix, frame_offset, q_range=None, trans_dof="", rot_dof=""
+            self,
+            axis,
+            axis_offset,
+            name,
+            parent,
+            rt_in_matrix,
+            frame_offset,
+            q_range=None,
+            trans_dof="",
+            rot_dof="",
+            dof_names: list[str]=None,
     ):
         x = axis[0]
         y = axis[1]
@@ -520,6 +536,7 @@ class OsimModelParser:
             rt_in_matrix=rt_in_matrix,
             trans_dof=trans_dof,
             rot_dof=rot_dof,
+            dof_names=dof_names,
         )
         return axis_offset.dot(frame_offset.get_rotation_matrix())
 
@@ -637,6 +654,7 @@ class OsimModelParser:
         mesh_file=None,
         mesh_color=None,
         mesh_scale=None,
+        dof_names: list[str] = None,
     ):
         """
         This function aims to add virtual segment to convert osim dof in biomod dof.
@@ -650,6 +668,7 @@ class OsimModelParser:
                 parent_name=parent_name,
                 translations=translations,
                 rotations=rotations,
+                dof_names=dof_names,
                 q_ranges=(
                     self.get_q_range(q_range)
                     if (translations != Translations.NONE or rotations != Rotations.NONE)
@@ -794,10 +813,10 @@ class OsimModelParser:
         rotations = []
         q_ranges_trans = []
         q_ranges_rot = []
-        is_dof_trans = []
+        trans_dof_names = []
         default_value_trans = []
         default_value_rot = []
-        is_dof_rot = []
+        rot_dof_names = []
         for transform in spatial_transform:
             q_range = None
             axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]
@@ -817,22 +836,22 @@ class OsimModelParser:
             if transform.type == "translation":
                 translations.append(axis)
                 q_ranges_trans.append(q_range)
-                is_dof_trans.append(is_dof_tmp)
+                trans_dof_names.append(is_dof_tmp)
                 default_value_trans.append(default_value)
             elif transform.type == "rotation":
                 rotations.append(axis)
                 q_ranges_rot.append(q_range)
-                is_dof_rot.append(is_dof_tmp)
+                rot_dof_names.append(is_dof_tmp)
                 default_value_rot.append(default_value)
             else:
                 raise RuntimeError("Transform must be 'rotation' or 'translation'")
         return (
             translations,
             q_ranges_trans,
-            is_dof_trans,
+            trans_dof_names,
             default_value_trans,
             rotations,
             q_ranges_rot,
-            is_dof_rot,
+            rot_dof_names,
             default_value_rot,
         )

@@ -15,6 +15,13 @@ class PathPointMovement:
         self.dof_names = dof_names
         self.locations = locations
 
+    def evaluate(self, angles: np.ndarray) -> np.ndarray:
+        """Evaluate the condition based on the current joint angles."""
+        position = np.zeros((angles.shape[0], ))
+        for i_angle, angle in enumerate(angles):
+            position[i_angle] = self.locations[i_angle].evaluate(angle)
+        return position
+
 
 class PathPointCondition:
     def __init__(self, dof_name: str, range_min: float, range_max: float):
@@ -22,6 +29,12 @@ class PathPointCondition:
         self.range_min = range_min
         self.range_max = range_max
 
+    def evaluate(self, angle: float) -> bool:
+        """Evaluate the condition based on the current joint angles."""
+        if self.range_min <= angle <= self.range_max:
+            return True
+        else:
+            return False
 
 class ViaPointReal:
     def __init__(
@@ -52,6 +65,11 @@ class ViaPointReal:
         movement
             The movement that defines how the via point moves in the local reference frame
         """
+        if position is not None and movement is not None:
+            raise RuntimeError("You can only have either a position or a movement, not both.")
+        if movement is not None and condition is not None:
+            raise RuntimeError("You can only have either a condition or a movement, not both.")
+
         self.name = name
         self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
@@ -154,7 +172,13 @@ class ViaPointReal:
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
+        """Define the print function, so it automatically formats things in the file properly."""
+        if self.condition is not None:
+            # To avoid this warning, it is possible to fix the via points using the BiomechanicalModelReal.fix_via_points(q)
+            return f"\n// WARNING: biorbd doe not support conditional via points, so the via point {self.name} was ignored.\n"
+        if self.movement is not None:
+            # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q)
+            return f"\n// WARNING: biorbd doe not support moving via points, so the via point {self.name} was ignored.\n"
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
         out_string += f"\tmuscle\t{self.muscle_name}\n"

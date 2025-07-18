@@ -26,8 +26,8 @@ class MuscleReal:
         muscle_type: MuscleType,
         state_type: MuscleStateType,
         muscle_group: str,
-        origin_position: Points,
-        insertion_position: Points,
+        origin_position: Points,  # TODO: should be a ViaPointReal (so that we allow for condition and movement)
+        insertion_position: Points,  # TODO: should be a ViaPointReal (so that we allow for condition and movement)
         optimal_length: float = None,
         maximal_force: float = None,
         tendon_slack_length: float = None,

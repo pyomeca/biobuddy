@@ -1,4 +1,5 @@
 from copy import deepcopy
+import numpy as np
 
 # from typing import Self
 
@@ -26,9 +27,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.header = ""
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscle_groups = NamedList[MuscleGroup]()  # Should be moved in MuscleReal
         self.muscles = NamedList[MuscleReal]()
-        self.via_points = NamedList[ViaPointReal]()
+        self.via_points = NamedList[ViaPointReal]()  # Should be moved in MuscleReal
         self.warnings = ""
 
         # Meta-data
@@ -206,7 +207,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         muscle_names = []
         for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:  # TODO: This is wack !
+            if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:
                 muscle_names += [muscle.name]
         return muscle_names
 
@@ -216,7 +217,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         muscle_names = []
         for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:  # TODO: This is wack !
+            if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:
                 muscle_names += [muscle.name]
         return muscle_names
 
@@ -225,6 +226,40 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         Get the names of the via point which have this segment as a parent.
         """
         return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
+
+    def fix_via_points(self, q: np.ndarray) -> None:
+        """
+        This function allows to fix conditional and moving via points on the model. This is useful to reduce modeling complexity if the via point do not change much over the range of motion used. It is also useful when using biorbd as these features are not implement in biorbd yet.
+        Note: This is a destructive operation: once the conditional and moving via points are fixed, they cannot be reverted.
+        # TODO: fix insertion and origin of muscles too.
+        """
+        if len(q.shape) == 2:
+            if q.shape[1] != 1:
+                raise RuntimeError("fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1).")
+        elif len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        else:
+            raise RuntimeError("fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1).")
+
+        original_via_points = deepcopy(self.via_points)
+        for via_point in original_via_points:
+
+            # Conditional via points
+            if via_point.condition is not None:
+                dof_index = self.dof_index(via_point.condition.dof_name)
+                if via_point.condition.evaluate(q[dof_index]):
+                    # The via point is active in this configuration so we keep it
+                    via_point.condition = None
+                else:
+                    # The via point is not activa, so we remove it
+                    self.via_points._remove(via_point.name)
+
+            # Moving via points
+            elif via_point.movement is not None:
+                # Get the position of the via point in this configuration
+                via_point.position = via_point.movement.evaluate(q)
+                via_point.movement = None
+
 
     def from_biomod(
         self,

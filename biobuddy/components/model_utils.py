@@ -144,6 +144,24 @@ class ModelUtils:
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
         raise ValueError(f"Segment {segment_name} not found in the model")
 
+    def dof_index(self, dof_name: str) -> int:
+        """
+        Get the index of a degree of freedom from the model
+
+        Parameters
+        ----------
+        dof_name
+            The name of the degree of freedom to get the index for
+        """
+        idx = 0
+        for segment in self.segments:
+            if dof_name in segment.dof_names:
+                idx += segment.dof_names.index(dof_name)
+                return idx
+            else:
+                idx += len(segment.dof_names)
+        raise ValueError(f"DoF {dof_name} not found in the model")
+
     def markers_indices(self, marker_names: list[str]) -> list[int]:
         """
         Get the indices of the markers of the model

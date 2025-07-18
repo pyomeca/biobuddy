@@ -44,7 +44,7 @@ def check_for_unsupported_elements(element: etree.ElementTree, name: str) -> str
 
 
 def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
-    applied = False
+    applied = True
     if element.find("appliesForce") is not None and not ignore_applied:
         applied = element.find("appliesForce").text == "true"
     return applied
@@ -96,12 +96,18 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
         warnings += f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
         return None, None, None, warnings
 
-    for i in range(len(via_points)):
-        via_points[i].muscle_group = muscle_group_name
+    for via_point in via_points:
+        via_point.muscle_group = muscle_group_name
 
     if not is_applied(element, ignore_applied):
         return muscle_group, None, None, ""
     else:
+
+        origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
+        insersion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
+        if origin_problem or insersion_problem:
+            warnings += f"\nThe muscle {name} has a conditional or moving insersion or origin, it is not implemented yet."
+            return muscle_group, None, None, warnings
 
         insersion_position = np.array([float(v) for v in via_points[-1].position.split()])
         origin_position = np.array([float(v) for v in via_points[0].position.split()])
@@ -136,5 +142,5 @@ def get_muscle_from_element(element: etree.ElementTree, ignore_applied: bool) ->
                 )
             )
 
-        return muscle_group, muscle, via_points, warnings
+        return muscle_group, muscle, via_points_real, warnings
 
