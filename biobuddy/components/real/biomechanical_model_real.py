@@ -4,7 +4,7 @@ import numpy as np
 # from typing import Self
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
-from ...utils.aliases import Point, point_to_array
+from ...utils.aliases import Point, point_to_array, points_to_array
 from ...utils.named_list import NamedList
 from ..model_utils import ModelUtils
 from .model_dynamics import ModelDynamics
@@ -148,7 +148,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                     )
                 if muscle.origin_position.condition is not None:
                     raise RuntimeError("Muscle origin cannot be conditional.")
-                if muscle.insertion_position_function is not None:
+                if muscle.insertion_position.condition is not None:
                     raise RuntimeError("Muscle insertion cannot be conditional.")
 
                 for via_point in muscle.via_points:
@@ -157,18 +157,29 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                             f"The via point {via_point.name} has a parent segment that does not exist in the model {via_point.parent_name}. "
                         )
 
+    def validate_moving_via_points(self):
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points + [muscle.origin_position, muscle.insertion_position]:
+                    if via_point.movement is not None and via_point.position.size != 0:
+                        raise RuntimeError(
+                            f"A via point can either have a position or a movement, but not both at the same time, {via_point.name} has both."
+                        )
+
     def validate_model(self):
         self.segments_rt_to_local()
         self.validate_parents()
+        self.validate_moving_via_points()
 
     def muscle_origin_on_this_segment(self, segment_name: str) -> list[str]:
         """
         Get the names of the muscles which have an insertion on this segment.
         """
         muscle_names = []
-        for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:
-                muscle_names += [muscle.name]
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:
+                    muscle_names += [muscle.name]
         return muscle_names
 
     def muscle_insertion_on_this_segment(self, segment_name: str) -> list[str]:
@@ -176,9 +187,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         Get the names of the muscles which have an insertion on this segment.
         """
         muscle_names = []
-        for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:
-                muscle_names += [muscle.name]
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:
+                    muscle_names += [muscle.name]
         return muscle_names
 
     def via_points_on_this_segment(self, segment_name: str) -> list[str]:
@@ -187,12 +199,14 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
 
-    def fix_via_points(self, q: np.ndarray) -> None:
+    def fix_via_points(self, q: np.ndarray = None) -> None:
         """
         This function allows to fix conditional and moving via points on the model. This is useful to reduce modeling complexity if the via point do not change much over the range of motion used. It is also useful when using biorbd as these features are not implement in biorbd yet.
         Note: This is a destructive operation: once the conditional and moving via points are fixed, they cannot be reverted.
         """
-        if len(q.shape) == 2:
+        if q is None:
+            q = np.zeros((self.nb_q, 1))
+        elif len(q.shape) == 2:
             if q.shape[1] != 1:
                 raise RuntimeError(
                     "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
@@ -228,7 +242,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         dof_index = self.dof_index(via_point.condition.dof_name)
                         if via_point.condition.evaluate(q[dof_index]):
                             # The via point is active in this configuration so we keep it
-                            via_point.condition = None
+                            muscle.via_points[via_point.name].condition = None
                         else:
                             # The via point is not activa, so we remove it
                             muscle.remove_via_point(via_point.name)
@@ -236,8 +250,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                     # Moving via points
                     elif via_point.movement is not None:
                         # Get the position of the via point in this configuration
-                        via_point.position = via_point.movement.evaluate(q)
-                        via_point.movement = None
+                        dof_indices = [self.dof_index(name) for name in via_point.movement.dof_names]
+                        muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
+                        muscle.via_points[via_point.name].movement = None
 
     def from_biomod(
         self,

@@ -27,6 +27,7 @@ def test_biomechanics_model_real_utils_functions():
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
     )
+    wholebody_model.fix_via_points()
     wholebody_model.to_biomod(wholebody_biorbd_filepath, with_mesh=False)
     wholebody_model_biorbd = biorbd.Model(wholebody_biorbd_filepath)
 

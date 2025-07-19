@@ -372,40 +372,43 @@ class ScaleTool:
         self.scaled_model.muscle_groups = deepcopy(self.original_model.muscle_groups)
 
         # Scale muscles
-        for muscle_name in self.original_model.muscles.keys():
+        for muscle_group in self.original_model.muscle_groups:
+            for muscle in muscle_group.muscles:
 
-            muscle_group_name = deepcopy(self.original_model.muscles[muscle_name].muscle_group)
-            origin_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].origin_parent_name)
-            insertion_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].insertion_parent_name)
-            origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
-            insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+                muscle_name = muscle.name
+                muscle_group_name = deepcopy(muscle.muscle_group)
+                origin_parent_name = deepcopy(muscle.origin_parent_name)
+                insertion_parent_name = deepcopy(muscle.insertion_parent_name)
+                origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+                insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
 
-            if (
-                origin_parent_name not in self.scaling_segments.keys()
-                and insertion_parent_name not in self.scaling_segments.keys()
-            ):
-                # If the muscle is not attached to a segment that is scaled, do not scale the muscle
-                self.scaled_model.add_muscle(deepcopy(self.original_model.muscles[muscle_name]))
-            else:
-                self.scaled_model.add_muscle(
-                    self.scale_muscle(
-                        deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
+                if (
+                    origin_parent_name not in self.scaling_segments.keys()
+                    and insertion_parent_name not in self.scaling_segments.keys()
+                ):
+                    # If the muscle is not attached to a segment that is scaled, do not scale the muscle
+                    self.scaled_model.muscle_groups[muscle_group_name].add_muscle(deepcopy(muscle))
+                else:
+                    self.scaled_model.muscle_groups[muscle_group_name].add_muscle(
+                        self.scale_muscle(
+                            deepcopy(muscle), origin_scale_factor, insertion_scale_factor
+                        )
                     )
-                )
 
-        # Scale via points
-        for via_point_name in self.original_model.via_points.keys():
+                # Scale via points
+                for via_point in muscle.via_points:
 
-            parent_name = deepcopy(self.original_model.via_points[via_point_name].parent_name)
-            parent_scale_factor = scaling_factors[parent_name].to_vector()
+                    via_point_name = via_point.name
+                    parent_name = deepcopy(via_point.parent_name)
+                    parent_scale_factor = scaling_factors[parent_name].to_vector()
 
-            if parent_name not in self.scaling_segments.keys():
-                # If the via point is not attached to a segment that is scaled, do not scale the via point
-                self.scaled_model.add_via_point(deepcopy(self.original_model.via_points[via_point_name]))
-            else:
-                self.scaled_model.add_via_point(
-                    self.scale_via_point(deepcopy(self.original_model.via_points[via_point_name]), parent_scale_factor)
-                )
+                    if parent_name not in self.scaling_segments.keys():
+                        # If the via point is not attached to a segment that is scaled, do not scale the via point
+                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(deepcopy(via_point))
+                    else:
+                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(
+                            self.scale_via_point(deepcopy(via_point), parent_scale_factor)
+                        )
 
         self.scaled_model.warnings = deepcopy(self.original_model.warnings)
 

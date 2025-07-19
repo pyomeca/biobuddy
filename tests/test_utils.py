@@ -15,6 +15,8 @@ from biobuddy import (
     ViaPointReal,
     MuscleType,
     MuscleStateType,
+    Translations,
+    Rotations,
 )
 
 
@@ -90,6 +92,8 @@ def create_simple_model():
     model.add_segment(
         SegmentReal(
             name="root",
+            translations=Translations.XYZ,
+            rotations=Rotations.XYZ,
             segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
             inertia_parameters=InertiaParametersReal(
                 mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
@@ -105,6 +109,7 @@ def create_simple_model():
         SegmentReal(
             name="child",
             parent_name="root",
+            rotations=Rotations.X,
             segment_coordinate_system=segment_coordinate_system_child,
             inertia_parameters=InertiaParametersReal(
                 mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01

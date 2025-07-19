@@ -15,7 +15,8 @@ def condition_from_element(element: etree.ElementTree) -> PathPointCondition:
     )
 
 
-def movement_from_element(element: etree.ElementTree) -> PathPointMovement:
+def movement_from_element(element: etree.ElementTree) -> tuple[PathPointMovement, str]:
+    warning = ""
     coordinate_elts = find_sub_elements_in_tree(
         element=element,
         parent_element_name=[],
@@ -26,15 +27,21 @@ def movement_from_element(element: etree.ElementTree) -> PathPointMovement:
     )
     dof_names = []
     locations = []
+    moving_path_point = None
+    if not find_in_tree(element, "SimmSpline"):
+        warning += "Warning: No SimmSpline found in PathPointMovement locations. It will be ignored\n"
     for coord, loc in zip(coordinate_elts, location_elts):
-        dof_names.append(coord.text.split("/")[-1])
-        if not match_tag(loc[0], "SimmSpline"):
-            raise NotImplementedError("Only SimmSpline functions are supported for PathPointMovement locations.")
-        locations.append(spline_from_element(loc[0]))
-    return PathPointMovement(
-        dof_names=dof_names,
-        locations=locations,
-    )
+        if match_tag(loc[0], "SimmSpline"):
+            dof_names.append(coord.text.split("/")[-1])
+            locations.append(spline_from_element(loc[0]))
+        else:
+            warning += "Only SimmSpline functions are supported for PathPointMovement locations."
+    if warning == "":
+        moving_path_point = PathPointMovement(
+            dof_names=dof_names,
+            locations=locations,
+        )
+    return moving_path_point, warning
 
 
 class PathPoint:
