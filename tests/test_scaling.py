@@ -12,7 +12,7 @@ import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from test_utils import remove_temporary_biomods, create_simple_model
+from test_utils import remove_temporary_biomods, create_simple_model, compare_models
 from biobuddy.utils.aliases import Point, point_to_array
 from biobuddy import (
     BiomechanicalModelReal,
@@ -438,6 +438,7 @@ def test_translation_of_scaling_configuration():
     new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
 
     diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
+    compare_models(scaling_configuration.scaled_model, new_biomod_scaling_configuration.scaled_model)
 
     # If the two objects are the same, there are no fields in diff
     assert diff == {}

@@ -161,17 +161,20 @@ class MuscleReal:
 
     @origin_position.setter
     def origin_position(self, value: ViaPointReal):
-        if value.muscle_name is not None and value.muscle_name != self.name:
-            raise ValueError(
-                f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
-            )
-        value.muscle_name = self.name
-        if value.muscle_group is not None and value.muscle_group != self.muscle_group:
-            raise ValueError(
-                f"The origin's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
-            )
-        value.muscle_group = self.muscle_group
-        self._origin_position = value
+        if value is None:
+            self._origin_position = None
+        else:
+            if value.muscle_name is not None and value.muscle_name != self.name:
+                raise ValueError(
+                    f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
+                )
+            value.muscle_name = self.name
+            if value.muscle_group is not None and value.muscle_group != self.muscle_group:
+                raise ValueError(
+                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+                )
+            value.muscle_group = self.muscle_group
+            self._origin_position = value
 
     @property
     def insertion_position(self) -> ViaPointReal:
@@ -179,17 +182,20 @@ class MuscleReal:
 
     @insertion_position.setter
     def insertion_position(self, value: ViaPointReal):
-        if value.muscle_name is not None and value.muscle_name != self.name:
-            raise ValueError(
-                f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
-            )
-        value.muscle_name = self.name
-        if value.muscle_group is not None and value.muscle_group != self.muscle_group:
-            raise ValueError(
-                f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
-            )
-        value.muscle_group = self.muscle_group
-        self._insertion_position = value
+        if value is None:
+            self._insertion_position = None
+        else:
+            if value.muscle_name is not None and value.muscle_name != self.name:
+                raise ValueError(
+                    f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
+                )
+            value.muscle_name = self.name
+            if value.muscle_group is not None and value.muscle_group != self.muscle_group:
+                raise ValueError(
+                    f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
+                )
+            value.muscle_group = self.muscle_group
+            self._insertion_position = value
 
     @property
     def optimal_length(self) -> float:

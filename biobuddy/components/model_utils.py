@@ -117,14 +117,14 @@ class ModelUtils:
     @property
     def nb_muscles(self) -> int:
         nb = 0
-        for muscle_group in self.muscle_groups.values():
+        for muscle_group in self.muscle_groups:
             nb += len(muscle_group.muscles)
         return nb
 
     @property
     def nb_via_points(self) -> int:
         nb = 0
-        for muscle_group in self.muscle_groups.values():
+        for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
                 nb += len(muscle.via_points)
         return nb
