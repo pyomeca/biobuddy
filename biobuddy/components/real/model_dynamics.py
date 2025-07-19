@@ -507,7 +507,9 @@ class ModelDynamics:
                             ).reshape(
                                 -1,
                             )
-                        via_points_position = np.concatenate((via_points_position, this_via_point[:, np.newaxis, :]), axis=1)
+                        via_points_position = np.concatenate(
+                            (via_points_position, this_via_point[:, np.newaxis, :]), axis=1
+                        )
 
         return via_points_position
 
@@ -578,7 +580,12 @@ class ModelDynamics:
         elif len(q.shape) > 2:
             raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
 
-        muscle_origin_parent_name, muscle_insertion_parent_name, muscle_origin, muscle_insertion = None, None, None, None
+        muscle_origin_parent_name, muscle_insertion_parent_name, muscle_origin, muscle_insertion = (
+            None,
+            None,
+            None,
+            None,
+        )
         nb_frames = q.shape[1]
         muscle_tendon_length = np.zeros((nb_frames,))
         global_jcs = self.forward_kinematics(q)
@@ -601,13 +608,16 @@ class ModelDynamics:
                 if muscle_found:
                     break
 
-            if (muscle_origin_parent_name is None or muscle_insertion_parent_name is None or muscle_origin is None or muscle_insertion is None):
+            if (
+                muscle_origin_parent_name is None
+                or muscle_insertion_parent_name is None
+                or muscle_origin is None
+                or muscle_insertion is None
+            ):
                 raise RuntimeError(f"The muscle {muscle_name} was not found in the model.")
 
             origin_position = global_jcs[muscle_origin_parent_name][i_frame] @ muscle_origin
-            insertion_position = (
-                global_jcs[muscle_insertion_parent_name][i_frame] @ muscle_insertion
-            )
+            insertion_position = global_jcs[muscle_insertion_parent_name][i_frame] @ muscle_insertion
 
             muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
             muscle_norm = 0

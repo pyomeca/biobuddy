@@ -356,7 +356,6 @@ class OsimModelParser:
             muscle_group_name = muscle.muscle_group
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
-
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
         rotomatrix = OrthoMatrix([0, 0, 0])
@@ -783,7 +782,9 @@ class OsimModelParser:
         else:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
-                    muscle_group, muscle, warnings = get_muscle_from_element(element, self.ignore_muscle_applied_tag, self.muscle_type)
+                    muscle_group, muscle, warnings = get_muscle_from_element(
+                        element, self.ignore_muscle_applied_tag, self.muscle_type
+                    )
                     muscle_groups += [muscle_group] if muscle_group is not None else []
                     muscles += [muscle] if muscle is not None else []
                     if len(warnings) > 0:
