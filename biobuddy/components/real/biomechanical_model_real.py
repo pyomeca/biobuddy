@@ -1,9 +1,10 @@
 from copy import deepcopy
+import numpy as np
 
 # from typing import Self
 
 from .muscle.muscle_real import MuscleType, MuscleStateType
-from ...utils.aliases import Point, point_to_array
+from ...utils.aliases import Point, point_to_array, points_to_array
 from ...utils.named_list import NamedList
 from ..model_utils import ModelUtils
 from .model_dynamics import ModelDynamics
@@ -14,8 +15,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         # Imported here to prevent from circular imports
         from ..generic.muscle.muscle_group import MuscleGroup
-        from .muscle.muscle_real import MuscleReal
-        from .muscle.via_point_real import ViaPointReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)
@@ -27,8 +26,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroup]()
-        self.muscles = NamedList[MuscleReal]()
-        self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
         # Meta-data
@@ -101,71 +98,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
-    def add_muscle(self, muscle: "MuscleReal") -> None:
-        """
-        Add a muscle to the model
-
-        Parameters
-        ----------
-        muscle
-            The muscle to add
-        """
-        if muscle.muscle_group not in self.muscle_group_names:
-            raise ValueError(
-                f"The muscle group must be declared before the muscle."
-                f"Please declare the muscle_group  {muscle.muscle_group} before declaring the muscle {muscle.name}."
-            )
-        self.muscles._append(muscle)
-
-    def remove_muscle(self, muscle_name: str) -> None:
-        """
-        Remove a muscle from the model
-
-        Parameters
-        ----------
-        muscle_name
-            The name of the muscle to remove
-        """
-        self.muscles._remove(muscle_name)
-
-    def add_via_point(self, via_point: "ViaPointReal") -> None:
-        """
-        Add a via point to the model
-
-        Parameters
-        ----------
-        via_point
-            The via point to add
-        """
-        if via_point.parent_name not in self.segment_names:
-            raise ValueError(
-                f"The parent segment of a via point must be declared before the via point."
-                f"Please declare the segment {via_point.parent_name} before declaring the via point {via_point.name}."
-            )
-        elif via_point.muscle_group not in self.muscle_group_names:
-            raise ValueError(
-                f"The muscle group of a via point must be declared before the via point."
-                f"Please declare the muscle group {via_point.muscle_group} before declaring the via point {via_point.name}."
-            )
-        elif via_point.muscle_name not in self.muscle_names:
-            raise ValueError(
-                f"The muscle of a via point must be declared before the via point."
-                f"Please declare the muscle {via_point.muscle_name} before declaring the via point {via_point.name}."
-            )
-
-        self.via_points._append(via_point)
-
-    def remove_via_point(self, via_point_name: str) -> None:
-        """
-        Remove a via point from the model
-
-        Parameters
-        ----------
-        via_point_name
-            The name of the via point to remove
-        """
-        self.via_points._remove(via_point_name)
-
     @property
     def mass(self) -> float:
         """
@@ -200,14 +132,58 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 is_scs_local=True,
             )
 
+    def validate_parents(self):
+        """
+        Validate that all via points have a valid parent segment.
+        """
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.origin_position.parent_name != muscle_group.origin_parent_name:
+                    raise ValueError(
+                        f"The origin position of the muscle {muscle.name} must be the same as the origin parent segment {muscle_group.origin_parent_name}."
+                    )
+                if muscle.insertion_position.parent_name != muscle_group.insertion_parent_name:
+                    raise ValueError(
+                        f"The insertion position of the muscle {muscle.name} must be the same as the insertion parent segment {muscle_group.insertion_parent_name}."
+                    )
+                if muscle.origin_position.condition is not None:
+                    raise RuntimeError("Muscle origin cannot be conditional.")
+                if muscle.insertion_position.condition is not None:
+                    raise RuntimeError("Muscle insertion cannot be conditional.")
+
+                for via_point in muscle.via_points:
+                    if via_point.parent_name not in self.segment_names:
+                        raise ValueError(
+                            f"The via point {via_point.name} has a parent segment that does not exist in the model {via_point.parent_name}. "
+                        )
+
+    def validate_moving_via_points(self):
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points + [muscle.origin_position, muscle.insertion_position]:
+                    if via_point.movement is not None and via_point.position.size != 0:
+                        raise RuntimeError(
+                            f"A via point can either have a position or a movement, but not both at the same time, {via_point.name} has both."
+                        )
+                    if via_point.movement is not None and via_point.condition is not None:
+                        raise RuntimeError(
+                            f"A via point can either have a movement or a condition, but not both at the same time, {via_point.name} has both."
+                        )
+
+    def validate_model(self):
+        self.segments_rt_to_local()
+        self.validate_parents()
+        self.validate_moving_via_points()
+
     def muscle_origin_on_this_segment(self, segment_name: str) -> list[str]:
         """
         Get the names of the muscles which have an insertion on this segment.
         """
         muscle_names = []
-        for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:  # TODO: This is wack !
-                muscle_names += [muscle.name]
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:
+                    muscle_names += [muscle.name]
         return muscle_names
 
     def muscle_insertion_on_this_segment(self, segment_name: str) -> list[str]:
@@ -215,16 +191,80 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         Get the names of the muscles which have an insertion on this segment.
         """
         muscle_names = []
-        for muscle in self.muscles:
-            if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:  # TODO: This is wack !
-                muscle_names += [muscle.name]
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:
+                    muscle_names += [muscle.name]
         return muscle_names
 
     def via_points_on_this_segment(self, segment_name: str) -> list[str]:
         """
         Get the names of the via point which have this segment as a parent.
         """
-        return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
+        via_point_names = []
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name == segment_name:
+                        via_point_names.append(via_point.name)
+        return via_point_names
+
+    def fix_via_points(self, q: np.ndarray = None) -> None:
+        """
+        This function allows to fix conditional and moving via points on the model. This is useful to reduce modeling complexity if the via point do not change much over the range of motion used. It is also useful when using biorbd as these features are not implement in biorbd yet.
+        Note: This is a destructive operation: once the conditional and moving via points are fixed, they cannot be reverted.
+        """
+        if q is None:
+            q = np.zeros((self.nb_q, 1))
+        elif len(q.shape) == 2:
+            if q.shape[1] != 1:
+                raise RuntimeError(
+                    "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
+                )
+        elif len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        else:
+            raise RuntimeError(
+                "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
+            )
+
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+
+                # Moving origin
+                if muscle.origin_position.movement is not None:
+                    # Get the position of the via point in this configuration
+                    dof_indices = [self.dof_index(name) for name in muscle.origin_position.movement.dof_names]
+                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])
+                    muscle.origin_position.movement = None
+
+                # Moving insertion
+                if muscle.insertion_position.movement is not None:
+                    # Get the position of the via point in this configuration
+                    dof_indices = [self.dof_index(name) for name in muscle.insertion_position.movement.dof_names]
+                    muscle.insertion_position.position = muscle.insertion_position.movement.evaluate(q[dof_indices])
+                    muscle.insertion_position.movement = None
+
+                #  Via points
+                original_via_points = deepcopy(muscle.via_points)
+                for via_point in original_via_points:
+
+                    # Conditional via points
+                    if via_point.condition is not None:
+                        dof_index = self.dof_index(via_point.condition.dof_name)
+                        if via_point.condition.evaluate(q[dof_index]):
+                            # The via point is active in this configuration so we keep it
+                            muscle.via_points[via_point.name].condition = None
+                        else:
+                            # The via point is not activa, so we remove it
+                            muscle.remove_via_point(via_point.name)
+
+                    # Moving via points
+                    elif via_point.movement is not None:
+                        # Get the position of the via point in this configuration
+                        dof_indices = [self.dof_index(name) for name in via_point.movement.dof_names]
+                        muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
+                        muscle.via_points[via_point.name].movement = None
 
     def from_biomod(
         self,
@@ -265,7 +305,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model = OsimModelParser(
             filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
         ).to_real()
-        model.segments_rt_to_local()
+        model.validate_model()
         return model
 
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
@@ -282,7 +322,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.biorbd.biorbd_model_writer import BiorbdModelWriter
 
         writer = BiorbdModelWriter(filepath=filepath, with_mesh=with_mesh)
-        self.segments_rt_to_local()
+        self.validate_model()
         writer.write(self)
 
     def to_osim(self, filepath: str, with_mesh: bool = False) -> None:
@@ -292,5 +332,5 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.opensim.opensim_model_writer import OpensimModelWriter
 
         writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
-        self.segments_rt_to_local()
+        self.validate_model()
         writer.write(self)

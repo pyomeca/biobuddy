@@ -8,8 +8,6 @@ class ModelUtils:
         # Attributes that will be filled by BiomechanicalModelReal
         self.segments = None
         self.muscle_groups = None
-        self.muscles = None
-        self.via_points = None
 
     @property
     def segment_names(self) -> list[str]:
@@ -54,14 +52,23 @@ class ModelUtils:
         """
         Get the names of the muscles in the model
         """
-        return list(self.muscles.keys())
+        names = []
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                names.append(muscle.name)
+        return names
 
     @property
     def via_point_names(self) -> list[str]:
         """
         Get the names of the via points in the model
         """
-        return list(self.via_points.keys())
+        names = []
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    names.append(via_point.name)
+        return names
 
     def has_parent_offset(self, segment_name: str) -> bool:
         """True if the segment segment_name has an offset parent."""
@@ -109,11 +116,18 @@ class ModelUtils:
 
     @property
     def nb_muscles(self) -> int:
-        return len(self.muscles)
+        nb = 0
+        for muscle_group in self.muscle_groups:
+            nb += len(muscle_group.muscles)
+        return nb
 
     @property
     def nb_via_points(self) -> int:
-        return len(self.via_points)
+        nb = 0
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                nb += len(muscle.via_points)
+        return nb
 
     @property
     def nb_q(self) -> int:
@@ -143,6 +157,24 @@ class ModelUtils:
                 nb_rotations = len(segment.rotations.value) if segment.rotations != Rotations.NONE else 0
                 return list(range(nb_dof, nb_dof + nb_translations + nb_rotations))
         raise ValueError(f"Segment {segment_name} not found in the model")
+
+    def dof_index(self, dof_name: str) -> int:
+        """
+        Get the index of a degree of freedom from the model
+
+        Parameters
+        ----------
+        dof_name
+            The name of the degree of freedom to get the index for
+        """
+        idx = 0
+        for segment in self.segments:
+            if dof_name in segment.dof_names:
+                idx += segment.dof_names.index(dof_name)
+                return idx
+            else:
+                idx += len(segment.dof_names)
+        raise ValueError(f"DoF {dof_name} not found in the model")
 
     def markers_indices(self, marker_names: list[str]) -> list[int]:
         """

@@ -16,13 +16,14 @@ from ..components.real.rigidbody.inertial_measurement_unit_real import InertialM
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..components.real.muscle.muscle_real import MuscleReal
+from ..components.real.muscle.muscle_group_real import MuscleGroupReal
 from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
 from ..utils.translations import Translations
 from ..utils.rotations import Rotations
-from ..utils.aliases import Point, point_to_array
+from ..utils.aliases import Point
 
 _logger = logging.getLogger(__name__)
 
@@ -368,44 +369,52 @@ class ScaleTool:
             else:
                 self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
 
-        # Set muscle groups
-        self.scaled_model.muscle_groups = deepcopy(self.original_model.muscle_groups)
-
         # Scale muscles
-        for muscle_name in self.original_model.muscles.keys():
+        for muscle_group in self.original_model.muscle_groups:
 
-            muscle_group_name = deepcopy(self.original_model.muscles[muscle_name].muscle_group)
-            origin_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].origin_parent_name)
-            insertion_parent_name = deepcopy(self.original_model.muscle_groups[muscle_group_name].insertion_parent_name)
-            origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
-            insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+            self.scaled_model.add_muscle_group(
+                MuscleGroupReal(
+                    name=deepcopy(muscle_group.name),
+                    origin_parent_name=deepcopy(muscle_group.origin_parent_name),
+                    insertion_parent_name=deepcopy(muscle_group.insertion_parent_name),
+                )
+            )
+            for muscle in muscle_group.muscles:
 
-            if (
-                origin_parent_name not in self.scaling_segments.keys()
-                and insertion_parent_name not in self.scaling_segments.keys()
-            ):
-                # If the muscle is not attached to a segment that is scaled, do not scale the muscle
-                self.scaled_model.add_muscle(deepcopy(self.original_model.muscles[muscle_name]))
-            else:
-                self.scaled_model.add_muscle(
-                    self.scale_muscle(
-                        deepcopy(self.original_model.muscles[muscle_name]), origin_scale_factor, insertion_scale_factor
+                muscle_name = muscle.name
+                muscle_group_name = deepcopy(muscle.muscle_group)
+                origin_parent_name = muscle_group.origin_parent_name
+                origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+                insertion_parent_name = muscle_group.insertion_parent_name
+                insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+
+                if (
+                    origin_parent_name not in self.scaling_segments.keys()
+                    and insertion_parent_name not in self.scaling_segments.keys()
+                ):
+                    # If the muscle is not attached to a segment that is scaled, do not scale the muscle
+                    self.scaled_model.muscle_groups[muscle_group_name].add_muscle(deepcopy(muscle))
+                else:
+                    self.scaled_model.muscle_groups[muscle_group_name].add_muscle(
+                        self.scale_muscle(deepcopy(muscle), origin_scale_factor, insertion_scale_factor)
                     )
-                )
 
-        # Scale via points
-        for via_point_name in self.original_model.via_points.keys():
+                # Scale via points
+                for via_point in muscle.via_points:
 
-            parent_name = deepcopy(self.original_model.via_points[via_point_name].parent_name)
-            parent_scale_factor = scaling_factors[parent_name].to_vector()
+                    via_point_name = via_point.name
+                    parent_name = deepcopy(via_point.parent_name)
+                    parent_scale_factor = scaling_factors[parent_name].to_vector()
 
-            if parent_name not in self.scaling_segments.keys():
-                # If the via point is not attached to a segment that is scaled, do not scale the via point
-                self.scaled_model.add_via_point(deepcopy(self.original_model.via_points[via_point_name]))
-            else:
-                self.scaled_model.add_via_point(
-                    self.scale_via_point(deepcopy(self.original_model.via_points[via_point_name]), parent_scale_factor)
-                )
+                    if parent_name not in self.scaling_segments.keys():
+                        # If the via point is not attached to a segment that is scaled, do not scale the via point
+                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(
+                            deepcopy(via_point)
+                        )
+                    else:
+                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(
+                            self.scale_via_point(deepcopy(via_point), parent_scale_factor)
+                        )
 
         self.scaled_model.warnings = deepcopy(self.original_model.warnings)
 
@@ -511,13 +520,17 @@ class ScaleTool:
     def scale_muscle(
         self, original_muscle: MuscleReal, origin_scale_factor: Point, insertion_scale_factor: Point
     ) -> MuscleReal:
+        origin_position = deepcopy(original_muscle.origin_position)
+        origin_position.position *= origin_scale_factor
+        insertion_position = deepcopy(original_muscle.insertion_position)
+        insertion_position.position *= insertion_scale_factor
         return MuscleReal(
             name=deepcopy(original_muscle.name),
             muscle_type=deepcopy(original_muscle.muscle_type),
             state_type=deepcopy(original_muscle.state_type),
             muscle_group=deepcopy(original_muscle.muscle_group),
-            origin_position=deepcopy(original_muscle.origin_position) * origin_scale_factor,
-            insertion_position=deepcopy(original_muscle.insertion_position) * insertion_scale_factor,
+            origin_position=origin_position,
+            insertion_position=insertion_position,
             optimal_length=None,  # Will be set later
             maximal_force=deepcopy(original_muscle.maximal_force),
             tendon_slack_length=None,  # Will be set later
@@ -689,29 +702,30 @@ class ScaleTool:
         """
         Modify the optimal length, tendon slack length and pennation angle of the muscles.
         """
-        for muscle_name in self.original_model.muscle_names:
-            if self.original_model.muscles[muscle_name].optimal_length is None:
-                raise RuntimeError(
-                    f"The muscle {muscle_name} does not have an optimal length. Please set the optimal length of the muscle in the original model."
-                )
-            elif self.original_model.muscles[muscle_name].tendon_slack_length is None:
-                raise RuntimeError(
-                    f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
-                )
+        for muscle_group in self.original_model.muscle_groups:
+            for muscle_name in muscle_group.muscle_names:
+                if muscle_group.muscles[muscle_name].optimal_length is None:
+                    raise RuntimeError(
+                        f"The muscle {muscle_name} does not have an optimal length. Please set the optimal length of the muscle in the original model."
+                    )
+                elif muscle_group.muscles[muscle_name].tendon_slack_length is None:
+                    raise RuntimeError(
+                        f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
+                    )
 
-            original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
-            scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
+                original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
+                scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
 
-            self.scaled_model.muscles[muscle_name].optimal_length = (
-                deepcopy(self.original_model.muscles[muscle_name].optimal_length)
-                * scaled_muscle_tendon_length
-                / original_muscle_tendon_length
-            )
-            self.scaled_model.muscles[muscle_name].tendon_slack_length = (
-                deepcopy(self.original_model.muscles[muscle_name].tendon_slack_length)
-                * scaled_muscle_tendon_length
-                / original_muscle_tendon_length
-            )
+                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].optimal_length = (
+                    deepcopy(muscle_group.muscles[muscle_name].optimal_length)
+                    * scaled_muscle_tendon_length
+                    / original_muscle_tendon_length
+                )
+                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].tendon_slack_length = (
+                    deepcopy(muscle_group.muscles[muscle_name].tendon_slack_length)
+                    * scaled_muscle_tendon_length
+                    / original_muscle_tendon_length
+                )
 
     def from_biomod(
         self,

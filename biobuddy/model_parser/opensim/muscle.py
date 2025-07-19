@@ -1,101 +1,180 @@
 # from typing import Self
 
+import numpy as np
 from lxml import etree
 
-from .utils import find_in_tree
-from .path_point import PathPoint
+from .utils import find_in_tree, find_sub_elements_in_tree
+from .path_point import PathPoint, condition_from_element, movement_from_element
+from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ...components.real.muscle.via_point_real import ViaPointReal
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 
 
-class Muscle:
-    def __init__(
-        self,
-        name: str,
-        via_point: list,
-        origin: list,
-        insersion: list,
-        optimal_length: float,
-        maximal_force: float,
-        tendon_slack_length: float,
-        pennation_angle: float,
-        applied: bool,
-        maximal_velocity: float,
-        wrap: bool,
-        group: list,
-    ):
-        self.name = name
-        self.via_point = via_point
-        self.origin = origin
-        self.insersion = insersion
-        self.optimal_length = optimal_length
-        self.maximal_force = maximal_force
-        self.tendon_slack_length = tendon_slack_length
-        self.pennation_angle = pennation_angle
-        self.applied = applied
-        self.maximal_velocity = maximal_velocity
-        self.wrap = wrap
-        self.group = group
+OPENSIM_MUSCLE_TYPE = {
+    "Thelen2003Muscle": MuscleType.HILL_THELEN,
+    "Millard2012EquilibriumMuscle": None,  # Not implemented
+    "Schutte1993Muscle": None,  # Not implemented
+    "DeGrooteFregly2016Muscle": MuscleType.HILL_DE_GROOTE,
+    "Schutte1993Muscle_Deprecated": None,  # Not implemented
+}
 
-    @staticmethod
-    def from_element(element: etree.ElementTree, ignore_applied: bool) -> "Self":
-        name = (element.attrib["name"]).split("/")[-1]
-        maximal_force = find_in_tree(element, "max_isometric_force")
-        optimal_length = find_in_tree(element, "optimal_fiber_length")
-        tendon_slack_length = find_in_tree(element, "tendon_slack_length")
-        pennation_angle = find_in_tree(element, "pennation_angle_at_optimal")
-        maximal_velocity = find_in_tree(element, "max_contraction_velocity")
 
-        applied = False
-        if element.find("appliesForce") is not None and not ignore_applied:
-            applied = element.find("appliesForce").text == "true"
+def check_for_wrappings(element: etree.ElementTree, name: str) -> str:
+    wrap = False
+    warnings = ""
+    if element.find("GeometryPath").find("PathWrapSet") is not None:
+        try:
+            wrap_tp = element.find("GeometryPath").find("PathWrapSet")[0].text
+        except:
+            wrap_tp = 0
+        n_wrap = 0 if not wrap_tp else len(wrap_tp)
+        wrap = n_wrap != 0
+    if wrap:
+        warnings += f"Some wrapping objects were present on the muscle {name} in the original file force set.\nWraping objects are not supported yet so they will be ignored."
+    return warnings
 
-        # TODO: add type hints to general lists
-        path_points = []
-        via_points = []
-        for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("PathPoint"):
-            via_point = PathPoint.from_element(path_point_elt)
-            via_point.muscle = name
-            via_points.append(via_point)
-            path_points.append(via_point)
 
-        # Not implemented in the model, but used to determine the muscle group
-        for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("ConditionalPathPoint"):
-            conditional_path_point = PathPoint.from_element(path_point_elt)
-            conditional_path_point.muscle = name
-            path_points.append(conditional_path_point)
+def check_for_unsupported_elements(element: etree.ElementTree, name: str) -> str:
+    warnings = ""
+    not_implemented_elements = [
+        "FmaxTendonStrain",
+        "FmaxMuscleStrain",
+        "KshapeActive",
+        "KshapePassive",
+        "Af",
+        "Flen",
+        "activation_time_constant",
+        "deactivation_time_constant",
+    ]
+    for elt_name in not_implemented_elements:
+        if find_in_tree(element, elt_name):
+            warnings += f"\nAn element {elt_name} was found in the muscle {name}, but this feature is not implemented yet so it will be ignored.\n"
+    return warnings
 
-        for path_point_elt in element.find("GeometryPath").find("PathPointSet")[0].findall("MovingPathPoint"):
-            moving_path_point = PathPoint.from_element(path_point_elt)
-            moving_path_point.muscle = name
-            path_points.append(moving_path_point)
 
-        group = [path_points[0].body, path_points[-1].body]
-        for i in range(len(via_points)):
-            via_points[i].muscle_group = f"{group[0]}_to_{group[1]}"
+def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
+    applied = True
+    if element.find("appliesForce") is not None and not ignore_applied:
+        applied = element.find("appliesForce").text == "true"
+    return applied
 
-        wrap = False
-        if element.find("GeometryPath").find("PathWrapSet") is not None:
-            try:
-                wrap_tp = element.find("GeometryPath").find("PathWrapSet")[0].text
-            except:
-                wrap_tp = 0
-            n_wrap = 0 if not wrap_tp else len(wrap_tp)
-            wrap = n_wrap != 0
 
-        insersion = via_points[-1].position
-        origin = via_points[0].position
-        via_point = via_points[1:-1]
+def get_muscle_from_element(
+    element: etree.ElementTree, ignore_applied: bool, muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE
+) -> tuple[MuscleGroupReal, MuscleReal, str]:
+    """
+    TODO: Better handle ignore_applied parameter. MuscleReal should have a applied parameter, a remove_unapplied_muscle method, and we should remove unapplied muscles in to_biomod.
+    """
+    name = (element.attrib["name"]).split("/")[-1]
+    warnings = check_for_wrappings(element, name) + check_for_unsupported_elements(element, name)
+    # muscle_type = OPENSIM_MUSCLE_TYPE[element.tag]  # TODO: We should try to match OpenSim muscle types
+    muscle_type = muscle_type
 
-        return Muscle(
+    maximal_force = find_in_tree(element, "max_isometric_force")
+    maximal_force = float(maximal_force) if maximal_force else 1000.0
+
+    optimal_length = find_in_tree(element, "optimal_fiber_length")
+    optimal_length = float(optimal_length) if optimal_length else 0.1
+
+    tendon_slack_length = find_in_tree(element, "tendon_slack_length")
+    tendon_slack_length = float(tendon_slack_length) if tendon_slack_length else None
+
+    pennation_angle = find_in_tree(element, "pennation_angle_at_optimal")
+    pennation_angle = float(pennation_angle) if pennation_angle else 0.0
+
+    maximal_velocity = find_in_tree(element, "max_contraction_velocity")
+    maximal_velocity = float(maximal_velocity) if maximal_velocity else 10.0
+
+    path_points: list[PathPoint] = []
+    via_points: list[PathPoint] = []
+    path_point_elts = find_sub_elements_in_tree(
+        element=element,
+        parent_element_name=["GeometryPath", "PathPointSet", "objects"],
+        sub_element_names=["PathPoint", "ConditionalPathPoint", "MovingPathPoint"],
+    )
+    for path_point_elt in path_point_elts:
+        via_point = PathPoint.from_element(path_point_elt)
+        via_point.muscle = name
+        via_point.condition = (
+            condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
+        )
+        movement, warning = (
+            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else (None, "")
+        )
+        if warning != "":
+            warnings += warning
+        else:
+            via_point.movement = movement
+        via_points.append(via_point)
+        path_points.append(via_point)
+
+    muscle_group_name = f"{path_points[0].body}_to_{path_points[-1].body}"
+    try:
+        muscle_group = MuscleGroupReal(
+            name=muscle_group_name,
+            origin_parent_name=path_points[0].body,
+            insertion_parent_name=path_points[-1].body,
+        )
+    except Exception as e:
+        # This error is raised when the origin and insertion parent names are the same which is accepted in OpenSim.
+        warnings += (
+            f"\nAn error occurred while creating the muscle group {muscle_group_name} for the muscle {name}: {e}\n"
+        )
+        return None, None, warnings
+
+    for via_point in via_points:
+        via_point.muscle_group = muscle_group_name
+
+    if not is_applied(element, ignore_applied):
+        return muscle_group, None, ""
+    else:
+
+        origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
+        insertion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
+        if origin_problem or insertion_problem:
+            warnings += (
+                f"\nThe muscle {name} has a conditional or moving insertion or origin, it is not implemented yet."
+            )
+            return muscle_group, None, warnings
+
+        origin_position = ViaPointReal(
+            name=f"origin_{name}",
+            parent_name=via_points[0].body,
+            position=np.array([float(v) for v in via_points[0].position.split()]),
+        )
+        insertion_position = ViaPointReal(
+            name=f"insertion_{name}",
+            parent_name=via_points[-1].body,
+            position=np.array([float(v) for v in via_points[-1].position.split()]),
+        )
+
+        muscle = MuscleReal(
             name=name,
-            via_point=via_point,
-            origin=origin,
-            insersion=insersion,
+            muscle_type=muscle_type,
+            state_type=MuscleStateType.DEGROOTE,  # TODO: make this configurable
+            muscle_group=muscle_group_name,
+            origin_position=origin_position,
+            insertion_position=insertion_position,
             optimal_length=optimal_length,
             maximal_force=maximal_force,
             tendon_slack_length=tendon_slack_length,
             pennation_angle=pennation_angle,
-            applied=applied,
             maximal_velocity=maximal_velocity,
-            wrap=wrap,
-            group=group,
+            maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation?
         )
+
+        for via_point in via_points[1:-1]:
+
+            position = np.array([float(v) for v in via_point.position.split()])
+
+            muscle.add_via_point(
+                ViaPointReal(
+                    name=via_point.name,
+                    parent_name=via_point.body,
+                    muscle_name=name,
+                    muscle_group=muscle_group_name,
+                    position=position,
+                )
+            )
+
+        return muscle_group, muscle, warnings

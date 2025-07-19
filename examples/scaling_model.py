@@ -44,6 +44,8 @@ def main(visualization):
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+    # Fix the via points before translating to biomod as there are some conditional and moving via points
+    model.fix_via_points(q=np.zeros((model.nb_q,)))
 
     # Translate into biomod
     model.to_biomod(biomod_filepath)

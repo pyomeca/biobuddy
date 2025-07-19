@@ -19,6 +19,7 @@ class Segment(SegmentUtils):
         parent_name: str = "base",
         translations: Translations = Translations.NONE,
         rotations: Rotations = Rotations.NONE,
+        dof_names: list[str] = None,
         q_ranges: RangeOfMotion = None,
         qdot_ranges: RangeOfMotion = None,
         segment_coordinate_system: SegmentCoordinateSystem = None,
@@ -39,6 +40,9 @@ class Segment(SegmentUtils):
             The sequence of translation
         rotations
             The sequence of rotation
+        dof_names
+            The names of the degrees of freedom of the segment
+            If None, it will be automatically generated based on translations and rotations (like "segment_transX" or "segment_rotY")
         q_ranges
             The range of motion of the segment
         qdot_ranges
@@ -58,6 +62,7 @@ class Segment(SegmentUtils):
         self.parent_name = check_name(parent_name)
         self.translations = translations
         self.rotations = rotations
+        self.dof_names = dof_names
         self.q_ranges = q_ranges
         self.qdot_ranges = qdot_ranges
         self.markers = NamedList[Marker]()
@@ -66,6 +71,26 @@ class Segment(SegmentUtils):
         self.inertia_parameters = inertia_parameters
         self.mesh = mesh
         self.mesh_file = mesh_file
+
+    @property
+    def dof_names(self) -> list[str]:
+        return self._dof_names
+
+    @dof_names.setter
+    def dof_names(self, value: list[str]):
+        if value is None:
+            value = []
+            if self.translations != Translations.NONE:
+                for trans in self.translations.value:
+                    value += [f"{self.name}_trans{trans.upper()}"]
+            if self.rotations != Rotations.NONE:
+                for rot in self.rotations.value:
+                    value += [f"{self.name}_rot{rot.upper()}"]
+        if len(value) != self.nb_q:
+            raise RuntimeError(
+                f"The number of DoF names ({len(value)}) does not match the number of DoFs ({self.nb_q}) in segment {self.name}."
+            )
+        self._dof_names = value
 
     @property
     def markers(self) -> NamedList[Marker]:

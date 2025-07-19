@@ -4,6 +4,7 @@ This example shows how to read and write models.
 
 import logging
 from pathlib import Path
+import numpy as np
 
 from biobuddy import (
     MuscleType,
@@ -48,6 +49,8 @@ def main():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+    # Fix the via points before translating to biomod as there are some conditional and moving via points
+    model.fix_via_points(q=np.zeros((model.nb_q,)))
 
     # And convert it to a .bioMod file
     model.to_biomod(biomod_filepath, with_mesh=visualization_flag)
@@ -62,8 +65,6 @@ def main():
 
     if visualization_flag:
         # Compare the result visually
-        import numpy as np
-
         try:
             import pyorerun
         except ImportError:

@@ -176,6 +176,15 @@ joint position and axis are modified.
 
 ![SCoRE_SARA](docs/images/SCoRE_SARA.png)
 
+
+# Note
+Understandably, not all modeling formats have the same functionalities, so some features may not be available for all 
+formats. We will try to keep here a list up to date of the features that are available in BioBuddy that are not 
+available for each format: 
+ - biorbd (.bioMod):
+   - `PathPointCondition` is not implemented yet in biorbd. So if your BioBuddy model has this component, we recommend running `BiomechanicalModelReal.fix_via_points(q)` before `BiomechanicalModelReal.to_biomod(path)`. This will evaluate the via point conditions at the desired posture (which should be close to the range of motion during the movement studied). If the condition is not meet, the via point is inactive, so it is removed from the model. Please note that this is a destructive operation, once the conditions are evaluated, they are removed from the model and the remaining via points are fixed on the segments. 
+   - `PathPointMovement` are not implemented yet in biorbd. So if your BioBuddy model has this components, we recommend running `BiomechanicalModelReal.fix_via_points(q)` before `BiomechanicalModelReal.to_biomod(path)`. This will fix the position of the moving via points, muscle origin, and muscle insertion by evaluating the position function at the desired posture (which should be close to the range of motion during the movement studied). Please note that this is a destructive operation, once the movements are evaluated, they are removed from the model and the remaining via points are fixed on the segments.  
+
 # How to cite
 ```
 @software{biobuddy_2025,

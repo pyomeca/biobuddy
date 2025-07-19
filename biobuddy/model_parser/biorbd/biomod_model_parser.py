@@ -48,8 +48,6 @@ class BiomodModelParser:
         self.gravity = None
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroup]()
-        self.muscles = NamedList[MuscleReal]()
-        self.via_points = NamedList[ViaPointReal]()
         self.warnings = ""
 
         def next_token():
@@ -305,7 +303,7 @@ class BiomodModelParser:
                             raise ValueError(f"Tendon slack length not found in muscle {current_component.name}")
                         if current_component.pennation_angle is None:
                             raise ValueError(f"Pennation angle not found in muscle {current_component.name}")
-                        self.muscles.append(current_component)
+                        self.muscle_groups[current_component.muscle_group].add_muscle(current_component)
                         current_component = None
                     elif token.lower() == "type":
                         current_component.muscle_type = MuscleType(read_str(next_token=next_token))
@@ -314,9 +312,21 @@ class BiomodModelParser:
                     elif token.lower() == "musclegroup":
                         current_component.muscle_group = read_str(next_token=next_token)
                     elif token.lower() == "originposition":
-                        current_component.origin_position = read_float_vector(next_token=next_token, length=3)
+                        current_component.origin_position = ViaPointReal(
+                            name=f"origin_{current_component.name}",
+                            parent_name=self.muscle_groups[current_component.muscle_group].origin_parent_name,
+                            muscle_name=current_component.name,
+                            muscle_group=current_component.muscle_group,
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "insertionposition":
-                        current_component.insertion_position = read_float_vector(next_token=next_token, length=3)
+                        current_component.insertion_position = ViaPointReal(
+                            name=f"insertion_{current_component.name}",
+                            parent_name=self.muscle_groups[current_component.muscle_group].insertion_parent_name,
+                            muscle_name=current_component.name,
+                            muscle_group=current_component.muscle_group,
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "optimallength":
                         current_component.optimal_length = read_float(next_token=next_token)
                     elif token.lower() == "maximalforce":
@@ -336,7 +346,9 @@ class BiomodModelParser:
                             raise ValueError(f"Muscle name type not found in via point {current_component.name}")
                         if not current_component.muscle_group:
                             raise ValueError(f"Muscle group not found in muscle {current_component.name}")
-                        self.via_points.append(current_component)
+                        self.muscle_groups[current_component.muscle_group].muscles[
+                            current_component.muscle_name
+                        ].add_via_point(current_component)
                         current_component = None
                     elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
@@ -361,14 +373,6 @@ class BiomodModelParser:
         # Add the muscle groups
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(deepcopy(muscle_group))
-
-        # Add the muscles
-        for muscle in self.muscles:
-            model.add_muscle(deepcopy(muscle))
-
-        # Add the via points
-        for via_point in self.via_points:
-            model.add_via_point(deepcopy(via_point))
 
         model.warnings = self.warnings
 

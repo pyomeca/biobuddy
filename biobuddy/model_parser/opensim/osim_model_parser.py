@@ -1,3 +1,10 @@
+"""
+Note to the developers: This OpenSim parser is in an intermediary state. We have implemented temporary classes
+(like body.py) to handle the features that are present in OpenSim but that are not implemented yet in BioBuddy.
+There are other casses (like muscle.py) where all the features are implemented so we can directly use the BioBuddy classes.
+The long term goal it to switch all the temporary classes to BioBuddy classes, but this will take time.
+"""
+
 from enum import Enum
 from time import strftime
 
@@ -8,13 +15,12 @@ from .utils import is_element_empty, match_tag
 from .body import Body
 from .joint import Joint
 from .marker import Marker
-from .muscle import Muscle
+from .muscle import get_muscle_from_element
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.real.rigidbody.segment_real import SegmentReal
-from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
@@ -104,19 +110,19 @@ class OsimModelParser:
 
         self.parse_tags(self.model.getroot())
 
-        # TODO Add the type hints for all and/or use NamedList
         self.bodies: list[Body] = []
-        self.forces = []
+        self.muscle_groups: list[MuscleGroup] = []
+        self.muscles: list[MuscleReal] = []
         self.joints: list[Joint] = []
         self.markers: list[Marker] = []
-        self.constraint_set = []
-        self.controller_set = []
-        self.prob_set = []
-        self.component_set = []
-        self.geometry_set = []
+        self.constraint_set = []  # Not implemented
+        self.controller_set = []  # Not implemented
+        self.prob_set = []  # Not implemented
+        self.component_set = []  # Not implemented
+        self.geometry_set: list[list[str]] = []
 
         self.header = ""
-        self.warnings = []
+        self.warnings: list[str] = []
 
         # Create the biomechanical model
         self.biomechanical_model_real = BiomechanicalModelReal()
@@ -174,7 +180,7 @@ class OsimModelParser:
     def to_real(self) -> BiomechanicalModelReal:
         return self.biomechanical_model_real
 
-    def _get_body_mesh_list(self, body_set=None) -> list[str]:
+    def _get_body_mesh_list(self, body_set=None) -> list[list[str]]:
         """returns the list of vtp files included in the model"""
         body_mesh_list = []
         body_set = body_set if body_set else self.bodyset_elt[0]
@@ -186,7 +192,7 @@ class OsimModelParser:
                 body_mesh_list.append(mesh)
             return body_mesh_list
 
-    def _get_marker_set(self):
+    def _get_marker_set(self) -> list[Marker]:
         markers = []
         if is_element_empty(self.markerset_elt):
             return []
@@ -336,53 +342,19 @@ class OsimModelParser:
                 )
 
     def _set_muscles(self):
-        """Convert OpenSim muscles to BiomechanicalModelReal muscles."""
-        if not self.forces:
+        """Add the muscle components to the BiomechanicalModelReal."""
+        if not self.muscle_groups and not self.muscles:
             return
 
-        for muscle in self.forces:
-            try:
-                # Add muscle group if it does not exist already
-                muscle_group_name = f"{muscle.group[0]}_to_{muscle.group[1]}"
-                if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
-                    self.biomechanical_model_real.add_muscle_group(
-                        MuscleGroup(
-                            name=muscle_group_name,
-                            origin_parent_name=muscle.group[0],
-                            insertion_parent_name=muscle.group[1],
-                        )
-                    )
+        for muscle_group in self.muscle_groups:
+            # Add muscle group if it does not exist already
+            muscle_group_name = muscle_group.name
+            if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
+                self.biomechanical_model_real.add_muscle_group(muscle_group)
 
-                # Convert muscle properties
-                muscle_real = MuscleReal(
-                    name=muscle.name,
-                    muscle_type=self.muscle_type,
-                    state_type=self.muscle_state_type,
-                    muscle_group=muscle_group_name,
-                    origin_position=np.array([float(v) for v in muscle.origin.split()]),
-                    insertion_position=np.array([float(v) for v in muscle.insersion.split()]),
-                    optimal_length=float(muscle.optimal_length) if muscle.optimal_length else 0.1,
-                    maximal_force=float(muscle.maximal_force) if muscle.maximal_force else 1000.0,
-                    tendon_slack_length=float(muscle.tendon_slack_length) if muscle.tendon_slack_length else None,
-                    pennation_angle=float(muscle.pennation_angle) if muscle.pennation_angle else 0.0,
-                    maximal_excitation=1.0,  # Default value since OpenSim does not handle maximal excitation.
-                )
-
-                self.biomechanical_model_real.add_muscle(muscle_real)
-
-                # Add via points if any
-                for via_point in muscle.via_point:
-                    via_real = ViaPointReal(
-                        name=f"{muscle.name}-{via_point.name}",
-                        parent_name=via_point.body,
-                        muscle_name=muscle.name,
-                        muscle_group=muscle_real.muscle_group,
-                        position=np.array([float(v) for v in via_point.position.split()]),
-                    )
-                    self.biomechanical_model_real.add_via_point(via_real)
-
-            except Exception as e:
-                self.warnings.append(f"Failed to convert muscle {muscle.name}: {str(e)}. Muscle skipped.")
+        for muscle in self.muscles:
+            muscle_group_name = muscle.muscle_group
+            self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
@@ -400,15 +372,15 @@ class OsimModelParser:
             (
                 translations,
                 q_ranges_trans,
-                is_dof_trans,
+                trans_dof_names,
                 default_value_trans,
                 rotations,
                 q_ranges_rot,
-                is_dof_rot,
+                rot_dof_names,
                 default_value_rot,
             ) = self._get_transformation_parameters(dof.spatial_transform)
 
-            is_dof_trans, is_dof_rot = np.array(is_dof_trans), np.array(is_dof_rot)
+            trans_dof_names, rot_dof_names = np.array(trans_dof_names), np.array(rot_dof_names)
             dof_axis = np.array(["x", "y", "z"])
 
             # Translations
@@ -416,8 +388,10 @@ class OsimModelParser:
                 body_name = body.name + "_translation"
                 if is_ortho_basis(translations):
                     trans_axis = ""
-                    for idx in np.where(is_dof_trans != None)[0]:
+                    effective_trans_dof_names = []
+                    for idx in np.where(trans_dof_names != None)[0]:
                         trans_axis += dof_axis[idx]
+                        effective_trans_dof_names += [trans_dof_names[idx]]
                     axis_offset = self.write_ortho_segment(
                         axis=translations,
                         axis_offset=axis_offset,
@@ -427,6 +401,7 @@ class OsimModelParser:
                         frame_offset=rotomatrix,
                         q_range=q_ranges_trans,
                         trans_dof=trans_axis,
+                        dof_names=effective_trans_dof_names,
                     )
                     parent = body_name
                 else:
@@ -436,8 +411,10 @@ class OsimModelParser:
             if len(rotations) != 0:
                 if is_ortho_basis(rotations):
                     rot_axis = ""
-                    for idx in np.where(is_dof_rot != None)[0]:
+                    effective_rot_dof_names = []
+                    for idx in np.where(rot_dof_names != None)[0]:
                         rot_axis += dof_axis[idx]
+                        effective_rot_dof_names += [rot_dof_names[idx]]
                     body_name = body.name + "_rotation_transform"
                     axis_offset = self.write_ortho_segment(
                         axis=rotations,
@@ -448,6 +425,7 @@ class OsimModelParser:
                         frame_offset=rotomatrix,
                         q_range=q_ranges_rot,
                         rot_dof=rot_axis,
+                        dof_names=effective_rot_dof_names,
                     )
                     parent = body_name
                 else:
@@ -526,7 +504,17 @@ class OsimModelParser:
         return segment_coordinate_system
 
     def write_ortho_segment(
-        self, axis, axis_offset, name, parent, rt_in_matrix, frame_offset, q_range=None, trans_dof="", rot_dof=""
+        self,
+        axis,
+        axis_offset,
+        name,
+        parent,
+        rt_in_matrix,
+        frame_offset,
+        q_range=None,
+        trans_dof="",
+        rot_dof="",
+        dof_names: list[str] = None,
     ):
         x = axis[0]
         y = axis[1]
@@ -540,6 +528,7 @@ class OsimModelParser:
             rt_in_matrix=rt_in_matrix,
             trans_dof=trans_dof,
             rot_dof=rot_dof,
+            dof_names=dof_names,
         )
         return axis_offset.dot(frame_offset.get_rotation_matrix())
 
@@ -657,6 +646,7 @@ class OsimModelParser:
         mesh_file=None,
         mesh_color=None,
         mesh_scale=None,
+        dof_names: list[str] = None,
     ):
         """
         This function aims to add virtual segment to convert osim dof in biomod dof.
@@ -670,6 +660,7 @@ class OsimModelParser:
                 parent_name=parent_name,
                 translations=translations,
                 rotations=rotations,
+                dof_names=dof_names,
                 q_ranges=(
                     self.get_q_range(q_range)
                     if (translations != Translations.NONE or rotations != Rotations.NONE)
@@ -755,7 +746,7 @@ class OsimModelParser:
         """
 
         # Read the .osim file
-        self.forces = self._get_force_set()
+        self.muscle_groups, self.muscles = self._get_force_set()
         self.joints = self._get_joint_set()
         self.bodies = self._get_body_set()
         self.markers = self._get_marker_set()
@@ -783,54 +774,39 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self):
-        forces = []
-        wrap = []
-        original_muscle_names = []
+    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal]]:
+        muscle_groups = []
+        muscles = []
         if is_element_empty(self.forceset_elt):
-            return None
+            return None, None
         else:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
-                    original_muscle_names += [(element.attrib["name"]).split("/")[-1]]
-                    current_muscle = Muscle.from_element(element, self.ignore_muscle_applied_tag)
+                    muscle_group, muscle, warnings = get_muscle_from_element(
+                        element, self.ignore_muscle_applied_tag, self.muscle_type
+                    )
+                    muscle_groups += [muscle_group] if muscle_group is not None else []
+                    muscles += [muscle] if muscle is not None else []
+                    if len(warnings) > 0:
+                        self.warnings.append(warnings)
 
-                    if len(element.find("GeometryPath").find("PathPointSet")[0].findall("ConditionalPathPoint")):
-                        self.warnings.append(
-                            f"Some conditional path points were present for the {current_muscle.name} muscle. "
-                            "This feature is not implemented in biorbd yet so it will be ignored."
-                        )
-                    if len(element.find("GeometryPath").find("PathPointSet")[0].findall("MovingPathPoint")):
-                        self.warnings.append(
-                            f"Some moving path points were present for the {current_muscle.name} muscle. "
-                            "This feature is not implemented in biorbd yet so it will be ignored."
-                        )
-
-                    if current_muscle is not None:
-                        forces.append(current_muscle)
-                        if forces[-1].wrap:
-                            wrap.append(forces[-1].name)
                 elif "Force" in element.tag or "Actuator" in element.tag:
                     self.warnings.append(
                         f"Some {element.tag} were present in the original file force set. "
                         "Only muscles are supported so they will be ignored."
                     )
-            if len(wrap) != 0:
-                self.warnings.append(
-                    f"Some wrapping objects were present on the muscles :{wrap} in the original file force set.\n"
-                    "Only via point are supported in biomod so they will be ignored."
-                )
-            return forces
+
+            return muscle_groups, muscles
 
     def _get_transformation_parameters(self, spatial_transform):
         translations = []
         rotations = []
         q_ranges_trans = []
         q_ranges_rot = []
-        is_dof_trans = []
+        trans_dof_names = []
         default_value_trans = []
         default_value_rot = []
-        is_dof_rot = []
+        rot_dof_names = []
         for transform in spatial_transform:
             q_range = None
             axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]
@@ -850,22 +826,22 @@ class OsimModelParser:
             if transform.type == "translation":
                 translations.append(axis)
                 q_ranges_trans.append(q_range)
-                is_dof_trans.append(is_dof_tmp)
+                trans_dof_names.append(is_dof_tmp)
                 default_value_trans.append(default_value)
             elif transform.type == "rotation":
                 rotations.append(axis)
                 q_ranges_rot.append(q_range)
-                is_dof_rot.append(is_dof_tmp)
+                rot_dof_names.append(is_dof_tmp)
                 default_value_rot.append(default_value)
             else:
                 raise RuntimeError("Transform must be 'rotation' or 'translation'")
         return (
             translations,
             q_ranges_trans,
-            is_dof_trans,
+            trans_dof_names,
             default_value_trans,
             rotations,
             q_ranges_rot,
-            is_dof_rot,
+            rot_dof_names,
             default_value_rot,
         )
