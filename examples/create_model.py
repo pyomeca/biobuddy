@@ -127,6 +127,8 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     if remove_temporary:
         os.remove(kinematic_model_filepath)
 
+    return real_model
+
 
 def main():
     current_path_file = Path(__file__).parent

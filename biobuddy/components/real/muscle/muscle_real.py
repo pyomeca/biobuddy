@@ -324,10 +324,10 @@ class MuscleReal:
             muscle_group,
             origin_position,
             insertion_position,
-            optimal_length=optimal_length_function(data.values, model),
-            maximal_force=maximal_force_function(data.values, model),
-            tendon_slack_length=tendon_slack_length_function(data.values, model),
-            pennation_angle=pennation_angle_function(data.values, model),
+            optimal_length=optimal_length_function(model, data.values),
+            maximal_force=maximal_force_function(model, data.values),
+            tendon_slack_length=tendon_slack_length_function(model, data.values),
+            pennation_angle=pennation_angle_function(model, data.values),
             maximal_excitation=maximal_excitation,
         )
 

@@ -248,8 +248,6 @@ def test_model_dynamics_initialization():
     assert model_dynamics.is_initialized is False
     assert model_dynamics.segments is None
     assert model_dynamics.muscle_groups is None
-    assert model_dynamics.muscles is None
-    assert model_dynamics.via_points is None
 
 
 def test_requires_initialization_decorator():

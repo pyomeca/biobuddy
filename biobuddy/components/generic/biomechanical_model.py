@@ -1,12 +1,8 @@
 from copy import deepcopy
 
-from .muscle.muscle_group import MuscleGroup
-from .muscle.muscle import Muscle
-from .muscle.via_point import ViaPoint
 from .rigidbody.segment import Segment
+from .muscle.muscle_group import MuscleGroup
 from ..real.biomechanical_model_real import BiomechanicalModelReal
-from ..real.rigidbody.segment_real import SegmentReal
-from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
@@ -19,7 +15,7 @@ class BiomechanicalModel(ModelUtils):
         self.segments = NamedList[Segment]()
         self.muscle_groups = NamedList[MuscleGroup]()
 
-    def add_segment(self, segment: "Segment"):
+    def add_segment(self, segment: Segment):
         """
         Add a segment to the model
 
@@ -51,7 +47,7 @@ class BiomechanicalModel(ModelUtils):
         """
         self.segments._remove(segment_name)
 
-    def add_muscle_group(self, muscle_group: "MuscleGroup"):
+    def add_muscle_group(self, muscle_group: MuscleGroup):
         """
         Add a muscle group to the model
 
@@ -83,6 +79,10 @@ class BiomechanicalModel(ModelUtils):
         data
             The data to collapse the model from
         """
+        from ..real.muscle.muscle_group_real import MuscleGroupReal
+        from ..real.rigidbody.segment_real import SegmentReal
+        from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
         gravity = None if gravity is None else point_to_array(gravity, "gravity")
         model = BiomechanicalModelReal(gravity=gravity)
 
@@ -133,7 +133,7 @@ class BiomechanicalModel(ModelUtils):
 
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(
-                MuscleGroup(
+                MuscleGroupReal(
                     name=muscle_group.name,
                     origin_parent_name=muscle_group.origin_parent_name,
                     insertion_parent_name=muscle_group.insertion_parent_name,

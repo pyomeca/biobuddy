@@ -377,9 +377,9 @@ class ScaleTool:
 
                 muscle_name = muscle.name
                 muscle_group_name = deepcopy(muscle.muscle_group)
-                origin_parent_name = deepcopy(muscle.origin_parent_name)
-                insertion_parent_name = deepcopy(muscle.insertion_parent_name)
+                origin_parent_name = muscle_group.origin_parent_name
                 origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+                insertion_parent_name = muscle_group.insertion_parent_name
                 insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
 
                 if (

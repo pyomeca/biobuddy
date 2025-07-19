@@ -1,6 +1,5 @@
 from typing import Callable
 
-from ...real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ..muscle.via_point import ViaPoint
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
@@ -10,8 +9,8 @@ class Muscle:
     def __init__(
         self,
         name: str,
-        muscle_type: MuscleType,
-        state_type: MuscleStateType,
+        muscle_type: "MuscleType",
+        state_type: "MuscleStateType",
         muscle_group: str,
         origin_position: ViaPoint,
         insertion_position: ViaPoint,
@@ -71,7 +70,8 @@ class Muscle:
         """
         self.via_points._remove(via_point_name)
 
-    def to_muscle(self, model, data: Data) -> MuscleReal:
+    def to_muscle(self, data: Data, model) -> "MuscleReal":
+        from ...real.muscle.muscle_real import MuscleReal
         return MuscleReal.from_data(
             data,
             model,
