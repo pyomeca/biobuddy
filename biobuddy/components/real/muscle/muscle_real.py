@@ -3,10 +3,11 @@ from typing import Callable
 import numpy as np
 from enum import Enum
 
-from ....utils.aliases import Points, point_to_array, points_to_array
+from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
 from .via_point_real import ViaPointReal
+from ...generic.muscle.via_point import ViaPoint
 
 
 class MuscleType(Enum):
