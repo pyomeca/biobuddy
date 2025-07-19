@@ -9,24 +9,24 @@ class ViaPoint:
     def __init__(
         self,
         name: str,
-        position_function: Callable | str = None,
         parent_name: str = None,
         muscle_name: str = None,
         muscle_group: str = None,
+        position_function: Callable | str = None,
     ):
         """
         Parameters
         ----------
         name
             The name of the new via point
-        position_function
-            The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the via point with.
         parent_name
             The name of the parent the via point is attached to
         muscle_name
             The name of the muscle that passes through this via point
         muscle_group
             The muscle group the muscle belongs to
+        position_function
+            The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the via point with.
         """
         self.name = name
         position_function = position_function if position_function is not None else self.name

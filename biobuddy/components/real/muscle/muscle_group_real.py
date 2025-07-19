@@ -62,6 +62,10 @@ class MuscleGroupReal:
         """
         self.muscles._remove(muscle_name)
 
+    @property
+    def nb_muscles(self):
+        return len(self.muscles)
+
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"musclegroup\t{self.name}\n"

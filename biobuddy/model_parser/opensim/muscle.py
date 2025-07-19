@@ -60,14 +60,15 @@ def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
 
 
 def get_muscle_from_element(
-    element: etree.ElementTree, ignore_applied: bool
+    element: etree.ElementTree, ignore_applied: bool, muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE
 ) -> tuple[MuscleGroupReal, MuscleReal, str]:
     """
     TODO: Better handle ignore_applied parameter. MuscleReal should have a applied parameter, a remove_unapplied_muscle method, and we should remove unapplied muscles in to_biomod.
     """
     name = (element.attrib["name"]).split("/")[-1]
     warnings = check_for_wrappings(element, name) + check_for_unsupported_elements(element, name)
-    muscle_type = OPENSIM_MUSCLE_TYPE[element.tag]
+    # muscle_type = OPENSIM_MUSCLE_TYPE[element.tag]  # TODO: We should try to match OpenSim muscle types
+    muscle_type = muscle_type
 
     maximal_force = find_in_tree(element, "max_isometric_force")
     maximal_force = float(maximal_force) if maximal_force else 1000.0
@@ -138,7 +139,7 @@ def get_muscle_from_element(
 
         origin_position = ViaPointReal(
             name=f"origin_{name}",
-            parent_name=via_points[-1].body,
+            parent_name=via_points[0].body,
             position=np.array([float(v) for v in via_points[0].position.split()]),
         )
         insertion_position = ViaPointReal(

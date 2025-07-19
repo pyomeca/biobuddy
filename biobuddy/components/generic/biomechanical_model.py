@@ -18,8 +18,6 @@ class BiomechanicalModel(ModelUtils):
         super().__init__()
         self.segments = NamedList[Segment]()
         self.muscle_groups = NamedList[MuscleGroup]()
-        self.muscles = NamedList[Muscle]()
-        self.via_points = NamedList[ViaPoint]()
 
     def add_segment(self, segment: "Segment"):
         """

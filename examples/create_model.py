@@ -73,14 +73,24 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     )
 
     # The pendulum muscle
-    bio_model.add_muscle(
+    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].add_muscle(
         Muscle(
             "PENDULUM_MUSCLE",
             muscle_type=MuscleType.HILL_THELEN,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="PENDULUM_MUSCLE_GROUP",
-            origin_position_function=lambda m, model: np.array([0, 0, 0]),
-            insertion_position_function=lambda m, model: np.array([0, 0, 1]),
+            origin_position=ViaPoint(
+                name="PENDULUM_ORIGIN",
+                parent_name="GROUND",
+                muscle_name="PENDULUM_MUSCLE",
+                muscle_group="PENDULUM_MUSCLE_GROUP",
+                position_function=lambda m, model: np.array([0, 0, 0])),
+            insertion_position=ViaPoint(
+                name="PENDULUM_ORIGIN",
+                parent_name="PENDULUM",
+                muscle_name="PENDULUM_MUSCLE",
+                muscle_group="PENDULUM_MUSCLE_GROUP",
+                position_function=lambda m, model: np.array([0, 0, 1])),
             optimal_length_function=lambda m, model: 0.1,
             maximal_force_function=lambda m, model: 100.0,
             tendon_slack_length_function=lambda m, model: 0.05,
@@ -88,13 +98,13 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             maximal_excitation=1,
         )
     )
-    bio_model.add_via_point(
+    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].add_via_point(
         ViaPoint(
             "PENDULUM_MUSCLE",
-            position_function=lambda m, model: np.array([0, 0, 0.5]),
             parent_name="PENDULUM",
             muscle_name="PENDULUM_MUSCLE",
             muscle_group="PENDULUM_MUSCLE_GROUP",
+            position_function=lambda m, model: np.array([0, 0, 0.5]),
         )
     )
 

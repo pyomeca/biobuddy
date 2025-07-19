@@ -925,7 +925,7 @@ def test_scale_contact():
 def test_scale_via_point():
     """Test scaling of via points"""
     simple_model = create_simple_model()
-    original_via_point = simple_model.via_points[0]
+    original_via_point = simple_model.muscle_groups["root_to_child"].muscles["muscle1"].via_points[0]
     scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 
     result = ScaleTool(simple_model).scale_via_point(original_via_point, scale_factor)
@@ -949,7 +949,7 @@ def test_scale_via_point():
 def test_scale_muscle():
     """Test scaling of muscles"""
     simple_model = create_simple_model()
-    original_muscle = simple_model.muscles[0]
+    original_muscle = simple_model.muscle_groups["root_to_child"].muscles[0]
     origin_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
     insertion_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 
@@ -966,20 +966,20 @@ def test_scale_muscle():
     assert result.maximal_excitation == original_muscle.maximal_excitation
 
     # Check scaled position
-    expected_origin = original_muscle.origin_position * origin_scale_factor
+    expected_origin = original_muscle.origin_position.position * origin_scale_factor
     npt.assert_almost_equal(
         expected_origin.reshape(
             4,
         ),
         np.array([0.0, 0.3, 0.0, 1.0]),
     )
-    npt.assert_almost_equal(result.origin_position, expected_origin)
+    npt.assert_almost_equal(result.origin_position.position, expected_origin)
 
-    expected_insertion = original_muscle.insertion_position * insertion_scale_factor
+    expected_insertion = original_muscle.insertion_position.position * insertion_scale_factor
     npt.assert_almost_equal(
         expected_insertion.reshape(
             4,
         ),
         np.array([1.0, 1.2, 1.2, 1.0]),
     )
-    npt.assert_almost_equal(result.insertion_position, expected_insertion)
+    npt.assert_almost_equal(result.insertion_position.position, expected_insertion)

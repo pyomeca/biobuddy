@@ -343,7 +343,7 @@ class OsimModelParser:
 
     def _set_muscles(self):
         """Add the muscle components to the BiomechanicalModelReal."""
-        if not self.muscle_groups and not self.muscles and not self.via_points:
+        if not self.muscle_groups and not self.muscles:
             return
 
         for muscle_group in self.muscle_groups:
@@ -351,6 +351,11 @@ class OsimModelParser:
             muscle_group_name = muscle_group.name
             if muscle_group_name not in self.biomechanical_model_real.muscle_groups.keys():
                 self.biomechanical_model_real.add_muscle_group(muscle_group)
+
+        for muscle in self.muscles:
+            muscle_group_name = muscle.muscle_group
+            self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
+
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
@@ -778,7 +783,7 @@ class OsimModelParser:
         else:
             for element in self.forceset_elt[0]:
                 if "Muscle" in element.tag:
-                    muscle_group, muscle, warnings = get_muscle_from_element(element, self.ignore_muscle_applied_tag)
+                    muscle_group, muscle, warnings = get_muscle_from_element(element, self.ignore_muscle_applied_tag, self.muscle_type)
                     muscle_groups += [muscle_group] if muscle_group is not None else []
                     muscles += [muscle] if muscle is not None else []
                     if len(warnings) > 0:

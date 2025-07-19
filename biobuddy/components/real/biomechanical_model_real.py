@@ -197,7 +197,13 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         Get the names of the via point which have this segment as a parent.
         """
-        return [via_point.name for via_point in self.via_points if via_point.parent_name == segment_name]
+        via_point_names = []
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name == segment_name:
+                        via_point_names.append(via_point.name)
+        return via_point_names
 
     def fix_via_points(self, q: np.ndarray = None) -> None:
         """

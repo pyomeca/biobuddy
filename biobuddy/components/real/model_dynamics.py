@@ -33,8 +33,6 @@ class ModelDynamics:
         # Attributes that will be filled by BiomechanicalModelReal
         self.segments = None
         self.muscle_groups = None
-        self.muscles = None
-        self.via_points = None
 
     # TODO: The two following functions should be handled differently
     @requires_initialization
@@ -497,17 +495,19 @@ class ModelDynamics:
 
         via_points_position = np.ones((4, 0, nb_frames))
         jcs_in_global = self.forward_kinematics(q)
-        for via_point in self.via_points:
-            if via_point.muscle_name == muscle_name:
-                this_via_point = np.ones((4, nb_frames))
-                for i_frame in range(nb_frames):
-                    this_via_point[:, i_frame] = point_from_local_to_global(
-                        point_in_local=via_point.position,
-                        jcs_in_global=jcs_in_global[via_point.parent_name][i_frame],
-                    ).reshape(
-                        -1,
-                    )
-                via_points_position = np.concatenate((via_points_position, this_via_point[:, np.newaxis, :]), axis=1)
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.name == muscle_name:
+                    for via_point in muscle.via_points:
+                        this_via_point = np.ones((4, nb_frames))
+                        for i_frame in range(nb_frames):
+                            this_via_point[:, i_frame] = point_from_local_to_global(
+                                point_in_local=via_point.position,
+                                jcs_in_global=jcs_in_global[via_point.parent_name][i_frame],
+                            ).reshape(
+                                -1,
+                            )
+                        via_points_position = np.concatenate((via_points_position, this_via_point[:, np.newaxis, :]), axis=1)
 
         return via_points_position
 
@@ -578,23 +578,35 @@ class ModelDynamics:
         elif len(q.shape) > 2:
             raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
 
-        muscle_group_name = self.muscles[muscle_name].muscle_group
-        muscle_origin_parent_name = self.muscle_groups[muscle_group_name].origin_parent_name
-        muscle_insertion_parent_name = self.muscle_groups[muscle_group_name].insertion_parent_name
-
+        muscle_origin_parent_name, muscle_insertion_parent_name, muscle_origin, muscle_insertion = None, None, None, None
         nb_frames = q.shape[1]
         muscle_tendon_length = np.zeros((nb_frames,))
         global_jcs = self.forward_kinematics(q)
         for i_frame in range(nb_frames):
+            muscle_found = False
             # Get all the points composing the muscle
             muscle_via_points = []
-            for via_point in self.via_points:
-                if via_point.muscle_name == muscle_name:
-                    rt = global_jcs[via_point.parent_name][i_frame]
-                    muscle_via_points += [rt @ via_point.position]
-            origin_position = global_jcs[muscle_origin_parent_name][i_frame] @ self.muscles[muscle_name].origin_position
+            for muscle_group in self.muscle_groups:
+                for muscle in muscle_group.muscles:
+                    if muscle.name == muscle_name:
+                        for via_point in muscle.via_points:
+                            rt = global_jcs[via_point.parent_name][i_frame]
+                            muscle_via_points += [rt @ via_point.position]
+                        muscle_origin = muscle.origin_position.position
+                        muscle_origin_parent_name = muscle.origin_position.parent_name
+                        muscle_insertion = muscle.insertion_position.position
+                        muscle_insertion_parent_name = muscle.insertion_position.parent_name
+                        muscle_found = True
+                        break
+                if muscle_found:
+                    break
+
+            if (muscle_origin_parent_name is None or muscle_insertion_parent_name is None or muscle_origin is None or muscle_insertion is None):
+                raise RuntimeError(f"The muscle {muscle_name} was not found in the model.")
+
+            origin_position = global_jcs[muscle_origin_parent_name][i_frame] @ muscle_origin
             insertion_position = (
-                global_jcs[muscle_insertion_parent_name][i_frame] @ self.muscles[muscle_name].insertion_position
+                global_jcs[muscle_insertion_parent_name][i_frame] @ muscle_insertion
             )
 
             muscle_trajectory = [origin_position] + muscle_via_points + [insertion_position]
