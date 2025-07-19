@@ -46,9 +46,6 @@ class SimmSpline:
     def _calculate_coefficients(self):
         """Calculate the spline coefficients."""
 
-        if self.nb_nodes < 2:
-            return
-
         # Initialize coefficient arrays
         self.b = np.zeros((self.nb_nodes,))
         self.c = np.zeros((self.nb_nodes,))
@@ -142,31 +139,25 @@ class SimmSpline:
         else:
             aX = x
 
-        # Check for valid data
-        if len(self.y_points) == 0 or len(self.b) == 0 or len(self.c) == 0 or len(self.d) == 0:
-            return float("nan")
-
-        n = len(self.x_points)
-
         # Handle out-of-range extrapolation using slope at endpoints
         if aX < self.x_points[0]:
             return self.y_points[0] + (aX - self.x_points[0]) * self.b[0]
-        elif aX > self.x_points[n - 1]:
-            return self.y_points[n - 1] + (aX - self.x_points[n - 1]) * self.b[n - 1]
+        elif aX > self.x_points[self.nb_nodes - 1]:
+            return self.y_points[self.nb_nodes - 1] + (aX - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
 
         # Check if close to endpoints (within numerical tolerance)
         tolerance = 1e-10
         if abs(aX - self.x_points[0]) < tolerance:
             return self.y_points[0]
-        elif abs(aX - self.x_points[n - 1]) < tolerance:
-            return self.y_points[n - 1]
+        elif abs(aX - self.x_points[self.nb_nodes - 1]) < tolerance:
+            return self.y_points[self.nb_nodes - 1]
 
         # Find the appropriate interval using binary search
-        if n < 3:
+        if self.nb_nodes < 3:
             k = 0
         else:
             i = 0
-            j = n
+            j = self.nb_nodes
             while True:
                 k = (i + j) // 2
                 if aX < self.x_points[k]:
@@ -195,6 +186,8 @@ class SimmSpline:
             raise NotImplementedError(
                 "Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative."
             )
+        # if order < 1 or order > 2:
+        #     raise ValueError("Derivative order must be 1 or 2")
 
         # Handle both scalar and array inputs
         if hasattr(x, "__len__") and not isinstance(x, str):
@@ -202,46 +195,41 @@ class SimmSpline:
         else:
             aX = x
 
-        # Check for valid data
-        if len(self.y_points) == 0 or len(self.b) == 0 or len(self.c) == 0 or len(self.d) == 0:
-            return float("nan")
-
-        if order < 1 or order > 2:
-            raise ValueError("Derivative order must be 1 or 2")
-
-        n = len(self.x_points)
-
         # Handle out-of-range cases
         if aX < self.x_points[0]:
-            if order == 1:
-                return self.b[0]
-            else:
-                return 0.0
-        elif aX > self.x_points[n - 1]:
-            if order == 1:
-                return self.b[n - 1]
-            else:
-                return 0.0
+            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+            # if order == 1:
+            #     return self.b[0]
+            # else:
+            #     return 0.0
+        elif aX > self.x_points[self.nb_nodes - 1]:
+            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+            # if order == 1:
+            #     return self.b[self.nb_nodes - 1]
+            # else:
+            #     return 0.0
 
         # Check if close to endpoints (within numerical tolerance)
         tolerance = 1e-10
         if abs(aX - self.x_points[0]) < tolerance:
-            if order == 1:
-                return self.b[0]
-            else:
-                return 2.0 * self.c[0]
-        elif abs(aX - self.x_points[n - 1]) < tolerance:
-            if order == 1:
-                return self.b[n - 1]
-            else:
-                return 2.0 * self.c[n - 1]
+            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+            # if order == 1:
+            #     return self.b[0]
+            # else:
+            #     return 2.0 * self.c[0]
+        elif abs(aX - self.x_points[self.nb_nodes - 1]) < tolerance:
+            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+            # if order == 1:
+            #     return self.b[self.nb_nodes - 1]
+            # else:
+            #     return 2.0 * self.c[self.nb_nodes - 1]
 
         # Find the appropriate interval using binary search
-        if n < 3:
+        if self.nb_nodes < 3:
             k = 0
         else:
             i = 0
-            j = n
+            j = self.nb_nodes
             while True:
                 k = (i + j) // 2
                 if aX < self.x_points[k]:
