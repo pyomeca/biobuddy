@@ -97,7 +97,9 @@ def get_muscle_from_element(
         via_point.condition = (
             condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
         )
-        movement, warning = movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else (None, "")
+        movement, warning = (
+            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else (None, "")
+        )
         if warning != "":
             warnings += warning
         else:

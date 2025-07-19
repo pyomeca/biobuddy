@@ -12,7 +12,10 @@ def test_fix_via_points_errors():
     model = create_simple_model()
 
     # Check that it does not have any conditional or moving via points
-    for via_point in model.muscle_groups["root_to_child"].muscles["muscle1"].via_points + [model.muscle_groups["root_to_child"].muscles["muscle1"].origin_position, model.muscle_groups["root_to_child"].muscles["muscle1"].insertion_position]:
+    for via_point in model.muscle_groups["root_to_child"].muscles["muscle1"].via_points + [
+        model.muscle_groups["root_to_child"].muscles["muscle1"].origin_position,
+        model.muscle_groups["root_to_child"].muscles["muscle1"].insertion_position,
+    ]:
         assert via_point.condition is None
         assert via_point.movement is None
 
@@ -22,7 +25,7 @@ def test_fix_via_points_errors():
             name="origin_muscle1",
             parent_name="root",
             position=np.array([0.0, 0.1, 0.0, 1.0]),
-            condition=PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2)
+            condition=PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2),
         )
         model.validate_model()
     model.muscle_groups["root_to_child"].muscles["muscle1"].origin_position.condition = None
@@ -31,7 +34,7 @@ def test_fix_via_points_errors():
             name="origin_muscle1",
             parent_name="child",
             position=np.array([0.0, 0.1, 0.0, 1.0]),
-            condition=PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2)
+            condition=PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2),
         )
         model.validate_model()
     model.muscle_groups["root_to_child"].muscles["muscle1"].insertion_position.condition = None
@@ -43,14 +46,22 @@ def test_fix_conditional_via_points_true():
     model = create_simple_model()
 
     # Add a conditional via point and fix it
-    model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].condition = PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2)
-    model.fix_via_points(np.ones((model.nb_q, )) * 0.1)
+    model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].condition = PathPointCondition(
+        dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2
+    )
+    model.fix_via_points(np.ones((model.nb_q,)) * 0.1)
 
     # Check that the condition is fixed
     assert model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].condition is None
     npt.assert_almost_equal(
-        model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].position.reshape(4, ),
-        np.array([0.2, 0.3, 0.4, 1.0]))
+        model.muscle_groups["root_to_child"]
+        .muscles["muscle1"]
+        .via_points["via_point1"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.2, 0.3, 0.4, 1.0]),
+    )
 
 
 def test_fix_conditional_via_points_false():
@@ -59,7 +70,8 @@ def test_fix_conditional_via_points_false():
 
     # Add a conditional via point and fix it
     model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].condition = PathPointCondition(
-        dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2)
+        dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2
+    )
     model.fix_via_points(np.ones((model.nb_q,)) * -0.1)
 
     # Check that the condition is fixed
@@ -75,19 +87,27 @@ def test_fix_moving_via_points_errors():
     with pytest.raises(RuntimeError, match=r"dof_names must be a list of 3 dof_names \(x, y, x\)."):
         PathPointMovement(
             dof_names=["child_rotX"],
-            locations=[SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6]))]
+            locations=[
+                SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6]))
+            ],
         )
     with pytest.raises(RuntimeError, match=r"locations must be a list of 3 Functions \(x, y, x\)."):
         PathPointMovement(
             dof_names=["child_rotX", "child_rotX", "child_rotX"],
-            locations=[SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6]))]
+            locations=[
+                SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6]))
+            ],
         )
 
     # Bad type
     with pytest.raises(RuntimeError, match="All locations must be instances of Functions."):
         PathPointMovement(
             dof_names=["child_rotX", "child_rotY", "child_rotZ"],
-            locations=[SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])), None, None]
+            locations=[
+                SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
+                None,
+                None,
+            ],
         )
 
 
@@ -99,13 +119,18 @@ def test_fix_moving_via_points():
     # Add a moving via point and fix it
     model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].movement = PathPointMovement(
         dof_names=["child_rotX", "child_rotX", "child_rotX"],
-        locations=[SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
-                   SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
-                   SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6]))]
+        locations=[
+            SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
+            SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
+            SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])),
+        ],
     )
 
     # Check that it is not allowed to have position and movement
-    with pytest.raises(RuntimeError, match="A via point can either have a position or a movement, but not both at the same time, via_point1 has both."):
+    with pytest.raises(
+        RuntimeError,
+        match="A via point can either have a position or a movement, but not both at the same time, via_point1 has both.",
+    ):
         model.validate_model()
 
     # But if we remove the position, it is fine
@@ -113,13 +138,20 @@ def test_fix_moving_via_points():
     model.validate_model()
 
     # Fix the via points
-    model.fix_via_points(np.ones((model.nb_q, )) * 0.15)
+    model.fix_via_points(np.ones((model.nb_q,)) * 0.15)
 
     # Check that the position is fixed
     assert model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].movement is None
-    expected_value = SimmSpline(x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])).evaluate(0.15)
+    expected_value = SimmSpline(
+        x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])
+    ).evaluate(0.15)
     npt.assert_almost_equal(expected_value, 0.25)
     npt.assert_almost_equal(
-        model.muscle_groups["root_to_child"].muscles["muscle1"].via_points["via_point1"].position.reshape(4, ),
-        np.array([0.25, 0.25, 0.25, 1.0]))
-
+        model.muscle_groups["root_to_child"]
+        .muscles["muscle1"]
+        .via_points["via_point1"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.25, 0.25, 0.25, 1.0]),
+    )

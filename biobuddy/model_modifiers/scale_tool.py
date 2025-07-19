@@ -390,9 +390,7 @@ class ScaleTool:
                     self.scaled_model.muscle_groups[muscle_group_name].add_muscle(deepcopy(muscle))
                 else:
                     self.scaled_model.muscle_groups[muscle_group_name].add_muscle(
-                        self.scale_muscle(
-                            deepcopy(muscle), origin_scale_factor, insertion_scale_factor
-                        )
+                        self.scale_muscle(deepcopy(muscle), origin_scale_factor, insertion_scale_factor)
                     )
 
                 # Scale via points
@@ -404,7 +402,9 @@ class ScaleTool:
 
                     if parent_name not in self.scaling_segments.keys():
                         # If the via point is not attached to a segment that is scaled, do not scale the via point
-                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(deepcopy(via_point))
+                        self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(
+                            deepcopy(via_point)
+                        )
                     else:
                         self.scaled_model.muscle_groups[muscle_group_name].muscles[muscle_name].add_via_point(
                             self.scale_via_point(deepcopy(via_point), parent_scale_factor)

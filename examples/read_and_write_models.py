@@ -16,6 +16,7 @@ from biobuddy import (
 
 _logger = logging.getLogger(__name__)
 
+
 def main():
     # Configure logging
     logging.basicConfig(
