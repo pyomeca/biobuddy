@@ -110,6 +110,7 @@ def test_fix_moving_via_points_errors():
             ],
         )
 
+
 def test_fix_moving_via_points():
 
     # create a simple model
@@ -208,8 +209,7 @@ def test_fix_moving_origin():
     npt.assert_almost_equal(
         model.muscle_groups["root_to_child"]
         .muscles["muscle1"]
-        .origin_position
-        .position.reshape(
+        .origin_position.position.reshape(
             4,
         ),
         np.array([0.25, 0.25, 0.25, 1.0]),
@@ -254,10 +254,8 @@ def test_fix_moving_insertion():
     npt.assert_almost_equal(
         model.muscle_groups["root_to_child"]
         .muscles["muscle1"]
-        .insertion_position
-        .position.reshape(
+        .insertion_position.position.reshape(
             4,
         ),
         np.array([0.25, 0.25, 0.25, 1.0]),
     )
-

@@ -60,12 +60,48 @@ def test_simm_spline(nb_nodes: int):
 
         # Get coefficients
         b, c, d = biobuddy_spline.get_coefficients()
-        npt.assert_almost_equal(b, np.array([ 2.14207868e-03,  1.19125465e-03,  9.29027113e-05, -5.62865497e-04,
-           -8.41440723e-04, -1.07137161e-03, -8.73072834e-04]))
-        npt.assert_almost_equal(c, np.array([-3.16941343e-05, -3.16941343e-05, -4.15293284e-05, -2.18855219e-06,
-           -1.63831295e-05,  1.05440369e-06,  1.21655148e-05]))
-        npt.assert_almost_equal(d, np.array([-1.12937726e-22, -2.18559868e-07,  8.74239471e-07, -3.15435052e-07,
-            3.87500738e-07,  2.46913580e-07,  2.46913580e-07]))
+        npt.assert_almost_equal(
+            b,
+            np.array(
+                [
+                    2.14207868e-03,
+                    1.19125465e-03,
+                    9.29027113e-05,
+                    -5.62865497e-04,
+                    -8.41440723e-04,
+                    -1.07137161e-03,
+                    -8.73072834e-04,
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            c,
+            np.array(
+                [
+                    -3.16941343e-05,
+                    -3.16941343e-05,
+                    -4.15293284e-05,
+                    -2.18855219e-06,
+                    -1.63831295e-05,
+                    1.05440369e-06,
+                    1.21655148e-05,
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            d,
+            np.array(
+                [
+                    -1.12937726e-22,
+                    -2.18559868e-07,
+                    8.74239471e-07,
+                    -3.15435052e-07,
+                    3.87500738e-07,
+                    2.46913580e-07,
+                    2.46913580e-07,
+                ]
+            ),
+        )
 
         # Test for extrapolation
         test_x = -10.0
@@ -79,7 +115,6 @@ def test_simm_spline(nb_nodes: int):
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
         npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
-
 
         # Test for values at the end of the range
         test_x = 0.0
@@ -113,9 +148,15 @@ def test_simm_spline_errors():
     x_points = [0, 15, 30, 45, 60, 75, 90]
     y_points = [0.02, 0.045, 0.055, 0.05, 0.04, 0.025, 0.01]
     biobuddy_spline = SimmSpline(np.array(x_points), np.array(y_points))
-    with pytest.raises(NotImplementedError, match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative."):
+    with pytest.raises(
+        NotImplementedError,
+        match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative.",
+    ):
         biobuddy_spline.evaluate_derivative(30, order=0)
-    with pytest.raises(NotImplementedError, match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative."):
+    with pytest.raises(
+        NotImplementedError,
+        match="Only first derivative is implemented. There is a discrepancy with OpenSim for the second order derivative.",
+    ):
         biobuddy_spline.evaluate_derivative(30, order=3)
 
     # Tes derivatives at the end points
