@@ -66,6 +66,10 @@ class MuscleGroupReal:
     def nb_muscles(self):
         return len(self.muscles)
 
+    @property
+    def muscle_names(self):
+        return [m.name for m in self.muscles]
+
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"musclegroup\t{self.name}\n"

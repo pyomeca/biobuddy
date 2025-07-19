@@ -341,7 +341,7 @@ def test_scaling_wholebody():
                     "med_gas_l",
                     "lat_gas_l",
                 ]
-                or "stern_mast" in muscle
+                or "stern_mast" in muscle.name
             ):
                 # Skipping muscles with ConditionalPathPoints and MovingPathPoints
                 # Skipping the head since there is a difference in scaling

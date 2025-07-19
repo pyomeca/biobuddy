@@ -65,3 +65,9 @@ class MuscleGroup:
     @property
     def nb_muscles(self):
         return len(self.muscles)
+
+    @property
+    def muscle_names(self):
+        return [m.name for m in self.muscles]
+
+

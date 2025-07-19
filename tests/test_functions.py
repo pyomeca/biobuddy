@@ -30,13 +30,13 @@ def test_simm_spline():
     osim_vector.resize(1)
     osim_vector.set(0, test_x)
 
-    order_1 = osim.StdVectorInt()
-    order_1.append(1)
+    # order_1 = osim.StdVectorInt()
+    # order_1.append(1)
 
     npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
     npt.assert_almost_equal(
         biobuddy_spline.evaluate_derivative(test_x, order=1),
-        opensim_spline.calcDerivative(order_1, osim_vector),
+        opensim_spline.calcDerivative(1, osim_vector),
         decimal=6,
     )
     # There is a mismatch for order 2 :(
