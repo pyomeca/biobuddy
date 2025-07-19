@@ -289,22 +289,26 @@ class MuscleReal:
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
         origin_position = ViaPointReal(
-                                name=f"origin_{name}",
-                                parent_name=origin_position.parent_name,
-                                muscle_name=name,
-                                muscle_group=origin_position.muscle_group,
-                                position=points_to_array(points=origin_position.position_function(data.values, model), name="muscle origin function"),
-                                condition = None,  # Not implemented for generic models yet
-                                movement = None,  # Not implemented for generic models yet
+            name=f"origin_{name}",
+            parent_name=origin_position.parent_name,
+            muscle_name=name,
+            muscle_group=origin_position.muscle_group,
+            position=points_to_array(
+                points=origin_position.position_function(data.values, model), name="muscle origin function"
+            ),
+            condition=None,  # Not implemented for generic models yet
+            movement=None,  # Not implemented for generic models yet
         )
         insertion_position = ViaPointReal(
-                                name=f"insertion_{name}",
-                                parent_name=insertion_position.parent_name,
-                                muscle_name=name,
-                                muscle_group=insertion_position.muscle_group,
-                                position=points_to_array(points=insertion_position.position_function(data.values, model), name="muscle insertion function"),
-                                condition = None,  # Not implemented for generic models yet
-                                movement = None,  # Not implemented for generic models yet
+            name=f"insertion_{name}",
+            parent_name=insertion_position.parent_name,
+            muscle_name=name,
+            muscle_group=insertion_position.muscle_group,
+            position=points_to_array(
+                points=insertion_position.position_function(data.values, model), name="muscle insertion function"
+            ),
+            condition=None,  # Not implemented for generic models yet
+            movement=None,  # Not implemented for generic models yet
         )
         return MuscleReal(
             name,

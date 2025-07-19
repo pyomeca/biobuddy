@@ -317,14 +317,16 @@ class BiomodModelParser:
                             parent_name=self.muscle_groups[current_component.muscle_group].origin_parent_name,
                             muscle_name=current_component.name,
                             muscle_group=current_component.muscle_group,
-                            position=read_float_vector(next_token=next_token, length=3))
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "insertionposition":
                         current_component.insertion_position = ViaPointReal(
                             name=f"insertion_{current_component.name}",
                             parent_name=self.muscle_groups[current_component.muscle_group].insertion_parent_name,
                             muscle_name=current_component.name,
                             muscle_group=current_component.muscle_group,
-                            position=read_float_vector(next_token=next_token, length=3))
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "optimallength":
                         current_component.optimal_length = read_float(next_token=next_token)
                     elif token.lower() == "maximalforce":
@@ -344,7 +346,9 @@ class BiomodModelParser:
                             raise ValueError(f"Muscle name type not found in via point {current_component.name}")
                         if not current_component.muscle_group:
                             raise ValueError(f"Muscle group not found in muscle {current_component.name}")
-                        self.muscle_groups[current_component.muscle_group].muscles[current_component.muscle_name].add_via_point(current_component)
+                        self.muscle_groups[current_component.muscle_group].muscles[
+                            current_component.muscle_name
+                        ].add_via_point(current_component)
                         current_component = None
                     elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)

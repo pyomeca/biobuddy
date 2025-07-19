@@ -158,12 +158,12 @@ def create_simple_model():
             muscle_type=MuscleType.HILL_DE_GROOTE,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="root_to_child",
-            origin_position=ViaPointReal(name=f"origin_muscle1",
-                                         parent_name="root",
-                                         position=np.array([0.0, 0.1, 0.0, 1.0])),
-            insertion_position=ViaPointReal(name=f"insertion_muscle1",
-                                         parent_name="child",
-                                         position=np.array([0.5, 0.4, 0.3, 1.0])),
+            origin_position=ViaPointReal(
+                name=f"origin_muscle1", parent_name="root", position=np.array([0.0, 0.1, 0.0, 1.0])
+            ),
+            insertion_position=ViaPointReal(
+                name=f"insertion_muscle1", parent_name="child", position=np.array([0.5, 0.4, 0.3, 1.0])
+            ),
             optimal_length=0.5,
             maximal_force=1000,
             tendon_slack_length=0.2,

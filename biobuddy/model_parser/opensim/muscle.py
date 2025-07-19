@@ -130,16 +130,15 @@ def get_muscle_from_element(
             )
             return muscle_group, None, warnings
 
-
         origin_position = ViaPointReal(
             name=f"origin_{name}",
             parent_name=via_points[-1].body,
-            position=np.array([float(v) for v in via_points[0].position.split()])
+            position=np.array([float(v) for v in via_points[0].position.split()]),
         )
         insertion_position = ViaPointReal(
             name=f"insertion_{name}",
             parent_name=via_points[-1].body,
-            position=np.array([float(v) for v in via_points[-1].position.split()])
+            position=np.array([float(v) for v in via_points[-1].position.split()]),
         )
 
         muscle = MuscleReal(
