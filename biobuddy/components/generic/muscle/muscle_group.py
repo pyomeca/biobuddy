@@ -69,5 +69,3 @@ class MuscleGroup:
     @property
     def muscle_names(self):
         return [m.name for m in self.muscles]
-
-
