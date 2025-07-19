@@ -72,6 +72,7 @@ class Muscle:
 
     def to_muscle(self, data: Data, model) -> "MuscleReal":
         from ...real.muscle.muscle_real import MuscleReal
+
         return MuscleReal.from_data(
             data,
             model,

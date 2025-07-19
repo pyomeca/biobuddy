@@ -500,29 +500,76 @@ def test_complex_model():
     assert real_model.segments["PENDULUM"].q_ranges.max_bound == [1, 1, 1, np.pi]
     assert real_model.segments["PENDULUM"].qdot_ranges.min_bound == [-10, -10, -10, -np.pi * 10]
     assert real_model.segments["PENDULUM"].qdot_ranges.max_bound == [10, 10, 10, np.pi * 10]
-    npt.assert_almost_equal(real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(4, ), np.array([1., 1. , 10., 1.]))
-    npt.assert_almost_equal(real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(4, ), np.array([np.pi/2, 0., 0., 1.]))
-    npt.assert_almost_equal(real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(4, ), np.array([0.1, 0., 0., 1.]))
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(
+            4,
+        ),
+        np.array([1.0, 1.0, 10.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(
+            4,
+        ),
+        np.array([np.pi / 2, 0.0, 0.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(
+            4,
+        ),
+        np.array([0.1, 0.0, 0.0, 1.0]),
+    )
 
-    npt.assert_almost_equal(real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].position.reshape(4, ), np.array([0., 0. , 0., 1.]))
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"]
+        .contacts["PENDULUM_CONTACT"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.0, 1.0]),
+    )
     assert real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].axis == Translations.XYZ
 
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].origin_parent_name == "GROUND"
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].insertion_parent_name == "PENDULUM"
 
-    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].muscle_type == MuscleType.HILL_THELEN
-    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].state_type == MuscleStateType.DEGROOTE
-    npt.assert_almost_equal(real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].origin_position.position.reshape(4, ),
-                            np.array([0., 0. , 0., 1.]))
-    npt.assert_almost_equal(real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].insertion_position.position.reshape(4, ),
-                            np.array([0., 0. , 1., 1.]))
+    assert (
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].muscle_type
+        == MuscleType.HILL_THELEN
+    )
+    assert (
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].state_type
+        == MuscleStateType.DEGROOTE
+    )
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .origin_position.position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .insertion_position.position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 1.0, 1.0]),
+    )
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].optimal_length == 0.1
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].maximal_force == 100.0
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].tendon_slack_length == 0.05
     assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].pennation_angle == 0.05
 
-    npt.assert_almost_equal(real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].via_points["PENDULUM_MUSCLE"].position.reshape(4, ),
-                            np.array([0., 0. , 0.5, 1.]))
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .via_points["PENDULUM_MUSCLE"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.5, 1.0]),
+    )
 
     destroy_model(real_model)
 
