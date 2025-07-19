@@ -75,50 +75,6 @@ class BiomechanicalModel(ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
-    def add_muscle(self, muscle: "MuscleReal"):
-        """
-        Add a muscle to the model
-
-        Parameters
-        ----------
-        muscle
-            The muscle to add
-        """
-        self.muscles._append(muscle)
-
-    def remove_muscle(self, muscle_name: str):
-        """
-        Remove a muscle from the model
-
-        Parameters
-        ----------
-        muscle_name
-            The name of the muscle to remove
-        """
-        self.muscles._remove(muscle_name)
-
-    def add_via_point(self, via_point: "ViaPointReal"):
-        """
-        Add a via point to the model
-
-        Parameters
-        ----------
-        via_point
-            The via point to add
-        """
-        self.via_points._append(via_point)
-
-    def remove_via_point(self, via_point_name: str):
-        """
-        Remove a via point from the model
-
-        Parameters
-        ----------
-        via_point_name
-            The name of the via point to remove
-        """
-        self.via_points._remove(via_point_name)
-
     def to_real(self, data: Data, gravity: Point = None) -> BiomechanicalModelReal:
         """
         Collapse the model to an actual personalized biomechanical model based on the generic model and the data

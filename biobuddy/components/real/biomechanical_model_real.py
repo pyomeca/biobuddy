@@ -15,8 +15,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         # Imported here to prevent from circular imports
         from ..generic.muscle.muscle_group import MuscleGroup
-        from .muscle.muscle_real import MuscleReal
-        from .muscle.via_point_real import ViaPointReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)
@@ -140,6 +138,19 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
+                if muscle.origin_position.parent_name != muscle_group.origin_parent_name:
+                    raise ValueError(
+                        f"The origin position of the muscle {muscle.name} must be the same as the origin parent segment {muscle_group.origin_parent_name}."
+                    )
+                if muscle.insertion_position.parent_name != muscle_group.insertion_parent_name:
+                    raise ValueError(
+                        f"The insertion position of the muscle {muscle.name} must be the same as the insertion parent segment {muscle_group.insertion_parent_name}."
+                    )
+                if muscle.origin_position.condition is not None:
+                    raise RuntimeError("Muscle origin cannot be conditional.")
+                if muscle.insertion_position_function is not None:
+                    raise RuntimeError("Muscle insertion cannot be conditional.")
+
                 for via_point in muscle.via_points:
                     if via_point.parent_name not in self.segment_names:
                         raise ValueError(
@@ -180,7 +191,6 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         This function allows to fix conditional and moving via points on the model. This is useful to reduce modeling complexity if the via point do not change much over the range of motion used. It is also useful when using biorbd as these features are not implement in biorbd yet.
         Note: This is a destructive operation: once the conditional and moving via points are fixed, they cannot be reverted.
-        # TODO: fix insertion and origin of muscles too.
         """
         if len(q.shape) == 2:
             if q.shape[1] != 1:
@@ -194,24 +204,40 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 "fix_via_points is only possible for one configuration (q of shape (nb_q,) or (nb_q, 1)."
             )
 
-        original_via_points = deepcopy(self.via_points)
-        for via_point in original_via_points:
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
 
-            # Conditional via points
-            if via_point.condition is not None:
-                dof_index = self.dof_index(via_point.condition.dof_name)
-                if via_point.condition.evaluate(q[dof_index]):
-                    # The via point is active in this configuration so we keep it
-                    via_point.condition = None
-                else:
-                    # The via point is not activa, so we remove it
-                    self.via_points._remove(via_point.name)
+                # Moving origin
+                if muscle.origin_position.movement is not None:
+                    # Get the position of the via point in this configuration
+                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q)
+                    muscle.origin_position.movement = None
 
-            # Moving via points
-            elif via_point.movement is not None:
-                # Get the position of the via point in this configuration
-                via_point.position = via_point.movement.evaluate(q)
-                via_point.movement = None
+                # Moving insertion
+                if muscle.insertion_position.movement is not None:
+                    # Get the position of the via point in this configuration
+                    muscle.insertion_position.position = muscle.insertion_position.movement.evaluate(q)
+                    muscle.insertion_position.movement = None
+
+                #  Via points
+                original_via_points = deepcopy(muscle.via_points)
+                for via_point in original_via_points:
+
+                    # Conditional via points
+                    if via_point.condition is not None:
+                        dof_index = self.dof_index(via_point.condition.dof_name)
+                        if via_point.condition.evaluate(q[dof_index]):
+                            # The via point is active in this configuration so we keep it
+                            via_point.condition = None
+                        else:
+                            # The via point is not activa, so we remove it
+                            muscle.remove_via_point(via_point.name)
+
+                    # Moving via points
+                    elif via_point.movement is not None:
+                        # Get the position of the via point in this configuration
+                        via_point.position = via_point.movement.evaluate(q)
+                        via_point.movement = None
 
     def from_biomod(
         self,

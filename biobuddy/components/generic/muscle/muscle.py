@@ -13,8 +13,8 @@ class Muscle:
         muscle_type: MuscleType,
         state_type: MuscleStateType,
         muscle_group: str,
-        origin_position_function: Callable[[dict[str, float]], float],
-        insertion_position_function: Callable[[dict[str, float]], float],
+        origin_position: ViaPoint,
+        insertion_position: ViaPoint,
         optimal_length_function: Callable[[dict[str, float]], float],
         maximal_force_function: Callable[[dict[str, float]], float],
         tendon_slack_length_function: Callable[[dict[str, float]], float],
@@ -33,8 +33,8 @@ class Muscle:
         self.muscle_type = muscle_type
         self.state_type = state_type
         self.muscle_group = muscle_group
-        self.origin_position_function = origin_position_function
-        self.insertion_position_function = insertion_position_function
+        self.origin_position = origin_position
+        self.insertion_position = insertion_position
         self.optimal_length_function = optimal_length_function
         self.maximal_force_function = maximal_force_function
         self.tendon_slack_length_function = tendon_slack_length_function
@@ -79,8 +79,8 @@ class Muscle:
             self.muscle_type,
             self.state_type,
             self.muscle_group,
-            self.origin_position_function,
-            self.insertion_position_function,
+            self.origin_position,
+            self.insertion_position,
             self.optimal_length_function,
             self.maximal_force_function,
             self.tendon_slack_length_function,

@@ -21,7 +21,6 @@ from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
 from ...components.real.rigidbody.segment_real import SegmentReal
-from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal

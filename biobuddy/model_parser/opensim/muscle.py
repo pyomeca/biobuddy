@@ -123,15 +123,24 @@ def get_muscle_from_element(
     else:
 
         origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
-        insersion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
-        if origin_problem or insersion_problem:
+        insertion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
+        if origin_problem or insertion_problem:
             warnings += (
-                f"\nThe muscle {name} has a conditional or moving insersion or origin, it is not implemented yet."
+                f"\nThe muscle {name} has a conditional or moving insertion or origin, it is not implemented yet."
             )
             return muscle_group, None, warnings
 
-        insersion_position = np.array([float(v) for v in via_points[-1].position.split()])
-        origin_position = np.array([float(v) for v in via_points[0].position.split()])
+
+        origin_position = ViaPointReal(
+            name=f"origin_{name}",
+            parent_name=via_points[-1].body,
+            position=np.array([float(v) for v in via_points[0].position.split()])
+        )
+        insertion_position = ViaPointReal(
+            name=f"insertion_{name}",
+            parent_name=via_points[-1].body,
+            position=np.array([float(v) for v in via_points[-1].position.split()])
+        )
 
         muscle = MuscleReal(
             name=name,
@@ -139,7 +148,7 @@ def get_muscle_from_element(
             state_type=MuscleStateType.DEGROOTE,  # TODO: make this configurable
             muscle_group=muscle_group_name,
             origin_position=origin_position,
-            insertion_position=insersion_position,
+            insertion_position=insertion_position,
             optimal_length=optimal_length,
             maximal_force=maximal_force,
             tendon_slack_length=tendon_slack_length,

@@ -511,13 +511,17 @@ class ScaleTool:
     def scale_muscle(
         self, original_muscle: MuscleReal, origin_scale_factor: Point, insertion_scale_factor: Point
     ) -> MuscleReal:
+        origin_position = deepcopy(original_muscle.origin_position)
+        origin_position.position *= origin_scale_factor
+        insertion_position = deepcopy(original_muscle.insertion_position)
+        insertion_position.position *= insertion_scale_factor
         return MuscleReal(
             name=deepcopy(original_muscle.name),
             muscle_type=deepcopy(original_muscle.muscle_type),
             state_type=deepcopy(original_muscle.state_type),
             muscle_group=deepcopy(original_muscle.muscle_group),
-            origin_position=deepcopy(original_muscle.origin_position) * origin_scale_factor,
-            insertion_position=deepcopy(original_muscle.insertion_position) * insertion_scale_factor,
+            origin_position=origin_position,
+            insertion_position=insertion_position,
             optimal_length=None,  # Will be set later
             maximal_force=deepcopy(original_muscle.maximal_force),
             tendon_slack_length=None,  # Will be set later

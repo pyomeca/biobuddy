@@ -26,16 +26,9 @@ from biobuddy import (
     BodyWiseScaling,
     Translations,
     MarkerWeight,
-    ScaleFactor,
-    SegmentReal,
-    MarkerReal,
     ContactReal,
     InertialMeasurementUnitReal,
-    InertiaParametersReal,
-    SegmentCoordinateSystemReal,
-    MuscleReal,
     RotoTransMatrix,
-    ViaPointReal,
 )
 
 from biobuddy.utils.named_list import NamedList

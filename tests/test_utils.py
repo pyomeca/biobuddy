@@ -152,14 +152,18 @@ def create_simple_model():
     )
 
     model.add_muscle_group(MuscleGroup(name="root_to_child", origin_parent_name="root", insertion_parent_name="child"))
-    model.add_muscle(
+    model.muscle_groups["root_to_child"].add_muscle(
         MuscleReal(
             name="muscle1",
             muscle_type=MuscleType.HILL_DE_GROOTE,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="root_to_child",
-            origin_position=np.array([0.0, 0.1, 0.0, 1.0]),
-            insertion_position=np.array([0.5, 0.4, 0.3, 1.0]),
+            origin_position=ViaPointReal(name=f"origin_muscle1",
+                                         parent_name="root",
+                                         position=np.array([0.0, 0.1, 0.0, 1.0])),
+            insertion_position=ViaPointReal(name=f"insertion_muscle1",
+                                         parent_name="child",
+                                         position=np.array([0.5, 0.4, 0.3, 1.0])),
             optimal_length=0.5,
             maximal_force=1000,
             tendon_slack_length=0.2,
@@ -168,12 +172,10 @@ def create_simple_model():
         )
     )
 
-    model.add_via_point(
+    model.muscle_groups["root_to_child"].muscles["muscle1"].add_via_point(
         ViaPointReal(
             name="via_point1",
             parent_name="child",
-            muscle_name="muscle1",
-            muscle_group="root_to_child",
             position=np.array([0.2, 0.3, 0.4, 1.0]),
         )
     )

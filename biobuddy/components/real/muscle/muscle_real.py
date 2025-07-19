@@ -28,8 +28,8 @@ class MuscleReal:
         muscle_type: MuscleType,
         state_type: MuscleStateType,
         muscle_group: str,
-        origin_position: Points,  # TODO: should be a ViaPointReal (so that we allow for condition and movement)
-        insertion_position: Points,  # TODO: should be a ViaPointReal (so that we allow for condition and movement)
+        origin_position: ViaPointReal,
+        insertion_position: ViaPointReal,
         optimal_length: float = None,
         maximal_force: float = None,
         tendon_slack_length: float = None,
@@ -155,20 +155,40 @@ class MuscleReal:
         self._muscle_group = value
 
     @property
-    def origin_position(self) -> np.ndarray:
+    def origin_position(self) -> ViaPointReal:
         return self._origin_position
 
     @origin_position.setter
-    def origin_position(self, value: Points):
-        self._origin_position = point_to_array(point=value, name="origin position")
+    def origin_position(self, value: ViaPointReal):
+        if value.muscle_name is not None and value.muscle_name != self.name:
+            raise ValueError(
+                f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
+            )
+        value.muscle_name = self.name
+        if value.muscle_group is not None and value.muscle_group != self.muscle_group:
+            raise ValueError(
+                f"The origin's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+            )
+        value.muscle_group = self.muscle_group
+        self._origin_position = value
 
     @property
-    def insertion_position(self) -> np.ndarray:
+    def insertion_position(self) -> ViaPointReal:
         return self._insertion_position
 
     @insertion_position.setter
-    def insertion_position(self, value: Points):
-        self._insertion_position = point_to_array(point=value, name="insertion position")
+    def insertion_position(self, value: ViaPointReal):
+        if value.muscle_name is not None and value.muscle_name != self.name:
+            raise ValueError(
+                f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
+            )
+        value.muscle_name = self.name
+        if value.muscle_group is not None and value.muscle_group != self.muscle_group:
+            raise ValueError(
+                f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
+            )
+        value.muscle_group = self.muscle_group
+        self._insertion_position = value
 
     @property
     def optimal_length(self) -> float:
@@ -226,8 +246,8 @@ class MuscleReal:
         muscle_type: MuscleType,
         state_type: MuscleStateType,
         muscle_group: str,
-        origin_position_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-        insertion_position_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        origin_position: ViaPoint,
+        insertion_position: ViaPoint,
         optimal_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
         maximal_force_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
         tendon_slack_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
@@ -253,10 +273,10 @@ class MuscleReal:
             The state type of the muscle
         muscle_group
             The muscle group the muscle belongs to
-        origin_position_function
-            The function (f(m) -> Points, where m is a dict of markers) that defines the origin position of the muscle
-        insertion_position_function
-            The function (f(m) -> Points, where m is a dict of markers) that defines the insertion position of the muscle
+        origin_position
+            The ViaPoint containing the function that defines the origin position of the muscle
+        insertion_position
+            The ViaPoint containing the function that defines the insertion position of the muscle
         optimal_length_function
             The function (f(m) -> float, where m is a dict of markers) that defines the optimal length of the muscle
         maximal_force_function
@@ -268,11 +288,23 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
-        origin_position = points_to_array(
-            points=origin_position_function(data.values, model), name="muscle origin function"
+        origin_position = ViaPointReal(
+                                name=f"origin_{name}",
+                                parent_name=origin_position.parent_name,
+                                muscle_name=name,
+                                muscle_group=origin_position.muscle_group,
+                                position=points_to_array(points=origin_position.position_function(data.values, model), name="muscle origin function"),
+                                condition = None,  # Not implemented for generic models yet
+                                movement = None,  # Not implemented for generic models yet
         )
-        insertion_position = points_to_array(
-            points=insertion_position_function(data.values, model), name="muscle insertion function"
+        insertion_position = ViaPointReal(
+                                name=f"insertion_{name}",
+                                parent_name=insertion_position.parent_name,
+                                muscle_name=name,
+                                muscle_group=insertion_position.muscle_group,
+                                position=points_to_array(points=insertion_position.position_function(data.values, model), name="muscle insertion function"),
+                                condition = None,  # Not implemented for generic models yet
+                                movement = None,  # Not implemented for generic models yet
         )
         return MuscleReal(
             name,
@@ -294,8 +326,8 @@ class MuscleReal:
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
-        out_string += f"\toriginposition\t{np.round(self.origin_position[0, 0], 4)}\t{np.round(self.origin_position[1, 0], 4)}\t{np.round(self.origin_position[2, 0], 4)}\n"
-        out_string += f"\tinsertionposition\t{np.round(self.insertion_position[0, 0], 4)}\t{np.round(self.insertion_position[1, 0], 4)}\t{np.round(self.insertion_position[2, 0], 4)}\n"
+        out_string += f"\toriginposition\t{np.round(self.origin_position.position[0, 0], 4)}\t{np.round(self.origin_position.position[1, 0], 4)}\t{np.round(self.origin_position.position[2, 0], 4)}\n"
+        out_string += f"\tinsertionposition\t{np.round(self.insertion_position.position[0, 0], 4)}\t{np.round(self.insertion_position.position[1, 0], 4)}\t{np.round(self.insertion_position.position[2, 0], 4)}\n"
         if isinstance(self.optimal_length, (float, int)):
             out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
         out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
