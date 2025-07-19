@@ -165,6 +165,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         raise RuntimeError(
                             f"A via point can either have a position or a movement, but not both at the same time, {via_point.name} has both."
                         )
+                    if via_point.movement is not None and via_point.condition is not None:
+                        raise RuntimeError(
+                            f"A via point can either have a movement or a condition, but not both at the same time, {via_point.name} has both."
+                        )
 
     def validate_model(self):
         self.segments_rt_to_local()

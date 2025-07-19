@@ -143,7 +143,9 @@ class SimmSpline:
         if aX < self.x_points[0]:
             return self.y_points[0] + (aX - self.x_points[0]) * self.b[0]
         elif aX > self.x_points[self.nb_nodes - 1]:
-            return self.y_points[self.nb_nodes - 1] + (aX - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
+            return (
+                self.y_points[self.nb_nodes - 1] + (aX - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
+            )
 
         # Check if close to endpoints (within numerical tolerance)
         tolerance = 1e-10
