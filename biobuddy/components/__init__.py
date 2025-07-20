@@ -1,6 +1,6 @@
 from .generic import *
 from .real import *
-from .model_utils import ModelUtils
+from .functions import SimmSpline
 
 
-__all__ = generic.__all__ + real.__all__ + [ModelUtils.__name__]
+__all__ = generic.__all__ + real.__all__ + [SimmSpline.__name__]

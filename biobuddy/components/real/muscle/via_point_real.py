@@ -5,6 +5,41 @@ import numpy as np
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.checks import check_name
+from ...functions import Functions
+
+
+class PathPointMovement:
+    def __init__(self, dof_names: list[str], locations: list[Functions]):
+        if len(dof_names) != 3:
+            raise RuntimeError("dof_names must be a list of 3 dof_names (x, y, x).")
+        if len(locations) != 3:
+            raise RuntimeError("locations must be a list of 3 Functions (x, y, x).")
+        if not all(isinstance(loc, Functions) for loc in locations):
+            raise RuntimeError("All locations must be instances of Functions.")
+
+        self.dof_names = dof_names
+        self.locations = locations
+
+    def evaluate(self, angles: np.ndarray) -> np.ndarray:
+        """Evaluate the condition based on the current joint angles."""
+        position = np.zeros((angles.shape[0],))
+        for i_angle, angle in enumerate(angles):
+            position[i_angle] = self.locations[i_angle].evaluate(angle)
+        return position
+
+
+class PathPointCondition:
+    def __init__(self, dof_name: str, range_min: float, range_max: float):
+        self.dof_name = dof_name
+        self.range_min = range_min
+        self.range_max = range_max
+
+    def evaluate(self, angle: float) -> bool:
+        """Evaluate the condition based on the current joint angles."""
+        if self.range_min <= angle <= self.range_max:
+            return True
+        else:
+            return False
 
 
 class ViaPointReal:
@@ -12,9 +47,11 @@ class ViaPointReal:
         self,
         name: str,
         parent_name: str,
-        muscle_name: str,
-        muscle_group: str,
+        muscle_name: str = None,
+        muscle_group: str = None,
         position: Points = None,
+        condition: PathPointCondition | None = None,
+        movement: PathPointMovement | None = None,
     ):
         """
         Parameters
@@ -29,12 +66,23 @@ class ViaPointReal:
             The muscle group the muscle belongs to
         position
             The 3d position of the via point in the local reference frame
+        condition
+            The condition that must be fulfilled for the via point to be active
+        movement
+            The movement that defines how the via point moves in the local reference frame
         """
+        if position is not None and movement is not None:
+            raise RuntimeError("You can only have either a position or a movement, not both.")
+        if movement is not None and condition is not None:
+            raise RuntimeError("You can only have either a condition or a movement, not both.")
+
         self.name = name
         self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
         self.position = position
+        self.condition = condition
+        self.movement = movement
 
     @property
     def name(self) -> str:
@@ -76,6 +124,22 @@ class ViaPointReal:
     def position(self, value: Points) -> None:
         self._position = points_to_array(points=value, name="viapoint")
 
+    @property
+    def condition(self) -> PathPointCondition:
+        return self._condition
+
+    @condition.setter
+    def condition(self, value: PathPointCondition) -> None:
+        self._condition = value
+
+    @property
+    def movement(self) -> PathPointMovement:
+        return self._movement
+
+    @movement.setter
+    def movement(self, value: PathPointMovement) -> None:
+        self._movement = value
+
     @staticmethod
     def from_data(
         data: Data,
@@ -114,11 +178,20 @@ class ViaPointReal:
         return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
 
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
+        """Define the print function, so it automatically formats things in the file properly."""
+        if self.condition is not None:
+            # To avoid this warning, it is possible to fix the via points using the BiomechanicalModelReal.fix_via_points(q)
+            return f"\n// WARNING: biorbd doe not support conditional via points, so the via point {self.name} was ignored.\n"
+        if self.movement is not None:
+            # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q)
+            return (
+                f"\n// WARNING: biorbd doe not support moving via points, so the via point {self.name} was ignored.\n"
+            )
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
         out_string += f"\tmuscle\t{self.muscle_name}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
         out_string += f"\tposition\t{np.round(self.position[0, 0], 6)}\t{np.round(self.position[1, 0], 6)}\t{np.round(self.position[2, 0], 6)}\n"
         out_string += "endviapoint\n"
+        out_string += "\n\n"
         return out_string

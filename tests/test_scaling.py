@@ -12,7 +12,7 @@ import biorbd
 import numpy as np
 import numpy.testing as npt
 
-from test_utils import remove_temporary_biomods, create_simple_model
+from test_utils import remove_temporary_biomods, create_simple_model, compare_models
 from biobuddy.utils.aliases import Point, point_to_array
 from biobuddy import (
     BiomechanicalModelReal,
@@ -26,16 +26,9 @@ from biobuddy import (
     BodyWiseScaling,
     Translations,
     MarkerWeight,
-    ScaleFactor,
-    SegmentReal,
-    MarkerReal,
     ContactReal,
     InertialMeasurementUnitReal,
-    InertiaParametersReal,
-    SegmentCoordinateSystemReal,
-    MuscleReal,
     RotoTransMatrix,
-    ViaPointReal,
 )
 
 from biobuddy.utils.named_list import NamedList
@@ -182,6 +175,7 @@ def test_scaling_wholebody():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
     )
+    osim_model_scaled.fix_via_points()
     osim_model_scaled.to_biomod(converted_scaled_osim_filepath, with_mesh=False)
     scaled_osim_model = biorbd.Model(converted_scaled_osim_filepath)
 
@@ -192,6 +186,7 @@ def test_scaling_wholebody():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
     )
+    original_model.fix_via_points()
 
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
@@ -314,39 +309,55 @@ def test_scaling_wholebody():
         npt.assert_almost_equal(osim_scaled_marker, biobuddy_scaled_marker, decimal=1)
 
     # Via point positions
-    for via_point_name in original_model.via_points.keys():
-        biobuddy_scaled_via_point = scaled_model.via_points[via_point_name].position[:3]
-        osim_scaled_via_point = osim_model_scaled.via_points[via_point_name].position[:3]
-        npt.assert_almost_equal(biobuddy_scaled_via_point, osim_scaled_via_point, decimal=5)
+    for muscle_group in original_model.muscle_groups:
+        for muscle in muscle_group.muscles:
+            for via_point in muscle.via_points:
+                biobuddy_scaled_via_point = (
+                    scaled_model.muscle_groups[muscle_group.name]
+                    .muscles[muscle.name]
+                    .via_points[via_point.name]
+                    .position[:3]
+                )
+                osim_scaled_via_point = (
+                    osim_model_scaled.muscle_groups[muscle_group.name]
+                    .muscles[muscle.name]
+                    .via_points[via_point.name]
+                    .position[:3]
+                )
+                npt.assert_almost_equal(biobuddy_scaled_via_point, osim_scaled_via_point, decimal=5)
 
-    # Muscle properties
-    for muscle in original_model.muscles.keys():
-        if (
-            muscle
-            in [
-                "semiten_r",
-                "vas_med_r",
-                "vas_lat_r",
-                "med_gas_r",
-                "lat_gas_r",
-                "semiten_l",
-                "vas_med_l",
-                "vas_lat_l",
-                "med_gas_l",
-                "lat_gas_l",
-            ]
-            or "stern_mast" in muscle
-        ):
-            # Skipping muscles with ConditionalPathPoints and MovingPathPoints
-            # Skipping the head since there is a difference in scaling
-            continue
-        print(muscle)
-        biobuddy_optimal_length = scaled_model.muscles[muscle].optimal_length
-        osim_optimal_length = osim_model_scaled.muscles[muscle].optimal_length
-        npt.assert_almost_equal(biobuddy_optimal_length, osim_optimal_length, decimal=5)
-        biobuddy_tendon_slack_length = scaled_model.muscles[muscle].tendon_slack_length
-        osim_tendon_slack_length = osim_model_scaled.muscles[muscle].tendon_slack_length
-        npt.assert_almost_equal(biobuddy_tendon_slack_length, osim_tendon_slack_length, decimal=5)
+            # Muscle properties
+            if (
+                muscle.name
+                in [
+                    "semiten_r",
+                    "vas_med_r",
+                    "vas_lat_r",
+                    "med_gas_r",
+                    "lat_gas_r",
+                    "semiten_l",
+                    "vas_med_l",
+                    "vas_lat_l",
+                    "med_gas_l",
+                    "lat_gas_l",
+                ]
+                or "stern_mast" in muscle.name
+            ):
+                # Skipping muscles with ConditionalPathPoints and MovingPathPoints
+                # Skipping the head since there is a difference in scaling
+                # TODO: This could be tested if MultiplierFunction was implemented
+                continue
+            print(muscle.name)
+            biobuddy_optimal_length = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+            osim_optimal_length = osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+            npt.assert_almost_equal(biobuddy_optimal_length, osim_optimal_length, decimal=5)
+            biobuddy_tendon_slack_length = (
+                scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
+            )
+            osim_tendon_slack_length = (
+                osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
+            )
+            npt.assert_almost_equal(biobuddy_tendon_slack_length, osim_tendon_slack_length, decimal=5)
 
     # Make sure the experimental markers are at the same position as the model's ones in static pose
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
@@ -441,6 +452,7 @@ def test_translation_of_scaling_configuration():
     new_biomod_scaling_configuration = ScaleTool(original_model).from_biomod(filepath=biomod_config_filepath_new)
 
     diff = DeepDiff(scaling_configuration, new_biomod_scaling_configuration, ignore_order=True)
+    compare_models(scaling_configuration.scaled_model, new_biomod_scaling_configuration.scaled_model)
 
     # If the two objects are the same, there are no fields in diff
     assert diff == {}
@@ -913,7 +925,7 @@ def test_scale_contact():
 def test_scale_via_point():
     """Test scaling of via points"""
     simple_model = create_simple_model()
-    original_via_point = simple_model.via_points[0]
+    original_via_point = simple_model.muscle_groups["root_to_child"].muscles["muscle1"].via_points[0]
     scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 
     result = ScaleTool(simple_model).scale_via_point(original_via_point, scale_factor)
@@ -937,7 +949,7 @@ def test_scale_via_point():
 def test_scale_muscle():
     """Test scaling of muscles"""
     simple_model = create_simple_model()
-    original_muscle = simple_model.muscles[0]
+    original_muscle = simple_model.muscle_groups["root_to_child"].muscles[0]
     origin_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
     insertion_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 
@@ -954,20 +966,20 @@ def test_scale_muscle():
     assert result.maximal_excitation == original_muscle.maximal_excitation
 
     # Check scaled position
-    expected_origin = original_muscle.origin_position * origin_scale_factor
+    expected_origin = original_muscle.origin_position.position * origin_scale_factor
     npt.assert_almost_equal(
         expected_origin.reshape(
             4,
         ),
         np.array([0.0, 0.3, 0.0, 1.0]),
     )
-    npt.assert_almost_equal(result.origin_position, expected_origin)
+    npt.assert_almost_equal(result.origin_position.position, expected_origin)
 
-    expected_insertion = original_muscle.insertion_position * insertion_scale_factor
+    expected_insertion = original_muscle.insertion_position.position * insertion_scale_factor
     npt.assert_almost_equal(
         expected_insertion.reshape(
             4,
         ),
         np.array([1.0, 1.2, 1.2, 1.0]),
     )
-    npt.assert_almost_equal(result.insertion_position, expected_insertion)
+    npt.assert_almost_equal(result.insertion_position.position, expected_insertion)

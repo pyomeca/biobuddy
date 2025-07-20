@@ -1,12 +1,8 @@
 from copy import deepcopy
 
-from .muscle.muscle_group import MuscleGroup
-from .muscle.muscle import Muscle
-from .muscle.via_point import ViaPoint
 from .rigidbody.segment import Segment
+from .muscle.muscle_group import MuscleGroup
 from ..real.biomechanical_model_real import BiomechanicalModelReal
-from ..real.rigidbody.segment_real import SegmentReal
-from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
@@ -18,10 +14,8 @@ class BiomechanicalModel(ModelUtils):
         super().__init__()
         self.segments = NamedList[Segment]()
         self.muscle_groups = NamedList[MuscleGroup]()
-        self.muscles = NamedList[Muscle]()
-        self.via_points = NamedList[ViaPoint]()
 
-    def add_segment(self, segment: "Segment"):
+    def add_segment(self, segment: Segment):
         """
         Add a segment to the model
 
@@ -53,7 +47,7 @@ class BiomechanicalModel(ModelUtils):
         """
         self.segments._remove(segment_name)
 
-    def add_muscle_group(self, muscle_group: "MuscleGroup"):
+    def add_muscle_group(self, muscle_group: MuscleGroup):
         """
         Add a muscle group to the model
 
@@ -75,50 +69,6 @@ class BiomechanicalModel(ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
-    def add_muscle(self, muscle: "MuscleReal"):
-        """
-        Add a muscle to the model
-
-        Parameters
-        ----------
-        muscle
-            The muscle to add
-        """
-        self.muscles._append(muscle)
-
-    def remove_muscle(self, muscle_name: str):
-        """
-        Remove a muscle from the model
-
-        Parameters
-        ----------
-        muscle_name
-            The name of the muscle to remove
-        """
-        self.muscles._remove(muscle_name)
-
-    def add_via_point(self, via_point: "ViaPointReal"):
-        """
-        Add a via point to the model
-
-        Parameters
-        ----------
-        via_point
-            The via point to add
-        """
-        self.via_points._append(via_point)
-
-    def remove_via_point(self, via_point_name: str):
-        """
-        Remove a via point from the model
-
-        Parameters
-        ----------
-        via_point_name
-            The name of the via point to remove
-        """
-        self.via_points._remove(via_point_name)
-
     def to_real(self, data: Data, gravity: Point = None) -> BiomechanicalModelReal:
         """
         Collapse the model to an actual personalized biomechanical model based on the generic model and the data
@@ -129,6 +79,10 @@ class BiomechanicalModel(ModelUtils):
         data
             The data to collapse the model from
         """
+        from ..real.muscle.muscle_group_real import MuscleGroupReal
+        from ..real.rigidbody.segment_real import SegmentReal
+        from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
         gravity = None if gravity is None else point_to_array(gravity, "gravity")
         model = BiomechanicalModelReal(gravity=gravity)
 
@@ -179,33 +133,20 @@ class BiomechanicalModel(ModelUtils):
 
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(
-                MuscleGroup(
+                MuscleGroupReal(
                     name=muscle_group.name,
                     origin_parent_name=muscle_group.origin_parent_name,
                     insertion_parent_name=muscle_group.insertion_parent_name,
                 )
             )
 
-        for muscle in self.muscles:
-            if muscle.muscle_group not in model.muscle_groups.keys():
-                raise RuntimeError(
-                    f"Please create the muscle group {muscle.muscle_group} before putting the muscle {muscle.name} in it."
-                )
+            for muscle in muscle_group.muscles:
+                model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model))
 
-            model.add_muscle(muscle.to_muscle(model, data))
+                for via_point in muscle.via_points:
+                    model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
+                        via_point.to_via_point(data, model)
+                    )
 
-        for via_point in self.via_points:
-            if via_point.muscle_name not in model.muscles.keys():
-                raise RuntimeError(
-                    f"Please create the muscle {via_point.muscle_name} before putting the via point {via_point.name} in it."
-                )
-
-            if via_point.muscle_group not in model.muscle_groups.keys():
-                raise RuntimeError(
-                    f"Please create the muscle group {via_point.muscle_group} before putting the via point {via_point.name} in it."
-                )
-
-            model.add_via_point(via_point.to_via_point(data, model))
-
-        model.segments_rt_to_local()
+        model.validate_model()
         return model
