@@ -31,7 +31,7 @@ class ViaPoint:
         self.name = name
         if position_function is not None:
             self.position_function = (
-            (lambda m, bio: m[position_function]) if isinstance(position_function, str) else position_function
+                (lambda m, bio: m[position_function]) if isinstance(position_function, str) else position_function
             )
         else:
             self.position_function = None
