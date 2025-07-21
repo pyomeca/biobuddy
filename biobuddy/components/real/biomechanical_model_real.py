@@ -6,6 +6,7 @@ import numpy as np
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array, points_to_array
 from ...utils.named_list import NamedList
+from ...utils.rotations import Rotations
 from ..model_utils import ModelUtils
 from .model_dynamics import ModelDynamics
 
@@ -132,6 +133,21 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 is_scs_local=True,
             )
 
+    def validate_dofs(self):
+        for segment in self.segments:
+            if len(segment.dof_names) != segment.nb_q:
+                raise RuntimeError(
+                    f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
+            if segment.q_ranges is not None and (len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q):
+                raise RuntimeError(
+                    f"The number of q_ranges (min: {len(segment.q_ranges.min_bound)}, max: {len(segment.q_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
+            if segment.qdot_ranges is not None and (len(segment.qdot_ranges.min_bound) != segment.nb_q or len(segment.qdot_ranges.max_bound) != segment.nb_q):
+                        raise RuntimeError(
+                            f"The number of qdot_ranges (min: {len(segment.qdot_ranges.min_bound)}, max: {len(segment.qdot_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                        )
+
     def validate_parents(self):
         """
         Validate that all via points have a valid parent segment.
@@ -172,6 +188,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
     def validate_model(self):
         self.segments_rt_to_local()
+        self.validate_dofs()
         self.validate_parents()
         self.validate_moving_via_points()
 
