@@ -484,6 +484,56 @@ class ModelDynamics:
         return com_position
 
     @requires_initialization
+    def muscle_origin_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        origin_position = np.ones((4, nb_frames))
+        jcs_in_global = self.forward_kinematics(q)
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.name == muscle_name:
+                    for i_frame in range(nb_frames):
+                        origin_position[:, i_frame] = point_from_local_to_global(
+                            point_in_local=muscle.origin_position.position,
+                            jcs_in_global=jcs_in_global[muscle_group.origin_parent_name][i_frame],
+                        ).reshape(
+                            -1,
+                        )
+
+        return origin_position
+
+    @requires_initialization
+    def muscle_insertion_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        insertion_position = np.ones((4, nb_frames))
+        jcs_in_global = self.forward_kinematics(q)
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.name == muscle_name:
+                    for i_frame in range(nb_frames):
+                        insertion_position[:, i_frame] = point_from_local_to_global(
+                            point_in_local=muscle.insertion_position.position,
+                            jcs_in_global=jcs_in_global[muscle_group.insertion_parent_name][i_frame],
+                        ).reshape(
+                            -1,
+                        )
+
+        return insertion_position
+
+    @requires_initialization
     def via_points_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
         q = np.zeros((self.nb_q, 1)) if q is None else q
         if len(q.shape) == 1:

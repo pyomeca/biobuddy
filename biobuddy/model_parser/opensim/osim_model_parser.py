@@ -17,7 +17,7 @@ from .joint import Joint
 from .marker import Marker
 from .muscle import get_muscle_from_element
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.rigidbody.segment_real import SegmentReal
@@ -112,7 +112,7 @@ class OsimModelParser:
         self.parse_tags(self.model.getroot())
 
         self.bodies: list[Body] = []
-        self.muscle_groups: list[MuscleGroup] = []
+        self.muscle_groups: list[MuscleGroupReal] = []
         self.muscles: list[MuscleReal] = []
         self.joints: list[Joint] = []
         self.markers: list[Marker] = []
@@ -775,7 +775,7 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal]]:
+    def _get_force_set(self) -> tuple[list[MuscleGroupReal], list[MuscleReal]]:
         muscle_groups = []
         muscles = []
         if is_element_empty(self.forceset_elt):

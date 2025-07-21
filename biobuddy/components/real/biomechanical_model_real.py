@@ -14,7 +14,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def __init__(self, gravity: Point = None):
 
         # Imported here to prevent from circular imports
-        from ..generic.muscle.muscle_group import MuscleGroup
+        from .muscle.muscle_group_real import MuscleGroupReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)
@@ -25,7 +25,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.header = ""
         self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscle_groups = NamedList[MuscleGroupReal]()
         self.warnings = ""
 
         # Meta-data
@@ -66,7 +66,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         self.segments._remove(segment_name)
 
-    def add_muscle_group(self, muscle_group: "MuscleGroup") -> None:
+    def add_muscle_group(self, muscle_group: "MuscleGroupReal") -> None:
         """
         Add a muscle group to the model
 
