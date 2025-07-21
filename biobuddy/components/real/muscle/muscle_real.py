@@ -54,15 +54,6 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
-        if optimal_length is not None and optimal_length <= 0:
-            raise ValueError("The optimal length of the muscle must be greater than 0.")
-        if maximal_force is not None and maximal_force <= 0:
-            raise ValueError("The maximal force of the muscle must be greater than 0.")
-        if maximal_velocity is not None and maximal_velocity <= 0:
-            raise ValueError("The maximal contraction velocity of the muscle must be greater than 0.")
-        if maximal_excitation is not None and maximal_excitation <= 0:
-            raise ValueError("The maximal excitation of the muscle must be greater than 0.")
-
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -191,6 +182,13 @@ class MuscleReal:
 
     @optimal_length.setter
     def optimal_length(self, value: float):
+        if value is not None and value <= 0:
+            raise ValueError("The optimal length of the muscle must be greater than 0.")
+        if isinstance(value, np.ndarray):
+            if value.shape == (1, ):
+                value = value[0]
+            else:
+                raise ValueError("The optimal length must be a float.")
         self._optimal_length = value
 
     @property
@@ -199,6 +197,13 @@ class MuscleReal:
 
     @maximal_force.setter
     def maximal_force(self, value: float):
+        if value is not None and value <= 0:
+            raise ValueError("The maximal force of the muscle must be greater than 0.")
+        if isinstance(value, np.ndarray):
+            if value.shape == (1,):
+                value = value[0]
+            else:
+                raise ValueError("The maximal force must be a float.")
         self._maximal_force = value
 
     @property
@@ -207,6 +212,13 @@ class MuscleReal:
 
     @tendon_slack_length.setter
     def tendon_slack_length(self, value: float):
+        if value is not None and value <= 0:
+            raise ValueError("The tendon slack length of the muscle must be greater than 0.")
+        if isinstance(value, np.ndarray):
+            if value.shape == (1, ):
+                value = value[0]
+            else:
+                raise ValueError("The tendon slack length must be a float.")
         self._tendon_slack_length = value
 
     @property
@@ -215,6 +227,11 @@ class MuscleReal:
 
     @pennation_angle.setter
     def pennation_angle(self, value: float):
+        if isinstance(value, np.ndarray):
+            if value.shape == (1, ):
+                value = value[0]
+            else:
+                raise ValueError("The optimal length must be a float.")
         self._pennation_angle = value
 
     @property
@@ -223,6 +240,13 @@ class MuscleReal:
 
     @maximal_velocity.setter
     def maximal_velocity(self, value: float):
+        if value is not None and value <= 0:
+            raise ValueError("The maximal contraction velocity of the muscle must be greater than 0.")
+        if isinstance(value, np.ndarray):
+            if value.shape == (1, ):
+                value = value[0]
+            else:
+                raise ValueError("The maximal velocity must be a float.")
         self._maximal_velocity = value
 
     @property
@@ -231,6 +255,13 @@ class MuscleReal:
 
     @maximal_excitation.setter
     def maximal_excitation(self, value: float):
+        if value is not None and value <= 0:
+            raise ValueError("The maximal excitation of the muscle must be greater than 0.")
+        if isinstance(value, np.ndarray):
+            if value.shape == (1, ):
+                value = value[0]
+            else:
+                raise ValueError("The maximal excitation must be a float.")
         self._maximal_excitation = value
 
     @staticmethod

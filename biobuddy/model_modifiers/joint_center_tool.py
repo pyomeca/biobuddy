@@ -1061,6 +1061,7 @@ class JointCenterTool:
                 first_segment.parent_name = "ground"
                 first_segment.translations = Translations.XYZ
                 first_segment.rotations = Rotations.XYZ
+                first_segment.dof_names = [f"{segment_name}_TransX", f"{segment_name}_TransY", f"{segment_name}_TransZ", f"{segment_name}_RotX", f"{segment_name}_RotY", f"{segment_name}_RotZ"]
                 first_segment.mesh_file = mesh_file
                 joint_model.add_segment(first_segment)
             else:
