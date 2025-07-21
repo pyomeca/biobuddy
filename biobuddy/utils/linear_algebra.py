@@ -621,8 +621,6 @@ class RotoTransMatrixTimeSeries:
         return rt_matrices
 
 
-
-
 def point_from_global_to_local(point_in_global: Point, jcs_in_global: RotoTransMatrix) -> Point:
     return jcs_in_global.inverse @ point_to_array(point=point_in_global)
 

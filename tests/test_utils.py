@@ -472,7 +472,9 @@ def create_simple_model():
         )
     )
 
-    model.add_muscle_group(MuscleGroupReal(name="root_to_child", origin_parent_name="root", insertion_parent_name="child"))
+    model.add_muscle_group(
+        MuscleGroupReal(name="root_to_child", origin_parent_name="root", insertion_parent_name="child")
+    )
     model.muscle_groups["root_to_child"].add_muscle(
         MuscleReal(
             name="muscle1",

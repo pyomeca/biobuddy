@@ -302,15 +302,17 @@ class RigidSegmentIdentification:
             # If the muscle is attached to the child segment, we update its origin and insertion positions
             if muscle_group.origin_parent_name == self.child_name:
                 for muscle in muscle_group.muscles:
-                    muscle.origin_position.position = (
-                        new_child_jcs_in_global.inverse
-                        @ point_from_local_to_global(original_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position, global_jcs)
+                    muscle.origin_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position,
+                        global_jcs,
                     )
             if muscle_group.insertion_parent_name == self.child_name:
                 for muscle in muscle_group.muscles:
-                    muscle.insertion_position.position = (
-                        new_child_jcs_in_global.inverse
-                        @ point_from_local_to_global(original_model.muscle_groups[muscle_group.name].muscles[muscle.name].insertion_position.position, global_jcs)
+                    muscle.insertion_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .insertion_position.position,
+                        global_jcs,
                     )
 
         # Via points
@@ -320,9 +322,14 @@ class RigidSegmentIdentification:
                     if via_point.parent_name == self.child_name:
                         muscle.via_points[via_point.name].position = (
                             new_child_jcs_in_global.inverse
-                            @ point_from_local_to_global(original_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[via_point.name].position, global_jcs)
+                            @ point_from_local_to_global(
+                                original_model.muscle_groups[muscle_group.name]
+                                .muscles[muscle.name]
+                                .via_points[via_point.name]
+                                .position,
+                                global_jcs,
+                            )
                         )
-
 
     @staticmethod
     def check_optimal_rt_inputs(
