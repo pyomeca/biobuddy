@@ -236,4 +236,5 @@ class Muscle:
             self.tendon_slack_length_function,
             self.pennation_angle_function,
             self.maximal_excitation,
+            self.via_points,
         )

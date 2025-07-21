@@ -248,6 +248,7 @@ class MuscleReal:
         tendon_slack_length_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
         pennation_angle_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
         maximal_excitation: float,
+        via_points: NamedList[ViaPoint] = None,  # TODO: Should passed otherwise
     ):
         """
         This is a constructor for the Muscle class. It evaluates the function that defines the muscle to get an
@@ -305,7 +306,7 @@ class MuscleReal:
             condition=None,  # Not implemented for generic models yet
             movement=None,  # Not implemented for generic models yet
         )
-        return MuscleReal(
+        muscle_real = MuscleReal(
             name,
             muscle_type,
             state_type,
@@ -318,6 +319,20 @@ class MuscleReal:
             pennation_angle=pennation_angle_function(model, data.values),
             maximal_excitation=maximal_excitation,
         )
+
+        for via_point in via_points:
+            via_point_real = ViaPointReal.from_data(
+                data=data,
+                model=model,
+                name=via_point.name,
+                parent_name=via_point.parent_name,
+                muscle_name=name,
+                muscle_group=muscle_group,
+                position_function=via_point.position_function,
+            )
+            muscle_real.add_via_point(via_point_real)
+
+        return muscle_real
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
