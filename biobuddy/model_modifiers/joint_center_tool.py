@@ -532,7 +532,8 @@ class RigidSegmentIdentification:
                 if sol.success:
                     rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
                 else:
-                    init = rt_init[:, :, 0].reshape(4, 4)
+                    # If the optimization fails, we use the initial rt matrix to initialize the next frame
+                    init = rt_init[0].rt_matrix
                     print(f"The optimization failed: {sol.message}")
                     continue
 
