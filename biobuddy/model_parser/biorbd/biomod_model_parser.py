@@ -149,6 +149,7 @@ class BiomodModelParser:
 
                 elif isinstance(current_component, SegmentReal):
                     if token.lower() == "endsegment":
+                        current_component.update_dof_names()
                         self.segments.append(current_component)
                         current_component = None
                     elif token.lower() == "parent":
