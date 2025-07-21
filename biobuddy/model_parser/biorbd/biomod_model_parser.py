@@ -14,7 +14,8 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
     ContactReal,
 )
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal

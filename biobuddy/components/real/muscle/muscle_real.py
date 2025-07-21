@@ -1,25 +1,13 @@
-from typing import Callable
+from typing import Callable, Any
 
 import numpy as np
-from enum import Enum
 
 from ....utils.aliases import Points, points_to_array
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
 from .via_point_real import ViaPointReal
 from ...generic.muscle.via_point import ViaPoint
-
-
-class MuscleType(Enum):
-    HILL = "hill"
-    HILL_THELEN = "hillthelen"
-    HILL_DE_GROOTE = "hilldegroote"
-
-
-class MuscleStateType(Enum):
-    DEGROOTE = "degroote"
-    DEFAULT = "default"
-    BUCHANAN = "buchanan"
+from ...muscle_utils import MuscleType, MuscleStateType
 
 
 class MuscleReal:
@@ -255,10 +243,10 @@ class MuscleReal:
         muscle_group: str,
         origin_position: ViaPoint,
         insertion_position: ViaPoint,
-        optimal_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-        maximal_force_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-        tendon_slack_length_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-        pennation_angle_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
+        optimal_length_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
+        maximal_force_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
+        tendon_slack_length_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
+        pennation_angle_function: Callable[[dict[str, Any], "BiomechanicalModelReal"], float],
         maximal_excitation: float,
     ):
         """

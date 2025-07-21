@@ -3,7 +3,7 @@ import numpy as np
 
 # from typing import Self
 
-from .muscle.muscle_real import MuscleType, MuscleStateType
+from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array, points_to_array
 from ...utils.named_list import NamedList
 from ..model_utils import ModelUtils

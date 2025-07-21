@@ -522,13 +522,16 @@ class MockEmptyC3dData(C3dData):
 
 
 class MockC3dData(C3dData):
-    def __init__(self, c3d_path):
+    def __init__(self, c3d_path: str = None):
 
-        super().__init__(self, c3d_path)
+        if c3d_path is None:
+            parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            c3d_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+
+        C3dData.__init__(self, c3d_path, first_frame=0, last_frame=10)
 
         # Fix the seed for reproducibility
         np.random.seed(42)
 
-        self.marker_names = ["marker1", "marker2", "marker3", "marker4", "marker5"]
         # Create marker positions for 10 frames
-        self.all_marker_positions = np.random.rand(4, 5, 10)
+        self.all_marker_positions = np.random.rand(4, 73, 10)

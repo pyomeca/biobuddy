@@ -4,7 +4,7 @@ from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree, match_tag
 from .functions import spline_from_element
-from ...components.real.muscle.via_point_real import PathPointCondition, PathPointMovement
+from ...components.via_point_utils import PathPointCondition, PathPointMovement
 
 
 def condition_from_element(element: etree.ElementTree) -> PathPointCondition:

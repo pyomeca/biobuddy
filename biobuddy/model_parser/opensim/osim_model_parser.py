@@ -19,12 +19,13 @@ from .muscle import get_muscle_from_element
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.generic.muscle.muscle_group import MuscleGroup
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
 from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
 from ...utils.linear_algebra import (
     OrthoMatrix,
     compute_matrix_rotation,
