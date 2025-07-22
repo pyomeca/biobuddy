@@ -24,7 +24,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         # Model core attributes
         self.header = ""
-        self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
+        self.gravity = gravity
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroupReal]()
         self.warnings = ""
@@ -98,6 +98,14 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             The name of the muscle group to remove
         """
         self.muscle_groups._remove(muscle_group_name)
+
+    @property
+    def gravity(self) -> np.ndarray:
+        return self._gravity
+
+    @gravity.setter
+    def gravity(self, value: Point) -> None:
+        self._gravity = None if value is None else point_to_array(value, "gravity")
 
     @property
     def mass(self) -> float:
