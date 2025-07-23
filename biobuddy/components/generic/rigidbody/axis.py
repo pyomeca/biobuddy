@@ -29,8 +29,10 @@ class Axis:
             If a str is provided, the position of the corresponding marker is used
         """
         self.name = name
-        self.start = Marker(function=start)
-        self.end = Marker(function=end)
+        name_start = start if isinstance(start, str) else "start"
+        name_end = end if isinstance(end, str) else "end"
+        self.start = Marker(name=name_start, function=start)
+        self.end = Marker(name=name_end, function=end)
 
     def to_axis(
         self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None

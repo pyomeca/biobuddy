@@ -1,5 +1,7 @@
 from typing import Callable
+import numpy as np
 
+from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.contact_real import ContactReal
 from ....utils.protocols import Data
 from ....utils.translations import Translations
@@ -27,14 +29,51 @@ class Contact:
             The axis of the contact
         """
         self.name = name
-        function = function if function is not None else self.name
-        self.function = (lambda m, bio: m[function]) if isinstance(function, str) else function
+        self.function = function
         self.parent_name = check_name(parent_name)
         self.axis = axis
 
-    def to_contact(self, data: Data) -> ContactReal:
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str) -> None:
+        self._parent_name = value
+
+    @property
+    def function(self) -> Callable | str:
+        return self._function
+
+    @function.setter
+    def function(self, value: Callable | str) -> None:
+        if value is None:
+            # Set the function to the name of the marker, so it can be used as a default
+            value = self.name
+        self._function = (lambda m, bio: np.nanmean(m[value], axis=1)) if isinstance(value, str) else value
+
+    @property
+    def axis(self) -> Translations:
+        return self._axis
+
+    @axis.setter
+    def axis(self, value: Translations) -> None:
+        self._axis = value
+
+    def to_contact(self, data: Data, model: BiomechanicalModelReal) -> ContactReal:
+        if self.function is None:
+            raise RuntimeError("You must provide a position function to evaluate the Contact into a ContactReal.")
         return ContactReal.from_data(
             data,
+            model,
             self.name,
             self.function,
             self.parent_name,

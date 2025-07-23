@@ -68,8 +68,9 @@ class ContactReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: "BiomechanicalModelReal",
         name: str,
-        function: Callable[[dict[str, np.ndarray]], Points],
+        function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
         parent_name: str,
         axis: Translations = None,
     ):
@@ -81,6 +82,8 @@ class ContactReal:
         ----------
         data
             The data to pick the data from
+        model
+            The biomechanical model to which the contact belongs
         name
             The name of the new contact
         function
@@ -92,7 +95,7 @@ class ContactReal:
         """
 
         # Get the position of the contact points and do some sanity checks
-        p = points_to_array(points=function(data.values), name=f"contact real function")
+        p = points_to_array(points=function(data.values, model), name=f"contact real function")
         return ContactReal(name, parent_name, p, axis)
 
     def to_biomod(self):

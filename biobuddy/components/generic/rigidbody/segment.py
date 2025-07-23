@@ -153,7 +153,7 @@ class Segment(SegmentUtils):
         marker.parent_name = self.name
         self.markers._append(marker)
 
-    def remove_marker(self, marker: Marker):
+    def remove_marker(self, marker: str):
         self.markers._remove(marker)
 
     def add_contact(self, contact: Contact):
@@ -172,5 +172,5 @@ class Segment(SegmentUtils):
         contact.parent_name = self.name
         self.contacts._append(contact)
 
-    def remove_contact(self, contact: Contact):
+    def remove_contact(self, contact: str):
         self.contacts._remove(contact)

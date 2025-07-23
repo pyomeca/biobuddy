@@ -60,8 +60,8 @@ class MeshReal:
         # Get the position of the all the mesh points and do some sanity checks
         all_p = points_to_array(points=None, name="mesh_real")
         for f in functions:
-            p = point_to_array(point=f(data.values, model), name="mesh function")
-            p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
+            p = np.nanmean(points_to_array(points=f(data.values, model), name="mesh function"), axis=1)
+            p[3] = 1  # Do not trust user and make sure the last value is a perfect one
             projected_p = (parent_scs.scs.inverse if parent_scs is not None else RotoTransMatrix()) @ p
             if np.isnan(projected_p).all():
                 raise RuntimeError(f"All the values for {f} returned nan which is not permitted")
