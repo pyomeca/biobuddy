@@ -1,3 +1,4 @@
+from enum import Enum
 from copy import deepcopy
 import logging
 import numpy as np
@@ -22,6 +23,11 @@ def requires_initialization(method):
         return method(self, *args, **kwargs)
 
     return wrapper
+
+
+class ViewAs(Enum):
+    BIORBD = "biorbd"
+    # OPENSIM = "opensim"
 
 
 class ModelDynamics:
@@ -676,6 +682,25 @@ class ModelDynamics:
             muscle_tendon_length[i_frame] = muscle_norm
 
         return muscle_tendon_length
+
+    def animate(self, view_as: ViewAs = ViewAs.BIORBD, model_path: str = None):
+
+        if view_as == ViewAs.BIORBD:
+            try:
+                import pyorerun
+
+                if model_path is None or not model_path.endswith(".bioMod"):
+                    model_path = "temporary.bioMod"
+                    self.to_biomod(model_path, with_mesh=False)
+
+                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=False)
+                animation.options.set_all_labels(False)
+                animation.rerun()
+            except ImportError:
+                _logger.error("pyorerun is not installed. Cannot animate the model.")
+
+        else:
+            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use ViewAs.BIORBD for now.")
 
     # TODO: implement tendons
     # @requires_initialization

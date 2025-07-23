@@ -150,9 +150,9 @@ class RigidSegmentIdentification:
         child_trans = np.zeros((3, nb_frames))
         child_rot = np.zeros((3, nb_frames))
 
-        rt_parent_instance = RotoTransMatrixTimeSeries()
+        rt_parent_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
         rt_parent_instance.from_rt_matrix(rt_parent)
-        rt_child_instance = RotoTransMatrixTimeSeries()
+        rt_child_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
         rt_child_instance.from_rt_matrix(rt_child)
 
         for i_frame in range(nb_frames):
