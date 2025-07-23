@@ -13,7 +13,9 @@ class RangeOfMotion:
         # Sanity check
         for min_bound_i, max_bound_i in zip(min_bound, max_bound):
             if min_bound_i > max_bound_i:
-                raise ValueError(f"The min_bound must be smaller than the max_bound for each degree of freedom, got {min_bound_i} > {max_bound_i}.")
+                raise ValueError(
+                    f"The min_bound must be smaller than the max_bound for each degree of freedom, got {min_bound_i} > {max_bound_i}."
+                )
 
         self.range_type = range_type
         self.min_bound = min_bound
