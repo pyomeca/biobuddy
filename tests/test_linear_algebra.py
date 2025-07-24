@@ -30,7 +30,6 @@ from biobuddy.utils.linear_algebra import (
     point_from_local_to_global,
     RotoTransMatrix,
     RotoTransMatrixTimeSeries,
-    OrthoMatrix,
 )
 
 
@@ -663,42 +662,6 @@ def test_rototrans_matrix_time_series():
     with pytest.raises(ValueError, match="should be of shape"):
         rt_series.from_rt_matrix(np.eye(4))
 
-
-def test_ortho_matrix_class():
-    """Test OrthoMatrix class."""
-    # Test initialization
-    translation = (1, 2, 3)
-    rotation_1 = (1, 0, 0)
-    rotation_2 = (0, 1, 0)
-    rotation_3 = (0, 0, 1)
-
-    ortho_matrix = OrthoMatrix(translation, rotation_1, rotation_2, rotation_3)
-
-    # Check dimensions
-    assert ortho_matrix.get_matrix().shape == (4, 4)
-
-    # Check that translation is set correctly
-    npt.assert_almost_equal(ortho_matrix.get_translation().flatten(), np.array([1, 2, 3]))
-
-    # Check that rotation matrix is orthogonal
-    rot_matrix = ortho_matrix.get_rotation_matrix()
-    npt.assert_almost_equal(rot_matrix @ rot_matrix.T, np.eye(3), decimal=10)
-    npt.assert_almost_equal(np.linalg.det(rot_matrix), 1.0)
-
-    # Test identity case
-    identity_ortho = OrthoMatrix()
-    assert identity_ortho.has_no_transformation()
-
-    # Test transpose operation
-    ortho_copy = OrthoMatrix(translation, rotation_1, rotation_2, rotation_3)
-    original_matrix = ortho_copy.get_matrix().copy()
-    ortho_copy.transpose()
-
-    # After transpose, the transformation should be inverted
-    expected_inverse = np.linalg.inv(original_matrix)
-    npt.assert_almost_equal(ortho_copy.get_matrix(), expected_inverse, decimal=10)
-
-
 def test_rt():
 
     np.random.seed(42)
@@ -921,28 +884,3 @@ def test_roto_trans_matrix():
         ),
         rt_expected @ point_4D,
     )
-
-    # Test OrthoMatrix methods
-    ortho = OrthoMatrix(translation=(1, 2, 3))
-
-    # Test set_rotation_matrix
-    new_rot = rot_y_matrix(np.pi / 6)
-    ortho.set_rotation_matrix(new_rot)
-    npt.assert_almost_equal(ortho.get_rotation_matrix(), new_rot)
-
-    # Test set_translation
-    new_trans = np.array([[4], [5], [6]])
-    ortho.set_translation(new_trans)
-    npt.assert_almost_equal(ortho.get_translation(), new_trans)
-
-    # Test product method
-    ortho1 = OrthoMatrix(translation=(1, 0, 0))
-    ortho2 = OrthoMatrix(translation=(0, 1, 0))
-
-    result_matrix = ortho1.product(ortho2)
-    assert result_matrix.shape == (4, 4)
-
-    # Test get_axis method
-    ortho_axis = OrthoMatrix(rotation_1=(1, 0, 0), rotation_2=(0, 1, 0), rotation_3=(0, 0, 1))
-    axis_string = ortho_axis.get_axis()
-    assert isinstance(axis_string, str)

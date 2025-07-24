@@ -380,51 +380,6 @@ def get_rt_aligning_markers_in_global(
 
     return rt_matrix
 
-
-class OrthoMatrix:
-    def __init__(self, translation=(0, 0, 0), rotation_1=(0, 0, 0), rotation_2=(0, 0, 0), rotation_3=(0, 0, 0)):
-        self.trans = np.transpose(np.array([translation]))
-        self.axe_1 = rotation_1  # axis of rotation for theta_1
-        self.axe_2 = rotation_2  # axis of rotation for theta_2
-        self.axe_3 = rotation_3  # axis of rotation for theta_3
-        self.rot_1 = np.transpose(np.array(coord_sys(self.axe_1)[0]))  # rotation matrix for theta_1
-        self.rot_2 = np.transpose(np.array(coord_sys(self.axe_2)[0]))  # rotation matrix for theta_2
-        self.rot_3 = np.transpose(np.array(coord_sys(self.axe_3)[0]))  # rotation matrix for theta_3
-        self.rotation_matrix = self.rot_3.dot(self.rot_2.dot(self.rot_1))  # rotation matrix for
-        self.matrix = np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
-
-    def get_rotation_matrix(self):
-        return self.rotation_matrix
-
-    def set_rotation_matrix(self, rotation_matrix):
-        self.rotation_matrix = rotation_matrix
-
-    def get_translation(self):
-        return self.trans
-
-    def set_translation(self, trans):
-        self.trans = trans
-
-    def get_matrix(self):
-        return np.append(np.append(self.rotation_matrix, self.trans, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
-
-    def transpose(self):
-        self.rotation_matrix = np.transpose(self.rotation_matrix)
-        self.trans = -self.rotation_matrix.dot(self.trans)
-        return self.matrix
-
-    def product(self, other):
-        self.rotation_matrix = self.rotation_matrix.dot(other.get_rotation_matrix())
-        self.trans = self.trans + other.get_translation()
-        return self.matrix
-
-    def get_axis(self):
-        return coord_sys(self.axe_1)[1] + coord_sys(self.axe_2)[1] + coord_sys(self.axe_3)[1]
-
-    def has_no_transformation(self):
-        return np.all(self.get_matrix() == np.identity(4))
-
-
 class RotoTransMatrix:
     def __init__(self):
         self._rt = np.identity(4)
@@ -501,10 +456,18 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
-        # # TODO: Charbie -> Uncomment when the bug in OpenSIm is fixed
-        # if np.abs(np.linalg.det(rt[:3, :3]) - 1.0) > 1e-6:
-        #     raise ValueError(f"The rotation matrix provided {rt} is not a valid rototranslation matrix (det of the rotation part = {np.linalg.det(rt[:3, :3])}, and should be 1.0).")
-        self._rt = rt
+        self._rt = get_closest_rt_matrix(rt)
+
+    def from_rotation_axes_and_translation(self,
+                                           first_rotation_axis: np.ndarray=np.array([0, 0, 0]),
+                                           second_rotation_axis: np.ndarray=np.array([0, 0, 0]),
+                                           third_rotation_axis: np.ndarray=np.array([0, 0, 0]),
+                                           translation: np.ndarray=np.array([0, 0, 0])):
+        rot_1 = np.transpose(np.array(coord_sys(first_rotation_axis)[0]))  # rotation matrix for theta_1
+        rot_2 = np.transpose(np.array(coord_sys(second_rotation_axis)[0]))  # rotation matrix for theta_2
+        rot_3 = np.transpose(np.array(coord_sys(third_rotation_axis)[0]))  # rotation matrix for theta_3
+        rotation_matrix = rot_3.dot(rot_2.dot(rot_1))  # rotation matrix for
+        self._rt_matrix = np.append(np.append(rotation_matrix, translation, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
 
     @property
     def rt_matrix(self) -> np.ndarray:
@@ -528,11 +491,7 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rotation_matrix used to set a RotoTransMatrix should be of shape (3, 3). You have {rot.shape}"
             )
-        if np.abs(np.linalg.det(rot) - 1.0) > 1e-6:
-            raise ValueError(
-                f"The rotation matrix provided {rot} is not a valid rotation matrix (det = {np.linalg.det(rot)}, and should be 1.0)."
-            )
-        self._rt[:3, :3] = rot
+        self._rt[:3, :3] = get_closest_rotation_matrix(rot)
 
     def euler_angles(self, angle_sequence: str) -> np.ndarray:
         return to_euler(self.rotation_matrix, angle_sequence)
