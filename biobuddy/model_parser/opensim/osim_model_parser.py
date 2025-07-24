@@ -28,6 +28,7 @@ from ...components.real.rigidbody.segment_coordinate_system_real import SegmentC
 from ...components.muscle_utils import MuscleType, MuscleStateType
 from ...utils.linear_algebra import (
     RotoTransMatrix,
+    RotationMatrix,
     compute_matrix_rotation,
     is_ortho_basis,
     ortho_norm_basis,
@@ -393,9 +394,13 @@ class OsimModelParser:
                     for idx in np.where(trans_dof_names != None)[0]:
                         trans_axis += dof_axis[idx]
                         effective_trans_dof_names += [trans_dof_names[idx]]
+                    axis = RotationMatrix()
+                    axis.from_rotation_matrix(np.array(translations).T)
+                    axis_offset_rot_mat = RotationMatrix()
+                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
-                        axis=np.array(translations).T,
-                        axis_offset=axis_offset,
+                        axis=axis,
+                        axis_offset=axis_offset_rot_mat,
                         name=body_name,
                         parent=parent,
                         rt_in_matrix=True,
@@ -417,9 +422,13 @@ class OsimModelParser:
                         rot_axis += dof_axis[idx]
                         effective_rot_dof_names += [rot_dof_names[idx]]
                     body_name = body.name + "_rotation_transform"
+                    axis = RotationMatrix()
+                    axis.from_rotation_matrix(np.array(rotations).T)
+                    axis_offset_rot_mat = RotationMatrix()
+                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
-                        axis=np.array(rotations).T,
-                        axis_offset=axis_offset,
+                        axis=axis,
+                        axis_offset=axis_offset_rot_mat,
                         name=body_name,
                         parent=parent,
                         rt_in_matrix=True,
@@ -502,8 +511,8 @@ class OsimModelParser:
 
     def write_ortho_segment(
         self,
-        axis: np.ndarray,
-        axis_offset: np.ndarray,
+        axis: RotationMatrix,
+        axis_offset: RotationMatrix,
         name: str,
         parent: str,
         rt_in_matrix: bool,
@@ -513,11 +522,7 @@ class OsimModelParser:
         rot_dof: str = "",  # ex: 'xyz'
         dof_names: list[str] = None,
     ):
-        if axis.shape != (3, 3):
-            raise RuntimeError(f"Axis must be a 3x3 matrix representing orthogonal axes, got {axis}.")
         frame_offset.rotation_matrix = axis
-        if axis_offset.shape != (3, 3):
-            raise RuntimeError(f"Axis offset must be a 3x3 matrix representing orthogonal axes, got {axis_offset}.")
         self.write_virtual_segment(
             name=name,
             parent_name=parent,
@@ -528,7 +533,7 @@ class OsimModelParser:
             rot_dof=rot_dof,
             dof_names=dof_names,
         )
-        return axis_offset @ frame_offset.rotation_matrix
+        return axis_offset.rotation_matrix @ frame_offset.rotation_matrix
 
     def write_non_ortho_rot_segment(
         self,
@@ -634,16 +639,16 @@ class OsimModelParser:
 
     def write_virtual_segment(
         self,
-        name,
-        parent_name,
-        frame_offset,
-        q_range=None,
+        name: str,
+        parent_name: str,
+        frame_offset: list[list[float]],  # ex: [[0, 0, 0], [0, 0, 0]]
+        q_range: list[str] = None,
         rt_in_matrix: bool = False,
-        trans_dof="",
-        rot_dof="",
-        mesh_file=None,
-        mesh_color=None,
-        mesh_scale=None,
+        trans_dof: str = "",  # ex: 'xyz'
+        rot_dof: str = "",  # ex: 'xyz'
+        mesh_file: str = None,
+        mesh_color: list[str] = None,  # ex: [0, 0, 0]
+        mesh_scale: list[str] = None, # ex: [1, 1, 1]
         dof_names: list[str] = None,
     ):
         """
