@@ -11,11 +11,17 @@ from biobuddy import (
     MeshReal,
     SegmentReal,
     InertialMeasurementUnitReal,
+    ViaPointReal,
+    MuscleReal,
+    MuscleGroupReal,
+    MuscleType,
+    MuscleStateType,
     RotoTransMatrix,
     Translations,
     Rotations,
     RangeOfMotion,
     Ranges,
+    ViaPoint,
 )
 from test_utils import MockC3dData
 
@@ -807,6 +813,7 @@ def test_segment_real_to_biomod():
                           parent_name="test_segment",
                           position=np.array([[1.0], [2.0], [3.0], [1.0]]))
     segment.add_contact(contact)
+
     # Exporting without an axis is not allowed
     with pytest.raises(RuntimeError, match="The axis of the contact must be defined before exporting to biomod."):
         segment.to_biomod(with_mesh=False)
@@ -825,3 +832,529 @@ def test_segment_real_to_biomod():
     assert "endsegment" in biomod_str
     assert "marker\ttest_marker" in biomod_str
     assert "contact\ttest_contact" in biomod_str
+
+
+# ------- ViaPointReal ------- #
+def test_init_via_point_real():
+    # Test initialization with minimal parameters
+    via_point = ViaPointReal(
+        name="test_via_point",
+        parent_name="segment1"
+    )
+    
+    assert via_point.name == "test_via_point"
+    assert via_point.parent_name == "segment1"
+    assert via_point.muscle_name is None
+    assert via_point.muscle_group is None
+    npt.assert_almost_equal(via_point.position, np.ndarray((4, 0)))
+    assert via_point.condition is None
+    assert via_point.movement is None
+    
+    # Test initialization with all parameters
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    via_point = ViaPointReal(
+        name="test_via_point",
+        parent_name="segment1",
+        muscle_name="muscle1",
+        muscle_group="group1",
+        position=position
+    )
+    
+    assert via_point.name == "test_via_point"
+    assert via_point.parent_name == "segment1"
+    assert via_point.muscle_name == "muscle1"
+    assert via_point.muscle_group == "group1"
+    npt.assert_array_equal(via_point.position, position)
+    
+    # Test with position as a tuple
+    via_point = ViaPointReal(
+        name="test_via_point",
+        parent_name="segment1",
+        position=np.array([[1.0], [2.0], [3.0]])
+    )
+    npt.assert_array_equal(via_point.position, np.array([[1.0], [2.0], [3.0], [1.0]]))
+    
+    # Test with both position and movement (should raise error)
+    with pytest.raises(RuntimeError, match="You can only have either a position or a movement, not both."):
+        ViaPointReal(
+            name="test_via_point",
+            parent_name="segment1",
+            position=(1.0, 2.0, 3.0),
+            movement=object()  # Mock movement object
+        )
+    
+    # Test with both condition and movement (should raise error)
+    with pytest.raises(RuntimeError, match="You can only have either a condition or a movement, not both."):
+        ViaPointReal(
+            name="test_via_point",
+            parent_name="segment1",
+            condition=object(),  # Mock condition object
+            movement=object()  # Mock movement object
+        )
+
+def test_via_point_real_to_biomod():
+    # Create a via point
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    via_point = ViaPointReal(
+        name="test_via_point",
+        parent_name="segment1",
+        muscle_name="muscle1",
+        muscle_group="group1",
+        position=position
+    )
+    
+    # Generate biomod string
+    biomod_str = via_point.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "viapoint\ttest_via_point\n"
+        "\tparent\tsegment1\n"
+        "\tmuscle\tmuscle1\n"
+        "\tmusclegroup\tgroup1\n"
+        "\tposition\t1.0\t2.0\t3.0\n"
+        "endviapoint\n"
+        "\n\n"
+    )
+    assert biomod_str == expected_str
+    
+    # Test with condition (should return warning)
+    via_point.condition = object()  # Mock condition object
+    biomod_str = via_point.to_biomod()
+    assert "WARNING: biorbd doe not support conditional via points" in biomod_str
+    
+    # Test with movement (should return warning)
+    via_point.condition = None
+    via_point.movement = object()  # Mock movement object
+    biomod_str = via_point.to_biomod()
+    assert "WARNING: biorbd doe not support moving via points" in biomod_str
+
+
+# ------- MuscleReal ------- #
+def test_init_muscle_real():
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Test initialization with minimal parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    
+    assert muscle.name == "test_muscle"
+    assert muscle.muscle_type == MuscleType.HILL
+    assert muscle.state_type == MuscleStateType.DEGROOTE
+    assert muscle.muscle_group == "group1"
+    assert muscle.origin_position == origin
+    assert muscle.insertion_position == insertion
+    assert muscle.optimal_length is None
+    assert muscle.maximal_force is None
+    assert muscle.tendon_slack_length is None
+    assert muscle.pennation_angle is None
+    assert muscle.maximal_velocity is None
+    assert muscle.maximal_excitation is None
+    assert len(muscle.via_points) == 0
+    
+    # Test initialization with all parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+        optimal_length=0.1,
+        maximal_force=100.0,
+        tendon_slack_length=0.2,
+        pennation_angle=0.1,
+        maximal_velocity=10.0,
+        maximal_excitation=1.0
+    )
+    
+    assert muscle.name == "test_muscle"
+    assert muscle.muscle_type == MuscleType.HILL
+    assert muscle.state_type == MuscleStateType.DEGROOTE
+    assert muscle.muscle_group == "group1"
+    assert muscle.origin_position == origin
+    assert muscle.insertion_position == insertion
+    assert muscle.optimal_length == 0.1
+    assert muscle.maximal_force == 100.0
+    assert muscle.tendon_slack_length == 0.2
+    assert muscle.pennation_angle == 0.1
+    assert muscle.maximal_velocity == 10.0
+    assert muscle.maximal_excitation == 1.0
+    
+    # Test with invalid parameters
+    with pytest.raises(ValueError, match="The optimal length of the muscle must be greater than 0."):
+        MuscleReal(
+            name="test_muscle",
+            muscle_type=MuscleType.HILL,
+            state_type=MuscleStateType.DEGROOTE,
+            muscle_group="group1",
+            origin_position=origin,
+            insertion_position=insertion,
+            optimal_length=0.0  # Invalid value
+        )
+    
+    with pytest.raises(ValueError, match="The maximal force of the muscle must be greater than 0."):
+        MuscleReal(
+            name="test_muscle",
+            muscle_type=MuscleType.HILL,
+            state_type=MuscleStateType.DEGROOTE,
+            muscle_group="group1",
+            origin_position=origin,
+            insertion_position=insertion,
+            maximal_force=0.0  # Invalid value
+        )
+
+
+def test_muscle_real_add_remove_via_point():
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    
+    # Create a via point
+    via_point = ViaPointReal(
+        name="via_point",
+        parent_name="segment1",
+        position=np.array([[0.5], [0.0], [0.0], [1.0]])
+    )
+    
+    # Add via point to muscle
+    muscle.add_via_point(via_point)
+    
+    # Verify via point was added and muscle_name was set
+    assert len(muscle.via_points) == 1
+    assert via_point.muscle_name == "test_muscle"
+    
+    # Create a via point with matching muscle_name
+    via_point2 = ViaPointReal(
+        name="via_point2",
+        parent_name="segment1",
+        muscle_name="test_muscle",
+        position=np.array([[0.7], [0.0], [0.0], [1.0]])
+    )
+    muscle.add_via_point(via_point2)
+    assert len(muscle.via_points) == 2
+    
+    # Create a via point with non-matching muscle_name
+    via_point3 = ViaPointReal(
+        name="via_point3",
+        parent_name="segment1",
+        muscle_name="other_muscle",
+        position=np.array([[0.8], [0.0], [0.0], [1.0]])
+    )
+    with pytest.raises(ValueError, match="The via points's muscle .* should be the same as the muscle's name"):
+        muscle.add_via_point(via_point3)
+    
+    # Remove a via point
+    muscle.remove_via_point("via_point")
+    assert len(muscle.via_points) == 1
+    assert muscle.via_points[0].name == "via_point2"
+
+
+def test_muscle_real_to_biomod():
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+        optimal_length=0.1,
+        maximal_force=100.0,
+        tendon_slack_length=0.2,
+        pennation_angle=0.1,
+        maximal_velocity=10.0,
+        maximal_excitation=1.0
+    )
+    
+    # Add a via point
+    via_point = ViaPointReal(
+        name="via_point",
+        parent_name="segment1",
+        position=np.array([[0.5], [0.0], [0.0], [1.0]])
+    )
+    muscle.add_via_point(via_point)
+    
+    # Generate biomod string
+    biomod_str = muscle.to_biomod()
+    
+    # Check the content
+    assert "muscle\ttest_muscle" in biomod_str
+    assert "\ttype\thill" in biomod_str
+    assert "\tstatetype\tdegroote" in biomod_str
+    assert "\tmusclegroup\tgroup1" in biomod_str
+    assert "\toriginposition\t0.0\t0.0\t0.0" in biomod_str
+    assert "\tinsertionposition\t1.0\t0.0\t0.0" in biomod_str
+    assert "\toptimallength\t0.1000" in biomod_str
+    assert "\tmaximalforce\t100.0000" in biomod_str
+    assert "\ttendonslacklength\t0.2000" in biomod_str
+    assert "\tpennationangle\t0.1000" in biomod_str
+    assert "\tmaxvelocity\t10.0000" in biomod_str
+    assert "\tmaxexcitation\t1.0000" in biomod_str
+    assert "endmuscle" in biomod_str
+    assert "viapoint\tvia_point" in biomod_str
+
+
+# ------- MuscleGroupReal ------- #
+def test_init_muscle_group_real():
+    # Test initialization
+    muscle_group = MuscleGroupReal(
+        name="test_group",
+        origin_parent_name="segment1",
+        insertion_parent_name="segment2"
+    )
+    
+    assert muscle_group.name == "test_group"
+    assert muscle_group.origin_parent_name == "segment1"
+    assert muscle_group.insertion_parent_name == "segment2"
+    assert len(muscle_group.muscles) == 0
+    
+    # Test with same origin and insertion parent names (should raise error)
+    with pytest.raises(ValueError, match="The origin and insertion parent names cannot be the same."):
+        MuscleGroupReal(
+            name="test_group",
+            origin_parent_name="segment1",
+            insertion_parent_name="segment1"
+        )
+
+
+def test_muscle_group_real_add_remove_muscle():
+    # Create a muscle group
+    muscle_group = MuscleGroupReal(
+        name="test_group",
+        origin_parent_name="segment1",
+        insertion_parent_name="segment2"
+    )
+    
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Create a muscle with no muscle_group
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=None,
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    
+    # Add muscle to group
+    muscle_group.add_muscle(muscle)
+    
+    # Verify muscle was added and muscle_group was set
+    assert len(muscle_group.muscles) == 1
+    assert muscle.muscle_group == "test_group"
+    
+    # Create a muscle with matching muscle_group
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    muscle2 = MuscleReal(
+        name="test_muscle2",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="test_group",
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    muscle_group.add_muscle(muscle2)
+    assert len(muscle_group.muscles) == 2
+    
+    # Create a muscle with non-matching muscle_group
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    muscle3 = MuscleReal(
+        name="test_muscle3",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="other_group",
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    with pytest.raises(ValueError, match="The muscle's muscle_group should be the same as the 'key'"):
+        muscle_group.add_muscle(muscle3)
+    
+    # Remove a muscle
+    muscle_group.remove_muscle("test_muscle")
+    assert len(muscle_group.muscles) == 1
+    assert muscle_group.muscles[0].name == "test_muscle2"
+
+
+def test_muscle_group_real_properties():
+    # Create a muscle group
+    muscle_group = MuscleGroupReal(
+        name="test_group",
+        origin_parent_name="segment1",
+        insertion_parent_name="segment2"
+    )
+    
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Create muscles
+    muscle1 = MuscleReal(
+        name="test_muscle1",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=None,
+        origin_position=origin,
+        insertion_position=insertion
+    )
+
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    muscle2 = MuscleReal(
+        name="test_muscle2",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=None,
+        origin_position=origin,
+        insertion_position=insertion
+    )
+    
+    # Add muscles to group
+    muscle_group.add_muscle(muscle1)
+    muscle_group.add_muscle(muscle2)
+    
+    # Test properties
+    assert muscle_group.nb_muscles == 2
+    assert muscle_group.muscle_names == ["test_muscle1", "test_muscle2"]
+
+
+def test_muscle_group_real_to_biomod():
+    # Create a muscle group
+    muscle_group = MuscleGroupReal(
+        name="test_group",
+        origin_parent_name="segment1",
+        insertion_parent_name="segment2"
+    )
+    
+    # Create origin and insertion via points
+    origin = ViaPointReal(
+        name="origin",
+        parent_name="segment1",
+        position=np.array([[0.0], [0.0], [0.0], [1.0]])
+    )
+    
+    insertion = ViaPointReal(
+        name="insertion",
+        parent_name="segment2",
+        position=np.array([[1.0], [0.0], [0.0], [1.0]])
+    )
+    
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=None,
+        origin_position=origin,
+        insertion_position=insertion,
+        maximal_force=100.0
+    )
+    
+    # Add muscle to group
+    muscle_group.add_muscle(muscle)
+    
+    # Generate biomod string
+    biomod_str = muscle_group.to_biomod()
+    
+    # Check the content
+    assert "musclegroup\ttest_group" in biomod_str
+    assert "\tOriginParent\tsegment1" in biomod_str
+    assert "\tInsertionParent\tsegment2" in biomod_str
+    assert "endmusclegroup" in biomod_str
+    assert "muscle\ttest_muscle" in biomod_str
