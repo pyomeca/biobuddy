@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np
 
+from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.protocols import Data
 from ....utils.aliases import point_to_array
 
@@ -90,6 +91,7 @@ class MeshFileReal:
     @staticmethod
     def from_data(
         data: Data,
+        model: BiomechanicalModelReal,
         mesh_file_name: str,
         mesh_color: np.ndarray[float] | list[float] | tuple[float] = None,
         scaling_function: Callable = None,
@@ -129,7 +131,7 @@ class MeshFileReal:
         if scaling_function is None:
             mesh_scale = np.array([1, 1, 1])
         else:
-            mesh_scale: np.ndarray = scaling_function(data.values)
+            mesh_scale: np.ndarray = scaling_function(data.values, model)
             if not isinstance(mesh_scale, np.ndarray):
                 raise RuntimeError(f"The scaling_function {scaling_function} must return a vector of dimension 3 (XYZ)")
             if mesh_scale.shape == (3, 1):
@@ -140,7 +142,7 @@ class MeshFileReal:
         if rotation_function is None:
             mesh_rotation = np.array([0, 0, 0])
         else:
-            mesh_rotation: np.ndarray = rotation_function(data.values)
+            mesh_rotation: np.ndarray = rotation_function(data.values, model)
             if not isinstance(mesh_rotation, np.ndarray):
                 raise RuntimeError(
                     f"The rotation_function {rotation_function} must return a vector of dimension 3 (XYZ)"
@@ -155,7 +157,7 @@ class MeshFileReal:
         if translation_function is None:
             mesh_translation = np.array([0, 0, 0])
         else:
-            mesh_translation: np.ndarray = translation_function(data.values)
+            mesh_translation: np.ndarray = translation_function(data.values, model)
             if not isinstance(mesh_translation, np.ndarray):
                 raise RuntimeError(
                     f"The translation_function {translation_function} must return a vector of dimension 3 (XYZ)"

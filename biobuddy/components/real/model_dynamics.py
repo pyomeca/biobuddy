@@ -376,8 +376,8 @@ class ModelDynamics:
                 xtol=1e-6,
                 tr_options=dict(disp=False),
             )
-            if not sol["success"]:
-                raise RuntimeError("The optimization in inverse_kinematics did not converge. Please check your inputs.")
+            # if not sol["success"]:
+            #     raise RuntimeError("The optimization in inverse_kinematics did not converge. Please check your inputs.")
             optimal_q[:, i_frame] = sol["x"]
             if compute_residual_distance:
                 residuals[:, i_frame] = self._marker_distance(

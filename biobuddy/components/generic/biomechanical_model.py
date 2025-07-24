@@ -100,7 +100,7 @@ class BiomechanicalModel(ModelUtils):
 
             inertia_parameters = None
             if segment.inertia_parameters is not None:
-                inertia_parameters = segment.inertia_parameters.to_real(data, model, scs)
+                inertia_parameters = segment.inertia_parameters.to_inertia(data, model, scs)
 
             mesh = None
             if segment.mesh is not None:
@@ -108,7 +108,7 @@ class BiomechanicalModel(ModelUtils):
 
             mesh_file = None
             if segment.mesh_file is not None:
-                mesh_file = segment.mesh_file.to_mesh_file(data)
+                mesh_file = segment.mesh_file.to_mesh_file(data, model)
 
             model.add_segment(
                 SegmentReal(
@@ -129,7 +129,7 @@ class BiomechanicalModel(ModelUtils):
                 model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs))
 
             for contact in segment.contacts:
-                model.segments[contact.parent_name].add_contact(contact.to_contact(data))
+                model.segments[contact.parent_name].add_contact(contact.to_contact(data, model))
 
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(

@@ -45,6 +45,7 @@ class MeshFile:
     ) -> MeshFileReal:
         return MeshFileReal.from_data(
             data,
+            model,
             self.mesh_file_name,
             self.mesh_color,
             self.scaling_function,
