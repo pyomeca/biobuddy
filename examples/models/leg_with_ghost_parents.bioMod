@@ -293,8 +293,6 @@ segment	tibia_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
-		-6.283185	6.283185
-		-6.283185	6.283185
 
 endsegment
 

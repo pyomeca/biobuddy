@@ -741,7 +741,11 @@ def test_rt():
 
 def test_point_from_global_to_local():
     point_in_global = np.array([0.1, 0.1, 0.1])
-    jcs_in_global = np.array([[1.0, 0.0, 0.0, 0.1], [0.0, 0.0, -1.0, 0.1], [0.0, 1.0, 0.0, 0.1], [0.0, 0.0, 0.0, 1.0]])
+    jcs_in_global = RotoTransMatrix()
+    jcs_in_global.from_rt_matrix(np.array([[1.0, 0.0, 0.0, 0.1],
+                                          [0.0, 0.0, -1.0, 0.1],
+                                          [0.0, 1.0, 0.0, 0.1],
+                                          [0.0, 0.0, 0.0, 1.0]]))
 
     point_in_local = point_from_global_to_local(point_in_global, jcs_in_global)
     npt.assert_almost_equal(point_in_local, np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -805,9 +809,8 @@ def test_point_transformations():
     rotation = rot_z_matrix(angle)
     translation = np.array([1, 2, 3])
 
-    rt_matrix = np.eye(4)
-    rt_matrix[:3, :3] = rotation
-    rt_matrix[:3, 3] = translation
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_rotation_matrix_and_translation(rotation, translation)
 
     # Test point
     point_global = np.array([5, 6, 7])
