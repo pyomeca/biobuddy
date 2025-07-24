@@ -871,9 +871,9 @@ def test_init_mesh_file():
 def test_mesh_file_to_mesh_file_real():
 
     # Initialization with all parameters
-    scaling_func = lambda data: np.array([1.1, 1.1, 1.1])
-    rotation_func = lambda data: np.array([1, 0, 0])
-    translation_func = lambda data: np.array([0.1, 0.1, 0.1])
+    scaling_func = lambda data, model: np.array([1.1, 1.1, 1.1])
+    rotation_func = lambda data, model: np.array([1, 0, 0])
+    translation_func = lambda data, model: np.array([0.1, 0.1, 0.1])
 
     mesh_file = MeshFile(
         mesh_file_name="test.obj",
