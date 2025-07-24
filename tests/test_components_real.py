@@ -1,0 +1,827 @@
+import numpy as np
+import numpy.testing as npt
+import pytest
+
+from biobuddy import (
+    MarkerReal,
+    MeshFileReal,
+    SegmentCoordinateSystemReal,
+    AxisReal,
+    ContactReal,
+    MeshReal,
+    SegmentReal,
+    InertialMeasurementUnitReal,
+    RotoTransMatrix,
+    Translations,
+    Rotations,
+    RangeOfMotion,
+    Ranges,
+)
+from test_utils import MockC3dData
+
+
+# ------- MarkerReal ------- #
+def test_init_marker_real():
+    # Test initialization with minimal parameters
+    marker = MarkerReal(name="test_marker", parent_name="segment1")
+    assert marker.name == "test_marker"
+    assert marker.parent_name == "segment1"
+    assert marker.is_technical is True
+    assert marker.is_anatomical is False
+    
+    # Test initialization with all parameters
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    marker = MarkerReal(
+        name="test_marker",
+        parent_name="segment1",
+        position=position,
+        is_technical=False,
+        is_anatomical=True
+    )
+    
+    assert marker.name == "test_marker"
+    assert marker.parent_name == "segment1"
+    npt.assert_array_equal(marker.position, position)
+    assert marker.is_technical is False
+    assert marker.is_anatomical is True
+
+
+def test_marker_real_mean_position():
+    # Test with single position
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    marker = MarkerReal(name="test_marker", parent_name="segment1", position=position)
+    npt.assert_array_equal(marker.mean_position, np.array([1.0, 2.0, 3.0, 1.0]))
+    
+    # Test with multiple positions (time series)
+    positions = np.array([
+        [1.0, 2.0, 3.0],
+        [2.0, 3.0, 4.0],
+        [3.0, 4.0, 5.0],
+        [1.0, 1.0, 1.0]
+    ])
+    marker = MarkerReal(name="test_marker", parent_name="segment1", position=positions)
+    npt.assert_array_equal(marker.mean_position, np.array([2.0, 3.0, 4.0, 1.0]))
+    
+    # Test with invalid shape
+    with pytest.raises(RuntimeError, match=r"The marker must be a np.ndarray of shape \(3,\), \(3, x\) \(4,\) or \(4, x\), but received: \(3, 3, 3\)"):
+        marker.position = np.ones((3, 3, 3))
+        marker.mean_position
+
+
+def test_marker_real_to_biomod():
+    # Create a marker
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    marker = MarkerReal(
+        name="test_marker",
+        parent_name="segment1",
+        position=position,
+        is_technical=True,
+        is_anatomical=False
+    )
+    
+    # Generate biomod string
+    biomod_str = marker.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "marker\ttest_marker\n"
+        "\tparent\tsegment1\n"
+        "\tposition\t1.00000000\t2.00000000\t3.00000000\n"
+        "\ttechnical\t1\n"
+        "\tanatomical\t0\n"
+        "endmarker\n"
+    )
+    assert biomod_str == expected_str
+
+
+def test_marker_real_arithmetic():
+    # Create markers
+    position1 = np.array([[1.0], [2.0], [3.0], [1.0]])
+    marker1 = MarkerReal(name="marker1", parent_name="segment1", position=position1)
+    
+    position2 = np.array([[2.0], [3.0], [4.0], [1.0]])
+    marker2 = MarkerReal(name="marker2", parent_name="segment1", position=position2)
+    
+    # Test addition with another marker
+    result = marker1 + marker2
+    npt.assert_array_equal(result.position, np.array([[3.0], [5.0], [7.0], [1.0]]))
+    
+    # Test addition with a numpy array
+    offset = np.array([0.5, 0.5, 0.5, 0])
+    result = marker1 + offset
+    npt.assert_array_equal(result.position, np.array([[1.5], [2.5], [3.5], [1.0]]))
+    
+    # Test addition with a tuple
+    result = marker1 + (0.5, 0.5, 0.5)
+    npt.assert_array_equal(result.position, np.array([[1.5], [2.5], [3.5], [1.0]]))
+    
+    # Test subtraction with another marker
+    result = marker2 - marker1
+    npt.assert_array_equal(result.position, np.array([[1.0], [1.0], [1.0], [1.0]]))
+    
+    # Test subtraction with a numpy array
+    result = marker1 - offset
+    npt.assert_array_equal(result.position, np.array([[0.5], [1.5], [2.5], [1.0]]))
+    
+    # Test subtraction with a tuple
+    result = marker1 - (0.5, 0.5, 0.5)
+    npt.assert_array_equal(result.position, np.array([[0.5], [1.5], [2.5], [1.0]]))
+    
+    # Test unsupported operation
+    with pytest.raises(NotImplementedError, match=r"The addition for \<class \'str\'\> is not implemented"):
+        marker1 + "invalid"
+
+
+# ------- MeshFileReal ------- #
+def test_init_mesh_file_real():
+    # Test initialization with minimal parameters
+    mesh_file = MeshFileReal(mesh_file_name="test.obj")
+    assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_color is None
+    npt.assert_array_equal(mesh_file.mesh_scale, np.ones((4, 1)))
+    npt.assert_array_equal(mesh_file.mesh_rotation, np.zeros((4, 1)))
+    npt.assert_array_equal(mesh_file.mesh_translation, np.zeros((4, 1)))
+    
+    # Test initialization with all parameters
+    mesh_color = np.array([1.0, 0.0, 0.0])
+    mesh_scale = np.array([2.0, 2.0, 2.0])
+    mesh_rotation = np.array([0.1, 0.2, 0.3])
+    mesh_translation = np.array([1.0, 2.0, 3.0])
+    
+    mesh_file = MeshFileReal(
+        mesh_file_name="test.obj",
+        mesh_color=mesh_color,
+        mesh_scale=mesh_scale,
+        mesh_rotation=mesh_rotation,
+        mesh_translation=mesh_translation
+    )
+    
+    assert mesh_file.mesh_file_name == "test.obj"
+    npt.assert_array_equal(mesh_file.mesh_color, mesh_color)
+    npt.assert_array_equal(mesh_file.mesh_scale, np.array([[2.0], [2.0], [2.0], [1.0]]))
+    npt.assert_array_equal(mesh_file.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
+    npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
+
+
+def test_mesh_file_real_from_data():
+    # Create mock data
+    mock_data = MockC3dData()
+    
+    # Test from_data with functions
+    def scaling_function(markers):
+        return np.array([1.5, 1.5, 1.5])
+    
+    def rotation_function(markers):
+        return np.array([0.1, 0.2, 0.3])
+    
+    def translation_function(markers):
+        return np.array([1.0, 2.0, 3.0])
+    
+    mesh_file_real = MeshFileReal.from_data(
+        data=mock_data,
+        mesh_file_name="test.obj",
+        mesh_color=[1.0, 0.0, 0.0],
+        scaling_function=scaling_function,
+        rotation_function=rotation_function,
+        translation_function=translation_function
+    )
+    
+    assert mesh_file_real.mesh_file_name == "test.obj"
+    npt.assert_array_equal(mesh_file_real.mesh_color, np.array([1.0, 0.0, 0.0]))
+    npt.assert_array_equal(mesh_file_real.mesh_scale, np.array([[1.5], [1.5], [1.5], [1.0]]))
+    npt.assert_array_equal(mesh_file_real.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
+    npt.assert_array_equal(mesh_file_real.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
+    
+    # Test with invalid mesh_file_name
+    with pytest.raises(RuntimeError):
+        MeshFileReal.from_data(
+            data=mock_data,
+            mesh_file_name=123,  # Not a string
+            mesh_color=[1.0, 0.0, 0.0]
+        )
+    
+    # Test with invalid mesh_color shape
+    with pytest.raises(RuntimeError):
+        MeshFileReal.from_data(
+            data=mock_data,
+            mesh_file_name="test.obj",
+            mesh_color=[1.0, 0.0, 0.0, 1.0]  # Should be RGB (3 values)
+        )
+
+
+def test_mesh_file_real_to_biomod():
+    # Create a mesh file
+    mesh_file = MeshFileReal(
+        mesh_file_name="test.obj",
+        mesh_color=np.array([1.0, 0.0, 0.0]),
+        mesh_scale=np.array([2.0, 2.0, 2.0]),
+        mesh_rotation=np.array([0.1, 0.2, 0.3]),
+        mesh_translation=np.array([1.0, 2.0, 3.0])
+    )
+    
+    # Generate biomod string
+    biomod_str = mesh_file.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "\tmeshfile\ttest.obj\n"
+        "\tmeshcolor\t1.0\t0.0\t0.0\n"
+        "\tmeshscale\t2.0\t2.0\t2.0\n"
+        "\tmeshrt\t0.1\t0.2\t0.3\txyz\t1.0\t2.0\t3.0\n"
+    )
+    assert biomod_str == expected_str
+    
+    # Test with missing rotation or translation
+    mesh_file = MeshFileReal(
+        mesh_file_name="test.obj",
+        mesh_color=np.array([1.0, 0.0, 0.0]),
+        mesh_scale=np.array([2.0, 2.0, 2.0]),
+        mesh_rotation=np.array([0.1, 0.2, 0.3]),
+        mesh_translation=None
+    )
+
+    expected_str = ("\tmeshfile\ttest.obj\n"
+                    "\tmeshcolor\t1.0\t0.0\t0.0\n"
+                    "\tmeshscale\t2.0\t2.0\t2.0\n"
+                    "\tmeshrt\t0.1\t0.2\t0.3\txyz\t0.0\t0.0\t0.0\n")
+    biomod_str = mesh_file.to_biomod()
+    assert biomod_str == expected_str
+
+
+# ------- AxisReal ------- #
+def test_init_axis_real():
+    # Create markers for the axis
+    start_marker = MarkerReal(name="start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    end_marker = MarkerReal(name="end", parent_name="segment1", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+    
+    # Test initialization
+    axis = AxisReal(name=AxisReal.Name.X, start=start_marker, end=end_marker)
+    
+    assert axis.name == AxisReal.Name.X
+    assert axis.start_point == start_marker
+    assert axis.end_point == end_marker
+
+
+def test_axis_real_axis():
+    # Create markers for the axis
+    start_marker = MarkerReal(name="start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    end_marker = MarkerReal(name="end", parent_name="segment1", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+    
+    # Create axis
+    axis = AxisReal(name=AxisReal.Name.X, start=start_marker, end=end_marker)
+    
+    # Test axis vector calculation
+    axis_vector = axis.axis()
+    npt.assert_array_equal(axis_vector, np.array([[1.0], [0.0], [0.0], [0.0]]))
+    
+    # Test with different positions
+    start_marker = MarkerReal(name="start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    end_marker = MarkerReal(name="end", parent_name="segment1", position=np.array([[0.0], [1.0], [0.0], [1.0]]))
+    
+    axis = AxisReal(name=AxisReal.Name.Y, start=start_marker, end=end_marker)
+    axis_vector = axis.axis()
+    npt.assert_array_equal(axis_vector, np.array([[0.0], [1.0], [0.0], [0.0]]))
+
+
+# ------- SegmentCoordinateSystemReal ------- #
+def test_init_segment_coordinate_system_real():
+    # Test initialization with default values
+    scs = SegmentCoordinateSystemReal()
+    assert isinstance(scs.scs, RotoTransMatrix)
+    assert scs.parent_scs is None
+    assert scs.is_in_global is True
+    assert scs.is_in_local is False
+    
+    # Test initialization with custom values
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_euler_angles_and_translation(
+        angle_sequence="xyz",
+        angles=np.array([0.1, 0.2, 0.3]),
+        translation=np.array([1.0, 2.0, 3.0])
+    )
+    
+    parent_scs = SegmentCoordinateSystemReal()
+    scs = SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+    
+    assert scs.scs == rt_matrix
+    assert scs.parent_scs == parent_scs
+    assert scs.is_in_global is False
+    assert scs.is_in_local is True
+
+
+def test_segment_coordinate_system_real_from_markers():
+    # Create markers for the coordinate system
+    origin = MarkerReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    
+    # Create axes
+    x_start = MarkerReal(name="x_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    x_end = MarkerReal(name="x_end", parent_name="segment1", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+    x_axis = AxisReal(name=AxisReal.Name.X, start=x_start, end=x_end)
+    
+    y_start = MarkerReal(name="y_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    y_end = MarkerReal(name="y_end", parent_name="segment1", position=np.array([[0.0], [1.0], [0.0], [1.0]]))
+    y_axis = AxisReal(name=AxisReal.Name.Y, start=y_start, end=y_end)
+    
+    # Create SCS
+    scs = SegmentCoordinateSystemReal.from_markers(
+        origin=origin,
+        first_axis=x_axis,
+        second_axis=y_axis,
+        axis_to_keep=AxisReal.Name.X
+    )
+    
+    # Test the resulting SCS
+    assert isinstance(scs, SegmentCoordinateSystemReal)
+    assert scs.is_in_global is True
+    
+    # Test with same axis names (should raise error)
+    with pytest.raises(ValueError):
+        SegmentCoordinateSystemReal.from_markers(
+            origin=origin,
+            first_axis=x_axis,
+            second_axis=x_axis,  # Same as first_axis
+            axis_to_keep=AxisReal.Name.X
+        )
+    
+    # Test with invalid axis_to_keep
+    with pytest.raises(ValueError):
+        SegmentCoordinateSystemReal.from_markers(
+            origin=origin,
+            first_axis=x_axis,
+            second_axis=y_axis,
+            axis_to_keep=AxisReal.Name.Z  # Not one of the provided axes
+        )
+
+
+def test_segment_coordinate_system_real_from_rt_matrix():
+    # Create an RT matrix
+    rt_matrix = np.eye(4)
+    rt_matrix[:3, 3] = [1.0, 2.0, 3.0]
+    
+    # Create SCS from RT matrix
+    scs = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix, is_scs_local=True)
+    
+    # Test the resulting SCS
+    assert isinstance(scs, SegmentCoordinateSystemReal)
+    assert scs.is_in_global is False
+    npt.assert_array_equal(scs.scs.rt_matrix, rt_matrix)
+
+
+def test_segment_coordinate_system_real_from_euler_and_translation():
+    # Create Euler angles and translation
+    angles = np.array([0.1, 0.2, 0.3])
+    translation = np.array([1.0, 2.0, 3.0])
+    
+    # Create SCS from Euler angles and translation
+    scs = SegmentCoordinateSystemReal.from_euler_and_translation(
+        angles=angles,
+        angle_sequence="xyz",
+        translation=translation,
+        is_scs_local=True
+    )
+    
+    # Test the resulting SCS
+    assert isinstance(scs, SegmentCoordinateSystemReal)
+    assert scs.is_in_global is False
+    
+    # The exact RT matrix would need to be calculated for comparison
+    # This is a simplified check
+    npt.assert_array_equal(scs.scs.rt_matrix[3, :], np.array([0.0, 0.0, 0.0, 1.0]))
+
+
+def test_segment_coordinate_system_real_inverse():
+    # Create an RT matrix
+    rt_matrix = np.eye(4)
+    rt_matrix[:3, 3] = [1.0, 2.0, 3.0]
+    
+    # Create SCS from RT matrix
+    scs = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix)
+    
+    # Get inverse
+    inverse_scs = scs.inverse
+    
+    # Test the inverse
+    assert isinstance(inverse_scs, SegmentCoordinateSystemReal)
+    
+    # The inverse of a translation matrix should have negative translations
+    expected_inverse = np.eye(4)
+    expected_inverse[:3, 3] = [-1.0, -2.0, -3.0]
+    npt.assert_array_equal(inverse_scs.scs.rt_matrix, expected_inverse)
+
+
+def test_segment_coordinate_system_real_to_biomod():
+    # Create an RT matrix
+    rt_matrix = np.eye(4)
+    rt_matrix[:3, 3] = [1.0, 2.0, 3.0]
+    
+    # Create SCS from RT matrix
+    scs = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix)
+    
+    # Generate biomod string
+    biomod_str = scs.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "\tRTinMatrix\t1\n"
+        "\tRT\n"
+        "\t\t1.000000\t0.000000\t0.000000\t1.000000\n"
+        "\t\t0.000000\t1.000000\t0.000000\t2.000000\n"
+        "\t\t0.000000\t0.000000\t1.000000\t3.000000\n"
+        "\t\t0.000000\t0.000000\t0.000000\t1.000000\n"
+    )
+    assert biomod_str == expected_str
+
+
+# ------- ContactReal ------- #
+def test_init_contact_real():
+    # Test initialization with minimal parameters
+    contact = ContactReal(name="test_contact", parent_name="segment1")
+    assert contact.name == "test_contact"
+    assert contact.parent_name == "segment1"
+    assert contact.axis is None
+    
+    # Test initialization with all parameters
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    contact = ContactReal(
+        name="test_contact",
+        parent_name="segment1",
+        position=position,
+        axis=Translations.XYZ
+    )
+    
+    assert contact.name == "test_contact"
+    assert contact.parent_name == "segment1"
+    npt.assert_array_equal(contact.position, position)
+    assert contact.axis == Translations.XYZ
+
+
+def test_contact_real_to_biomod():
+    # Create a contact
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    contact = ContactReal(
+        name="test_contact",
+        parent_name="segment1",
+        position=position,
+        axis=Translations.XYZ
+    )
+    
+    # Generate biomod string
+    biomod_str = contact.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "contact\ttest_contact\n"
+        "\tparent\tsegment1\n"
+        "\tposition\t1.0\t2.0\t3.0\n"
+        "\taxis\txyz\n"
+        "endcontact\n"
+    )
+    assert biomod_str == expected_str
+
+
+# ------- MeshReal ------- #
+def test_init_mesh_real():
+    # Test initialization with no positions
+    mesh = MeshReal()
+    assert mesh.positions.shape == (4, 0)
+    
+    # Test initialization with positions
+    positions = np.array([
+        [1.0, 2.0, 3.0],
+        [2.0, 3.0, 4.0],
+        [3.0, 4.0, 5.0],
+        [1.0, 1.0, 1.0]
+    ])
+    mesh = MeshReal(positions=positions)
+    npt.assert_array_equal(mesh.positions, positions)
+
+
+def test_mesh_real_add_positions():
+    # Create a mesh with initial positions
+    initial_positions = np.array([
+        [1.0, 2.0],
+        [2.0, 3.0],
+        [3.0, 4.0],
+        [1.0, 1.0]
+    ])
+    mesh = MeshReal(positions=initial_positions)
+    
+    # Add more positions
+    additional_positions = np.array([
+        [3.0, 4.0],
+        [4.0, 5.0],
+        [5.0, 6.0],
+        [1.0, 1.0]
+    ])
+    mesh.add_positions(additional_positions)
+    
+    # Check the result
+    expected_positions = np.array([
+        [1.0, 2.0, 3.0, 4.0],
+        [2.0, 3.0, 4.0, 5.0],
+        [3.0, 4.0, 5.0, 6.0],
+        [1.0, 1.0, 1.0, 1.0]
+    ])
+    npt.assert_array_equal(mesh.positions, expected_positions)
+
+
+def test_mesh_real_to_biomod():
+    # Create a mesh with positions
+    positions = np.array([
+        [1.0, 2.0],
+        [2.0, 3.0],
+        [3.0, 4.0],
+        [1.0, 1.0]
+    ])
+    mesh = MeshReal(positions=positions)
+    
+    # Generate biomod string
+    biomod_str = mesh.to_biomod()
+    
+    # Check the content
+    expected_str = (
+        "\tmesh\t1.000000\t2.000000\t3.000000\n"
+        "\tmesh\t2.000000\t3.000000\t4.000000\n"
+    )
+    assert biomod_str == expected_str
+    
+    # Test with nan values
+    mesh.positions = np.array([
+        [1.0, np.nan],
+        [2.0, 3.0],
+        [3.0, 4.0],
+        [1.0, 1.0]
+    ])
+    
+    with pytest.raises(RuntimeError):
+        mesh.to_biomod()
+
+
+# ------- InertialMeasurementUnitReal ------- #
+def test_init_inertial_measurement_unit_real():
+    # Test initialization with minimal parameters
+    imu = InertialMeasurementUnitReal(name="test_imu", parent_name="segment1")
+    assert imu.name == "test_imu"
+    assert imu.parent_name == "segment1"
+    assert isinstance(imu.scs, RotoTransMatrix)
+    assert imu.is_technical is True
+    assert imu.is_anatomical is False
+    
+    # Test initialization with all parameters
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_euler_angles_and_translation(
+        angle_sequence="xyz",
+        angles=np.array([0.1, 0.2, 0.3]),
+        translation=np.array([1.0, 2.0, 3.0])
+    )
+    
+    imu = InertialMeasurementUnitReal(
+        name="test_imu",
+        parent_name="segment1",
+        scs=rt_matrix,
+        is_technical=False,
+        is_anatomical=True
+    )
+    
+    assert imu.name == "test_imu"
+    assert imu.parent_name == "segment1"
+    assert imu.scs == rt_matrix
+    assert imu.is_technical is False
+    assert imu.is_anatomical is True
+
+
+def test_inertial_measurement_unit_real_to_biomod():
+    # Create an IMU
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_euler_angles_and_translation(
+        angle_sequence="xyz",
+        angles=np.array([0.1, 0.2, 0.3]),
+        translation=np.array([1.0, 2.0, 3.0])
+    )
+    
+    imu = InertialMeasurementUnitReal(
+        name="test_imu",
+        parent_name="segment1",
+        scs=rt_matrix,
+        is_technical=True,
+        is_anatomical=False
+    )
+    
+    # Generate biomod string
+    biomod_str = imu.to_biomod()
+    
+    # Check the content (simplified check)
+    assert "imu\ttest_imu" in biomod_str
+    assert "\tparent\tsegment1" in biomod_str
+    assert "\tRTinMatrix\t1" in biomod_str
+    assert "\ttechnical\t1" in biomod_str
+    assert "\tanatomical\t0" in biomod_str
+    assert "endimu" in biomod_str
+
+
+# ------- SegmentReal ------- #
+def test_init_segment_real():
+    # Test initialization with minimal parameters
+    segment = SegmentReal(name="test_segment")
+    assert segment.name == "test_segment"
+    assert segment.parent_name == "base"
+    assert isinstance(segment.segment_coordinate_system, SegmentCoordinateSystemReal)
+    assert segment.translations == Translations.NONE
+    assert segment.rotations == Rotations.NONE
+    assert len(segment.dof_names) == 0
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+    assert len(segment.markers) == 0
+    assert len(segment.contacts) == 0
+    assert len(segment.imus) == 0
+    assert segment.inertia_parameters is None
+    assert segment.mesh is None
+    assert segment.mesh_file is None
+    
+    # Test initialization with custom parameters
+    scs = SegmentCoordinateSystemReal()
+    q_ranges = RangeOfMotion(Ranges.Q, [-1, -1, -1], [1, 1, 1])
+    qdot_ranges = RangeOfMotion(Ranges.Qdot, [-10, -10, -10], [10, 10, 10])
+    
+    segment = SegmentReal(
+        name="test_segment",
+        parent_name="parent_segment",
+        segment_coordinate_system=scs,
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ,
+        dof_names=["dof1", "dof2", "dof3", "dof4", "dof5", "dof6"],
+        q_ranges=q_ranges,
+        qdot_ranges=qdot_ranges
+    )
+    
+    assert segment.name == "test_segment"
+    assert segment.parent_name == "parent_segment"
+    assert segment.segment_coordinate_system == scs
+    assert segment.translations == Translations.XYZ
+    assert segment.rotations == Rotations.XYZ
+    assert segment.dof_names == ["dof1", "dof2", "dof3", "dof4", "dof5", "dof6"]
+    assert segment.q_ranges == q_ranges
+    assert segment.qdot_ranges == qdot_ranges
+
+
+def test_segment_real_dof_names_auto_generation():
+    # Test auto-generation of dof_names
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XY,
+        rotations=Rotations.Z
+    )
+    
+    expected_dof_names = ["test_segment_transX", "test_segment_transY", "test_segment_rotZ"]
+    assert segment.dof_names == expected_dof_names
+    
+    # Test mismatch between dof_names length and actual DoFs
+    with pytest.raises(RuntimeError):
+        SegmentReal(
+            name="test_segment",
+            translations=Translations.XYZ,
+            rotations=Rotations.XYZ,
+            dof_names=["dof1"]  # Only one name for 6 DoFs
+        )
+
+
+def test_segment_real_add_remove_marker():
+    # Create a segment
+    segment = SegmentReal(name="test_segment")
+    
+    # Create a marker
+    marker = MarkerReal(name="test_marker", parent_name=None)
+    
+    # Add marker to segment
+    segment.add_marker(marker)
+    
+    # Verify marker was added and parent_name was set
+    assert len(segment.markers) == 1
+    assert marker.parent_name == "test_segment"
+    
+    # Create a marker with matching parent_name
+    marker2 = MarkerReal(name="test_marker2", parent_name="test_segment")
+    segment.add_marker(marker2)
+    assert len(segment.markers) == 2
+    
+    # Create a marker with non-matching parent_name
+    marker3 = MarkerReal(name="test_marker3", parent_name="other_segment")
+    with pytest.raises(ValueError):
+        segment.add_marker(marker3)
+    
+    # Remove a marker
+    segment.remove_marker(marker.name)
+    assert len(segment.markers) == 1
+    assert segment.markers[0].name == "test_marker2"
+
+
+def test_segment_real_add_remove_contact():
+    # Create a segment
+    segment = SegmentReal(name="test_segment")
+    
+    # Create a contact
+    contact = ContactReal(name="test_contact", parent_name="test_segment")
+    
+    # Add contact to segment
+    segment.add_contact(contact)
+    
+    # Verify contact was added
+    assert len(segment.contacts) == 1
+    assert contact.parent_name == "test_segment"
+    
+    # Create a contact with no parent_name
+    contact2 = ContactReal(name="test_contact2", parent_name=None)
+    with pytest.raises(ValueError):
+        segment.add_contact(contact2)
+    
+    # Create a contact with non-matching parent_name
+    contact3 = ContactReal(name="test_contact3", parent_name="other_segment")
+    with pytest.raises(ValueError):
+        segment.add_contact(contact3)
+    
+    # Remove a contact
+    segment.remove_contact(contact.name)
+    assert len(segment.contacts) == 0
+
+
+def test_segment_real_add_remove_imu():
+    # Create a segment
+    segment = SegmentReal(name="test_segment")
+    
+    # Create an IMU
+    imu = InertialMeasurementUnitReal(name="test_imu", parent_name="test_segment")
+    
+    # Add IMU to segment
+    segment.add_imu(imu)
+    
+    # Verify IMU was added
+    assert len(segment.imus) == 1
+    assert imu.parent_name == "test_segment"
+    
+    # Create an IMU with no parent_name
+    imu2 = InertialMeasurementUnitReal(name="test_imu2", parent_name=None)
+    with pytest.raises(RuntimeError):
+        segment.add_imu(imu2)
+    
+    # Remove an IMU
+    segment.remove_imu(imu.name)
+    assert len(segment.imus) == 0
+
+
+def test_segment_real_rt_from_local_q():
+    # Create a segment with translations and rotations
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ
+    )
+    
+    # Test with correct q vector size
+    local_q = np.array([1.0, 2.0, 3.0, 0.1, 0.2, 0.3])
+    rt = segment.rt_from_local_q(local_q)
+    
+    assert isinstance(rt, RotoTransMatrix)
+    
+    # Test with incorrect q vector size
+    with pytest.raises(RuntimeError):
+        segment.rt_from_local_q(np.array([1.0, 2.0]))
+
+
+def test_segment_real_to_biomod():
+    # Create a segment with various components
+    segment = SegmentReal(
+        name="test_segment",
+        parent_name="parent_segment",
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ
+    )
+    
+    # Add a marker
+    marker = MarkerReal(name="test_marker",
+                        parent_name="test_segment",
+                        position=np.array([[1.0], [2.0], [3.0], [1.0]]))
+    segment.add_marker(marker)
+    
+    # Add a contact
+    contact = ContactReal(name="test_contact",
+                          parent_name="test_segment",
+                          position=np.array([[1.0], [2.0], [3.0], [1.0]]))
+    segment.add_contact(contact)
+    # Exporting without an axis is not allowed
+    with pytest.raises(RuntimeError, match="The axis of the contact must be defined before exporting to biomod."):
+        segment.to_biomod(with_mesh=False)
+
+    # Generate biomod string
+    segment.remove_contact("test_contact")
+    contact.axis = Translations.XYZ  # Set an axis for the contact
+    segment.add_contact(contact)
+    biomod_str = segment.to_biomod(with_mesh=True)
+    
+    # Check the content (simplified check)
+    assert "segment\ttest_segment" in biomod_str
+    assert "\tparent\tparent_segment" in biomod_str
+    assert "\ttranslations\txyz" in biomod_str
+    assert "\trotations\txyz" in biomod_str
+    assert "endsegment" in biomod_str
+    assert "marker\ttest_marker" in biomod_str
+    assert "contact\ttest_contact" in biomod_str

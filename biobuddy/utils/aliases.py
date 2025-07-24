@@ -89,6 +89,7 @@ def points_to_array(points: Points, name: str) -> np.ndarray:
         if points.shape[0] == 3:
             points = np.vstack((points, np.ones(points.shape[1])))
 
+        points[3] = 1  # Ensure the last row is all ones
         return points
     else:
         raise RuntimeError(f"The {name} must be a list or np.ndarray, but received: {type(points)}")

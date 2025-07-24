@@ -55,7 +55,7 @@ class ContactReal:
 
     @position.setter
     def position(self, value: Point):
-        self._position = point_to_array(point=value, name="position")
+        self._position = points_to_array(points=value, name="position")
 
     @property
     def axis(self) -> Translations:
@@ -99,6 +99,8 @@ class ContactReal:
         return ContactReal(name, parent_name, p, axis)
 
     def to_biomod(self):
+        if self.axis is None:
+            raise RuntimeError("The axis of the contact must be defined before exporting to biomod.")
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"

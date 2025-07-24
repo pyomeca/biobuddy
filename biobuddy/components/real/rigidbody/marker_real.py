@@ -155,7 +155,7 @@ class MarkerReal:
             other = np.array(other)
 
         if isinstance(other, np.ndarray):
-            return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position + other)
+            return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position + point_to_array(other))
         elif isinstance(other, MarkerReal):
             return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position + other.position)
         else:
@@ -166,7 +166,7 @@ class MarkerReal:
             other = np.array(other)
 
         if isinstance(other, np.ndarray):
-            return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position - other)
+            return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position - point_to_array(other))
         elif isinstance(other, MarkerReal):
             return MarkerReal(name=self.name, parent_name=self.parent_name, position=self.position - other.position)
         else:
