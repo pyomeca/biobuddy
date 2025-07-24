@@ -1106,7 +1106,7 @@ class JointCenterTool:
                 if marker not in task.c3d_data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
-            q_init = model_for_initial_rt.inverse_kinematics(
+            q_init, _ = model_for_initial_rt.inverse_kinematics(
                 marker_positions=marker_positions,
                 marker_names=marker_names,
                 marker_weights=initial_rt_marker_weights,

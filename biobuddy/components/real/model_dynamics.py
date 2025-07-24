@@ -183,6 +183,33 @@ class ModelDynamics:
         return out
 
     @staticmethod
+    def _marker_distance(
+        model: "BiomechanicalModelReal" or "biorbd.Model",
+        q: np.ndarray,
+        marker_names: list[str],
+        experimental_markers: np.ndarray,
+        with_biorbd: bool,
+    ) -> np.ndarray:
+
+        nb_markers = experimental_markers.shape[1]
+        vect_pos_markers = np.zeros((nb_markers, ))
+
+        if with_biorbd:
+            markers_model = np.zeros((3, nb_markers, 1))
+            for i_marker in range(nb_markers):
+                if model.markerNames()[i_marker].to_string() in marker_names:
+                    markers_model[:, i_marker, 0] = model.marker(q, i_marker, True).to_array()
+        else:
+            markers_model = np.array(model.markers_in_global(q))
+
+        for i_marker in range(nb_markers):
+            vect_pos_markers[i_marker] = np.linalg.norm((
+                markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
+            ))
+
+        return vect_pos_markers
+
+    @staticmethod
     def _marker_jacobian(
         model: "BiomechanicalModelReal" or "biorbd.Model",
         q_regularization_weight: float,
@@ -229,7 +256,8 @@ class ModelDynamics:
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
         animate_reconstruction: bool = False,
-    ) -> np.ndarray:
+        compute_residual_distance: bool = False,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Solve the inverse kinematics problem using least squares optimization.
         The objective is to match the experimental marker positions with the model marker positions.
@@ -316,7 +344,14 @@ class ModelDynamics:
             q_regularization_weight = 0.0
 
         optimal_q = np.zeros((self.nb_q, nb_frames))
+        residuals = None
+        if compute_residual_distance:
+            residuals = np.zeros((nb_markers, nb_frames))
         for i_frame in range(nb_frames):
+
+            if i_frame % 100 == 0:
+                print(f"{i_frame}/{nb_frames} frames")
+
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
                     model_to_use,
@@ -341,7 +376,17 @@ class ModelDynamics:
                 xtol=1e-6,
                 tr_options=dict(disp=False),
             )
-            optimal_q[:, i_frame] = sol.x
+            if not sol["success"]:
+                raise RuntimeError("The optimization in inverse_kinematics did not converge. Please check your inputs.")
+            optimal_q[:, i_frame] = sol["x"]
+            if compute_residual_distance:
+                residuals[:, i_frame] = self._marker_distance(
+                    model_to_use,
+                    optimal_q[:, i_frame],
+                    marker_names_reordered,
+                    markers_real[:, :, i_frame],
+                    with_biorbd=with_biorbd,
+                )
 
         if animate_reconstruction:
             if not with_biorbd:
@@ -366,7 +411,7 @@ class ModelDynamics:
                 viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers)
                 viz.rerun_by_frame("Model output")
 
-        return optimal_q
+        return optimal_q, residuals
 
     @requires_initialization
     def forward_kinematics(self, q: np.ndarray = None) -> dict[str, RotoTransMatrixTimeSeries]:

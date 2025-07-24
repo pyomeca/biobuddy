@@ -214,7 +214,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     # Test the reconstruction for the original model and the output model with the functional joint centers
     # Hip
-    original_optimal_q = scaled_model.inverse_kinematics(
+    original_optimal_q, _ = scaled_model.inverse_kinematics(
         marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
         marker_names=list(marker_weights.keys()),
         marker_weights=marker_weights,
@@ -224,7 +224,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     original_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
     original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
 
-    new_optimal_q = score_model.inverse_kinematics(
+    new_optimal_q, _ = score_model.inverse_kinematics(
         marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
         marker_names=list(marker_weights.keys()),
         marker_weights=marker_weights,
@@ -248,13 +248,13 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     # Knee
     marker_names = list(marker_weights.keys())
-    original_optimal_q = scaled_model.inverse_kinematics(
+    original_optimal_q, _ = scaled_model.inverse_kinematics(
         marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
         marker_names=marker_names,
         marker_weights=marker_weights,
         method="lm",
     )
-    new_optimal_q = score_model.inverse_kinematics(
+    new_optimal_q, _ = score_model.inverse_kinematics(
         marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
         marker_names=marker_names,
         marker_weights=marker_weights,
@@ -474,7 +474,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # Test the reconstruction for the original model and the output model with the functional joint centers
     # Hip
-    original_optimal_q = scaled_model.inverse_kinematics(
+    original_optimal_q, _ = scaled_model.inverse_kinematics(
         marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
         marker_names=list(marker_weights.keys()),
         marker_weights=marker_weights,
@@ -484,7 +484,7 @@ def test_score_and_sara_with_ghost_segments():
     original_marker_position_diff = hip_c3d.get_position(list(marker_weights.keys())) - original_markers_reconstructed
     original_marker_tracking_error = np.sum(original_marker_position_diff[:3, :, :] ** 2)
 
-    new_optimal_q = score_model.inverse_kinematics(
+    new_optimal_q, _ = score_model.inverse_kinematics(
         marker_positions=hip_c3d.get_position(list(marker_weights.keys()))[:3, :, :],
         marker_names=list(marker_weights.keys()),
         marker_weights=marker_weights,
@@ -500,13 +500,13 @@ def test_score_and_sara_with_ghost_segments():
 
     # Knee
     marker_names = list(marker_weights.keys())
-    original_optimal_q = scaled_model.inverse_kinematics(
+    original_optimal_q, _ = scaled_model.inverse_kinematics(
         marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
         marker_names=marker_names,
         marker_weights=marker_weights,
         method="lm",
     )
-    new_optimal_q = score_model.inverse_kinematics(
+    new_optimal_q, _ = score_model.inverse_kinematics(
         marker_positions=knee_c3d.get_position(marker_names)[:3, :, :],
         marker_names=marker_names,
         marker_weights=marker_weights,
