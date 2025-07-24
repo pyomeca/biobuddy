@@ -401,7 +401,7 @@ class RigidSegmentIdentification:
                 )
             if problematic_indices_child.shape[0] > 0:
                 problematic_markers = np.where(np.nanmax(marker_movement_child, axis=1) > 0.03)[0]
-                problematic_marker_names = [self.parent_marker_names[i] for i in problematic_markers]
+                problematic_marker_names = [self.child_marker_names[i] for i in problematic_markers]
                 raise RuntimeError(
                     f"The child markers {problematic_marker_names} seem to be mislabeled as they move more than 3cm between frames {problematic_indices_child}."
                 )
