@@ -364,8 +364,23 @@ def test_get_closest_rt_matrix():
     # Check that result is valid
     assert result.shape == (4, 4)
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
-    npt.assert_almost_equal(result[:3, :3] @ result[:3, :3].T, np.eye(3), decimal=6)
+    npt.assert_almost_equal(result[:3, :3], np.eye(3), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
+
+    # Test with slightly invalid rotation matrix with inverted axis
+    invalid_rt = np.eye(4)
+    invalid_rt[:3, :3] = np.array([[0, 0, 1.0], [0, 0.99, 0], [1.01, 0, 0]])
+
+    result = get_closest_rt_matrix(invalid_rt)
+
+    # Check that result is valid
+    assert result.shape == (4, 4)
+    npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
+    npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1],
+                                                     [0, -1, 0],
+                                                     [1, 0, 0]]), decimal=6)
+    npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
+
 
     # Test error conditions
     with pytest.raises(RuntimeError, match="far from SO\\(3\\)"):

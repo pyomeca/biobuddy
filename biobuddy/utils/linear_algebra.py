@@ -210,32 +210,45 @@ def rot2eul(rot) -> np.ndarray:
     return np.array((alpha, beta, gamma))
 
 
-def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
+def get_closest_rotation_matrix(rotation_matrix: np.ndarray) -> np.ndarray:
     """
     Projects a rotation matrix to the closest rotation matrix using Singular Value Decomposition (SVD).
     """
-    if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) > 0.1:
-        raise RuntimeError(f"The rotation matrix {rt_matrix[:3, :3]} is far from SO(3).")
-    if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
-        raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
+    if rotation_matrix.shape != (3, 3):
+        raise ValueError(f"Expected 3x3 matrix, got shape {rotation_matrix.shape}")
 
-    if np.abs(np.sum(rt_matrix[:3, :3] ** 2) - 3.0) < 1e-6:
-        return rt_matrix
-
+    current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), 'fro'))
+    if current_norm_error > 0.1:
+        # The input is far from being valid
+        raise RuntimeError(f"The rotation matrix {rotation_matrix} is far from SO(3).")
+    elif current_norm_error < 1e-6:
+        # The input is already valid
+        return rotation_matrix
     else:
-        output_rt = np.identity(4)
-        output_rt[:3, 3] = rt_matrix[:3, 3]
-
-        u, _, vt = np.linalg.svd(rt_matrix[:3, :3])
+        # The input can be improved through SVD
+        u, _, vt = np.linalg.svd(rotation_matrix)
         projected_rot_matrix = u @ vt
 
         # Ensure det(R) = +1
         if np.linalg.det(projected_rot_matrix) < 0:
             u[:, -1] *= -1
             projected_rot_matrix = u @ vt
+        return projected_rot_matrix
 
-        output_rt[:3, :3] = projected_rot_matrix
-        return output_rt
+
+def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
+    """
+    Projects a rotation matrix to the closest rotation matrix using Singular Value Decomposition (SVD).
+    """
+    if rt_matrix.shape != (4, 4):
+        raise ValueError(f"Expected 4x4 matrix, got shape {rt_matrix.shape}")
+    if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
+        raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
+
+    output_rt = np.identity(4)
+    output_rt[:3, 3] = rt_matrix[:3, 3]
+    output_rt[:3, :3] = get_closest_rotation_matrix(rt_matrix[:3, :3])
+    return output_rt
 
 
 def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -> np.ndarray:
@@ -271,7 +284,7 @@ def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -
     return rot_matrix
 
 
-def coord_sys(axis) -> tuple[list[np.ndarray], str]:
+def coord_sys(axis: tuple[float, float, float]) -> tuple[list[np.ndarray], str]:
     # define orthonormal coordinate system with given z-axis
     [a, b, c] = axis
     if a == 0:

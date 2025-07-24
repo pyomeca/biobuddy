@@ -349,7 +349,7 @@ class ModelDynamics:
             residuals = np.zeros((nb_markers, nb_frames))
         for i_frame in range(nb_frames):
 
-            if i_frame % 100 == 0:
+            if i_frame % 100 == 0 and i_frame != 0:
                 print(f"{i_frame}/{nb_frames} frames")
 
             sol = optimize.least_squares(
