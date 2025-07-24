@@ -164,17 +164,18 @@ def test_mesh_file_real_from_data():
     mock_data = MockC3dData()
 
     # Test from_data with functions
-    def scaling_function(markers):
+    def scaling_function(markers, model):
         return np.array([1.5, 1.5, 1.5])
 
-    def rotation_function(markers):
+    def rotation_function(markers, model):
         return np.array([0.1, 0.2, 0.3])
 
-    def translation_function(markers):
+    def translation_function(markers, model):
         return np.array([1.0, 2.0, 3.0])
 
     mesh_file_real = MeshFileReal.from_data(
         data=mock_data,
+        model=None,
         mesh_file_name="test.obj",
         mesh_color=[1.0, 0.0, 0.0],
         scaling_function=scaling_function,
@@ -190,12 +191,12 @@ def test_mesh_file_real_from_data():
 
     # Test with invalid mesh_file_name
     with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(data=mock_data, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0])  # Not a string
+        MeshFileReal.from_data(data=mock_data, model=None, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0])  # Not a string
 
     # Test with invalid mesh_color shape
     with pytest.raises(RuntimeError):
         MeshFileReal.from_data(
-            data=mock_data, mesh_file_name="test.obj", mesh_color=[1.0, 0.0, 0.0, 1.0]  # Should be RGB (3 values)
+            data=mock_data, model=None, mesh_file_name="test.obj", mesh_color=[1.0, 0.0, 0.0, 1.0]  # Should be RGB (3 values)
         )
 
 

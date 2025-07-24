@@ -614,12 +614,12 @@ class ScaleTool:
             viz.add_animated_model(viz_biomod_model, optimal_q, tracked_markers=pyomarkers)
             viz.rerun("Model output")
 
-        # if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
-        #     raise RuntimeError(
-        #         "The inverse kinematics shows more than 20° variance over the frame range specified."
-        #         "Please see the animation provided to verify that the subject does not move during the static trial."
-        #         "If not, please make sure the model and subject are not positioned close to singularities (gimbal lock)."
-        #     )
+        if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
+            raise RuntimeError(
+                "The inverse kinematics shows more than 20° variance over the frame range specified."
+                "Please see the animation provided to verify that the subject does not move during the static trial."
+                "If not, please make sure the model and subject are not positioned close to singularities (gimbal lock)."
+            )
 
         q_static = np.median(optimal_q, axis=1)
 

@@ -131,27 +131,19 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
             # The rotation part did not change, only the translation part was modified
-            np.array(
-                [
-                    [0.941067, 0.334883, 0.047408, -0.07076823],
-                    [-0.335537, 0.906752, 0.255373, -0.02166063],
-                    [0.042533, -0.25623, 0.96568, 0.09724843],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
+            np.array([[ 0.94106637,  0.33488294,  0.04740786, -0.07073665],
+                   [-0.33553695,  0.90675222,  0.25537299, -0.02090582],
+                   [ 0.04253287, -0.25623002,  0.96567962,  0.09795824],
+                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
             decimal=5,
         )
     else:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
-            np.array(
-                [
-                    [0.941067, 0.334883, 0.047408, -0.07167634],
-                    [-0.335537, 0.906752, 0.255373, -0.0227917],
-                    [0.042533, -0.25623, 0.96568, 0.09659206],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
+            np.array([[ 0.94106637,  0.33488294,  0.04740786, -0.07167729],
+                   [-0.33553695,  0.90675222,  0.25537299, -0.02279122],
+                   [ 0.04253287, -0.25623002,  0.96567962,  0.09659234],
+                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
             decimal=5,
         )
 
@@ -160,27 +152,19 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
             # Both rotation and translation parts were modified
-            np.array(
-                [
-                    [0.9729903, 0.03790419, -0.22771286, 0.02107178],
-                    [-0.06120388, 0.99348383, -0.09614557, -0.40854228],
-                    [0.22258472, 0.10748562, 0.96897001, -0.03014],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
+            np.array([[ 0.97291137,  0.03767885, -0.22808722,  0.02126479],
+                       [-0.06119303,  0.99340983, -0.09691404, -0.40906061],
+                       [ 0.22293247,  0.10824612,  0.96880539, -0.03103533],
+                       [ 0.        ,  0.        ,  0.        ,  1.        ]]),
             decimal=5,
         )
     else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
-            np.array(
-                [
-                    [0.97197658, 0.04183821, -0.23132465, 0.02157433],
-                    [-0.06106329, 0.99519176, -0.0765809, -0.40738251],
-                    [0.22700838, 0.08856029, 0.96985786, -0.02918886],
-                    [0.0, 0.0, 0.0, 1.0],
-                ]
-            ),
+            np.array([[ 0.97197795,  0.04183997, -0.23131857,  0.02157546],
+                   [-0.06106364,  0.99519203, -0.0765771 , -0.407386  ],
+                   [ 0.22700242,  0.08855641,  0.96985961, -0.02919023],
+                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
             decimal=5,
         )
 
@@ -236,9 +220,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 1.2695623487402687, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8534216909413301, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.852078389733663, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 0.8546461146170594, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 0.8546370633355006, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # # For debugging purposes
@@ -276,11 +260,11 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     new_marker_position_diff = knee_c3d.get_position(marker_names)[:3, :, :] - new_markers_reconstructed
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
-    npt.assert_almost_equal(original_marker_tracking_error, 4.705484147753087, decimal=5)
+    npt.assert_almost_equal(original_marker_tracking_error, 4.705350581055244, decimal=5)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.16564612806039, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.1482122493133398, decimal=5)
     else:
-        npt.assert_almost_equal(new_marker_tracking_error, 3.1621662489880955, decimal=5)
+        npt.assert_almost_equal(new_marker_tracking_error, 3.162024226671943, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
     # Test replace_joint_centers

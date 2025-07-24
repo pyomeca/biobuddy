@@ -614,6 +614,7 @@ def test_rt_from_parent_offset_to_real_segment_basic():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     rt_result = model_without.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix

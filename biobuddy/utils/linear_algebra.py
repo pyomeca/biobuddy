@@ -58,55 +58,17 @@ def get_rotation_vector_from_sequence(sequence: str):
 
 
 def get_sequence_from_rotation_vector(rotation_vector: np.ndarray):
-    if np.all(np.abs(rotation_vector[:3] - np.array([1, 0, 0])) < 1e-6):
+    if np.all(np.abs(np.abs(rotation_vector[:3]) - np.array([1, 0, 0])) < 1e-6):
         sequence = "x"
-    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 1, 0])) < 1e-6):
+    elif np.all(np.abs(np.abs(rotation_vector[:3]) - np.array([0, 1, 0])) < 1e-6):
         sequence = "y"
-    elif np.all(np.abs(rotation_vector[:3] - np.array([0, 0, 1])) < 1e-6):
+    elif np.all(np.abs(np.abs(rotation_vector[:3]) - np.array([0, 0, 1])) < 1e-6):
         sequence = "z"
     else:
         raise RuntimeError(
             f"Rotation vector {rotation_vector} not recognized. Please use np.array([1, 0, 0]), np.array([0, 1, 0]), or np.array([0, 0, 1])."
         )
     return sequence
-
-
-def euler_and_translation_to_matrix(
-    angles: np.ndarray,
-    angle_sequence: str,
-    translations: np.ndarray,
-) -> np.ndarray:
-    """
-    Construct a SegmentCoordinateSystemReal from angles and translations
-
-    Parameters
-    ----------
-    angles
-        The actual angles
-    angle_sequence
-        The angle sequence of the angles
-    translations
-        The XYZ translations
-    """
-
-    if len(angles.shape) > 1 and angles.shape[1] != 1:
-        raise RuntimeError("The angles must be a vector of size (number or rotations x 1).")
-    if len(angle_sequence) != angles.shape[0]:
-        raise RuntimeError("The number of angles must be equal to the number of angles in the sequence.")
-    if len(translations.shape) > 1 and translations.shape[1] != 1:
-        raise RuntimeError("The translations must be a vector of size (number or translations x 1).")
-
-    matrix = {
-        "x": rot_x_matrix,
-        "y": rot_y_matrix,
-        "z": rot_z_matrix,
-    }
-    rt = np.identity(4)
-    for angle, axis in zip(angles, angle_sequence):
-        rt[:3, :3] = rt[:3, :3] @ matrix[axis](angle)
-    rt[:3, 3] = translations[:3]
-
-    return rt
 
 
 def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:

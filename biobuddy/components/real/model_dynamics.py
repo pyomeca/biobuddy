@@ -257,6 +257,7 @@ class ModelDynamics:
         method: str = "lm",
         animate_reconstruction: bool = False,
         compute_residual_distance: bool = False,
+        verbose: int = 0,
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Solve the inverse kinematics problem using least squares optimization.
@@ -280,6 +281,8 @@ class ModelDynamics:
             The least square method to use. By default, the Levenberg-Marquardt method is used.
         animate_reconstruction
             Weather to animate the reconstruction
+            verbose
+        The verbosity level of the optimization algorithm [0, 1, 2]. Default is 0 (no output).
         """
 
         try:
@@ -373,11 +376,11 @@ class ModelDynamics:
                 ),
                 x0=init,
                 method=method,
-                xtol=1e-6,
+                xtol=1e-5,
+                ftol=1e-5,
                 tr_options=dict(disp=False),
+                verbose=verbose,
             )
-            # if not sol["success"]:
-            #     raise RuntimeError("The optimization in inverse_kinematics did not converge. Please check your inputs.")
             optimal_q[:, i_frame] = sol["x"]
             if compute_residual_distance:
                 residuals[:, i_frame] = self._marker_distance(

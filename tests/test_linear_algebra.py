@@ -11,7 +11,6 @@ from biobuddy.utils.linear_algebra import (
     rot_z_matrix,
     get_rotation_vector_from_sequence,
     get_sequence_from_rotation_vector,
-    euler_and_translation_to_matrix,
     mean_homogenous_matrix,
     mean_unit_vector,
     to_euler,
@@ -111,62 +110,6 @@ def test_rotation_vector_sequences():
         get_sequence_from_rotation_vector(np.array([1, 1, 0]))
 
 
-def test_euler_and_translation_to_matrix():
-    """Test Euler angle and translation to matrix conversion."""
-    # Test single rotation
-    angles = np.array([np.pi / 2])
-    angle_sequence = "x"
-    translations = np.array([1, 2, 3])
-
-    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
-
-    # Check dimensions
-    assert rt.shape == (4, 4)
-
-    # Check homogeneous matrix structure
-    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
-
-    # Check rotation part
-    npt.assert_almost_equal(rt[:3, :3], np.array([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]]))
-
-    # Check translation part
-    npt.assert_almost_equal(rt[:3, 3], translations)
-
-    # Test multiple rotations
-    angles = np.array([np.pi / 4, np.pi / 6, np.pi / 3])
-    angle_sequence = "xyz"
-    translations = np.array([1, 2, 3])
-
-    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
-
-    # Check dimensions
-    assert rt.shape == (4, 4)
-
-    # Check homogeneous matrix structure
-    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
-
-    # Check translation part
-    npt.assert_almost_equal(rt[:3, 3], translations)
-
-    # Check rotation part
-    npt.assert_almost_equal(
-        rt[:3, :3],
-        np.array(
-            [[0.4330127, -0.75, 0.5], [0.78914913, 0.04736717, -0.61237244], [0.43559574, 0.65973961, 0.61237244]]
-        ),
-    )
-
-    # Test error conditions
-    with pytest.raises(RuntimeError, match="The angles must be a vector"):
-        euler_and_translation_to_matrix(np.array([[1, 2], [3, 4]]), "x", np.array([1, 2, 3]))
-
-    with pytest.raises(RuntimeError, match="The number of angles must be equal"):
-        euler_and_translation_to_matrix(np.array([1, 2]), "x", np.array([1, 2, 3]))
-
-    with pytest.raises(RuntimeError, match="The translations must be a vector"):
-        euler_and_translation_to_matrix(np.array([1]), "x", np.array([[1, 2], [3, 4]]))
-
-
 def test_mean_homogenous_matrix():
     """Test mean homogeneous matrix computation."""
     # Create test matrices
@@ -239,7 +182,9 @@ def test_to_euler():
     """Test conversion from rotation matrix to Euler angles."""
     # Test with known angles
     angles = np.array([0.1, 0.2, 0.3])
-    rt = euler_and_translation_to_matrix(angles, "xyz", np.array([0, 0, 0]))
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_euler_angles_and_translation("xyz", angles, np.array([0, 0, 0]))
+    rt = rt_matrix.rt_matrix
 
     # Check the rt matrix
     npt.assert_almost_equal(
@@ -670,21 +615,6 @@ def test_rt():
             angles = np.random.rand(nb_angles) * 2 * np.pi
             translations = np.random.rand(3)
 
-            # --- rt from translations and Euler angles --- #
-            # TODO: remove when the uniformization is completed
-            rt_biobuddy = euler_and_translation_to_matrix(
-                angles=angles, angle_sequence=angle_sequence.value, translations=translations
-            )
-            rot_biobuddy = rt_biobuddy[:3, :3]
-            rot_biorbd = biorbd.Rotation.fromEulerAngles(angles, angle_sequence.value).to_array()
-
-            npt.assert_almost_equal(
-                rot_biobuddy,
-                rot_biorbd,
-            )
-            npt.assert_almost_equal(translations, rt_biobuddy[:3, 3])
-
-            # TODO: Leave this section though
             rt_biobuddy = RotoTransMatrix()
             rt_biobuddy.from_euler_angles_and_translation(
                 angles=angles, angle_sequence=angle_sequence.value, translation=translations

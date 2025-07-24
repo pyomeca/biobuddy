@@ -849,9 +849,9 @@ def test_init_mesh_file():
     assert mesh_file.translation_function is None
 
     # Test initialization with all parameters
-    scaling_func = lambda data: np.array([1, 1, 1])
-    rotation_func = lambda data: np.eye(3)
-    translation_func = lambda data: np.array([0, 0, 0])
+    scaling_func = lambda data, model: np.array([1, 1, 1])
+    rotation_func = lambda data, model: np.eye(3)
+    translation_func = lambda data, model: np.array([0, 0, 0])
 
     mesh_file = MeshFile(
         mesh_file_name="test.obj",
