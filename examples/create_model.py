@@ -97,7 +97,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             maximal_force_function=lambda m, model: 100.0,
             tendon_slack_length_function=lambda m, model: 0.05,
             pennation_angle_function=lambda m, model: 0.05,
-            maximal_velocity_function= lambda m, model: 10.0,
+            maximal_velocity_function=lambda m, model: 10.0,
             maximal_excitation=1,
         )
     )

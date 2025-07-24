@@ -147,14 +147,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 raise RuntimeError(
                     f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
                 )
-            if segment.q_ranges is not None and (len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q):
+            if segment.q_ranges is not None and (
+                len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q
+            ):
                 raise RuntimeError(
                     f"The number of q_ranges (min: {len(segment.q_ranges.min_bound)}, max: {len(segment.q_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
                 )
-            if segment.qdot_ranges is not None and (len(segment.qdot_ranges.min_bound) != segment.nb_q or len(segment.qdot_ranges.max_bound) != segment.nb_q):
-                        raise RuntimeError(
-                            f"The number of qdot_ranges (min: {len(segment.qdot_ranges.min_bound)}, max: {len(segment.qdot_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
-                        )
+            if segment.qdot_ranges is not None and (
+                len(segment.qdot_ranges.min_bound) != segment.nb_q or len(segment.qdot_ranges.max_bound) != segment.nb_q
+            ):
+                raise RuntimeError(
+                    f"The number of qdot_ranges (min: {len(segment.qdot_ranges.min_bound)}, max: {len(segment.qdot_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
 
     def validate_parents(self):
         """

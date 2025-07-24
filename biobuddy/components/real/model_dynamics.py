@@ -192,7 +192,7 @@ class ModelDynamics:
     ) -> np.ndarray:
 
         nb_markers = experimental_markers.shape[1]
-        vect_pos_markers = np.zeros((nb_markers, ))
+        vect_pos_markers = np.zeros((nb_markers,))
 
         if with_biorbd:
             markers_model = np.zeros((3, nb_markers, 1))
@@ -203,9 +203,9 @@ class ModelDynamics:
             markers_model = np.array(model.markers_in_global(q))
 
         for i_marker in range(nb_markers):
-            vect_pos_markers[i_marker] = np.linalg.norm((
-                markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
-            ))
+            vect_pos_markers[i_marker] = np.linalg.norm(
+                (markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker])
+            )
 
         return vect_pos_markers
 

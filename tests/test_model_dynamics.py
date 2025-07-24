@@ -515,7 +515,11 @@ def test_inverse_kinematics_basic():
     # Check that the residuals are computed correctly
     for i_marker in range(leg_model.nb_markers):
         residuals_biorbd = np.linalg.norm(
-            biorbd_leg_model.markers(q_biorbd[:, 0])[i_marker].to_array() - marker_positions_true[:3, i_marker, :].reshape(3, ))
+            biorbd_leg_model.markers(q_biorbd[:, 0])[i_marker].to_array()
+            - marker_positions_true[:3, i_marker, :].reshape(
+                3,
+            )
+        )
         npt.assert_array_almost_equal(residuals[i_marker], residuals_biorbd, decimal=3)
 
     q_reconstructed, _ = leg_model.inverse_kinematics(

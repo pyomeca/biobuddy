@@ -185,7 +185,7 @@ class MuscleReal:
         if value is not None and value <= 0:
             raise ValueError("The optimal length of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
-            if value.shape == (1, ):
+            if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The optimal length must be a float.")
@@ -215,7 +215,7 @@ class MuscleReal:
         if value is not None and value <= 0:
             raise ValueError("The tendon slack length of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
-            if value.shape == (1, ):
+            if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The tendon slack length must be a float.")
@@ -228,7 +228,7 @@ class MuscleReal:
     @pennation_angle.setter
     def pennation_angle(self, value: float):
         if isinstance(value, np.ndarray):
-            if value.shape == (1, ):
+            if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The optimal length must be a float.")
@@ -243,7 +243,7 @@ class MuscleReal:
         if value is not None and value <= 0:
             raise ValueError("The maximal contraction velocity of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
-            if value.shape == (1, ):
+            if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The maximal velocity must be a float.")
@@ -258,7 +258,7 @@ class MuscleReal:
         if value is not None and value <= 0:
             raise ValueError("The maximal excitation of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
-            if value.shape == (1, ):
+            if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The maximal excitation must be a float.")
