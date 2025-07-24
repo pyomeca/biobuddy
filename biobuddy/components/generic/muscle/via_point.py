@@ -29,12 +29,7 @@ class ViaPoint:
             The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the via point with.
         """
         self.name = name
-        if position_function is not None:
-            self.position_function = (
-                (lambda m, bio: m[position_function]) if isinstance(position_function, str) else position_function
-            )
-        else:
-            self.position_function = None
+        self.position_function = position_function
         self.parent_name = check_name(parent_name)
         self.muscle_name = muscle_name
         self.muscle_group = muscle_group
@@ -77,7 +72,10 @@ class ViaPoint:
 
     @position_function.setter
     def position_function(self, value: Callable | str) -> None:
-        position_function = (lambda m, bio: m[value]) if isinstance(value, str) else value
+        if value is not None:
+            position_function = (lambda m, bio: m[value]) if isinstance(value, str) else value
+        else:
+            position_function = None
         self._position_function = position_function
 
     def to_via_point(self, data: Data, model: "BiomechanicalModelReal") -> ViaPointReal:

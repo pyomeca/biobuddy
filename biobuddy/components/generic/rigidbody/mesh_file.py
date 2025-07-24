@@ -2,6 +2,7 @@ from typing import Callable
 
 import numpy as np
 
+from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.mesh_file_real import MeshFileReal
 from ....utils.protocols import Data
 
@@ -40,6 +41,7 @@ class MeshFile:
     def to_mesh_file(
         self,
         data: Data,
+        model: BiomechanicalModelReal,
     ) -> MeshFileReal:
         return MeshFileReal.from_data(
             data,
