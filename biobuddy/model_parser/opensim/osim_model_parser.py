@@ -17,7 +17,7 @@ from .joint import Joint
 from .marker import Marker
 from .muscle import get_muscle_from_element
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.rigidbody.segment_real import SegmentReal
@@ -112,7 +112,7 @@ class OsimModelParser:
         self.parse_tags(self.model.getroot())
 
         self.bodies: list[Body] = []
-        self.muscle_groups: list[MuscleGroup] = []
+        self.muscle_groups: list[MuscleGroupReal] = []
         self.muscles: list[MuscleReal] = []
         self.joints: list[Joint] = []
         self.markers: list[Marker] = []
@@ -578,7 +578,7 @@ class OsimModelParser:
                 name=body_dof,
                 parent_name=parent,
                 frame_offset=frame_offset,
-                q_range=self.get_q_range(q_range),
+                q_range=self.get_q_range(q_range, body_dof),
                 rt_in_matrix=rt_in_matrix,
                 rot_dof=rot_dof,
             )
@@ -663,7 +663,7 @@ class OsimModelParser:
                 rotations=rotations,
                 dof_names=dof_names,
                 q_ranges=(
-                    self.get_q_range(q_range)
+                    self.get_q_range(q_range, dof_names)
                     if (translations != Translations.NONE or rotations != Rotations.NONE)
                     else None
                 ),
@@ -705,23 +705,24 @@ class OsimModelParser:
         return frame_offset, parent_name
 
     @staticmethod
-    def get_q_range(q_range):
+    def get_q_range(q_range: RangeOfMotion | list[str], dof_names: list[str]):
         if isinstance(q_range, RangeOfMotion) or q_range is None:
             return q_range
         elif isinstance(q_range, list) or isinstance(q_range, str):
             q_range = [q_range] if isinstance(q_range, str) else q_range
             min_bound = []
             max_bound = []
-            for range in q_range:
-                if range is None:
-                    min_bound += [-2 * np.pi]
-                    max_bound += [2 * np.pi]
-                else:
-                    if "// " in range:
-                        range = range.replace("// ", "")
-                    r = range.split(" ")
-                    min_bound += [float(r[0])]
-                    max_bound += [float(r[1])]
+            for i_dof, dof_range in enumerate(q_range):
+                if i_dof < len(dof_names):
+                    if dof_range is None:
+                        min_bound += [-2 * np.pi]
+                        max_bound += [2 * np.pi]
+                    else:
+                        if "// " in dof_range:
+                            dof_range = dof_range.replace("// ", "")
+                        r = dof_range.split(" ")
+                        min_bound += [float(r[0])]
+                        max_bound += [float(r[1])]
             q_range = RangeOfMotion(range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound)
             return q_range
         else:
@@ -775,7 +776,7 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal]]:
+    def _get_force_set(self) -> tuple[list[MuscleGroupReal], list[MuscleReal]]:
         muscle_groups = []
         muscles = []
         if is_element_empty(self.forceset_elt):

@@ -105,3 +105,7 @@ class SegmentUtils:
         if self.rotations is not None and self.rotations != Rotations.NONE:
             nb_rotations = len(self.rotations.value)
         return nb_translations + nb_rotations
+
+    def update_dof_names(self):
+        """Update the dof_names property based on translations and rotations added after first initialization of the model."""
+        self.dof_names = None

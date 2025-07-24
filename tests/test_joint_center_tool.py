@@ -283,6 +283,47 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(new_marker_tracking_error, 3.1621662489880955, decimal=5)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
 
+    # Test replace_joint_centers
+    for muscle_group in scaled_model.muscle_groups:
+        # Check that there are the same number of muscles
+        assert (
+            scaled_model.muscle_groups[muscle_group.name].muscle_names
+            == score_model.muscle_groups[muscle_group.name].muscle_names
+        )
+        assert (
+            scaled_model.muscle_groups[muscle_group.name].nb_muscles
+            == score_model.muscle_groups[muscle_group.name].nb_muscles
+        )
+
+        for muscle in muscle_group.muscles:
+            # Test that the origin and insertion have been updated locally
+            origin_scaled = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position
+            insertion_scaled = (
+                scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].insertion_position.position
+            )
+            origin_score = score_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position
+            insertion_score = (
+                score_model.muscle_groups[muscle_group.name].muscles[muscle.name].insertion_position.position
+            )
+            if muscle_group.origin_parent_name == "pelvis":
+                # pelvis did not move so should be the same
+                assert np.all(origin_scaled == origin_score)
+            else:
+                assert np.any(origin_scaled != origin_score)
+            assert np.any(insertion_scaled != insertion_score)
+            # So that they stay at the same place in the global reference frame
+            scaled_origin_in_global = scaled_model.muscle_origin_in_global(muscle.name)
+            score_origin_in_global = score_model.muscle_origin_in_global(muscle.name)
+            npt.assert_almost_equal(scaled_origin_in_global, score_origin_in_global, decimal=5)
+            scaled_insertion_in_global = scaled_model.muscle_insertion_in_global(muscle.name)
+            score_insertion_in_global = score_model.muscle_insertion_in_global(muscle.name)
+            npt.assert_almost_equal(scaled_insertion_in_global, score_insertion_in_global, decimal=5)
+
+            # Test the position of the via points
+            via_points_scaled = scaled_model.via_points_in_global(muscle.name)
+            via_points_score = score_model.via_points_in_global(muscle.name)
+            npt.assert_almost_equal(via_points_scaled, via_points_score, decimal=5)
+
     remove_temporary_biomods()
     if os.path.exists(score_biomod_filepath):
         os.remove(score_biomod_filepath)
@@ -486,6 +527,49 @@ def test_score_and_sara_with_ghost_segments():
     npt.assert_almost_equal(original_marker_tracking_error, 9.674445375391658, decimal=5)
     npt.assert_almost_equal(new_marker_tracking_error, 9.853176510568787, decimal=5)
 
+    # Test replace_joint_centers
+    for muscle_group in scaled_model.muscle_groups:
+        # Check that there are the same number of muscles
+        assert (
+            scaled_model.muscle_groups[muscle_group.name].muscle_names
+            == score_model.muscle_groups[muscle_group.name].muscle_names
+        )
+        assert (
+            scaled_model.muscle_groups[muscle_group.name].nb_muscles
+            == score_model.muscle_groups[muscle_group.name].nb_muscles
+        )
+
+        for muscle in muscle_group.muscles:
+            # Test that the origin and insertion have been updated locally
+            origin_scaled = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position
+            insertion_scaled = (
+                scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].insertion_position.position
+            )
+            origin_score = score_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position
+            insertion_score = (
+                score_model.muscle_groups[muscle_group.name].muscles[muscle.name].insertion_position.position
+            )
+            if muscle_group.origin_parent_name == "pelvis":
+                # pelvis did not move so should be the same
+                assert np.all(origin_scaled == origin_score)
+            else:
+                assert np.any(origin_scaled != origin_score)
+            assert np.any(insertion_scaled != insertion_score)
+            # So that they stay at the same place in the global reference frame
+            scaled_origin_in_global = scaled_model.muscle_origin_in_global(muscle.name)
+            score_origin_in_global = score_model.muscle_origin_in_global(muscle.name)
+            npt.assert_almost_equal(scaled_origin_in_global, score_origin_in_global, decimal=5)
+            scaled_insertion_in_global = scaled_model.muscle_insertion_in_global(muscle.name)
+            score_insertion_in_global = score_model.muscle_insertion_in_global(muscle.name)
+            npt.assert_almost_equal(scaled_insertion_in_global, score_insertion_in_global, decimal=5)
+
+            # Test the position of the via points
+            via_points_scaled = scaled_model.via_points_in_global(muscle.name)
+            via_points_score = score_model.via_points_in_global(muscle.name)
+            npt.assert_almost_equal(via_points_scaled, via_points_score, decimal=5)
+
+    # TODO: Test mesh files and contacts
+
     remove_temporary_biomods()
     if os.path.exists(score_biomod_filepath):
         os.remove(score_biomod_filepath)
@@ -653,17 +737,6 @@ def test_marker_residual():
         match="The marker marker1 seem to move during the functional trial.The distance between the center and this marker is ",
     ):
         rsi.check_optimal_rt_inputs(markers, static_markers, marker_names)
-
-
-# Test SCoRE
-def test_score_algorithm():
-
-    # Set up
-    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
-    hip_c3d = C3dData(
-        hip_functional_trial_path, first_frame=250, last_frame=350
-    )  # Marker inversion happening after the 500th frame in the example data!
 
 
 # Test SARA

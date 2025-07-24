@@ -6,6 +6,7 @@ import numpy as np
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array, points_to_array
 from ...utils.named_list import NamedList
+from ...utils.rotations import Rotations
 from ..model_utils import ModelUtils
 from .model_dynamics import ModelDynamics
 
@@ -14,7 +15,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def __init__(self, gravity: Point = None):
 
         # Imported here to prevent from circular imports
-        from ..generic.muscle.muscle_group import MuscleGroup
+        from .muscle.muscle_group_real import MuscleGroupReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)
@@ -23,9 +24,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         # Model core attributes
         self.header = ""
-        self.gravity = None if gravity is None else point_to_array(gravity, "gravity")
+        self.gravity = gravity
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscle_groups = NamedList[MuscleGroupReal]()
         self.warnings = ""
 
         # Meta-data
@@ -66,7 +67,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         self.segments._remove(segment_name)
 
-    def add_muscle_group(self, muscle_group: "MuscleGroup") -> None:
+    def add_muscle_group(self, muscle_group: "MuscleGroupReal") -> None:
         """
         Add a muscle group to the model
 
@@ -97,6 +98,14 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             The name of the muscle group to remove
         """
         self.muscle_groups._remove(muscle_group_name)
+
+    @property
+    def gravity(self) -> np.ndarray:
+        return self._gravity
+
+    @gravity.setter
+    def gravity(self, value: Point) -> None:
+        self._gravity = None if value is None else point_to_array(value, "gravity")
 
     @property
     def mass(self) -> float:
@@ -131,6 +140,21 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 scs=deepcopy(self.segment_coordinate_system_in_local(segment.name)),
                 is_scs_local=True,
             )
+
+    def validate_dofs(self):
+        for segment in self.segments:
+            if len(segment.dof_names) != segment.nb_q:
+                raise RuntimeError(
+                    f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
+            if segment.q_ranges is not None and (len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q):
+                raise RuntimeError(
+                    f"The number of q_ranges (min: {len(segment.q_ranges.min_bound)}, max: {len(segment.q_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
+            if segment.qdot_ranges is not None and (len(segment.qdot_ranges.min_bound) != segment.nb_q or len(segment.qdot_ranges.max_bound) != segment.nb_q):
+                        raise RuntimeError(
+                            f"The number of qdot_ranges (min: {len(segment.qdot_ranges.min_bound)}, max: {len(segment.qdot_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                        )
 
     def validate_parents(self):
         """
@@ -172,6 +196,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
     def validate_model(self):
         self.segments_rt_to_local()
+        self.validate_dofs()
         self.validate_parents()
         self.validate_moving_via_points()
 
