@@ -375,11 +375,8 @@ def test_get_closest_rt_matrix():
     # Check that result is valid
     assert result.shape == (4, 4)
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
-    npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1],
-                                                     [0, -1, 0],
-                                                     [1, 0, 0]]), decimal=6)
+    npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
-
 
     # Test error conditions
     with pytest.raises(RuntimeError, match="far from SO\\(3\\)"):
@@ -661,6 +658,7 @@ def test_rototrans_matrix_time_series():
 
     with pytest.raises(ValueError, match="should be of shape"):
         rt_series.from_rt_matrix(np.eye(4))
+
 
 def test_rt():
 

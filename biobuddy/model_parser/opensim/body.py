@@ -7,7 +7,9 @@ from .utils import find_in_tree
 from ...utils.linear_algebra import RotoTransMatrix
 
 
-def _extend_mesh_list_with_extra_components(mesh_list, element: etree.ElementTree) -> list[tuple[etree.ElementTree, RotoTransMatrix]]:
+def _extend_mesh_list_with_extra_components(
+    mesh_list, element: etree.ElementTree
+) -> list[tuple[etree.ElementTree, RotoTransMatrix]]:
     """Convert mesh_list from list[str] to list[tuple(str, RotoTransMatrix)] to include offset in some meshes"""
     mesh_list_and_offset = [(mesh, RotoTransMatrix()) for mesh in mesh_list]
 
@@ -19,8 +21,9 @@ def _extend_mesh_list_with_extra_components(mesh_list, element: etree.ElementTre
                 translation_array = np.array([float(t) for t in translation.split(" ")])
                 mesh = frame.find("attached_geometry").find("Mesh")
                 mesh_rt = RotoTransMatrix()
-                mesh_rt.from_rotation_matrix_and_translation(rotation_matrix=np.identity(3),
-                                                                translation=translation_array)
+                mesh_rt.from_rotation_matrix_and_translation(
+                    rotation_matrix=np.identity(3), translation=translation_array
+                )
                 mesh_list_and_offset += [(mesh, mesh_rt)]
 
     return mesh_list_and_offset

@@ -648,7 +648,7 @@ class OsimModelParser:
         rot_dof: str = "",  # ex: 'xyz'
         mesh_file: str = None,
         mesh_color: list[str] = None,  # ex: [0, 0, 0]
-        mesh_scale: list[str] = None, # ex: [1, 1, 1]
+        mesh_scale: list[str] = None,  # ex: [1, 1, 1]
         dof_names: list[str] = None,
     ):
         """

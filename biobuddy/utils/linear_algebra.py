@@ -217,7 +217,7 @@ def get_closest_rotation_matrix(rotation_matrix: np.ndarray) -> np.ndarray:
     if rotation_matrix.shape != (3, 3):
         raise ValueError(f"Expected 3x3 matrix, got shape {rotation_matrix.shape}")
 
-    current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), 'fro'))
+    current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), "fro"))
     if current_norm_error > 0.1:
         # The input is far from being valid
         raise RuntimeError(f"The rotation matrix {rotation_matrix} is far from SO(3).")
@@ -435,11 +435,12 @@ class RotationMatrix:
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
         self._rotation_matrix = rotation_matrix
 
-    def from_rotation_axes(self,
-                               first_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                               second_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                               third_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                               ):
+    def from_rotation_axes(
+        self,
+        first_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+        second_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+        third_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+    ):
         rot_1 = np.transpose(np.array(coord_sys(first_rotation_axis)[0]))  # rotation matrix for theta_1
         rot_2 = np.transpose(np.array(coord_sys(second_rotation_axis)[0]))  # rotation matrix for theta_2
         rot_3 = np.transpose(np.array(coord_sys(third_rotation_axis)[0]))  # rotation matrix for theta_3
@@ -537,16 +538,22 @@ class RotoTransMatrix:
             )
         self._rt = get_closest_rt_matrix(rt)
 
-    def from_rotation_axes_and_translation(self,
-                                           first_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                                           second_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                                           third_rotation_axis: np.ndarray=np.array([0, 0, 0]),
-                                           translation: np.ndarray=np.array([0, 0, 0])):
+    def from_rotation_axes_and_translation(
+        self,
+        first_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+        second_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+        third_rotation_axis: np.ndarray = np.array([0, 0, 0]),
+        translation: np.ndarray = np.array([0, 0, 0]),
+    ):
         rotation_matrix = RotationMatrix()
-        rotation_matrix = rotation_matrix.from_rotation_axes(first_rotation_axis=first_rotation_axis,
-                                                             second_rotation_axis=second_rotation_axis,
-                                                             third_rotation_axis=third_rotation_axis)
-        self._rt_matrix = np.append(np.append(rotation_matrix.rotation_matrix, translation, axis=1), np.array([[0, 0, 0, 1]]), axis=0)
+        rotation_matrix = rotation_matrix.from_rotation_axes(
+            first_rotation_axis=first_rotation_axis,
+            second_rotation_axis=second_rotation_axis,
+            third_rotation_axis=third_rotation_axis,
+        )
+        self._rt_matrix = np.append(
+            np.append(rotation_matrix.rotation_matrix, translation, axis=1), np.array([[0, 0, 0, 1]]), axis=0
+        )
 
     @property
     def rt_matrix(self) -> np.ndarray:
