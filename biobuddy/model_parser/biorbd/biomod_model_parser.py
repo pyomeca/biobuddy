@@ -14,8 +14,9 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
     ContactReal,
 )
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
@@ -47,7 +48,7 @@ class BiomodModelParser:
         # Prepare the internal structure to hold the model
         self.gravity = None
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()
+        self.muscle_groups = NamedList[MuscleGroupReal]()
         self.warnings = ""
 
         def next_token():
@@ -110,7 +111,7 @@ class BiomodModelParser:
                         current_component = ContactReal(name=read_str(next_token=next_token), parent_name="")
                     elif token.lower() == "musclegroup":
                         check_if_version_defined(biomod_version)
-                        current_component = MuscleGroup(
+                        current_component = MuscleGroupReal(
                             name=read_str(next_token=next_token), origin_parent_name="", insertion_parent_name=""
                         )
                     elif token.lower() == "muscle":
@@ -148,6 +149,7 @@ class BiomodModelParser:
 
                 elif isinstance(current_component, SegmentReal):
                     if token.lower() == "endsegment":
+                        current_component.update_dof_names()
                         self.segments.append(current_component)
                         current_component = None
                     elif token.lower() == "parent":
@@ -270,7 +272,7 @@ class BiomodModelParser:
                     elif token.lower() == "axis":
                         current_component.axis = Translations(read_str(next_token=next_token))
 
-                elif isinstance(current_component, MuscleGroup):
+                elif isinstance(current_component, MuscleGroupReal):
                     if token.lower() == "endmusclegroup":
                         if not current_component.insertion_parent_name:
                             raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")

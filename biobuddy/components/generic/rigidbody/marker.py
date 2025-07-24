@@ -1,4 +1,5 @@
 from typing import Callable
+import numpy as np
 
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.marker_real import MarkerReal
@@ -34,11 +35,53 @@ class Marker:
             If the marker should be flagged as an anatomical marker
         """
         self.name = name
-        function = function if function is not None else self.name
-        self.function = (lambda m, model: m[function]) if isinstance(function, str) else function
+        self.function = function
         self.parent_name = check_name(parent_name)
         self.is_technical = is_technical
         self.is_anatomical = is_anatomical
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        self._name = value
+
+    @property
+    def parent_name(self) -> str:
+        return self._parent_name
+
+    @parent_name.setter
+    def parent_name(self, value: str) -> None:
+        self._parent_name = value
+
+    @property
+    def function(self) -> Callable | str:
+        return self._function
+
+    @function.setter
+    def function(self, value: Callable | str) -> None:
+        if value is None:
+            # Set the function to the name of the marker, so it can be used as a default
+            value = self.name
+        self._function = (lambda m, bio: np.nanmean(m[value], axis=1)) if isinstance(value, str) else value
+
+    @property
+    def is_technical(self) -> bool:
+        return self._is_technical
+
+    @is_technical.setter
+    def is_technical(self, value: bool) -> None:
+        self._is_technical = value
+
+    @property
+    def is_anatomical(self) -> bool:
+        return self._is_anatomical
+
+    @is_anatomical.setter
+    def is_anatomical(self, value: bool) -> None:
+        self._is_anatomical = value
 
     def to_marker(
         self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None

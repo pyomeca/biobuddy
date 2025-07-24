@@ -8,7 +8,7 @@ from .mesh_file_real import MeshFileReal
 from .mesh_real import MeshReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
-from ....utils.linear_algebra import RotoTransMatrix, euler_and_translation_to_matrix
+from ....utils.linear_algebra import RotoTransMatrix
 from ....utils.rotations import Rotations
 from ....utils.translations import Translations
 from ....utils.named_list import NamedList
@@ -170,7 +170,7 @@ class SegmentReal(SegmentUtils):
         marker.parent_name = self.name
         self.markers._append(marker)
 
-    def remove_marker(self, marker: MarkerReal):
+    def remove_marker(self, marker: str):
         self.markers._remove(marker)
 
     def add_contact(self, contact: ContactReal):
@@ -189,7 +189,7 @@ class SegmentReal(SegmentUtils):
         contact.parent_name = self.name
         self.contacts._append(contact)
 
-    def remove_contact(self, contact: ContactReal):
+    def remove_contact(self, contact: str):
         self.contacts._remove(contact)
 
     def add_imu(self, imu: InertialMeasurementUnitReal):
@@ -197,7 +197,7 @@ class SegmentReal(SegmentUtils):
             raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
         self.imus._append(imu)
 
-    def remove_imu(self, imu: InertialMeasurementUnitReal):
+    def remove_imu(self, imu: str):
         self.imus._remove(imu)
 
     def rt_from_local_q(self, local_q: np.ndarray) -> RotoTransMatrix:

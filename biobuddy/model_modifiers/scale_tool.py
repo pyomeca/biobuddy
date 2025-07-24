@@ -577,7 +577,7 @@ class ScaleTool:
             # If the model does not have a free-floating base, we need to create a temporary model with a free-floating base to match the experimental markers
             model_to_use = self.create_free_floating_base_model()
 
-        optimal_q = model_to_use.inverse_kinematics(
+        optimal_q, _ = model_to_use.inverse_kinematics(
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
@@ -605,15 +605,14 @@ class ScaleTool:
             viz_biomod_model.options.show_gravity = True
             viz_biomod_model.options.show_marker_labels = False
             viz_biomod_model.options.show_center_of_mass_labels = False
-            viz.add_animated_model(viz_biomod_model, optimal_q)
 
             model_marker_names = model_to_use.marker_names
             marker_indices = [experimental_marker_names.index(m) for m in model_marker_names]
             pyomarkers = pyorerun.PyoMarkers(
-                data=marker_positions[:, marker_indices, :], channels=model_marker_names, show_labels=False
+                data=marker_positions[:, marker_indices, :], marker_names=model_marker_names, show_labels=False
             )
-            viz.add_xp_markers(name=experimental_marker_names, markers=pyomarkers)
-            viz.rerun_by_frame("Model output")
+            viz.add_animated_model(viz_biomod_model, optimal_q, tracked_markers=pyomarkers)
+            viz.rerun("Model output")
 
         if any(np.std(optimal_q, axis=1) > 20 * np.pi / 180):
             raise RuntimeError(

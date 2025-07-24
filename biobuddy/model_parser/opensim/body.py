@@ -4,24 +4,27 @@ from lxml import etree
 import numpy as np
 
 from .utils import find_in_tree
-from ...utils.linear_algebra import OrthoMatrix
+from ...utils.linear_algebra import RotoTransMatrix
 
 
-def _extend_mesh_list_with_extra_components(mesh_list, element: etree.ElementTree) -> list[tuple[str, OrthoMatrix]]:
-    """Convert mesh_list from list[str] to list[tuple(str, OrthoMatrix)] to include offset in some meshes"""
-    mesh_list_and_offset = [(mesh, OrthoMatrix()) for mesh in mesh_list]
+def _extend_mesh_list_with_extra_components(
+    mesh_list, element: etree.ElementTree
+) -> list[tuple[etree.ElementTree, RotoTransMatrix]]:
+    """Convert mesh_list from list[str] to list[tuple(str, RotoTransMatrix)] to include offset in some meshes"""
+    mesh_list_and_offset = [(mesh, RotoTransMatrix()) for mesh in mesh_list]
 
     if element.find("components") is not None:
         frames = element.find("components").findall("PhysicalOffsetFrame")
         for frame in frames:
             if frame.find("attached_geometry") is not None:
                 translation = frame.find("translation").text
-                translation_tuple = tuple([float(t) for t in translation.split(" ")])
-                tuple_mesh_and_offset = (
-                    frame.find("attached_geometry").find("Mesh"),
-                    OrthoMatrix(translation=translation_tuple),
+                translation_array = np.array([float(t) for t in translation.split(" ")])
+                mesh = frame.find("attached_geometry").find("Mesh")
+                mesh_rt = RotoTransMatrix()
+                mesh_rt.from_rotation_matrix_and_translation(
+                    rotation_matrix=np.identity(3), translation=translation_array
                 )
-                mesh_list_and_offset.append(tuple_mesh_and_offset)
+                mesh_list_and_offset += [(mesh, mesh_rt)]
 
     return mesh_list_and_offset
 

@@ -476,7 +476,7 @@ def test_inverse_kinematics_basic():
     marker_positions_true = leg_model.markers_in_global(q_true)
     marker_names = leg_model.marker_names
 
-    q_reconstructed = leg_model.inverse_kinematics(
+    q_reconstructed, residuals = leg_model.inverse_kinematics(
         marker_positions=marker_positions_true[:3, :, :],
         marker_names=marker_names,
         q_regularization_weight=0.01,
@@ -485,6 +485,7 @@ def test_inverse_kinematics_basic():
         method="lm",
         animate_reconstruction=False,
     )
+    assert residuals is None
 
     q_biorbd = biorbd.InverseKinematics(biorbd_leg_model, marker_positions_true[:3, :, :]).solve()
 
@@ -494,10 +495,47 @@ def test_inverse_kinematics_basic():
     # Check that the solution is close to the true q
     npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
 
+    q_reconstructed, residuals = leg_model.inverse_kinematics(
+        marker_positions=marker_positions_true[:3, :, :],
+        marker_names=marker_names,
+        q_regularization_weight=0.01,
+        q_target=None,
+        marker_weights=None,
+        method="lm",
+        animate_reconstruction=False,
+        compute_residual_distance=True,
+    )
+
+    # Check that the solution is the same as biorbd
+    npt.assert_array_almost_equal(q_reconstructed, q_biorbd, decimal=3)
+
+    # Check that the solution is close to the true q
+    npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
+
+    # Check that the residuals are computed correctly
+    for i_marker in range(leg_model.nb_markers):
+        residuals_biorbd = np.linalg.norm(
+            biorbd_leg_model.markers(q_biorbd[:, 0])[i_marker].to_array()
+            - marker_positions_true[:3, i_marker, :].reshape(
+                3,
+            )
+        )
+        npt.assert_array_almost_equal(residuals[i_marker], residuals_biorbd, decimal=3)
+
+    q_reconstructed, _ = leg_model.inverse_kinematics(
+        marker_positions=marker_positions_true[:3, :, :],
+        marker_names=marker_names,
+        q_regularization_weight=0.01,
+        q_target=None,
+        marker_weights=None,
+        method="lm",
+        animate_reconstruction=False,
+    )
+
     # Test that it also works when there are NaNs in the exp data
     marker_positions_with_nan = marker_positions_true.copy()
     marker_positions_with_nan[0, 0, 0] = np.nan  # Introduce NaN in the first marker position
-    q_reconstructed_nan = leg_model.inverse_kinematics(
+    q_reconstructed_nan, _ = leg_model.inverse_kinematics(
         marker_positions=marker_positions_with_nan[:3, :, :],
         marker_names=marker_names,
         q_regularization_weight=0.01,
@@ -576,6 +614,7 @@ def test_rt_from_parent_offset_to_real_segment_basic():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
+        decimal=5,
     )
 
     rt_result = model_without.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix

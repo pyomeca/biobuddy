@@ -51,9 +51,9 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             mesh_file=MeshFile(
                 mesh_file_name=mesh_path,
                 mesh_color=np.array([0, 0, 1]),
-                scaling_function=lambda m: np.array([1, 1, 10]),
-                rotation_function=lambda m: np.array([np.pi / 2, 0, 0]),
-                translation_function=lambda m: np.array([0.1, 0, 0]),
+                scaling_function=lambda m, model: np.array([1, 1, 10]),
+                rotation_function=lambda m, model: np.array([np.pi / 2, 0, 0]),
+                translation_function=lambda m, model: np.array([0.1, 0, 0]),
             ),
         )
     )
@@ -61,7 +61,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     bio_model.segments["PENDULUM"].add_contact(
         Contact(
             name="PENDULUM_CONTACT",
-            function=lambda m: np.array([0, 0, 0]),
+            function=lambda m, model: np.array([0, 0, 0]),
             parent_name="PENDULUM",
             axis=Translations.XYZ,
         )
@@ -97,6 +97,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             maximal_force_function=lambda m, model: 100.0,
             tendon_slack_length_function=lambda m, model: 0.05,
             pennation_angle_function=lambda m, model: 0.05,
+            maximal_velocity_function=lambda m, model: 10.0,
             maximal_excitation=1,
         )
     )
@@ -111,7 +112,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     )
 
     # Put the model together
-    real_model = bio_model.to_real({})
+    real_model = bio_model.to_real({}, None)
 
     # Pprint it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath)

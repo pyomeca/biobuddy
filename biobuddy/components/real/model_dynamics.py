@@ -1,3 +1,4 @@
+from enum import Enum
 from copy import deepcopy
 import logging
 import numpy as np
@@ -22,6 +23,11 @@ def requires_initialization(method):
         return method(self, *args, **kwargs)
 
     return wrapper
+
+
+class ViewAs(Enum):
+    BIORBD = "biorbd"
+    # OPENSIM = "opensim"
 
 
 class ModelDynamics:
@@ -177,6 +183,33 @@ class ModelDynamics:
         return out
 
     @staticmethod
+    def _marker_distance(
+        model: "BiomechanicalModelReal" or "biorbd.Model",
+        q: np.ndarray,
+        marker_names: list[str],
+        experimental_markers: np.ndarray,
+        with_biorbd: bool,
+    ) -> np.ndarray:
+
+        nb_markers = experimental_markers.shape[1]
+        vect_pos_markers = np.zeros((nb_markers,))
+
+        if with_biorbd:
+            markers_model = np.zeros((3, nb_markers, 1))
+            for i_marker in range(nb_markers):
+                if model.markerNames()[i_marker].to_string() in marker_names:
+                    markers_model[:, i_marker, 0] = model.marker(q, i_marker, True).to_array()
+        else:
+            markers_model = np.array(model.markers_in_global(q))
+
+        for i_marker in range(nb_markers):
+            vect_pos_markers[i_marker] = np.linalg.norm(
+                (markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker])
+            )
+
+        return vect_pos_markers
+
+    @staticmethod
     def _marker_jacobian(
         model: "BiomechanicalModelReal" or "biorbd.Model",
         q_regularization_weight: float,
@@ -223,7 +256,9 @@ class ModelDynamics:
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
         animate_reconstruction: bool = False,
-    ) -> np.ndarray:
+        compute_residual_distance: bool = False,
+        verbose: int = 0,
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Solve the inverse kinematics problem using least squares optimization.
         The objective is to match the experimental marker positions with the model marker positions.
@@ -246,6 +281,8 @@ class ModelDynamics:
             The least square method to use. By default, the Levenberg-Marquardt method is used.
         animate_reconstruction
             Weather to animate the reconstruction
+            verbose
+        The verbosity level of the optimization algorithm [0, 1, 2]. Default is 0 (no output).
         """
 
         try:
@@ -310,7 +347,14 @@ class ModelDynamics:
             q_regularization_weight = 0.0
 
         optimal_q = np.zeros((self.nb_q, nb_frames))
+        residuals = None
+        if compute_residual_distance:
+            residuals = np.zeros((nb_markers, nb_frames))
         for i_frame in range(nb_frames):
+
+            if i_frame % 100 == 0 and i_frame != 0:
+                print(f"{i_frame}/{nb_frames} frames")
+
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
                     model_to_use,
@@ -332,10 +376,20 @@ class ModelDynamics:
                 ),
                 x0=init,
                 method=method,
-                xtol=1e-6,
+                xtol=1e-5,
+                ftol=1e-5,
                 tr_options=dict(disp=False),
+                verbose=verbose,
             )
-            optimal_q[:, i_frame] = sol.x
+            optimal_q[:, i_frame] = sol["x"]
+            if compute_residual_distance:
+                residuals[:, i_frame] = self._marker_distance(
+                    model_to_use,
+                    optimal_q[:, i_frame],
+                    marker_names_reordered,
+                    markers_real[:, :, i_frame],
+                    with_biorbd=with_biorbd,
+                )
 
         if animate_reconstruction:
             if not with_biorbd:
@@ -360,7 +414,7 @@ class ModelDynamics:
                 viz.add_animated_model(viz_scaled_model, optimal_q, tracked_markers=pyomarkers)
                 viz.rerun_by_frame("Model output")
 
-        return optimal_q
+        return optimal_q, residuals
 
     @requires_initialization
     def forward_kinematics(self, q: np.ndarray = None) -> dict[str, RotoTransMatrixTimeSeries]:
@@ -482,6 +536,56 @@ class ModelDynamics:
                 )
 
         return com_position
+
+    @requires_initialization
+    def muscle_origin_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        origin_position = np.ones((4, nb_frames))
+        jcs_in_global = self.forward_kinematics(q)
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.name == muscle_name:
+                    for i_frame in range(nb_frames):
+                        origin_position[:, i_frame] = point_from_local_to_global(
+                            point_in_local=muscle.origin_position.position,
+                            jcs_in_global=jcs_in_global[muscle_group.origin_parent_name][i_frame],
+                        ).reshape(
+                            -1,
+                        )
+
+        return origin_position
+
+    @requires_initialization
+    def muscle_insertion_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
+        q = np.zeros((self.nb_q, 1)) if q is None else q
+        if len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+
+        insertion_position = np.ones((4, nb_frames))
+        jcs_in_global = self.forward_kinematics(q)
+        for muscle_group in self.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.name == muscle_name:
+                    for i_frame in range(nb_frames):
+                        insertion_position[:, i_frame] = point_from_local_to_global(
+                            point_in_local=muscle.insertion_position.position,
+                            jcs_in_global=jcs_in_global[muscle_group.insertion_parent_name][i_frame],
+                        ).reshape(
+                            -1,
+                        )
+
+        return insertion_position
 
     @requires_initialization
     def via_points_in_global(self, muscle_name: str, q: np.ndarray = None) -> np.ndarray:
@@ -626,6 +730,25 @@ class ModelDynamics:
             muscle_tendon_length[i_frame] = muscle_norm
 
         return muscle_tendon_length
+
+    def animate(self, view_as: ViewAs = ViewAs.BIORBD, model_path: str = None):
+
+        if view_as == ViewAs.BIORBD:
+            try:
+                import pyorerun
+
+                if model_path is None or not model_path.endswith(".bioMod"):
+                    model_path = "temporary.bioMod"
+                    self.to_biomod(model_path, with_mesh=False)
+
+                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=False)
+                animation.options.set_all_labels(False)
+                animation.rerun()
+            except ImportError:
+                _logger.error("pyorerun is not installed. Cannot animate the model.")
+
+        else:
+            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use ViewAs.BIORBD for now.")
 
     # TODO: implement tendons
     # @requires_initialization

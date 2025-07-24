@@ -20,12 +20,6 @@ class MuscleGroup:
             The name of the insertion segment for this muscle group
         """
         # Sanity checks
-        if not isinstance(name, str):
-            raise ValueError("The name of the muscle group must be a string.")
-        if not isinstance(origin_parent_name, str):
-            raise ValueError("The name of the origin parent segment must be a string.")
-        if not isinstance(insertion_parent_name, str):
-            raise ValueError("The name of the insertion parent segment must be a string.")
         if origin_parent_name == insertion_parent_name and origin_parent_name != "":
             raise ValueError("The origin and insertion parent names cannot be the same.")
 
@@ -61,6 +55,30 @@ class MuscleGroup:
             The name of the muscle to remove
         """
         self.muscles._remove(muscle_name)
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @name.setter
+    def name(self, value: str):
+        self._name = value
+
+    @property
+    def origin_parent_name(self) -> str:
+        return self._origin_parent_name
+
+    @origin_parent_name.setter
+    def origin_parent_name(self, value: str):
+        self._origin_parent_name = value
+
+    @property
+    def insertion_parent_name(self) -> str:
+        return self._insertion_parent_name
+
+    @insertion_parent_name.setter
+    def insertion_parent_name(self, value: str):
+        self._insertion_parent_name = value
 
     @property
     def nb_muscles(self):

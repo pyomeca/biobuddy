@@ -29,6 +29,8 @@ def point_to_array(point: Point, name: str = "unknown") -> np.ndarray:
     if not isinstance(point, np.ndarray):
         point = np.array(point)
 
+    if len(point.shape) == 0:
+        raise RuntimeError(f"The point {name} must be a np.ndarray of shape (3,) or (4,), but received: {point}")
     error_message = f"The {name} must be a np.ndarray of shape (3,) or (4,), but received: {point.shape}"
 
     # Check the first dimension
@@ -89,6 +91,7 @@ def points_to_array(points: Points, name: str) -> np.ndarray:
         if points.shape[0] == 3:
             points = np.vstack((points, np.ones(points.shape[1])))
 
+        points[3] = 1  # Ensure the last row is all ones
         return points
     else:
         raise RuntimeError(f"The {name} must be a list or np.ndarray, but received: {type(points)}")

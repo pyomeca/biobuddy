@@ -17,16 +17,18 @@ from .joint import Joint
 from .marker import Marker
 from .muscle import get_muscle_from_element
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
 from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
 from ...utils.linear_algebra import (
-    OrthoMatrix,
+    RotoTransMatrix,
+    RotationMatrix,
     compute_matrix_rotation,
     is_ortho_basis,
     ortho_norm_basis,
@@ -111,7 +113,7 @@ class OsimModelParser:
         self.parse_tags(self.model.getroot())
 
         self.bodies: list[Body] = []
-        self.muscle_groups: list[MuscleGroup] = []
+        self.muscle_groups: list[MuscleGroupReal] = []
         self.muscles: list[MuscleReal] = []
         self.joints: list[Joint] = []
         self.markers: list[Marker] = []
@@ -358,14 +360,14 @@ class OsimModelParser:
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
-        rotomatrix = OrthoMatrix([0, 0, 0])
+        rt_matrix = RotoTransMatrix()
         if not skip_virtual:
             parent = dof.parent_body.split("/")[-1]
             axis_offset = np.identity(3)
             # Parent offset
             body_name = body.name + "_parent_offset"
             offset = [dof.parent_offset_trans, dof.parent_offset_rot]
-            self.write_virtual_segment(name=body_name, parent_name=parent, frame_offset=offset, rt_in_matrix=0)
+            self.write_virtual_segment(name=body_name, parent_name=parent, frame_offset=offset, rt_in_matrix=False)
             parent = body_name
 
             # Coordinates
@@ -392,13 +394,17 @@ class OsimModelParser:
                     for idx in np.where(trans_dof_names != None)[0]:
                         trans_axis += dof_axis[idx]
                         effective_trans_dof_names += [trans_dof_names[idx]]
+                    axis = RotationMatrix()
+                    axis.from_rotation_matrix(np.array(translations).T)
+                    axis_offset_rot_mat = RotationMatrix()
+                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
-                        axis=translations,
-                        axis_offset=axis_offset,
+                        axis=axis,
+                        axis_offset=axis_offset_rot_mat,
                         name=body_name,
                         parent=parent,
-                        rt_in_matrix=1,
-                        frame_offset=rotomatrix,
+                        rt_in_matrix=True,
+                        frame_offset=rt_matrix,
                         q_range=q_ranges_trans,
                         trans_dof=trans_axis,
                         dof_names=effective_trans_dof_names,
@@ -416,13 +422,17 @@ class OsimModelParser:
                         rot_axis += dof_axis[idx]
                         effective_rot_dof_names += [rot_dof_names[idx]]
                     body_name = body.name + "_rotation_transform"
+                    axis = RotationMatrix()
+                    axis.from_rotation_matrix(np.array(rotations).T)
+                    axis_offset_rot_mat = RotationMatrix()
+                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
-                        axis=rotations,
-                        axis_offset=axis_offset,
+                        axis=axis,
+                        axis_offset=axis_offset_rot_mat,
                         name=body_name,
                         parent=parent,
-                        rt_in_matrix=1,
-                        frame_offset=rotomatrix,
+                        rt_in_matrix=True,
+                        frame_offset=rt_matrix,
                         q_range=q_ranges_rot,
                         rot_dof=rot_axis,
                         dof_names=effective_rot_dof_names,
@@ -435,23 +445,23 @@ class OsimModelParser:
                         axis_offset,
                         body_name,
                         parent,
-                        frame_offset=rotomatrix,
-                        rt_in_matrix=1,
+                        frame_offset=rt_matrix,
+                        rt_in_matrix=True,
                         spatial_transform=dof.spatial_transform,
                         q_ranges=q_ranges_rot,
                         default_values=default_value_rot,
                     )
 
             # segment to cancel axis effects
-            rotomatrix.set_rotation_matrix(np.linalg.inv(axis_offset))
+            rt_matrix.rotation_matrix = axis_offset.T
 
-            if not rotomatrix.has_no_transformation():
+            if np.any(rt_matrix.rt_matrix != np.identity(4)):
                 body_name = body.name + "_reset_axis"
                 self.write_virtual_segment(
                     name=body_name,
                     parent_name=parent,
-                    frame_offset=rotomatrix,
-                    rt_in_matrix=1,
+                    frame_offset=rt_matrix,
+                    rt_in_matrix=True,
                 )
                 parent = body_name
 
@@ -479,12 +489,17 @@ class OsimModelParser:
             mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
             mesh_color=body.mesh_color[0] if body.mesh[0] and mesh_dir is not None else None,
             mesh_scale=body.mesh_scale_factor[0] if body.mesh[0] and mesh_dir is not None else None,
-            rt_in_matrix=0,
+            rt_in_matrix=False,
         )
 
     @staticmethod
-    def get_scs_from_offset(rt_in_matrix, frame_offset):
-        if rt_in_matrix == 0:
+    def get_scs_from_offset(rt_in_matrix: bool, frame_offset: RotoTransMatrix):
+        if rt_in_matrix:
+            frame_offset = frame_offset if frame_offset else RotoTransMatrix()
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
+                rt_matrix=get_closest_rt_matrix(frame_offset.rt_matrix), is_scs_local=True
+            )
+        else:
             frame_offset = frame_offset if frame_offset else [[0, 0, 0], [0, 0, 0]]
             segment_coordinate_system = SegmentCoordinateSystemReal.from_euler_and_translation(
                 angles=np.array(frame_offset[1]),
@@ -492,34 +507,22 @@ class OsimModelParser:
                 translation=np.array(frame_offset[0]),
                 is_scs_local=True,
             )
-        else:
-            frame_offset = frame_offset if frame_offset else OrthoMatrix([0, 0, 0])
-            translation_vector = frame_offset.get_translation().tolist()
-            rotation_matrix = frame_offset.get_rotation_matrix()
-            rt_matrix = np.vstack((np.hstack((rotation_matrix, translation_vector)), np.array([0, 0, 0, 1])))
-            # TODO: Charbie -> rt_matrix is not always orthogonal, should be handled differently !!!!!!!!
-            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
-                rt_matrix=get_closest_rt_matrix(rt_matrix), is_scs_local=True
-            )
         return segment_coordinate_system
 
     def write_ortho_segment(
         self,
-        axis,
-        axis_offset,
-        name,
-        parent,
-        rt_in_matrix,
-        frame_offset,
-        q_range=None,
-        trans_dof="",
-        rot_dof="",
+        axis: RotationMatrix,
+        axis_offset: RotationMatrix,
+        name: str,
+        parent: str,
+        rt_in_matrix: bool,
+        frame_offset: RotoTransMatrix,
+        q_range: list[str] = None,  # ex: ['-3 3', '-3 3', '-3 3']
+        trans_dof: str = "",  # ex: 'xyz'
+        rot_dof: str = "",  # ex: 'xyz'
         dof_names: list[str] = None,
     ):
-        x = axis[0]
-        y = axis[1]
-        z = axis[2]
-        frame_offset.set_rotation_matrix(np.append(x, np.append(y, z)).reshape(3, 3).T)
+        frame_offset.rotation_matrix = axis
         self.write_virtual_segment(
             name=name,
             parent_name=parent,
@@ -530,16 +533,16 @@ class OsimModelParser:
             rot_dof=rot_dof,
             dof_names=dof_names,
         )
-        return axis_offset.dot(frame_offset.get_rotation_matrix())
+        return axis_offset.rotation_matrix @ frame_offset.rotation_matrix
 
     def write_non_ortho_rot_segment(
         self,
         axis,
         axis_offset,
-        name,
+        name: str,
         parent,
-        rt_in_matrix,
-        frame_offset,
+        rt_in_matrix: bool,
+        frame_offset: RotoTransMatrix,
         spatial_transform,
         q_ranges=None,
         default_values=None,
@@ -571,17 +574,17 @@ class OsimModelParser:
                 body_dof = name + "_" + spatial_transform[i].coordinate.name
                 q_range = q_ranges[i]
 
-            frame_offset.set_rotation_matrix(axis_basis[i].dot(initial_rotation))
+            frame_offset.rotation_matrix = axis_basis[i] @ initial_rotation
             count_dof_rot += 1
             self.write_virtual_segment(
                 name=body_dof,
                 parent_name=parent,
                 frame_offset=frame_offset,
-                q_range=self.get_q_range(q_range),
+                q_range=self.get_q_range(q_range, body_dof),
                 rt_in_matrix=rt_in_matrix,
                 rot_dof=rot_dof,
             )
-            axis_offset = axis_offset.dot(frame_offset.get_rotation_matrix())
+            axis_offset = axis_offset @ frame_offset.rotation_matrix
             parent = body_dof
         return axis_offset, parent
 
@@ -596,7 +599,7 @@ class OsimModelParser:
         mesh_file=None,
         mesh_scale=None,
         mesh_color=None,
-        rt_in_matrix=0,
+        rt_in_matrix: bool = False,
     ):
         """
         True segments hold the inertia and markers, but do not have any DoFs.
@@ -636,16 +639,16 @@ class OsimModelParser:
 
     def write_virtual_segment(
         self,
-        name,
-        parent_name,
-        frame_offset,
-        q_range=None,
-        rt_in_matrix=0,
-        trans_dof="",
-        rot_dof="",
-        mesh_file=None,
-        mesh_color=None,
-        mesh_scale=None,
+        name: str,
+        parent_name: str,
+        frame_offset: list[list[float]],  # ex: [[0, 0, 0], [0, 0, 0]]
+        q_range: list[str] = None,
+        rt_in_matrix: bool = False,
+        trans_dof: str = "",  # ex: 'xyz'
+        rot_dof: str = "",  # ex: 'xyz'
+        mesh_file: str = None,
+        mesh_color: list[str] = None,  # ex: [0, 0, 0]
+        mesh_scale: list[str] = None,  # ex: [1, 1, 1]
         dof_names: list[str] = None,
     ):
         """
@@ -662,7 +665,7 @@ class OsimModelParser:
                 rotations=rotations,
                 dof_names=dof_names,
                 q_ranges=(
-                    self.get_q_range(q_range)
+                    self.get_q_range(q_range, dof_names)
                     if (translations != Translations.NONE or rotations != Rotations.NONE)
                     else None
                 ),
@@ -697,30 +700,31 @@ class OsimModelParser:
                 mesh_file=f"{mesh_dir}/{body.mesh[i]}" if mesh_dir is not None else None,
                 mesh_color=body.mesh_color[i] if mesh_dir is not None else None,
                 mesh_scale=body.mesh_scale_factor[i] if mesh_dir is not None else None,
-                rt_in_matrix=1,
+                rt_in_matrix=True,
             )
             parent_name = body_name
             frame_offset = body.mesh_offset[i]
         return frame_offset, parent_name
 
     @staticmethod
-    def get_q_range(q_range):
+    def get_q_range(q_range: RangeOfMotion | list[str], dof_names: list[str]):
         if isinstance(q_range, RangeOfMotion) or q_range is None:
             return q_range
         elif isinstance(q_range, list) or isinstance(q_range, str):
             q_range = [q_range] if isinstance(q_range, str) else q_range
             min_bound = []
             max_bound = []
-            for range in q_range:
-                if range is None:
-                    min_bound += [-2 * np.pi]
-                    max_bound += [2 * np.pi]
-                else:
-                    if "// " in range:
-                        range = range.replace("// ", "")
-                    r = range.split(" ")
-                    min_bound += [float(r[0])]
-                    max_bound += [float(r[1])]
+            for i_dof, dof_range in enumerate(q_range):
+                if i_dof < len(dof_names):
+                    if dof_range is None:
+                        min_bound += [-2 * np.pi]
+                        max_bound += [2 * np.pi]
+                    else:
+                        if "// " in dof_range:
+                            dof_range = dof_range.replace("// ", "")
+                        r = dof_range.split(" ")
+                        min_bound += [float(r[0])]
+                        max_bound += [float(r[1])]
             q_range = RangeOfMotion(range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound)
             return q_range
         else:
@@ -774,7 +778,7 @@ class OsimModelParser:
                 bodies.append(Body.from_element(element))
             return bodies
 
-    def _get_force_set(self) -> tuple[list[MuscleGroup], list[MuscleReal]]:
+    def _get_force_set(self) -> tuple[list[MuscleGroupReal], list[MuscleReal]]:
         muscle_groups = []
         muscles = []
         if is_element_empty(self.forceset_elt):

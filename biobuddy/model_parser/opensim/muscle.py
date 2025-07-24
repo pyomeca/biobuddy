@@ -5,9 +5,10 @@ from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree
 from .path_point import PathPoint, condition_from_element, movement_from_element
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
 
 
 OPENSIM_MUSCLE_TYPE = {

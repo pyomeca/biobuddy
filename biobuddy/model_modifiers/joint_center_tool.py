@@ -150,9 +150,9 @@ class RigidSegmentIdentification:
         child_trans = np.zeros((3, nb_frames))
         child_rot = np.zeros((3, nb_frames))
 
-        rt_parent_instance = RotoTransMatrixTimeSeries()
+        rt_parent_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
         rt_parent_instance.from_rt_matrix(rt_parent)
-        rt_child_instance = RotoTransMatrixTimeSeries()
+        rt_child_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
         rt_child_instance.from_rt_matrix(rt_child)
 
         for i_frame in range(nb_frames):
@@ -298,23 +298,38 @@ class RigidSegmentIdentification:
             imu.scs = rotation_translation_transform.rt_matrix @ imu.scs
 
         # Muscles (origin and insertion)
-        for muscle_name in new_model.muscle_origin_on_this_segment(self.child_name):
-            new_model.muscles[muscle_name].origin_position = (
-                new_child_jcs_in_global.inverse
-                @ point_from_local_to_global(original_model.muscles[muscle_name].origin_position, global_jcs)
-            )
-        for muscle_name in new_model.muscle_insertion_on_this_segment(self.child_name):
-            new_model.muscles[muscle_name].insertion_position = (
-                new_child_jcs_in_global.inverse
-                @ point_from_local_to_global(original_model.muscles[muscle_name].insertion_position, global_jcs)
-            )
+        for muscle_group in new_model.muscle_groups:
+            # If the muscle is attached to the child segment, we update its origin and insertion positions
+            if muscle_group.origin_parent_name == self.child_name:
+                for muscle in muscle_group.muscles:
+                    muscle.origin_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position,
+                        global_jcs,
+                    )
+            if muscle_group.insertion_parent_name == self.child_name:
+                for muscle in muscle_group.muscles:
+                    muscle.insertion_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .insertion_position.position,
+                        global_jcs,
+                    )
 
         # Via points
-        for via_point_name in new_model.via_points_on_this_segment(self.child_name):
-            new_model.via_points[via_point_name].position = (
-                new_child_jcs_in_global.inverse
-                @ point_from_local_to_global(original_model.via_points[via_point_name].position, global_jcs)
-            )
+        for muscle_group in new_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name == self.child_name:
+                        muscle.via_points[via_point.name].position = (
+                            new_child_jcs_in_global.inverse
+                            @ point_from_local_to_global(
+                                original_model.muscle_groups[muscle_group.name]
+                                .muscles[muscle.name]
+                                .via_points[via_point.name]
+                                .position,
+                                global_jcs,
+                            )
+                        )
 
     @staticmethod
     def check_optimal_rt_inputs(
@@ -386,7 +401,7 @@ class RigidSegmentIdentification:
                 )
             if problematic_indices_child.shape[0] > 0:
                 problematic_markers = np.where(np.nanmax(marker_movement_child, axis=1) > 0.03)[0]
-                problematic_marker_names = [self.parent_marker_names[i] for i in problematic_markers]
+                problematic_marker_names = [self.child_marker_names[i] for i in problematic_markers]
                 raise RuntimeError(
                     f"The child markers {problematic_marker_names} seem to be mislabeled as they move more than 3cm between frames {problematic_indices_child}."
                 )
@@ -517,7 +532,8 @@ class RigidSegmentIdentification:
                 if sol.success:
                     rt_optimal[:, :, i_frame] = np.reshape(sol.x, (4, 4))
                 else:
-                    init = rt_init[:, :, 0].reshape(4, 4)
+                    # If the optimization fails, we use the initial rt matrix to initialize the next frame
+                    init = rt_init[0].rt_matrix
                     print(f"The optimization failed: {sol.message}")
                     continue
 
@@ -1045,6 +1061,14 @@ class JointCenterTool:
                 first_segment.parent_name = "ground"
                 first_segment.translations = Translations.XYZ
                 first_segment.rotations = Rotations.XYZ
+                first_segment.dof_names = [
+                    f"{segment_name}_TransX",
+                    f"{segment_name}_TransY",
+                    f"{segment_name}_TransZ",
+                    f"{segment_name}_RotX",
+                    f"{segment_name}_RotY",
+                    f"{segment_name}_RotZ",
+                ]
                 first_segment.mesh_file = mesh_file
                 joint_model.add_segment(first_segment)
             else:
@@ -1089,7 +1113,7 @@ class JointCenterTool:
                 if marker not in task.c3d_data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
-            q_init = model_for_initial_rt.inverse_kinematics(
+            q_init, _ = model_for_initial_rt.inverse_kinematics(
                 marker_positions=marker_positions,
                 marker_names=marker_names,
                 marker_weights=initial_rt_marker_weights,
