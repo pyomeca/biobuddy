@@ -191,12 +191,17 @@ def test_mesh_file_real_from_data():
 
     # Test with invalid mesh_file_name
     with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(data=mock_data, model=None, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0])  # Not a string
+        MeshFileReal.from_data(
+            data=mock_data, model=None, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0]
+        )  # Not a string
 
     # Test with invalid mesh_color shape
     with pytest.raises(RuntimeError):
         MeshFileReal.from_data(
-            data=mock_data, model=None, mesh_file_name="test.obj", mesh_color=[1.0, 0.0, 0.0, 1.0]  # Should be RGB (3 values)
+            data=mock_data,
+            model=None,
+            mesh_file_name="test.obj",
+            mesh_color=[1.0, 0.0, 0.0, 1.0],  # Should be RGB (3 values)
         )
 
 

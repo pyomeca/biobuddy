@@ -131,19 +131,27 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
             # The rotation part did not change, only the translation part was modified
-            np.array([[ 0.94106637,  0.33488294,  0.04740786, -0.07073665],
-                   [-0.33553695,  0.90675222,  0.25537299, -0.02090582],
-                   [ 0.04253287, -0.25623002,  0.96567962,  0.09795824],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.94106637, 0.33488294, 0.04740786, -0.07073665],
+                    [-0.33553695, 0.90675222, 0.25537299, -0.02090582],
+                    [0.04253287, -0.25623002, 0.96567962, 0.09795824],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
     else:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
-            np.array([[ 0.94106637,  0.33488294,  0.04740786, -0.07167729],
-                   [-0.33553695,  0.90675222,  0.25537299, -0.02279122],
-                   [ 0.04253287, -0.25623002,  0.96567962,  0.09659234],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.94106637, 0.33488294, 0.04740786, -0.07167729],
+                    [-0.33553695, 0.90675222, 0.25537299, -0.02279122],
+                    [0.04253287, -0.25623002, 0.96567962, 0.09659234],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
 
@@ -152,19 +160,27 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
             # Both rotation and translation parts were modified
-            np.array([[ 0.97291137,  0.03767885, -0.22808722,  0.02126479],
-                       [-0.06119303,  0.99340983, -0.09691404, -0.40906061],
-                       [ 0.22293247,  0.10824612,  0.96880539, -0.03103533],
-                       [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.97291137, 0.03767885, -0.22808722, 0.02126479],
+                    [-0.06119303, 0.99340983, -0.09691404, -0.40906061],
+                    [0.22293247, 0.10824612, 0.96880539, -0.03103533],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
     else:
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
-            np.array([[ 0.97197795,  0.04183997, -0.23131857,  0.02157546],
-                   [-0.06106364,  0.99519203, -0.0765771 , -0.407386  ],
-                   [ 0.22700242,  0.08855641,  0.96985961, -0.02919023],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.97197795, 0.04183997, -0.23131857, 0.02157546],
+                    [-0.06106364, 0.99519203, -0.0765771, -0.407386],
+                    [0.22700242, 0.08855641, 0.96985961, -0.02919023],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
 
