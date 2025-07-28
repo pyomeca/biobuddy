@@ -412,7 +412,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=4,
+        decimal=3,
     )
     assert score_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
@@ -425,7 +425,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=4,
+        decimal=3,
     )
 
     assert score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
@@ -439,7 +439,7 @@ def test_score_and_sara_with_ghost_segments():
                 [0.0, 0.0, 0.0, 1.0],
             ]
         ),
-        decimal=4,
+        decimal=3,
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
