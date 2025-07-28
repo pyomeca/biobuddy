@@ -20,11 +20,12 @@ from .model_parser import *
 from .model_modifiers import *
 
 
-__all__ = (components.__all__ +
-           utils.__all__ +
-           characteristics.__all__ +
-           mesh_parser.__all__ +
-           model_parser.__all__ +
-           model_modifiers.__all__ +
-           ["__version__"]
-           )
+__all__ = (
+    components.__all__
+    + utils.__all__
+    + characteristics.__all__
+    + mesh_parser.__all__
+    + model_parser.__all__
+    + model_modifiers.__all__
+    + ["__version__"]
+)
