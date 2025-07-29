@@ -98,17 +98,17 @@ def test_rotation_vector_sequences():
     with pytest.raises(RuntimeError, match="Rotation sequence .* not recognized"):
         get_vector_from_sequence("invalid")
 
-    # Test get_sequence_from_vector
-    assert get_sequence_from_vector(np.array([1, 0, 0])) == "x"
-    assert get_sequence_from_vector(np.array([0, 1, 0])) == "y"
-    assert get_sequence_from_vector(np.array([0, 0, 1])) == "z"
+    # Test get_sequence_from_rotation_vector
+    assert get_sequence_from_rotation_vector(np.array([1, 0, 0])) == "x"
+    assert get_sequence_from_rotation_vector(np.array([0, 1, 0])) == "y"
+    assert get_sequence_from_rotation_vector(np.array([0, 0, 1])) == "z"
 
     # Test with 4D vector (should use first 3 components)
-    assert get_sequence_from_vector(np.array([1, 0, 0, 5])) == "x"
+    assert get_sequence_from_rotation_vector(np.array([1, 0, 0, 5])) == "x"
 
     # Test invalid rotation vector
     with pytest.raises(RuntimeError, match="Rotation vector .* not recognized"):
-        get_sequence_from_vector(np.array([1, 1, 0]))
+        get_sequence_from_rotation_vector(np.array([1, 1, 0]))
 
 
 def test_mean_homogenous_matrix():

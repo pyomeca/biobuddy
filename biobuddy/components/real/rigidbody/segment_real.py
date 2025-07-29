@@ -8,7 +8,7 @@ from .mesh_file_real import MeshFileReal
 from .mesh_real import MeshReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
-from ....utils.linear_algebra import RotoTransMatrix, euler_and_translation_to_matrix
+from ....utils.linear_algebra import RotoTransMatrix
 from ....utils.enums import Rotations
 from ....utils.enums import Translations
 from ....utils.named_list import NamedList

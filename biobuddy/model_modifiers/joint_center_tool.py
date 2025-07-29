@@ -16,7 +16,7 @@ from ..utils.linear_algebra import (
     RotoTransMatrixTimeSeries,
     point_from_local_to_global,
     get_vector_from_sequence,
-    get_sequence_from_vector,
+    get_sequence_from_rotation_vector,
     rot2eul,
 )
 
@@ -833,7 +833,7 @@ class Sara(RigidSegmentIdentification):
                     ].segment_coordinate_system.scs.rotation_matrix
                     @ rotation_vector
                 )
-                rot = get_sequence_from_vector(rotation_vector)
+                rot = get_sequence_from_rotation_vector(rotation_vector)
             else:
                 NotImplementedError(
                     "Your model has a _rotation_transform segment without a _reset_axis segment, which is not implemented yet."

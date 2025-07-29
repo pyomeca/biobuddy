@@ -1,6 +1,5 @@
 from .generic.rigidbody.range_of_motion import RangeOfMotion
-from ..utils.rotations import Rotations
-from ..utils.translations import Translations
+from ..utils.enums import Rotations, Translations
 from ..utils.named_list import NamedList
 
 

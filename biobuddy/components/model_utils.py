@@ -1,5 +1,4 @@
-from ..utils.translations import Translations
-from ..utils.rotations import Rotations
+from ..utils.enums import Translations, Rotations
 
 
 class ModelUtils:
