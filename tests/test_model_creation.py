@@ -1,8 +1,8 @@
 import os
 import pytest
 
-import ezc3d
 import numpy as np
+import numpy.testing as npt
 from biorbd import Model
 
 from biobuddy import (
@@ -277,7 +277,6 @@ class FakeData:
         self.nb_frames = 1
 
 
-# TODO: this test fails with exit code 134
 def test_model_creation_from_data():
 
     kinematic_model_filepath = "temporary.bioMod"
@@ -287,10 +286,9 @@ def test_model_creation_from_data():
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="TRUNK",
-            parent_name="base",
             segment_coordinate_system=SegmentCoordinateSystem(
                 lambda m, k: np.array([0, 0, 0]),
                 first_axis=Axis(
@@ -312,7 +310,7 @@ def test_model_creation_from_data():
     )
     model.segments["TRUNK"].add_marker(Marker("PELVIS"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HEAD",
             parent_name="TRUNK",
@@ -331,7 +329,7 @@ def test_model_creation_from_data():
     model.segments["HEAD"].add_marker(Marker("HEAD_Z"))
     model.segments["HEAD"].add_marker(Marker("HEAD_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="UPPER_ARM",
             parent_name="TRUNK",
@@ -349,7 +347,7 @@ def test_model_creation_from_data():
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_X"))
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="LOWER_ARM",
             parent_name="UPPER_ARM",
@@ -366,7 +364,7 @@ def test_model_creation_from_data():
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_Y"))
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW_XY"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="HAND",
             parent_name="LOWER_ARM",
@@ -384,7 +382,7 @@ def test_model_creation_from_data():
     model.segments["HAND"].add_marker(Marker("HAND_Y"))
     model.segments["HAND"].add_marker(Marker("HAND_YZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="THIGH",
             parent_name="TRUNK",
@@ -402,7 +400,7 @@ def test_model_creation_from_data():
     model.segments["THIGH"].add_marker(Marker("THIGH_X"))
     model.segments["THIGH"].add_marker(Marker("THIGH_Y"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="SHANK",
             parent_name="THIGH",
@@ -420,7 +418,7 @@ def test_model_creation_from_data():
     model.segments["SHANK"].add_marker(Marker("KNEE_Z"))
     model.segments["SHANK"].add_marker(Marker("KNEE_XZ"))
 
-    model.segments.append(
+    model.add_segment(
         Segment(
             name="FOOT",
             parent_name="SHANK",
@@ -448,112 +446,37 @@ def test_model_creation_from_data():
     # print it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
 
-    model = Model(kinematic_model_filepath)
-    assert model.nbQ() == 7
-    assert model.nbSegment() == 9
-    assert model.nbMarkers() == 25
-    value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
-    np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
+    biorbd_model = Model(kinematic_model_filepath)
+    assert biorbd_model.nbQ() == 7
+    assert real_model.nb_q == 7
+    assert model.nb_q == 7
+    assert biorbd_model.nbSegment() == 9
+    assert real_model.nb_segments == 9
+    assert model.nb_segments == 9
+    assert biorbd_model.nbMarkers() == 25
+    assert real_model.nb_markers == 25
+    assert model.nb_markers == 25
+    biorbd_markers = biorbd_model.markers(np.zeros((biorbd_model.nbQ(),)))[-3].to_array()
+    np.testing.assert_almost_equal(biorbd_markers, [0, 0.25, -0.85], decimal=4)
+    biobuddy_markers = real_model.markers_in_global(np.zeros((real_model.nb_q,)))[:3, -3, 0]
+    np.testing.assert_almost_equal(biobuddy_markers, [0, 0.25, -0.85], decimal=4)
 
-    # # @pariterre: There should be an inheritance somewhere (I am not reimplementing them all on the BiomechanicsModel too)
-    # destroy_model(model)
-    #
-    # # Test the attributes of the model
-    # assert model.segments == []
-    # assert model.markers == []
+    destroy_model(model)
+    destroy_model(real_model)
 
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
 
 
 def test_complex_model():
+    from examples.create_model import complex_model_from_scratch
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
     kinematic_model_filepath = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
-    mesh_path = f"meshes/pendulum.STL"
+    mesh_path = f"{current_path_folder}/../examples/models/meshes/pendulum.STL"
 
-    # Create a model holder
-    bio_model = BiomechanicalModel()
-
-    # The ground segment
-    bio_model.add_segment(Segment(name="GROUND"))
-
-    # The pendulum segment
-    bio_model.add_segment(
-        Segment(
-            name="PENDULUM",
-            translations=Translations.XYZ,
-            rotations=Rotations.X,
-            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-1, -1, -1, -np.pi], max_bound=[1, 1, 1, np.pi]),
-            qdot_ranges=RangeOfMotion(
-                range_type=Ranges.Qdot, min_bound=[-10, -10, -10, -np.pi * 10], max_bound=[10, 10, 10, np.pi * 10]
-            ),
-            segment_coordinate_system=SegmentCoordinateSystem(
-                lambda m, k: np.array([0, 0, 0]),
-                first_axis=Axis(
-                    name=Axis.Name.Z,
-                    start=lambda m, model: np.array([0, 0, 0]),
-                    end=lambda m, model: np.array([0, 0, 1]),
-                ),
-                second_axis=Axis(
-                    name=Axis.Name.X,
-                    start=lambda m, model: np.array([0, 0, 0]),
-                    end=lambda m, model: np.array([1, 0, 0]),
-                ),
-                axis_to_keep=Axis.Name.Z,
-            ),
-            mesh_file=MeshFile(
-                mesh_file_name=mesh_path,
-                mesh_color=np.array([0, 0, 1]),
-                scaling_function=lambda m: np.array([1, 1, 10]),
-                rotation_function=lambda m: np.array([np.pi / 2, 0, 0]),
-                translation_function=lambda m: np.array([0.1, 0, 0]),
-            ),
-        )
-    )
-    # The pendulum segment contact point
-    bio_model.segments["PENDULUM"].add_contact(
-        Contact(
-            name="PENDULUM_CONTACT",
-            function=lambda m: np.array([0, 0, 0]),
-            parent_name="PENDULUM",
-            axis=Translations.XYZ,
-        )
-    )
-
-    # The pendulum muscle group
-    bio_model.add_muscle_group(
-        MuscleGroup(name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM")
-    )
-
-    # The pendulum muscle
-    bio_model.add_muscle(
-        Muscle(
-            "PENDULUM_MUSCLE",
-            muscle_type=MuscleType.HILL_THELEN,
-            state_type=MuscleStateType.DEGROOTE,
-            muscle_group="PENDULUM_MUSCLE_GROUP",
-            origin_position_function=lambda m, model: np.array([0, 0, 0]),
-            insertion_position_function=lambda m, model: np.array([0, 0, 1]),
-            optimal_length_function=lambda m, model: 0.1,
-            maximal_force_function=lambda m, model: 100.0,
-            tendon_slack_length_function=lambda m, model: 0.05,
-            pennation_angle_function=lambda m, model: 0.05,
-            maximal_excitation=1,
-        )
-    )
-    bio_model.add_via_point(
-        ViaPoint(
-            "PENDULUM_MUSCLE",
-            position_function=lambda m, model: np.array([0, 0, 0.5]),
-            parent_name="PENDULUM",
-            muscle_name="PENDULUM_MUSCLE",
-            muscle_group="PENDULUM_MUSCLE_GROUP",
-        )
-    )
-
-    # Put the model together
-    real_model = bio_model.to_real({})
+    # Create the model
+    real_model = complex_model_from_scratch(mesh_path=mesh_path, remove_temporary=False)
 
     # Print it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath, with_mesh=False)
@@ -571,6 +494,82 @@ def test_complex_model():
     assert real_model.nb_muscle_groups == 1
     assert model.nbContacts() == 3  # Number of rigid contact axis
     assert real_model.nb_contacts == 1  # Number of rigid contact points
+
+    # Test the position of elements
+    assert real_model.segments["PENDULUM"].q_ranges.min_bound == [-1, -1, -1, -np.pi]
+    assert real_model.segments["PENDULUM"].q_ranges.max_bound == [1, 1, 1, np.pi]
+    assert real_model.segments["PENDULUM"].qdot_ranges.min_bound == [-10, -10, -10, -np.pi * 10]
+    assert real_model.segments["PENDULUM"].qdot_ranges.max_bound == [10, 10, 10, np.pi * 10]
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(
+            4,
+        ),
+        np.array([1.0, 1.0, 10.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(
+            4,
+        ),
+        np.array([np.pi / 2, 0.0, 0.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(
+            4,
+        ),
+        np.array([0.1, 0.0, 0.0, 1.0]),
+    )
+
+    npt.assert_almost_equal(
+        real_model.segments["PENDULUM"]
+        .contacts["PENDULUM_CONTACT"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.0, 1.0]),
+    )
+    assert real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].axis == Translations.XYZ
+
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].origin_parent_name == "GROUND"
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].insertion_parent_name == "PENDULUM"
+
+    assert (
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].muscle_type
+        == MuscleType.HILL_THELEN
+    )
+    assert (
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].state_type
+        == MuscleStateType.DEGROOTE
+    )
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .origin_position.position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.0, 1.0]),
+    )
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .insertion_position.position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 1.0, 1.0]),
+    )
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].optimal_length == 0.1
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].maximal_force == 100.0
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].tendon_slack_length == 0.05
+    assert real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].pennation_angle == 0.05
+
+    npt.assert_almost_equal(
+        real_model.muscle_groups["PENDULUM_MUSCLE_GROUP"]
+        .muscles["PENDULUM_MUSCLE"]
+        .via_points["PENDULUM_MUSCLE"]
+        .position.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.5, 1.0]),
+    )
 
     destroy_model(real_model)
 

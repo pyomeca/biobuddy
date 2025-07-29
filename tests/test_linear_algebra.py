@@ -9,8 +9,8 @@ from biobuddy.utils.linear_algebra import (
     rot_x_matrix,
     rot_y_matrix,
     rot_z_matrix,
-    get_vector_from_sequence,
-    get_sequence_from_vector,
+    get_rotation_vector_from_sequence,
+    get_sequence_from_rotation_vector,
     euler_and_translation_to_matrix,
     mean_homogenous_matrix,
     mean_unit_vector,
@@ -30,8 +30,6 @@ from biobuddy.utils.linear_algebra import (
     point_from_local_to_global,
     RotoTransMatrix,
     RotoTransMatrixTimeSeries,
-    OrthoMatrix,
-    multiply_homogeneous_matrix,
 )
 
 
@@ -113,62 +111,6 @@ def test_rotation_vector_sequences():
         get_sequence_from_vector(np.array([1, 1, 0]))
 
 
-def test_euler_and_translation_to_matrix():
-    """Test Euler angle and translation to matrix conversion."""
-    # Test single rotation
-    angles = np.array([np.pi / 2])
-    angle_sequence = "x"
-    translations = np.array([1, 2, 3])
-
-    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
-
-    # Check dimensions
-    assert rt.shape == (4, 4)
-
-    # Check homogeneous matrix structure
-    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
-
-    # Check rotation part
-    npt.assert_almost_equal(rt[:3, :3], np.array([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0]]))
-
-    # Check translation part
-    npt.assert_almost_equal(rt[:3, 3], translations)
-
-    # Test multiple rotations
-    angles = np.array([np.pi / 4, np.pi / 6, np.pi / 3])
-    angle_sequence = "xyz"
-    translations = np.array([1, 2, 3])
-
-    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
-
-    # Check dimensions
-    assert rt.shape == (4, 4)
-
-    # Check homogeneous matrix structure
-    npt.assert_almost_equal(rt[3, :], np.array([0, 0, 0, 1]))
-
-    # Check translation part
-    npt.assert_almost_equal(rt[:3, 3], translations)
-
-    # Check rotation part
-    npt.assert_almost_equal(
-        rt[:3, :3],
-        np.array(
-            [[0.4330127, -0.75, 0.5], [0.78914913, 0.04736717, -0.61237244], [0.43559574, 0.65973961, 0.61237244]]
-        ),
-    )
-
-    # Test error conditions
-    with pytest.raises(RuntimeError, match="The angles must be a vector"):
-        euler_and_translation_to_matrix(np.array([[1, 2], [3, 4]]), "x", np.array([1, 2, 3]))
-
-    with pytest.raises(RuntimeError, match="The number of angles must be equal"):
-        euler_and_translation_to_matrix(np.array([1, 2]), "x", np.array([1, 2, 3]))
-
-    with pytest.raises(RuntimeError, match="The translations must be a vector"):
-        euler_and_translation_to_matrix(np.array([1]), "x", np.array([[1, 2], [3, 4]]))
-
-
 def test_mean_homogenous_matrix():
     """Test mean homogeneous matrix computation."""
     # Create test matrices
@@ -241,7 +183,9 @@ def test_to_euler():
     """Test conversion from rotation matrix to Euler angles."""
     # Test with known angles
     angles = np.array([0.1, 0.2, 0.3])
-    rt = euler_and_translation_to_matrix(angles, "xyz", np.array([0, 0, 0]))
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_euler_angles_and_translation("xyz", angles, np.array([0, 0, 0]))
+    rt = rt_matrix.rt_matrix
 
     # Check the rt matrix
     npt.assert_almost_equal(
@@ -365,7 +309,19 @@ def test_get_closest_rt_matrix():
     # Check that result is valid
     assert result.shape == (4, 4)
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
-    npt.assert_almost_equal(result[:3, :3] @ result[:3, :3].T, np.eye(3), decimal=6)
+    npt.assert_almost_equal(result[:3, :3], np.eye(3), decimal=6)
+    npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
+
+    # Test with slightly invalid rotation matrix with inverted axis
+    invalid_rt = np.eye(4)
+    invalid_rt[:3, :3] = np.array([[0, 0, 1.0], [0, 0.99, 0], [1.01, 0, 0]])
+
+    result = get_closest_rt_matrix(invalid_rt)
+
+    # Check that result is valid
+    assert result.shape == (4, 4)
+    npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
+    npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
 
     # Test error conditions
@@ -576,7 +532,7 @@ def test_rototrans_matrix_class():
     npt.assert_almost_equal(rt3.rt_matrix, rt_matrix)
 
     # Test inverse
-    inverse_rt = rt3.inverse
+    inverse_rt = rt3.inverse.rt_matrix
 
     # Check that inverse is correct
     npt.assert_almost_equal(rt3.rt_matrix @ inverse_rt, np.eye(4))
@@ -618,7 +574,7 @@ def test_rototrans_matrix_time_series():
         translations[:, i] = np.array([i, 0, 0])
 
     # Test initialization
-    rt_series = RotoTransMatrixTimeSeries()
+    rt_series = RotoTransMatrixTimeSeries(n_frames)
     rt_series.from_rotation_matrix_and_translation(rotation_matrices, translations)
 
     # Check that we can access individual frames
@@ -634,7 +590,7 @@ def test_rototrans_matrix_time_series():
         rt_matrices[:3, 3, i] = translations[:, i]
         rt_matrices[3, 3, i] = 1.0
 
-    rt_series2 = RotoTransMatrixTimeSeries()
+    rt_series2 = RotoTransMatrixTimeSeries(n_frames)
     rt_series2.from_rt_matrix(rt_matrices)
 
     # Check that we get the same results
@@ -650,41 +606,6 @@ def test_rototrans_matrix_time_series():
         rt_series.from_rt_matrix(np.eye(4))
 
 
-def test_ortho_matrix_class():
-    """Test OrthoMatrix class."""
-    # Test initialization
-    translation = (1, 2, 3)
-    rotation_1 = (1, 0, 0)
-    rotation_2 = (0, 1, 0)
-    rotation_3 = (0, 0, 1)
-
-    ortho_matrix = OrthoMatrix(translation, rotation_1, rotation_2, rotation_3)
-
-    # Check dimensions
-    assert ortho_matrix.get_matrix().shape == (4, 4)
-
-    # Check that translation is set correctly
-    npt.assert_almost_equal(ortho_matrix.get_translation().flatten(), np.array([1, 2, 3]))
-
-    # Check that rotation matrix is orthogonal
-    rot_matrix = ortho_matrix.get_rotation_matrix()
-    npt.assert_almost_equal(rot_matrix @ rot_matrix.T, np.eye(3), decimal=10)
-    npt.assert_almost_equal(np.linalg.det(rot_matrix), 1.0)
-
-    # Test identity case
-    identity_ortho = OrthoMatrix()
-    assert identity_ortho.has_no_transformation()
-
-    # Test transpose operation
-    ortho_copy = OrthoMatrix(translation, rotation_1, rotation_2, rotation_3)
-    original_matrix = ortho_copy.get_matrix().copy()
-    ortho_copy.transpose()
-
-    # After transpose, the transformation should be inverted
-    expected_inverse = np.linalg.inv(original_matrix)
-    npt.assert_almost_equal(ortho_copy.get_matrix(), expected_inverse, decimal=10)
-
-
 def test_rt():
 
     np.random.seed(42)
@@ -695,21 +616,6 @@ def test_rt():
             angles = np.random.rand(nb_angles) * 2 * np.pi
             translations = np.random.rand(3)
 
-            # --- rt from translations and Euler angles --- #
-            # TODO: remove when the uniformization is completed
-            rt_biobuddy = euler_and_translation_to_matrix(
-                angles=angles, angle_sequence=angle_sequence.value, translations=translations
-            )
-            rot_biobuddy = rt_biobuddy[:3, :3]
-            rot_biorbd = biorbd.Rotation.fromEulerAngles(angles, angle_sequence.value).to_array()
-
-            npt.assert_almost_equal(
-                rot_biobuddy,
-                rot_biorbd,
-            )
-            npt.assert_almost_equal(translations, rt_biobuddy[:3, 3])
-
-            # TODO: Leave this section though
             rt_biobuddy = RotoTransMatrix()
             rt_biobuddy.from_euler_angles_and_translation(
                 angles=angles, angle_sequence=angle_sequence.value, translation=translations
@@ -742,34 +648,13 @@ def test_rt():
 
 def test_point_from_global_to_local():
     point_in_global = np.array([0.1, 0.1, 0.1])
-    jcs_in_global = np.array([[1.0, 0.0, 0.0, 0.1], [0.0, 0.0, -1.0, 0.1], [0.0, 1.0, 0.0, 0.1], [0.0, 0.0, 0.0, 1.0]])
+    jcs_in_global = RotoTransMatrix()
+    jcs_in_global.from_rt_matrix(
+        np.array([[1.0, 0.0, 0.0, 0.1], [0.0, 0.0, -1.0, 0.1], [0.0, 1.0, 0.0, 0.1], [0.0, 0.0, 0.0, 1.0]])
+    )
 
     point_in_local = point_from_global_to_local(point_in_global, jcs_in_global)
     npt.assert_almost_equal(point_in_local, np.array([[0.0], [0.0], [0.0], [1.0]]))
-
-
-def test_multiply_homogeneous_matrix():
-
-    angles = np.array([0.1, 0.2, 0.3])
-    angle_sequence = "zyx"
-    translations = np.array([1, 2, 3])
-
-    rt = euler_and_translation_to_matrix(angles, angle_sequence, translations)
-    matrix_1 = SegmentCoordinateSystemReal(rt)
-    matrix_2 = euler_and_translation_to_matrix(angles * 2, angle_sequence, translations * 2)
-
-    mult = multiply_homogeneous_matrix(matrix_1, matrix_2)
-    npt.assert_almost_equal(
-        mult,
-        np.array(
-            [
-                [0.78849493, 0.13230009, 0.60064334, 4.11261658],
-                [0.37046366, 0.67738988, -0.63553098, 4.37081205],
-                [-0.49095053, 0.72362949, 0.48510611, 9.37893943],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
-    )
 
 
 def test_transpose_homogenous_matrix():
@@ -830,9 +715,8 @@ def test_point_transformations():
     rotation = rot_z_matrix(angle)
     translation = np.array([1, 2, 3])
 
-    rt_matrix = np.eye(4)
-    rt_matrix[:3, :3] = rotation
-    rt_matrix[:3, 3] = translation
+    rt_matrix = RotoTransMatrix()
+    rt_matrix.from_rotation_matrix_and_translation(rotation, translation)
 
     # Test point
     point_global = np.array([5, 6, 7])
@@ -852,8 +736,8 @@ def test_point_transformations():
     assert point_global_back[3, 0] == 1.0
 
 
-def test_additional_edge_cases():
-    """Test additional edge cases for better coverage."""
+def test_roto_trans_matrix():
+
     # Test coord_sys with zero vector
     axes, label = coord_sys([0, 0, 0])
     expected_axes = [[1, 0, 0], [0, 1, 0], [0, 0, 1]]
@@ -894,27 +778,38 @@ def test_additional_edge_cases():
     rt_obj2.rotation_matrix = new_rotation
     npt.assert_almost_equal(rt_obj2.rotation_matrix, new_rotation)
 
-    # Test OrthoMatrix methods
-    ortho = OrthoMatrix(translation=(1, 2, 3))
+    # Test the rt_matrix
+    rt_expected = np.array(
+        [
+            [1.0, 0.0, 0.0, 1.0],
+            [0.0, 0.70710678, -0.70710678, 2.0],
+            [0.0, 0.70710678, 0.70710678, 3.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+    npt.assert_almost_equal(rt_obj2.rt_matrix, rt_expected)
 
-    # Test set_rotation_matrix
-    new_rot = rot_y_matrix(np.pi / 6)
-    ortho.set_rotation_matrix(new_rot)
-    npt.assert_almost_equal(ortho.get_rotation_matrix(), new_rot)
+    # Test the multiplication by a matrix
+    expected_identity = rt_obj2.inverse @ rt_obj2
+    npt.assert_almost_equal(expected_identity.rt_matrix, np.eye(4))
+    npt.assert_almost_equal(rt_obj2.inverse.rt_matrix, np.linalg.inv(rt_expected))
+    mult_res = rt_obj2 @ rt_obj2
+    npt.assert_almost_equal(mult_res.rt_matrix, rt_expected @ rt_expected)
 
-    # Test set_translation
-    new_trans = np.array([[4], [5], [6]])
-    ortho.set_translation(new_trans)
-    npt.assert_almost_equal(ortho.get_translation(), new_trans)
-
-    # Test product method
-    ortho1 = OrthoMatrix(translation=(1, 0, 0))
-    ortho2 = OrthoMatrix(translation=(0, 1, 0))
-
-    result_matrix = ortho1.product(ortho2)
-    assert result_matrix.shape == (4, 4)
-
-    # Test get_axis method
-    ortho_axis = OrthoMatrix(rotation_1=(1, 0, 0), rotation_2=(0, 1, 0), rotation_3=(0, 0, 1))
-    axis_string = ortho_axis.get_axis()
-    assert isinstance(axis_string, str)
+    # Test the multiplication by a vector
+    point_4D = np.array([0.01, 0.2, 3.3, 1.0])
+    mult_res = rt_obj2 @ point_4D
+    npt.assert_almost_equal(
+        mult_res.reshape(
+            4,
+        ),
+        rt_expected @ point_4D,
+    )
+    point_3D = np.array([0.01, 0.2, 3.3])
+    mult_res = rt_obj2 @ point_3D
+    npt.assert_almost_equal(
+        mult_res.reshape(
+            4,
+        ),
+        rt_expected @ point_4D,
+    )

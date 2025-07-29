@@ -14,7 +14,7 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
 )
 from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.enums import Translations
 
@@ -157,13 +157,9 @@ class BiomodConfigurationParser:
                     elif token.lower() == "scalingtype":
                         scaling_type = read_str(next_token=next_token)
                         if scaling_type.lower() == "segmentwisescaling":
-                            current_component.scaling_type = SegmentWiseScaling(
-                                segment_name="", axis=None, marker_pairs=[]
-                            )
+                            current_component.scaling_type = SegmentWiseScaling(axis=None, marker_pairs=[])
                         elif scaling_type.lower() == "axiswisescaling":
-                            current_component.scaling_type = AxisWiseScaling(
-                                segment_name="", axis=None, marker_pairs=[]
-                            )
+                            current_component.scaling_type = AxisWiseScaling(axis=None, marker_pairs=[])
                         else:
                             raise NotImplementedError(f"Scaling type {scaling_type} not implemented yet.")
 
@@ -220,7 +216,7 @@ class BiomodConfigurationParser:
                 elif (
                     isinstance(current_component, ViaPointReal)
                     or isinstance(current_component, MuscleReal)
-                    or isinstance(current_component, MuscleGroup)
+                    or isinstance(current_component, MuscleGroupReal)
                     or isinstance(current_component, MarkerReal)
                     or isinstance(current_component, InertialMeasurementUnitReal)
                     or isinstance(current_component, SegmentReal)

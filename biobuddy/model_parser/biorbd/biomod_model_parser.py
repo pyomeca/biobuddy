@@ -14,8 +14,9 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
     ContactReal,
 )
-from ...components.real.muscle.muscle_real import MuscleReal, MuscleType, MuscleStateType
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.muscle_utils import MuscleType, MuscleStateType
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
@@ -47,9 +48,7 @@ class BiomodModelParser:
         # Prepare the internal structure to hold the model
         self.gravity = None
         self.segments = NamedList[SegmentReal]()
-        self.muscle_groups = NamedList[MuscleGroup]()
-        self.muscles = NamedList[MuscleReal]()
-        self.via_points = NamedList[ViaPointReal]()
+        self.muscle_groups = NamedList[MuscleGroupReal]()
         self.warnings = ""
 
         def next_token():
@@ -112,7 +111,7 @@ class BiomodModelParser:
                         current_component = ContactReal(name=read_str(next_token=next_token), parent_name="")
                     elif token.lower() == "musclegroup":
                         check_if_version_defined(biomod_version)
-                        current_component = MuscleGroup(
+                        current_component = MuscleGroupReal(
                             name=read_str(next_token=next_token), origin_parent_name="", insertion_parent_name=""
                         )
                     elif token.lower() == "muscle":
@@ -150,6 +149,7 @@ class BiomodModelParser:
 
                 elif isinstance(current_component, SegmentReal):
                     if token.lower() == "endsegment":
+                        current_component.update_dof_names()
                         self.segments.append(current_component)
                         current_component = None
                     elif token.lower() == "parent":
@@ -272,7 +272,7 @@ class BiomodModelParser:
                     elif token.lower() == "axis":
                         current_component.axis = Translations(read_str(next_token=next_token))
 
-                elif isinstance(current_component, MuscleGroup):
+                elif isinstance(current_component, MuscleGroupReal):
                     if token.lower() == "endmusclegroup":
                         if not current_component.insertion_parent_name:
                             raise ValueError(f"Insertion parent name not found in musclegroup {current_component.name}")
@@ -305,7 +305,7 @@ class BiomodModelParser:
                             raise ValueError(f"Tendon slack length not found in muscle {current_component.name}")
                         if current_component.pennation_angle is None:
                             raise ValueError(f"Pennation angle not found in muscle {current_component.name}")
-                        self.muscles.append(current_component)
+                        self.muscle_groups[current_component.muscle_group].add_muscle(current_component)
                         current_component = None
                     elif token.lower() == "type":
                         current_component.muscle_type = MuscleType(read_str(next_token=next_token))
@@ -314,9 +314,21 @@ class BiomodModelParser:
                     elif token.lower() == "musclegroup":
                         current_component.muscle_group = read_str(next_token=next_token)
                     elif token.lower() == "originposition":
-                        current_component.origin_position = read_float_vector(next_token=next_token, length=3)
+                        current_component.origin_position = ViaPointReal(
+                            name=f"origin_{current_component.name}",
+                            parent_name=self.muscle_groups[current_component.muscle_group].origin_parent_name,
+                            muscle_name=current_component.name,
+                            muscle_group=current_component.muscle_group,
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "insertionposition":
-                        current_component.insertion_position = read_float_vector(next_token=next_token, length=3)
+                        current_component.insertion_position = ViaPointReal(
+                            name=f"insertion_{current_component.name}",
+                            parent_name=self.muscle_groups[current_component.muscle_group].insertion_parent_name,
+                            muscle_name=current_component.name,
+                            muscle_group=current_component.muscle_group,
+                            position=read_float_vector(next_token=next_token, length=3),
+                        )
                     elif token.lower() == "optimallength":
                         current_component.optimal_length = read_float(next_token=next_token)
                     elif token.lower() == "maximalforce":
@@ -336,7 +348,9 @@ class BiomodModelParser:
                             raise ValueError(f"Muscle name type not found in via point {current_component.name}")
                         if not current_component.muscle_group:
                             raise ValueError(f"Muscle group not found in muscle {current_component.name}")
-                        self.via_points.append(current_component)
+                        self.muscle_groups[current_component.muscle_group].muscles[
+                            current_component.muscle_name
+                        ].add_via_point(current_component)
                         current_component = None
                     elif token.lower() == "parent":
                         current_component.parent_name = read_str(next_token=next_token)
@@ -362,14 +376,6 @@ class BiomodModelParser:
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(deepcopy(muscle_group))
 
-        # Add the muscles
-        for muscle in self.muscles:
-            model.add_muscle(deepcopy(muscle))
-
-        # Add the via points
-        for via_point in self.via_points:
-            model.add_via_point(deepcopy(via_point))
-
         model.warnings = self.warnings
 
         return model
@@ -388,4 +394,4 @@ def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarr
         scs = SegmentCoordinateSystemReal.from_euler_and_translation(
             angles=angles, angle_sequence=angle_sequence, translations=translations, is_scs_local=True
         )
-    return scs.scs[:, :, 0]
+    return scs.scs

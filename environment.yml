@@ -80,7 +80,6 @@ dependencies:
       - pillow==11.2.1
       - pluggy==1.6.0
       - pygments==2.19.1
-      - pyomeca==2024.0.2
       - pyparsing==3.2.3
       - pytest==8.4.1
       - pytest-cov==6.2.1

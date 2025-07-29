@@ -33,7 +33,7 @@ class InertiaParameters:
         self.center_of_mass = center_of_mass
         self.inertia = inertia
 
-    def to_real(
+    def to_inertia(
         self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
     ) -> InertiaParametersReal:
         return InertiaParametersReal.from_data(

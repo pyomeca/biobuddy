@@ -7,7 +7,6 @@ from pathlib import Path
 import numpy as np
 import biorbd
 
-from pyomeca import Markers
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
 
 
@@ -45,12 +44,54 @@ def main(visualization):
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+    # Fix the via points before translating to biomod as there are some conditional and moving via points
+    model.fix_via_points(q=np.zeros((model.nb_q,)))
 
     # Translate into biomod
     model.to_biomod(biomod_filepath)
 
     # Setup the scaling configuration (which markers to use)
     scale_tool = ScaleTool(original_model=model).from_xml(filepath=xml_filepath)
+
+    # # Note that it is also possible to initialize the ScaleTool from scratch like this
+    # from biobuddy import SegmentScaling, BodyWiseScaling, SegmentWiseScaling, AxisWiseScaling, Translations
+    #
+    # # BodyWise scaling
+    # scale_tool.add_scaling_segment(
+    #     SegmentScaling(
+    #         name="pelvis",
+    #         scaling_type=BodyWiseScaling(
+    #             subject_height=1.70,
+    #         ),
+    #     )
+    # )
+    # # SegmentWise scaling
+    # scale_tool.add_scaling_segment(
+    #     SegmentScaling(
+    #         name="pelvis",
+    #         scaling_type=SegmentWiseScaling(
+    #             axis=Translations.XYZ,
+    #             marker_pairs=[
+    #                 ["RASIS", "LASIS"],
+    #                 ["RPSIS", "LPSIS"],
+    #                 ["RASIS", "RPSIS"],
+    #                 ["LASIS", "LPSIS"],
+    #             ],
+    #         ),
+    #     )
+    # )
+    # # AxisWise scaling
+    # scale_tool.add_scaling_segment(
+    #     SegmentScaling(
+    #         name="pelvis",
+    #         scaling_type=AxisWiseScaling(
+    #             marker_pairs={
+    #                 Translations.X: [["RASIS", "LASIS"], ["RPSIS", "LPSIS"]],
+    #                 Translations.Y: [["RASIS", "RPSIS"], ["LASIS", "LPSIS"]],
+    #             },
+    #         ),
+    #     )
+    # )
 
     # Scale the model
     scaled_model = scale_tool.scale(
@@ -70,6 +111,8 @@ def main(visualization):
     biorbd.Model(scaled_biomod_filepath)
 
     if visualization:
+        import pyorerun
+
         # Compare the result visually
         t = np.linspace(0, 1, 10)
         viz = pyorerun.PhaseRerun(t)
@@ -85,7 +128,7 @@ def main(visualization):
 
         # Add the experimental markers from the static trial
         fake_exp_markers = np.repeat(scale_tool.mean_experimental_markers[:, :, np.newaxis], 10, axis=2)
-        pyomarkers = Markers(data=fake_exp_markers, channels=scaled_model.marker_names)
+        pyomarkers = pyorerun.PyoMarkers(data=fake_exp_markers, channels=scaled_model.marker_names, show_labels=False)
 
         # Model output
         viz_scaled_model = pyorerun.BiorbdModel(scaled_biomod_filepath)
@@ -93,7 +136,7 @@ def main(visualization):
         viz_scaled_model.options.show_gravity = True
         viz_scaled_model.options.show_marker_labels = False
         viz_scaled_model.options.show_center_of_mass_labels = False
-        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers, show_tracked_marker_labels=False)
+        viz.add_animated_model(viz_scaled_model, q, tracked_markers=pyomarkers)
 
         # Animate
         viz.rerun_by_frame("Model output")

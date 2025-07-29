@@ -15,7 +15,7 @@ description = "A generic interface to generate a virtual buddy"
 dynamic = ["version"]
 authors = [
     {name = "Pariterre", email = "pariterre@hotmail.com"},
-    {name = "EveCharbie", email = "eve.charbonneau@univ-reunion.fr"},
+    {name = "EveCharbie", email = "eve.charbie@gmail.com"},
 ]
 readme = "README.md"
 classifiers = [

@@ -5,6 +5,8 @@ from copy import deepcopy
 import numpy as np
 
 from ....utils.linear_algebra import mean_homogenous_matrix, transpose_homogenous_matrix
+from ....utils.checks import check_name
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class InertialMeasurementUnitReal:
@@ -12,7 +14,7 @@ class InertialMeasurementUnitReal:
         self,
         name: str,
         parent_name: str,
-        scs: np.ndarray = np.identity(4),
+        scs: RotoTransMatrix = RotoTransMatrix(),
         is_technical: bool = True,
         is_anatomical: bool = False,
     ):
@@ -25,11 +27,6 @@ class InertialMeasurementUnitReal:
             The name of the parent the inertial measurement unit is attached to
         scs
             The scs of the SegmentCoordinateSystemReal
-        parent_scs
-            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
-            is in parent's local reference frame
-        is_scs_local
-            If the scs is already in local reference frame
         is_technical
             If the marker should be flagged as a technical imu
         is_anatomical
@@ -37,7 +34,7 @@ class InertialMeasurementUnitReal:
 
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
 
         self.scs = scs
         self.is_technical = is_technical
@@ -60,16 +57,12 @@ class InertialMeasurementUnitReal:
         self._parent_name = value
 
     @property
-    def scs(self) -> np.ndarray:
+    def scs(self) -> RotoTransMatrix:
         return self._scs
 
     @scs.setter
-    def scs(self, value: np.ndarray):
-        if value.shape != (4, 4):
-            raise ValueError("The scs must be a 4x4 matrix")
+    def scs(self, value: RotoTransMatrix):
         self._scs = value
-        if len(self._scs.shape) == 2:
-            self._scs = self._scs[:, :, np.newaxis]
 
     @property
     def is_technical(self) -> bool:
@@ -91,8 +84,9 @@ class InertialMeasurementUnitReal:
         out_string = f"imu\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
 
-        rt = self.scs
-        mean_rt = mean_homogenous_matrix(rt) if rt.shape[2] > 1 else rt[:, :, 0]
+        mean_rt = (
+            self.scs.rt_matrix
+        )  # See if we want to do like SegmentCoordinateSystemReal and use mean_homogenous_matrix
         out_string += f"\tRTinMatrix	1\n"
         out_string += f"\tRT\n"
         out_string += f"\t\t{mean_rt[0, 0]:0.6f}\t{mean_rt[0, 1]:0.6f}\t{mean_rt[0, 2]:0.6f}\t{mean_rt[0, 3]:0.6f}\n"
@@ -104,9 +98,3 @@ class InertialMeasurementUnitReal:
         out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
         out_string += "endimu\n"
         return out_string
-
-    @property
-    def transpose(self) -> "Self":
-        out = deepcopy(self)
-        out.scs = transpose_homogenous_matrix(out.scs)
-        return out

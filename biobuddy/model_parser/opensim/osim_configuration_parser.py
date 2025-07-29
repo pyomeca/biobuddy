@@ -233,9 +233,7 @@ class OsimConfigurationParser:
         self.scale_tool.add_scaling_segment(
             SegmentScaling(
                 name=segment_name,
-                scaling_type=SegmentWiseScaling(
-                    segment_name=segment_name, axis=body_scale_set, marker_pairs=marker_pair_set
-                ),
+                scaling_type=SegmentWiseScaling(axis=body_scale_set, marker_pairs=marker_pair_set),
             )
         )
 
