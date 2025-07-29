@@ -233,13 +233,9 @@ class ModelDynamics:
             jacobian_matrix = np.array(model.markers_jacobian(q)) * marker_weights_reordered
 
         for i_marker in range(nb_markers):
-            if with_biorbd:
-                if model.markerNames()[i_marker].to_string() in marker_names:
-                    vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
-            else:
-                if with_biorbd:
-                    if model.marker_names[i_marker] in marker_names:
-                        vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+            marker_name = model.markerNames()[i_marker].to_string() if with_biorbd else model.marker_names[i_marker]
+            if marker_name in marker_names:
+                vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
         for i_q in range(nb_q):
             vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight[i_q]
