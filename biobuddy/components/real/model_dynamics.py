@@ -212,7 +212,7 @@ class ModelDynamics:
     @staticmethod
     def _marker_jacobian(
         model: "BiomechanicalModelReal" or "biorbd.Model",
-        q_regularization_weight: float,
+        q_regularization_weight: np.ndarray[float],
         q: np.ndarray,
         marker_names: list[str],
         marker_weights_reordered: np.ndarray,
@@ -233,16 +233,12 @@ class ModelDynamics:
             jacobian_matrix = np.array(model.markers_jacobian(q)) * marker_weights_reordered
 
         for i_marker in range(nb_markers):
-            if with_biorbd:
-                if model.markerNames()[i_marker].to_string() in marker_names:
-                    vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
-            else:
-                if with_biorbd:
-                    if model.marker_names[i_marker] in marker_names:
-                        vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
+            marker_name = model.markerNames()[i_marker].to_string() if with_biorbd else model.marker_names[i_marker]
+            if marker_name in marker_names:
+                vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
         for i_q in range(nb_q):
-            vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight
+            vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight[i_q]
 
         return vec_jacobian
 
@@ -251,7 +247,7 @@ class ModelDynamics:
         self,
         marker_positions: np.ndarray,
         marker_names: list[str],
-        q_regularization_weight: float = None,
+        q_regularization_weight: float | np.ndarray[float] = None,
         q_target: np.ndarray = None,
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
@@ -344,7 +340,14 @@ class ModelDynamics:
             q_target = np.zeros((self.nb_q, 1))
 
         if q_regularization_weight is None:
-            q_regularization_weight = 0.0
+            q_regularization_weight = np.zeros((self.nb_q,))  # No regularization by default
+        elif isinstance(q_regularization_weight, (int, float)):
+            q_regularization_weight = np.ones((self.nb_q,)) * q_regularization_weight
+        else:
+            if len(q_regularization_weight) != self.nb_q:
+                raise RuntimeError(
+                    f"The q_regularization_weight must be of shape (nb_q, ). Here the shape provided is {q_regularization_weight.shape}"
+                )
 
         optimal_q = np.zeros((self.nb_q, nb_frames))
         residuals = None

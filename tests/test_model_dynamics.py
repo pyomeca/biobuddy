@@ -476,6 +476,18 @@ def test_inverse_kinematics_basic():
     marker_positions_true = leg_model.markers_in_global(q_true)
     marker_names = leg_model.marker_names
 
+    # Test with q_regularization_weight: np.ndarrray
+    q_reconstructed_array, _ = leg_model.inverse_kinematics(
+        marker_positions=marker_positions_true[:3, :, :],
+        marker_names=marker_names,
+        q_regularization_weight=np.ones((leg_model.nb_q,)) * 0.01,
+        q_target=None,
+        marker_weights=None,
+        method="lm",
+        animate_reconstruction=False,
+    )
+
+    # Test without residuals
     q_reconstructed, residuals = leg_model.inverse_kinematics(
         marker_positions=marker_positions_true[:3, :, :],
         marker_names=marker_names,
@@ -495,6 +507,10 @@ def test_inverse_kinematics_basic():
     # Check that the solution is close to the true q
     npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
 
+    # Check that the solution is the same as with an array as q_regularization_weight
+    npt.assert_array_almost_equal(q_reconstructed, q_reconstructed_array)
+
+    # Test with residuals
     q_reconstructed, residuals = leg_model.inverse_kinematics(
         marker_positions=marker_positions_true[:3, :, :],
         marker_names=marker_names,
