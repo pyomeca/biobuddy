@@ -1,6 +1,6 @@
 """
 This example shows how to create a personalized kinematic model from a C3D file containing a static trial.
-Here, we generate a simple lower-body model with one unified upper-body segment.
+Here, we generate a simple lower-body model with only a trunk segment.
 The marker position and names are taken from Maldonado & al., 2018 (https://hal.science/hal-01841355/)
 """
 
@@ -26,12 +26,13 @@ from biobuddy import (
 )
 
 
-def model_creation_from_measured_data(remove_temporary: bool = True):
+def model_creation_from_measured_data(static_trial: C3dData,
+                                    remove_temporary: bool = True,
+                                      animate_model: bool = True):
 
     total_mass = 66
     total_height = 1.70
 
-    static_trial = C3dData(f"data/static_lower_body.c3d")
     output_model_filepath = f"lower_body.bioMod"
     de_leva = DeLevaTable(total_mass=total_mass, sex=Sex.FEMALE)
     de_leva.from_measurements(
@@ -272,15 +273,22 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     # Put the model together, print it and print it to a bioMod file
     model_real = reduced_model.to_real(static_trial)
     model_real.to_biomod(output_model_filepath)
-    model_real.animate(view_as=ViewAs.BIORBD, model_path=output_model_filepath)
+
+    if animate_model:
+        model_real.animate(view_as=ViewAs.BIORBD, model_path=output_model_filepath)
 
     if remove_temporary:
         os.remove(output_model_filepath)
 
+    return model_real
+
 
 def main():
-    # Create the model from a data file and markers as template
-    model_creation_from_measured_data(remove_temporary=False)
+
+    # Load the static trial
+    static_trial = C3dData(f"data/static_lower_body.c3d")
+
+    model_creation_from_measured_data(static_trial)
 
 
 if __name__ == "__main__":
