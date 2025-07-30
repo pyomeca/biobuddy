@@ -221,47 +221,55 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert all(segment_name in [
-        "root",
-        "TRUNK",
-        "HEAD",
-        "UPPER_ARM",
-        "LOWER_ARM",
-        "HAND",
-        "THIGH",
-        "SHANK",
-        "FOOT",
-    ] for segment_name in bio_model.segment_names)
+    assert all(
+        segment_name
+        in [
+            "root",
+            "TRUNK",
+            "HEAD",
+            "UPPER_ARM",
+            "LOWER_ARM",
+            "HAND",
+            "THIGH",
+            "SHANK",
+            "FOOT",
+        ]
+        for segment_name in bio_model.segment_names
+    )
     assert len(bio_model.segment_names) == 9
 
-    assert all(marker_name in [
-                "PELVIS",
-                "BOTTOM_HEAD",
-                "TOP_HEAD",
-                "HEAD_Z",
-                "HEAD_XZ",
-                "SHOULDER",
-                "SHOULDER_X",
-                "SHOULDER_XY",
-                "ELBOW",
-                "ELBOW_Y",
-                "ELBOW_XY",
-                "WRIST",
-                "FINGER",
-                "HAND_Y",
-                "HAND_YZ",
-                "THIGH_ORIGIN",
-                "THIGH_X",
-                "THIGH_Y",
-                "KNEE",
-                "KNEE_Z",
-                "KNEE_XZ",
-                "ANKLE",
-                "TOE",
-                "HEEL",
-                "ANKLE_Z",
-                "ANKLE_YZ",
-            ] for marker_name in bio_model.marker_names)
+    assert all(
+        marker_name
+        in [
+            "PELVIS",
+            "BOTTOM_HEAD",
+            "TOP_HEAD",
+            "HEAD_Z",
+            "HEAD_XZ",
+            "SHOULDER",
+            "SHOULDER_X",
+            "SHOULDER_XY",
+            "ELBOW",
+            "ELBOW_Y",
+            "ELBOW_XY",
+            "WRIST",
+            "FINGER",
+            "HAND_Y",
+            "HAND_YZ",
+            "THIGH_ORIGIN",
+            "THIGH_X",
+            "THIGH_Y",
+            "KNEE",
+            "KNEE_Z",
+            "KNEE_XZ",
+            "ANKLE",
+            "TOE",
+            "HEEL",
+            "ANKLE_Z",
+            "ANKLE_YZ",
+        ]
+        for marker_name in bio_model.marker_names
+    )
     assert len(bio_model.marker_names) == 26
 
     destroy_model(bio_model)

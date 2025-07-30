@@ -16,7 +16,12 @@ class Axis:
 
         pass
 
-    def __init__(self, name: AxisReal.Name, start: Callable | str | Marker | None = None, end: Callable | str | Marker | None = None):
+    def __init__(
+        self,
+        name: AxisReal.Name,
+        start: Callable | str | Marker | None = None,
+        end: Callable | str | Marker | None = None,
+    ):
         """
         Defines an axis to create a SegmentCoordinateSystemReal. The axis is defined by a start and an end point.
         If neither start nor end is provided, the axis is defined as the global coordinate system.
