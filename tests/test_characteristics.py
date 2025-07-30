@@ -376,7 +376,7 @@ def test_de_leva_table_constructor_from_measurements():
     npt.assert_almost_equal(female_table.knee_position, np.array([0.0, 0.0, 0.4, 1.0]))
     npt.assert_almost_equal(female_table.ankle_position, np.array([0.0, 0.0, 0.01, 1.0]))
     npt.assert_almost_equal(female_table.heel_position, np.array([0.0, 0.0, 0.0, 1.0]))
-    npt.assert_almost_equal(female_table.toes_position, np.array([0.35, 0.0, 0.0, 1.0]))
+    npt.assert_almost_equal(female_table.toes_position, np.array([0.0, 0.35, 0.0, 1.0]))
 
 
 def test_de_leva_table_getitem():

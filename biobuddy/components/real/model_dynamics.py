@@ -8,7 +8,6 @@ from functools import wraps
 from ...utils.linear_algebra import (
     RotoTransMatrix,
     RotoTransMatrixTimeSeries,
-    get_closest_rt_matrix,
     point_from_local_to_global,
 )
 from ...utils.enums import ViewAs
@@ -24,11 +23,6 @@ def requires_initialization(method):
         return method(self, *args, **kwargs)
 
     return wrapper
-
-
-class ViewAs(Enum):
-    BIORBD = "biorbd"
-    # OPENSIM = "opensim"
 
 
 class ModelDynamics:
@@ -752,7 +746,7 @@ class ModelDynamics:
                 _logger.error("pyorerun is not installed. Cannot animate the model.")
 
         else:
-            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use ViewAs.BIORBD for now.")
+            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use view_as=ViewAs.BIORBD for now.")
 
     # TODO: implement tendons
     # @requires_initialization

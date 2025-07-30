@@ -306,8 +306,7 @@ class DeLevaTable:
         self.knee_position = np.array([0.0, 0.0, knee_height, 1.0])
         self.ankle_position = np.array([0.0, 0.0, ankle_height, 1.0])
         self.heel_position = np.array([0.0, 0.0, 0.0, 1.0])
-        # Toes/heel positions are not the real positions, but they are only used relatively to each other, so it's fine
-        self.toes_position = np.array([foot_length, 0.0, 0.0, 1.0])
+        self.toes_position = np.array([0.0, foot_length, 0.0, 1.0])
 
         self.define_inertial_table()
 
