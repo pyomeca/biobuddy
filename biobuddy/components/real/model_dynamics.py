@@ -746,7 +746,9 @@ class ModelDynamics:
                 _logger.error("pyorerun is not installed. Cannot animate the model.")
 
         else:
-            raise NotImplementedError(f"The viewer {view_as} is not implemented yet. Please use view_as=ViewAs.BIORBD for now.")
+            raise NotImplementedError(
+                f"The viewer {view_as} is not implemented yet. Please use view_as=ViewAs.BIORBD for now."
+            )
 
     # TODO: implement tendons
     # @requires_initialization

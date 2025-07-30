@@ -26,9 +26,7 @@ from biobuddy import (
 )
 
 
-def model_creation_from_measured_data(static_trial: C3dData,
-                                    remove_temporary: bool = True,
-                                      animate_model: bool = True):
+def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: bool = True, animate_model: bool = True):
 
     total_mass = 66
     total_height = 1.70
@@ -152,13 +150,14 @@ def model_creation_from_measured_data(static_trial: C3dData,
     rt_matrix = RotoTransMatrix()
     rt_matrix.from_euler_angles_and_translation(
         angle_sequence="y",
-        angles=np.array([-np.pi/2]),
-        translation=np.array([0., 0., 0.]),
+        angles=np.array([-np.pi / 2]),
+        translation=np.array([0.0, 0.0, 0.0]),
     )
     foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
-        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0) -
-        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
-        axis=1)
+        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
+        - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
+        axis=1,
+    )
 
     reduced_model.add_segment(
         Segment(
@@ -243,13 +242,14 @@ def model_creation_from_measured_data(static_trial: C3dData,
     rt_matrix = RotoTransMatrix()
     rt_matrix.from_euler_angles_and_translation(
         angle_sequence="y",
-        angles=np.array([-np.pi/2]),
-        translation=np.array([0., 0., 0.]),
+        angles=np.array([-np.pi / 2]),
+        translation=np.array([0.0, 0.0, 0.0]),
     )
     foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
-        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0) -
-        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
-        axis=1)
+        np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
+        - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
+        axis=1,
+    )
 
     reduced_model.add_segment(
         Segment(
