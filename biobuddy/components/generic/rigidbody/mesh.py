@@ -34,8 +34,10 @@ class Mesh:
             for function in value:
                 if isinstance(function, str):
                     functions_list += [
-                    lambda m, bio, name = function: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
-                ]
+                        lambda m, bio, name=function: (
+                            m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
+                        )
+                    ]
                 elif callable(function):
                     functions_list += [function]
                 else:

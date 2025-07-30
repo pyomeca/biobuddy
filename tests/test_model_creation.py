@@ -256,8 +256,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         "KNEE_XZ",
         "ANKLE",
         "TOE",
-        "HEEL"
-        "ANKLE_Z",
+        "HEEL" "ANKLE_Z",
         "ANKLE_YZ",
     ]
 

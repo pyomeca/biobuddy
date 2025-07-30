@@ -8,8 +8,10 @@ from ..utils.protocols import Data
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
 
+
 def point_on_vector_in_global(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return start + coef * (end - start)
+
 
 class Sex(Enum):
     MALE = "male"
@@ -68,7 +70,7 @@ class DeLevaTable:
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0694 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.5002), start=self.shoulder_position, end=self.top_head_position
+                        (1 - 0.5002), start=self.shoulder_position, end=self.top_head_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0694 * self.total_mass,
@@ -80,7 +82,7 @@ class DeLevaTable:
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4346 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.5138), start=self.pelvis_position, end=self.shoulder_position
+                        (1 - 0.5138), start=self.pelvis_position, end=self.shoulder_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.4346 * self.total_mass,
@@ -92,7 +94,7 @@ class DeLevaTable:
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0271 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.5772), start=self.shoulder_position, end=self.elbow_position
+                        (1 - 0.5772), start=self.shoulder_position, end=self.elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0271 * self.total_mass,
@@ -104,7 +106,7 @@ class DeLevaTable:
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0162 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.4574), start=self.elbow_position, end=self.wrist_position
+                        (1 - 0.4574), start=self.elbow_position, end=self.wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0162 * self.total_mass,
@@ -116,7 +118,7 @@ class DeLevaTable:
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0061 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.7900), start=self.wrist_position, end=self.finger_position
+                        (1 - 0.7900), start=self.wrist_position, end=self.finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0061 * self.total_mass,
@@ -166,7 +168,7 @@ class DeLevaTable:
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0669 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.4841), start=self.shoulder_position, end=self.top_head_position
+                        (1 - 0.4841), start=self.shoulder_position, end=self.top_head_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0669 * self.total_mass,
@@ -178,7 +180,7 @@ class DeLevaTable:
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4257 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.4964), start=self.pelvis_position, end=self.shoulder_position
+                        (1 - 0.4964), start=self.pelvis_position, end=self.shoulder_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.4257 * self.total_mass,
@@ -190,7 +192,7 @@ class DeLevaTable:
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0255 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.5754), start=self.shoulder_position, end=self.elbow_position
+                        (1 - 0.5754), start=self.shoulder_position, end=self.elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0255 * self.total_mass,
@@ -202,7 +204,7 @@ class DeLevaTable:
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0138 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.4559), start=self.elbow_position, end=self.wrist_position
+                        (1 - 0.4559), start=self.elbow_position, end=self.wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0138 * self.total_mass,
@@ -214,7 +216,7 @@ class DeLevaTable:
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0056 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1-0.7474), start=self.wrist_position, end=self.finger_position
+                        (1 - 0.7474), start=self.wrist_position, end=self.finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0056 * self.total_mass,

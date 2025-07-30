@@ -1,5 +1,3 @@
-
-
 class FromOriginalModel:
     def __init__(self, total_mass: float):
         """
