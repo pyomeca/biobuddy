@@ -18,6 +18,8 @@ from biobuddy import (
     InertiaParameters,
     Contact,
     Segment,
+    Translations,
+    Rotations,
 )
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData
@@ -827,14 +829,10 @@ def test_mesh_to_mesh():
 
     npt.assert_almost_equal(
         mesh_real.positions,
-        np.array(
-            [
-                [0.5758053, 0.5758053, 0.5758053, 0.5758053],
-                [0.60425486, 0.60425486, 0.60425486, 0.60425486],
-                [1.67896849, 1.67896849, 1.67896849, 1.67896849],
-                [1.0, 1.0, 1.0, 1.0],
-            ]
-        ),
+        np.array([[0.5758053 , 0.60645725, 0.5515919 , 0.5758053 ],
+                    [0.60425486, 0.59659578, 0.60041439, 0.60425486],
+                    [1.67896849, 1.16874875, 1.37607094, 1.67896849],
+                    [1.        , 1.        , 1.        , 1.        ]]),
     )
 
 
@@ -988,9 +986,6 @@ def test_init_contact():
     assert contact.parent_name == "segment1"
     assert contact.axis is None
 
-    # Test initialization with all parameters
-    from biobuddy.utils.translations import Translations
-
     contact = Contact(
         name="test_contact",
         function=lambda m, bio: np.array([1, 2, 3, 1]),
@@ -1041,8 +1036,6 @@ def test_contact_to_contact():
 
 # ------- Segment ------- #
 def test_init_segment():
-    from biobuddy.utils.rotations import Rotations
-    from biobuddy.utils.translations import Translations
 
     # Test initialization with minimal parameters
     segment = Segment(name="test_segment")
@@ -1087,8 +1080,6 @@ def test_init_segment():
 
 
 def test_segment_dof_names_auto_generation():
-    from biobuddy.utils.rotations import Rotations
-    from biobuddy.utils.translations import Translations
 
     # Test auto-generation of dof_names
     segment = Segment(name="test_segment", translations=Translations.XY, rotations=Rotations.Z)

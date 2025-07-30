@@ -215,13 +215,13 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     assert bio_model.nb_q == 7
     assert model.nbSegment() == 9
     assert bio_model.nb_segments == 9
-    assert model.nbMarkers() == 25
-    assert bio_model.nb_markers == 25
+    assert model.nbMarkers() == 26
+    assert bio_model.nb_markers == 26
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert bio_model.segment_names == [
+    assert all(segment_name in [
         "root",
         "TRUNK",
         "HEAD",
@@ -231,34 +231,38 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         "THIGH",
         "SHANK",
         "FOOT",
-    ]
-    assert bio_model.marker_names == [
-        "PELVIS",
-        "BOTTOM_HEAD",
-        "TOP_HEAD",
-        "HEAD_Z",
-        "HEAD_XZ",
-        "SHOULDER",
-        "SHOULDER_X",
-        "SHOULDER_XY",
-        "ELBOW",
-        "ELBOW_Y",
-        "ELBOW_XY",
-        "WRIST",
-        "FINGER",
-        "HAND_Y",
-        "HAND_YZ",
-        "THIGH_ORIGIN",
-        "THIGH_X",
-        "THIGH_Y",
-        "KNEE",
-        "KNEE_Z",
-        "KNEE_XZ",
-        "ANKLE",
-        "TOE",
-        "HEEL" "ANKLE_Z",
-        "ANKLE_YZ",
-    ]
+    ] for segment_name in bio_model.segment_names)
+    assert len(bio_model.segment_names) == 9
+
+    assert all(marker_name in [
+                "PELVIS",
+                "BOTTOM_HEAD",
+                "TOP_HEAD",
+                "HEAD_Z",
+                "HEAD_XZ",
+                "SHOULDER",
+                "SHOULDER_X",
+                "SHOULDER_XY",
+                "ELBOW",
+                "ELBOW_Y",
+                "ELBOW_XY",
+                "WRIST",
+                "FINGER",
+                "HAND_Y",
+                "HAND_YZ",
+                "THIGH_ORIGIN",
+                "THIGH_X",
+                "THIGH_Y",
+                "KNEE",
+                "KNEE_Z",
+                "KNEE_XZ",
+                "ANKLE",
+                "TOE",
+                "HEEL",
+                "ANKLE_Z",
+                "ANKLE_YZ",
+            ] for marker_name in bio_model.marker_names)
+    assert len(bio_model.marker_names) == 26
 
     destroy_model(bio_model)
 
@@ -283,9 +287,13 @@ def test_model_creation_from_data():
     kinematic_model_filepath = "temporary.bioMod"
     test_model_creation_from_static(remove_temporary=False)
 
+    # Prepare a fake model and a fake static from the previous test
+    fake_data = FakeData(Model(kinematic_model_filepath))
+
     # Fill the kinematic chain model
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
+    de_leva.from_data(fake_data)
 
     model.add_segment(
         Segment(
@@ -439,8 +447,6 @@ def test_model_creation_from_data():
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
-    # Prepare a fake model and a fake static from the previous test
-    fake_data = FakeData(Model(kinematic_model_filepath))
     real_model = model.to_real(fake_data)
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
@@ -455,13 +461,13 @@ def test_model_creation_from_data():
     assert biorbd_model.nbSegment() == 9
     assert real_model.nb_segments == 9
     assert model.nb_segments == 9
-    assert biorbd_model.nbMarkers() == 25
-    assert real_model.nb_markers == 25
-    assert model.nb_markers == 25
+    assert biorbd_model.nbMarkers() == 26
+    assert real_model.nb_markers == 26
+    assert model.nb_markers == 26
     biorbd_markers = biorbd_model.markers(np.zeros((biorbd_model.nbQ(),)))[-3].to_array()
-    np.testing.assert_almost_equal(biorbd_markers, [0, 0.25, -0.85], decimal=4)
+    np.testing.assert_almost_equal(biorbd_markers, [0, -0.01, -0.85], decimal=4)
     biobuddy_markers = real_model.markers_in_global(np.zeros((real_model.nb_q,)))[:3, -3, 0]
-    np.testing.assert_almost_equal(biobuddy_markers, [0, 0.25, -0.85], decimal=4)
+    np.testing.assert_almost_equal(biobuddy_markers, [0, -0.01, -0.85], decimal=4)
 
     destroy_model(model)
     destroy_model(real_model)

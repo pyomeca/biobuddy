@@ -16,7 +16,7 @@ class Axis:
 
         pass
 
-    def __init__(self, name: AxisReal.Name, start: Callable | str = None, end: Callable | str = None):
+    def __init__(self, name: AxisReal.Name, start: Callable | str | Marker | None = None, end: Callable | str | Marker | None = None):
         """
         Defines an axis to create a SegmentCoordinateSystemReal. The axis is defined by a start and an end point.
         If neither start nor end is provided, the axis is defined as the global coordinate system.
@@ -36,12 +36,54 @@ class Axis:
             raise ValueError("Both start and end must be provided or both must be None.")
 
         self.name = name
-        if start is None and end is None:
-            start = lambda m, model: np.array([0.0, 0.0, 0.0])
-            end = lambda m, model: np.array([0.0 if i != name else 1.0 for i in range(3)])
+        self.start = start
+        self.end = end
 
-        self.start = Marker(function=start)
-        self.end = Marker(function=end)
+    @property
+    def start(self) -> Marker:
+        """
+        The start point of the axis
+        """
+        return self._start
+
+    @start.setter
+    def start(self, value: Marker | str | None):
+        """
+        Setter for the start point of the axis
+        """
+        if value is None:
+            value = lambda m, model: np.array([0.0, 0.0, 0.0])
+        if isinstance(value, Marker):
+            self._start = value
+        elif isinstance(value, str):
+            self._start = Marker(function=value, name=value)
+        elif callable(value):
+            self._start = Marker(function=value, name=f"start_{self.name}")
+        else:
+            raise RuntimeError("Start must be a Marker, a str, or a callable")
+
+    @property
+    def end(self) -> Marker:
+        """
+        The end point of the axis
+        """
+        return self._end
+
+    @end.setter
+    def end(self, value: Marker | str | None):
+        """
+        Setter for the end point of the axis
+        """
+        if value is None:
+            value = lambda m, model: np.array([0.0 if i != self.name else 1.0 for i in range(3)])
+        if isinstance(value, Marker):
+            self._end = value
+        elif isinstance(value, str):
+            self._end = Marker(function=value, name=value)
+        elif callable(value):
+            self._end = Marker(function=value, name=f"end_{self.name}")
+        else:
+            raise RuntimeError("End must be a Marker, a str, or a callable")
 
     def to_axis(
         self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
