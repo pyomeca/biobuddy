@@ -65,7 +65,16 @@ class Marker:
         if value is None:
             # Set the function to the name of the marker, so it can be used as a default
             value = self.name
-        self._function = (lambda m, bio: np.nanmean(m[value], axis=1)) if isinstance(value, str) else value
+
+        if isinstance(value, str):
+            self._function = lambda m, bio: m[value] if len(m[value].shape) == 1 else np.nanmean(m[value], axis=1)
+        elif callable(value):
+            self._function = value
+        else:
+            raise TypeError(
+                f"Expected a callable or a string, got {type(value)} instead. "
+                "Please provide a valid function or marker name."
+            )
 
     @property
     def is_technical(self) -> bool:

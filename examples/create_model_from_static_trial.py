@@ -149,6 +149,7 @@ def model_creation_from_static_trial(remove_temporary: bool = True):
     )
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE", parent_name="FOOT", position=(0, 0, 0)))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="TOE", parent_name="FOOT", position=(0, 0, 0.25)))
+    bio_model.segments["FOOT"].add_marker(MarkerReal(name="HEEL", parent_name="FOOT", position=(0, 0, -0.01)))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_Z", parent_name="FOOT", position=(0, 0, 1)))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=(0, 1, 1)))
 

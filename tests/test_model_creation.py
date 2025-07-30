@@ -202,6 +202,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         )
     )
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE", parent_name="FOOT", position=np.array([0, 0, 0])))
+    bio_model.segments["FOOT"].add_marker(MarkerReal(name="HEEL", parent_name="FOOT", position=np.array([0, 0, -0.01])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="TOE", parent_name="FOOT", position=np.array([0, 0, 0.25])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_Z", parent_name="FOOT", position=np.array([0, 0, 1])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=np.array([0, 1, 1])))
@@ -255,6 +256,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         "KNEE_XZ",
         "ANKLE",
         "TOE",
+        "HEEL"
         "ANKLE_Z",
         "ANKLE_YZ",
     ]
@@ -434,6 +436,7 @@ def test_model_creation_from_data():
     )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
     model.segments["FOOT"].add_marker(Marker("TOE"))
+    model.segments["FOOT"].add_marker(Marker("HEEL"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 

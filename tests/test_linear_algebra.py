@@ -4,14 +4,13 @@ import pytest
 
 import biorbd
 
-from biobuddy import Rotations, SegmentCoordinateSystemReal
+from biobuddy import Rotations
 from biobuddy.utils.linear_algebra import (
     rot_x_matrix,
     rot_y_matrix,
     rot_z_matrix,
-    get_rotation_vector_from_sequence,
     get_sequence_from_rotation_vector,
-    euler_and_translation_to_matrix,
+    get_vector_from_sequence,
     mean_homogenous_matrix,
     mean_unit_vector,
     to_euler,

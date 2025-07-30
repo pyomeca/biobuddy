@@ -32,17 +32,17 @@ class Mesh:
         functions_list = []
         if value is not None:
             for function in value:
-                if not callable(function) and not isinstance(function, str):
+                if isinstance(function, str):
+                    functions_list += [
+                    lambda m, bio, name = function: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
+                ]
+                elif callable(function):
+                    functions_list += [function]
+                else:
                     raise TypeError(
                         f"Expected a callable or a string, got {type(function)} instead. "
                         "Please provide a valid function or marker name."
                     )
-                if isinstance(function, str):
-                    functions_list += [
-                    lambda m, bio, name=f: m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
-                ]
-                else:
-                    functions_list += [function]
         else:
             functions_list = None
         self._functions = functions_list

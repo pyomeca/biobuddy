@@ -193,6 +193,7 @@ def model_creation_from_measured_data(remove_temporary: bool = True):
     )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
     model.segments["FOOT"].add_marker(Marker("TOE"))
+    model.segments["FOOT"].add_marker(Marker("HEEL"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
