@@ -89,13 +89,9 @@ class BiomechanicalModel(ModelUtils):
         for segment in self.segments:
             scs = SegmentCoordinateSystemReal()
             if segment.segment_coordinate_system is not None:
-                parent_scs = None
-                if segment.parent_name is not None and segment.parent_name not in ["base"]:
-                    parent_scs = deepcopy(model.segments[segment.parent_name].segment_coordinate_system)
                 scs = segment.segment_coordinate_system.to_scs(
                     data,
                     model,
-                    parent_scs,
                 )
 
             inertia_parameters = None

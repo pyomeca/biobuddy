@@ -90,9 +90,7 @@ class Axis:
         else:
             raise RuntimeError("End must be a Marker, a str, or a callable")
 
-    def to_axis(
-        self, data: Data, kinematic_chain: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
-    ) -> AxisReal:
+    def to_axis(self, data: Data, kinematic_chain: BiomechanicalModelReal) -> AxisReal:
         """
         Compute the axis from actual data
         Parameters
@@ -102,10 +100,8 @@ class Axis:
         kinematic_chain
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
-        parent_scs
-            The transformation from global to local
         """
 
-        start = self.start.to_marker(data, kinematic_chain, parent_scs)
-        end = self.end.to_marker(data, kinematic_chain, parent_scs)
+        start = self.start.to_marker(data, kinematic_chain)
+        end = self.end.to_marker(data, kinematic_chain)
         return AxisReal(self.name, start, end)

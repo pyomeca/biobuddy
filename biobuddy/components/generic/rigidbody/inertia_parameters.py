@@ -34,7 +34,9 @@ class InertiaParameters:
         self.inertia = inertia
 
     def to_inertia(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
+        self,
+        data: Data,
+        model: BiomechanicalModelReal,
     ) -> InertiaParametersReal:
         return InertiaParametersReal.from_data(
             data,
@@ -42,7 +44,6 @@ class InertiaParameters:
             self.relative_mass,
             self.center_of_mass,
             self.inertia,
-            parent_scs,
         )
 
     @staticmethod

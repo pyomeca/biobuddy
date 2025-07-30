@@ -87,7 +87,6 @@ class MarkerReal:
         name: str,
         function: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], Points],
         parent_name: str,
-        parent_scs: CoordinateSystemRealProtocol = None,
         is_technical: bool = True,
         is_anatomical: bool = False,
     ):
@@ -108,8 +107,6 @@ class MarkerReal:
             The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the marker
         parent_name
             The name of the parent the marker is attached to
-        parent_scs
-            The segment coordinate system of the parent to transform the marker from global to local
         is_technical
             If the marker should be flagged as a technical marker
         is_anatomical
@@ -117,9 +114,7 @@ class MarkerReal:
         """
 
         # Get the position of the markers and do some sanity checks
-        p = points_to_array(points=function(data.values, model), name=f"marker function")
-        p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
-        projected_p = (parent_scs.scs.inverse if parent_scs is not None else RotoTransMatrix()) @ p
+        projected_p = points_to_array(points=function(data.values, model), name=f"marker function")
         if np.isnan(projected_p).all():
             raise RuntimeError(f"All the values for {function} returned nan which is not permitted")
         return MarkerReal(name, parent_name, projected_p, is_technical=is_technical, is_anatomical=is_anatomical)

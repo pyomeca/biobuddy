@@ -92,16 +92,13 @@ class Marker:
     def is_anatomical(self, value: bool) -> None:
         self._is_anatomical = value
 
-    def to_marker(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
-    ) -> MarkerReal:
+    def to_marker(self, data: Data, model: BiomechanicalModelReal) -> MarkerReal:
         return MarkerReal.from_data(
             data,
             model,
             self.name,
             self.function,
             self.parent_name,
-            parent_scs,
             is_technical=self.is_technical,
             is_anatomical=self.is_anatomical,
         )

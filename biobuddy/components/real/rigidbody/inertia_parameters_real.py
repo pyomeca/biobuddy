@@ -67,7 +67,6 @@ class InertiaParametersReal:
         relative_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], float],
         center_of_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
         inertia: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
-        parent_scs: CoordinateSystemRealProtocol = None,
     ):
         """
         This is a constructor for the InertiaParameterReal class.
@@ -86,17 +85,11 @@ class InertiaParametersReal:
             from the segment coordinate system on the main axis
         inertia
             The callback function that returns the inertia xx, yy and zz parameters of the segment
-        parent_scs
-            The segment coordinate system of the parent to transform the marker from global to local
         """
 
         mass = relative_mass(data.values, model)
 
-        p = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
-        p[3, :] = 1  # Do not trust user and make sure the last value is a perfect one
-        # com = (parent_scs.transpose if parent_scs is not None else np.identity(4)) @ p
-        # @pariterre : I expect the user to give the com in the local ref frame not the global ?
-        com = p
+        com = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
         inertia = points_to_array(points=inertia(data.values, model), name="inertia parameter function")

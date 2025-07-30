@@ -43,9 +43,7 @@ class SegmentCoordinateSystem:
         self.second_axis = second_axis
         self.axis_to_keep = axis_to_keep
 
-    def to_scs(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
-    ) -> SegmentCoordinateSystemReal:
+    def to_scs(self, data: Data, model: BiomechanicalModelReal) -> SegmentCoordinateSystemReal:
         """
         Collapse the generic SegmentCoordinateSystem to an actual SegmentCoordinateSystemReal with value
         based on the model and the data
@@ -57,8 +55,7 @@ class SegmentCoordinateSystem:
         model
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
-        parent_scs
-            The SegmentCoordinateSystemReal of the parent to compute the local transformation
+
         Returns
         -------
         The collapsed SegmentCoordinateSystemReal
@@ -69,7 +66,6 @@ class SegmentCoordinateSystem:
             self.first_axis.to_axis(data, model),
             self.second_axis.to_axis(data, model),
             self.axis_to_keep,
-            parent_scs,
         )
 
 

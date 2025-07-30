@@ -49,14 +49,11 @@ class Mesh:
             functions_list = None
         self._functions = functions_list
 
-    def to_mesh(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal = None
-    ) -> MeshReal:
+    def to_mesh(self, data: Data, model: BiomechanicalModelReal) -> MeshReal:
         if self.functions is None:
             raise RuntimeError("You must provide a position function to evaluate the Mesh into a MeshReal.")
         return MeshReal.from_data(
             data,
             model,
             self.functions,
-            parent_scs,
         )

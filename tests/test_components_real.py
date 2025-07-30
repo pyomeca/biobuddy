@@ -286,7 +286,6 @@ def test_init_segment_coordinate_system_real():
     # Test initialization with default values
     scs = SegmentCoordinateSystemReal()
     assert isinstance(scs.scs, RotoTransMatrix)
-    assert scs.parent_scs is None
     assert scs.is_in_global is True
     assert scs.is_in_local is False
 
@@ -296,11 +295,9 @@ def test_init_segment_coordinate_system_real():
         angle_sequence="xyz", angles=np.array([0.1, 0.2, 0.3]), translation=np.array([1.0, 2.0, 3.0])
     )
 
-    parent_scs = SegmentCoordinateSystemReal()
-    scs = SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+    scs = SegmentCoordinateSystemReal(scs=rt_matrix, is_scs_local=True)
 
     assert scs.scs == rt_matrix
-    assert scs.parent_scs == parent_scs
     assert scs.is_in_global is False
     assert scs.is_in_local is True
 
