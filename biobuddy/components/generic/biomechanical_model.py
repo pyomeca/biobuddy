@@ -89,6 +89,7 @@ class BiomechanicalModel(ModelUtils):
 
         for segment in self.segments:
             scs = SegmentCoordinateSystemReal()
+            scs_global = RotoTransMatrix()
             if segment.segment_coordinate_system is not None:
                 parent_scs_global = model.segment_coordinate_system_in_global(segment.parent_name)
                 scs = segment.segment_coordinate_system.to_scs(data, model, parent_scs_global)
