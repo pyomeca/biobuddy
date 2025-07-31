@@ -110,6 +110,7 @@ def test_to_via_point_local():
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
 
+
 def test_to_via_point_global():
     # Mock the ViaPointReal class
     mock_data = MockC3dData()
@@ -144,7 +145,7 @@ def test_to_via_point_global():
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.        ]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
 
     # Set the marker name
@@ -156,7 +157,7 @@ def test_to_via_point_global():
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.        ]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
 
 
@@ -382,6 +383,7 @@ def test_muscle_to_muscle_local():
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
 
+
 def test_muscle_to_muscle_global():
     # Create mock functions for muscle parameters
     mock_optimal_length = lambda params, bio: 0.1
@@ -432,14 +434,15 @@ def test_muscle_to_muscle_global():
         np.mean(muscle_real.origin_position.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.        ]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
     npt.assert_almost_equal(
         np.mean(muscle_real.insertion_position.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.        ]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
+
 
 def test_muscle_functions():
     # Create mock functions for muscle parameters with known return values
@@ -825,6 +828,7 @@ def test_marker_to_marker_local():
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
 
+
 def test_marker_to_marker_global():
     # Create a marker with a position function
     marker = Marker(name="SUP", parent_name="segment1", is_local=False)
@@ -839,7 +843,7 @@ def test_marker_to_marker_global():
         marker_real.position.reshape(
             4,
         ),
-        np.array([-0.47436502,  0.4726582 ,  0.57603569,  1. ]),
+        np.array([-0.47436502, 0.4726582, 0.57603569, 1.0]),
     )
 
     # Set the function
@@ -859,8 +863,9 @@ def test_marker_to_marker_global():
         marker_real.position.reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1. ]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
+
 
 # ------- Axis ------- #
 def test_init_axis():
@@ -895,20 +900,21 @@ def test_axis_to_axis_global():
         axis_real.start_point.position.reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
     npt.assert_almost_equal(
         axis_real.end_point.position.reshape(
             4,
         ),
-        np.array([-0.65174504,  0.60837317,  0.78210787,  1.]),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
+
 
 def test_axis_to_axis_local():
     # Create an axis with marker functions
-    axis = Axis(name=Axis.Name.X,
-                start=Marker("HV", is_local=True),
-                end=Marker("HV", is_local=True))  # Using same marker for simplicity
+    axis = Axis(
+        name=Axis.Name.X, start=Marker("HV", is_local=True), end=Marker("HV", is_local=True)
+    )  # Using same marker for simplicity
 
     # Mock data and model
     mock_data = MockC3dData()
@@ -934,6 +940,7 @@ def test_axis_to_axis_local():
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
 
+
 # ------- Segment Coordinate System ------- #
 def test_init_segment_coordinate_system():
     # Create axes for the coordinate system
@@ -957,10 +964,7 @@ def test_segment_coordinate_system_to_scs_global():
     second_axis = Axis(name=Axis.Name.Y, start="LA", end="RA")
 
     # Create a segment coordinate system
-    scs = SegmentCoordinateSystem(origin="HV",
-                                  first_axis=first_axis,
-                                  second_axis=second_axis,
-                                  axis_to_keep=Axis.Name.Z)
+    scs = SegmentCoordinateSystem(origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.Z)
 
     # Mock data and model
     mock_data = MockC3dData()
@@ -970,26 +974,26 @@ def test_segment_coordinate_system_to_scs_global():
 
     npt.assert_almost_equal(
         result.scs.rt_matrix,
-        np.array([[ 0.6345035 , -0.50665328,  0.58370178, -0.65174504],
-               [-0.27024383, -0.85294839, -0.44659525,  0.60837317],
-               [ 0.72413644,  0.12562444, -0.67811866,  0.78210787],
-               [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+        np.array(
+            [
+                [0.6345035, -0.50665328, 0.58370178, -0.65174504],
+                [-0.27024383, -0.85294839, -0.44659525, 0.60837317],
+                [0.72413644, 0.12562444, -0.67811866, 0.78210787],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
+
 
 def test_segment_coordinate_system_to_scs_local():
     # Create axes for the coordinate system
-    first_axis = Axis(name=Axis.Name.Z,
-                      start=Marker("HV", is_local=True),
-                      end=Marker("SUP", is_local=True))
-    second_axis = Axis(name=Axis.Name.Y,
-                       start=Marker("LA", is_local=True),
-                       end=Marker("RA", is_local=True))
+    first_axis = Axis(name=Axis.Name.Z, start=Marker("HV", is_local=True), end=Marker("SUP", is_local=True))
+    second_axis = Axis(name=Axis.Name.Y, start=Marker("LA", is_local=True), end=Marker("RA", is_local=True))
 
     # Create a segment coordinate system
-    scs = SegmentCoordinateSystem(origin=Marker("HV", is_local=True),
-                                  first_axis=first_axis,
-                                  second_axis=second_axis,
-                                  axis_to_keep=Axis.Name.Z)
+    scs = SegmentCoordinateSystem(
+        origin=Marker("HV", is_local=True), first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.Z
+    )
 
     # Mock data and model
     mock_data = MockC3dData()
@@ -1008,6 +1012,7 @@ def test_segment_coordinate_system_to_scs_local():
             ]
         ),
     )
+
 
 # ------- Mesh ------- #
 def test_init_mesh():
@@ -1039,11 +1044,16 @@ def test_mesh_to_mesh_global():
 
     npt.assert_almost_equal(
         mesh_real.positions,
-        np.array([[-0.65174504, -0.31463354, -0.47436502, -0.65174504],
-                   [ 0.60837317,  0.35748207,  0.4726582 ,  0.60837317],
-                   [ 0.78210787,  0.49102046,  0.57603569,  0.78210787],
-                   [ 1.        ,  1.        ,  1.        ,  1.        ]]),
+        np.array(
+            [
+                [-0.65174504, -0.31463354, -0.47436502, -0.65174504],
+                [0.60837317, 0.35748207, 0.4726582, 0.60837317],
+                [0.78210787, 0.49102046, 0.57603569, 0.78210787],
+                [1.0, 1.0, 1.0, 1.0],
+            ]
+        ),
     )
+
 
 def test_mesh_to_mesh_local():
     # Create a mesh with marker functions
@@ -1058,11 +1068,16 @@ def test_mesh_to_mesh_local():
 
     npt.assert_almost_equal(
         mesh_real.positions,
-        np.array([[0.5758053 , 0.60645725, 0.5515919 , 0.5758053 ],
-                   [0.60425486, 0.59659578, 0.60041439, 0.60425486],
-                   [1.67896849, 1.16874875, 1.37607094, 1.67896849],
-                   [1.        , 1.        , 1.        , 1.        ]]),
+        np.array(
+            [
+                [0.5758053, 0.60645725, 0.5515919, 0.5758053],
+                [0.60425486, 0.59659578, 0.60041439, 0.60425486],
+                [1.67896849, 1.16874875, 1.37607094, 1.67896849],
+                [1.0, 1.0, 1.0, 1.0],
+            ]
+        ),
     )
+
 
 # ------- Mesh File ------- #
 def test_init_mesh_file():
@@ -1155,6 +1170,7 @@ def test_init_inertia_parameters():
     assert inertia_params.center_of_mass == com_func
     assert inertia_params.inertia == inertia_func
 
+
 def test_inertia_parameters_to_inertia_global():
     # Create inertia parameters with functions
     mass_func = lambda data, model: 10.0
@@ -1176,11 +1192,12 @@ def test_inertia_parameters_to_inertia_global():
         inertia_real.center_of_mass.reshape(
             4,
         ),
-        np.array([-0.25467601, -0.22376214, -0.41841443,  1.]),
+        np.array([-0.25467601, -0.22376214, -0.41841443, 1.0]),
     )
     npt.assert_almost_equal(
         inertia_real.inertia.reshape(4, 4), np.array([[1, 0, 0, 0], [0, 2, 0, 0], [0, 0, 3, 0], [0, 0, 0, 1]])
     )
+
 
 def test_inertia_parameters_to_inertia_local():
     # Create inertia parameters with functions
@@ -1284,8 +1301,9 @@ def test_contact_to_contact_global():
         np.mean(contact_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.651745 ,  0.6083732,  0.7821079,  1.]),
+        np.array([-0.651745, 0.6083732, 0.7821079, 1.0]),
     )
+
 
 def test_contact_to_contact_local():
     # Create a contact with a position function
@@ -1307,8 +1325,9 @@ def test_contact_to_contact_local():
         np.mean(contact_real.position, axis=1).reshape(
             4,
         ),
-        np.array([0.5758053, 0.6042549, 1.6789685, 1.]),
+        np.array([0.5758053, 0.6042549, 1.6789685, 1.0]),
     )
+
 
 # ------- Segment ------- #
 def test_init_segment():

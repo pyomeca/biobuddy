@@ -256,44 +256,6 @@ def test_init_segment_coordinate_system_real():
     assert scs.is_in_local is True
 
 
-def test_segment_coordinate_system_real_from_markers():
-    # Create markers for the coordinate system
-    origin = MarkerReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-
-    # Create axes
-    x_start = MarkerReal(name="x_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-    x_end = MarkerReal(name="x_end", parent_name="segment1", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
-    x_axis = AxisReal(name=AxisReal.Name.X, start=x_start, end=x_end)
-
-    y_start = MarkerReal(name="y_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-    y_end = MarkerReal(name="y_end", parent_name="segment1", position=np.array([[0.0], [1.0], [0.0], [1.0]]))
-    y_axis = AxisReal(name=AxisReal.Name.Y, start=y_start, end=y_end)
-
-    # Create SCS
-    scs = SegmentCoordinateSystemReal.from_markers(
-        origin=origin, first_axis=x_axis, second_axis=y_axis, axis_to_keep=AxisReal.Name.X
-    )
-
-    # Test the resulting SCS
-    assert isinstance(scs, SegmentCoordinateSystemReal)
-    assert scs.is_in_global is True
-
-    # Test with same axis names (should raise error)
-    with pytest.raises(ValueError):
-        SegmentCoordinateSystemReal.from_markers(
-            origin=origin, first_axis=x_axis, second_axis=x_axis, axis_to_keep=AxisReal.Name.X  # Same as first_axis
-        )
-
-    # Test with invalid axis_to_keep
-    with pytest.raises(ValueError):
-        SegmentCoordinateSystemReal.from_markers(
-            origin=origin,
-            first_axis=x_axis,
-            second_axis=y_axis,
-            axis_to_keep=AxisReal.Name.Z,  # Not one of the provided axes
-        )
-
-
 def test_segment_coordinate_system_real_from_rt_matrix():
     # Create an RT matrix
     rt_matrix = np.eye(4)

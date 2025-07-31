@@ -75,9 +75,7 @@ class Contact:
     def axis(self, value: Translations) -> None:
         self._axis = value
 
-    def to_contact(
-        self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix
-    ) -> "ContactReal":
+    def to_contact(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ContactReal":
         """
         This constructs the ContactReal by evaluating the function that defines the contact to get an actual position
 

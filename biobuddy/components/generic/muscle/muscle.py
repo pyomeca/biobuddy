@@ -220,9 +220,7 @@ class Muscle:
     def maximal_excitation(self, value: float):
         self._maximal_excitation = value
 
-    def to_muscle(
-        self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix
-    ) -> "MuscleReal":
+    def to_muscle(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MuscleReal":
         """
         This constructs a MuscleReal by evaluating the function that defines the muscle to get an actual position
 
