@@ -2,7 +2,12 @@ from enum import Enum
 import numpy as np
 
 from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
+from ..components.real.biomechanical_model_real import BiomechanicalModelReal
+from ..components.generic.rigidbody.segment import Segment
+from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystem
+from ..components.generic.rigidbody.mesh import Mesh
 from ..utils.protocols import Data
+from ..utils.enums import  Translations, Rotations
 
 
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
@@ -264,6 +269,34 @@ class DeLevaTable:
             },
         }
 
+    def get_joint_position_from_measurements(self,
+                                             total_height: float,
+                                             pelvis_height: float,
+                                             trunk_length: float,
+                                             shoulder_width: float,
+                                             upper_arm_length: float,
+                                                lower_arm_length: float,
+                                                hand_length: float,
+                                             thigh_length: float,
+                                             tibia_length: float,
+                                             foot_length: float) -> None:
+
+
+
+        self.pelvis_position = np.array([0.0, 0.0, pelvis_height, 1.0])
+        self.shoulder_position = np.array([0.0, 0.0, shoulder_height, 1.0])
+        self.top_head_position = np.array([0.0, 0.0, total_height, 1.0])
+        self.elbow_position = self.shoulder_position - np.array([0.0, 0.0, upper_arm_length, 0.0])
+        self.wrist_position = self.elbow_position - np.array([0.0, 0.0, lower_arm_length, 0.0])
+        self.finger_position = self.wrist_position - np.array([0.0, 0.0, hand_length, 0.0])
+        self.knee_position = np.array([0.0, 0.0, knee_height, 1.0])
+        self.ankle_position = np.array([0.0, 0.0, ankle_height, 1.0])
+        self.heel_position = np.array([0.0, 0.0, 0.0, 1.0])
+        self.toes_position = np.array([0.0, foot_length, 0.0, 1.0])
+
+
+
+
     def from_data(self, data: Data):
         self.top_head_position = data.values["TOP_HEAD"]
         self.shoulder_position = data.values["SHOULDER"]
@@ -289,25 +322,23 @@ class DeLevaTable:
         wrist_span: float,
         elbow_span: float,
         shoulder_span: float,
+        hip_width: float,
         foot_length: float,
     ):
 
         # Define some length from measurements
-        hand_length = (finger_span - wrist_span) / 2
-        lower_arm_length = (wrist_span - elbow_span) / 2
-        upper_arm_length = (elbow_span - shoulder_span) / 2
+        self.total_height = total_height
+        self.pelvis_height = pelvis_height
+        self.trunk_length = shoulder_height - pelvis_height
+        self.hand_length = (finger_span - wrist_span) / 2
+        self.lower_arm_length = (wrist_span - elbow_span) / 2
+        self.upper_arm_length = (elbow_span - shoulder_span) / 2
+        self.shoulder_width = shoulder_span
+        self.thigh_length = pelvis_height - knee_height
+        self.tibia_length = knee_height - ankle_height
+        self.foot_length = foot_length
 
-        self.pelvis_position = np.array([0.0, 0.0, pelvis_height, 1.0])
-        self.shoulder_position = np.array([0.0, 0.0, shoulder_height, 1.0])
-        self.top_head_position = np.array([0.0, 0.0, total_height, 1.0])
-        self.elbow_position = self.shoulder_position - np.array([0.0, 0.0, upper_arm_length, 0.0])
-        self.wrist_position = self.elbow_position - np.array([0.0, 0.0, lower_arm_length, 0.0])
-        self.finger_position = self.wrist_position - np.array([0.0, 0.0, hand_length, 0.0])
-        self.knee_position = np.array([0.0, 0.0, knee_height, 1.0])
-        self.ankle_position = np.array([0.0, 0.0, ankle_height, 1.0])
-        self.heel_position = np.array([0.0, 0.0, 0.0, 1.0])
-        self.toes_position = np.array([0.0, foot_length, 0.0, 1.0])
-
+        self.get_joint_position_from_measurements()
         self.define_inertial_table()
 
     def __getitem__(self, segment_name: SegmentName) -> InertiaParameters:
@@ -320,3 +351,197 @@ class DeLevaTable:
             The name of the segment
         """
         return self.inertial_table[self.sex][segment_name]
+
+
+    def to_simple_model(self) -> BiomechanicalModelReal:
+        """
+        Creates a simple BiomechanicalModelReal based on the measurements used to create the De Leva table.
+        TODO: This could be handled differently so that the positions are already hadled properly in the from_ methods
+        """
+
+        # Generate the personalized kinematic model
+        model_real = BiomechanicalModelReal()
+
+        model_real.add_segment(Segment(name="Ground"))
+
+        model_real.add_segment(
+            Segment(
+                name="TRUNK",
+                parent_name="Ground",
+                translations=Translations.XYZ,
+                rotations=Rotations.XYZ,
+                inertia_parameters=self.inertial_table[SegmentName.TRUNK],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=self.pelvis_position,
+                ),
+                mesh=Mesh([lambda m, model: np.array([0, 0, 0]),
+                          lambda m, model: self.shoulder_position - self.pelvis_position], is_local=True),
+            )
+        )
+
+        model_real.add_segment(
+            Segment(
+                name="RTHIGH",
+                parent_name="TRUNK",
+                rotations=Rotations.XY,
+                inertia_parameters=self.inertial_table[SegmentName.THIGH],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=self.pelvis_position,
+                ),
+                mesh=Mesh([lambda m, model: np.array([0, 0, 0]),
+                           lambda m, model: self.shoulder_position - self.pelvis_position], is_local=True),
+            )
+        )
+        reduced_model.segments["RFemur"].add_marker(Marker("RLFE", is_technical=True, is_anatomical=True))
+        reduced_model.segments["RFemur"].add_marker(Marker("RMFE", is_technical=True, is_anatomical=True))
+
+        reduced_model.add_segment(
+            Segment(
+                name="RTibia",
+                parent_name="RFemur",
+                rotations=Rotations.X,
+                inertia_parameters=de_leva[SegmentName.SHANK],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
+                    first_axis=Axis(name=Axis.Name.X, start="RSPH", end="RLM"),
+                    second_axis=Axis(
+                        name=Axis.Name.Z,
+                        start=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]),
+                        end=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
+                    ),
+                    axis_to_keep=Axis.Name.Z,
+                ),
+                mesh=Mesh(("RMFE", "RSPH", "RLM", "RLFE"), is_local=False),
+            )
+        )
+        reduced_model.segments["RTibia"].add_marker(Marker("RLM", is_technical=True, is_anatomical=True))
+        reduced_model.segments["RTibia"].add_marker(Marker("RSPH", is_technical=True, is_anatomical=True))
+
+        # The foot is a special case since the position of the ankle relatively to the foot length is not given in De Leva
+        # So here we assume that the foot com is in the middle of the three foot markers
+        foot_inertia_parameters = de_leva[SegmentName.FOOT]
+        rt_matrix = RotoTransMatrix()
+        rt_matrix.from_euler_angles_and_translation(
+            angle_sequence="y",
+            angles=np.array([-np.pi / 2]),
+            translation=np.array([0.0, 0.0, 0.0]),
+        )
+        foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
+            np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
+            - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
+            axis=1,
+        )
+
+        reduced_model.add_segment(
+            Segment(
+                name="RFoot",
+                parent_name="RTibia",
+                rotations=Rotations.X,
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]),
+                    first_axis=Axis(
+                        Axis.Name.Z, start=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]), end="RTT2"
+                    ),
+                    second_axis=Axis(Axis.Name.X, start="RSPH", end="RLM"),
+                    axis_to_keep=Axis.Name.Z,
+                ),
+                inertia_parameters=foot_inertia_parameters,
+                mesh=Mesh(("RLM", "RTT2", "RSPH", "RLM"), is_local=False),
+            )
+        )
+        reduced_model.segments["RFoot"].add_marker(Marker("RTT2", is_technical=True, is_anatomical=True))
+
+        reduced_model.add_segment(
+            Segment(
+                name="LFemur",
+                parent_name="Pelvis",
+                rotations=Rotations.XY,
+                inertia_parameters=de_leva[SegmentName.THIGH],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
+                        static_trial.values, None
+                    )
+                                          - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
+                    first_axis=Axis(name=Axis.Name.X, start="LLFE", end="LMFE"),
+                    second_axis=Axis(
+                        name=Axis.Name.Z,
+                        start=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
+                        end=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"]),
+                    ),
+                    axis_to_keep=Axis.Name.Z,
+                ),
+                mesh=Mesh(
+                    (
+                        lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
+                            static_trial.values, None
+                        )
+                                       - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
+                        "LMFE",
+                        "LLFE",
+                        lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
+                            static_trial.values, None
+                        )
+                                       - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
+                    ),
+                    is_local=False,
+                ),
+            )
+        )
+        reduced_model.segments["LFemur"].add_marker(Marker("LLFE", is_technical=True, is_anatomical=True))
+        reduced_model.segments["LFemur"].add_marker(Marker("LMFE", is_technical=True, is_anatomical=True))
+
+        reduced_model.add_segment(
+            Segment(
+                name="LTibia",
+                parent_name="LFemur",
+                rotations=Rotations.X,
+                inertia_parameters=de_leva[SegmentName.SHANK],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
+                    first_axis=Axis(name=Axis.Name.X, start="LLM", end="LSPH"),
+                    second_axis=Axis(
+                        name=Axis.Name.Z,
+                        start=SegmentCoordinateSystemUtils.mean_markers(["LSPH", "LLM"]),
+                        end=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
+                    ),
+                    axis_to_keep=Axis.Name.Z,
+                ),
+                mesh=Mesh(("LMFE", "LSPH", "LLM", "LLFE"), is_local=False),
+            )
+        )
+        reduced_model.segments["LTibia"].add_marker(Marker("LLM", is_technical=True, is_anatomical=True))
+        reduced_model.segments["LTibia"].add_marker(Marker("LSPH", is_technical=True, is_anatomical=True))
+
+        foot_inertia_parameters = de_leva[SegmentName.FOOT]
+        rt_matrix = RotoTransMatrix()
+        rt_matrix.from_euler_angles_and_translation(
+            angle_sequence="y",
+            angles=np.array([-np.pi / 2]),
+            translation=np.array([0.0, 0.0, 0.0]),
+        )
+        foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
+            np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
+            - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
+            axis=1,
+        )
+
+        reduced_model.add_segment(
+            Segment(
+                name="LFoot",
+                parent_name="LTibia",
+                rotations=Rotations.X,
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=SegmentCoordinateSystemUtils.mean_markers(["LSPH", "LLM"]),
+                    first_axis=Axis(
+                        Axis.Name.Z, start=SegmentCoordinateSystemUtils.mean_markers(["LLM", "LSPH"]), end="LTT2"
+                    ),
+                    second_axis=Axis(Axis.Name.X, start="LLM", end="LSPH"),
+                    axis_to_keep=Axis.Name.Z,
+                ),
+                inertia_parameters=foot_inertia_parameters,
+                mesh=Mesh(("LLM", "LTT2", "LSPH", "LLM"), is_local=False),
+            )
+        )
+        reduced_model.segments["LFoot"].add_marker(Marker("LTT2", is_technical=True, is_anatomical=True))
+
+
