@@ -15,7 +15,7 @@ class ViaPoint:
         muscle_name: str = None,
         muscle_group: str = None,
         position_function: Callable | str = None,
-        is_local: bool = False,
+        is_local: bool = True,
     ):
         """
         Parameters
@@ -87,7 +87,7 @@ class ViaPoint:
         self._position_function = position_function
 
     def to_via_point(
-        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+        self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix
     ) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
@@ -119,12 +119,9 @@ class ViaPoint:
         p = np.nanmean(
             points_to_array(points=self.position_function(data.values, model), name="via point function"), axis=1
         )
-        projected_p = scs.inverse @ p
-        if np.isnan(projected_p).all():
+        position = scs.inverse @ p
+        if np.isnan(position).all():
             raise RuntimeError(f"All the values for {self.position_function} returned nan which is not permitted")
-
-        # Get the position of the contact points and do some sanity checks
-        position = points_to_array(points=self.position_function(data.values, model), name="viapoint function")
 
         return ViaPointReal(
             name=self.name,

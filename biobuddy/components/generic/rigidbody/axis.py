@@ -4,8 +4,8 @@ import numpy as np
 from ..rigidbody.marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
-from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ....utils.protocols import Data
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class Axis:
@@ -90,7 +90,7 @@ class Axis:
         else:
             raise RuntimeError("End must be a Marker, a str, or a callable")
 
-    def to_axis(self, data: Data, model: BiomechanicalModelReal, scs: SegmentCoordinateSystemReal) -> AxisReal:
+    def to_axis(self, data: Data, model: BiomechanicalModelReal, scs: RotoTransMatrix) -> AxisReal:
         """
         Compute the axis from actual data
         Parameters
@@ -100,6 +100,9 @@ class Axis:
         model
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
+        scs
+            The SegmentCoordinateSystem that this axis is part of. It is useful to compute the axis in the context of
+            the segment coordinate system
         """
 
         start = self.start.to_marker(data, model, scs)

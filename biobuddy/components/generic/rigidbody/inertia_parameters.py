@@ -93,18 +93,6 @@ class InertiaParameters:
         """
         from ...real.rigidbody.inertia_parameters_real import InertiaParametersReal
 
-        if self.relative_mass is None:
-            raise RuntimeError("To compute the inertia parameters, you must provide a mass function.")
-        mass = self.relative_mass(data.values, model)
-
-        if self.center_of_mass is None:
-            raise RuntimeError("To compute the inertia parameters, you must provide a center of mass function.")
-        com_p = points_to_array(points=self.center_of_mass(data.values, model), name=f"center_of_mass function")
-
-        if self.inertia is None:
-            raise RuntimeError("To compute the inertia parameters, you must provide a inertia function.")
-        inertia_p = points_to_array(points=self.inertia(data.values, model), name="inertia parameter function")
-
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
@@ -112,13 +100,24 @@ class InertiaParameters:
                 "If you want to provide a global mesh, you must provide the segment's coordinate system."
             )
 
+        # Mass
+        if self.relative_mass is None:
+            raise RuntimeError("To compute the inertia parameters, you must provide a mass function.")
+        mass = self.relative_mass(data.values, model)
+
+        # Center of mass
+        if self.center_of_mass is None:
+            raise RuntimeError("To compute the inertia parameters, you must provide a center of mass function.")
+        com_p = points_to_array(points=self.center_of_mass(data.values, model), name=f"center_of_mass function")
         # Transform into local coordinates if needed
         com = scs.inverse @ com_p
-        inertia = scs.inverse @ inertia_p
-
         if np.isnan(com).all():
             raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
-        if np.isnan(inertia).all():
-            raise RuntimeError(f"All the values for {inertia} returned nan which is not permitted")
+
+        # Inertia
+        if self.inertia is None:
+            raise RuntimeError("To compute the inertia parameters, you must provide a inertia function.")
+        inertia = points_to_array(points=self.inertia(data.values, model), name="inertia parameter function")
+        # Do not transform inertia because it does not make any sens to express it elsewhere than at the CoM
 
         return InertiaParametersReal(mass, com, inertia)

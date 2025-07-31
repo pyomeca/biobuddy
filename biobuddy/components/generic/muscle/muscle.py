@@ -4,6 +4,7 @@ from ..muscle.via_point import ViaPoint
 from ...muscle_utils import MuscleType, MuscleStateType
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class Muscle:
@@ -220,7 +221,7 @@ class Muscle:
         self._maximal_excitation = value
 
     def to_muscle(
-        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+        self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix
     ) -> "MuscleReal":
         """
         This constructs a MuscleReal by evaluating the function that defines the muscle to get an actual position

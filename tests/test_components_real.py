@@ -159,52 +159,6 @@ def test_init_mesh_file_real():
     npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
 
 
-def test_mesh_file_real_from_data():
-    # Create mock data
-    mock_data = MockC3dData()
-
-    # Test from_data with functions
-    def scaling_function(markers, model):
-        return np.array([1.5, 1.5, 1.5])
-
-    def rotation_function(markers, model):
-        return np.array([0.1, 0.2, 0.3])
-
-    def translation_function(markers, model):
-        return np.array([1.0, 2.0, 3.0])
-
-    mesh_file_real = MeshFileReal.from_data(
-        data=mock_data,
-        model=None,
-        mesh_file_name="test.obj",
-        mesh_color=[1.0, 0.0, 0.0],
-        scaling_function=scaling_function,
-        rotation_function=rotation_function,
-        translation_function=translation_function,
-    )
-
-    assert mesh_file_real.mesh_file_name == "test.obj"
-    npt.assert_array_equal(mesh_file_real.mesh_color, np.array([1.0, 0.0, 0.0]))
-    npt.assert_array_equal(mesh_file_real.mesh_scale, np.array([[1.5], [1.5], [1.5], [1.0]]))
-    npt.assert_array_equal(mesh_file_real.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
-    npt.assert_array_equal(mesh_file_real.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
-
-    # Test with invalid mesh_file_name
-    with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(
-            data=mock_data, model=None, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0]
-        )  # Not a string
-
-    # Test with invalid mesh_color shape
-    with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(
-            data=mock_data,
-            model=None,
-            mesh_file_name="test.obj",
-            mesh_color=[1.0, 0.0, 0.0, 1.0],  # Should be RGB (3 values)
-        )
-
-
 def test_mesh_file_real_to_biomod():
     # Create a mesh file
     mesh_file = MeshFileReal(

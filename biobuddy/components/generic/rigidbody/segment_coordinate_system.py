@@ -13,11 +13,10 @@ from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 class SegmentCoordinateSystem:
     def __init__(
         self,
-        origin: Callable | str,
+        origin: Callable | str | Marker,
         first_axis: Axis,
         second_axis: Axis,
         axis_to_keep: AxisReal.Name,
-        is_local: bool = False,
     ):
         """
         Set the SegmentCoordinateSystemReal matrix of the segment. To compute the third axis, a first cross product of
@@ -38,20 +37,36 @@ class SegmentCoordinateSystem:
         axis_to_keep
             The Axis.Name of the axis to keep while recomputing the reference frame. It must be the same as either
             first_axis.name or second_axis.name
-        is_local
-            If True, the SegmentCoordinateSystem is defined in the local coordinate system of the parent segment.
-            If False, it is defined in the global coordinate system.
-            Defaults to False.
         """
-
-        self.origin = Marker(function=origin)
+        self.origin = origin
         self.first_axis = first_axis
         self.second_axis = second_axis
         self.axis_to_keep = axis_to_keep
-        self.is_local = is_local
+
+    @property
+    def origin(self) -> Marker:
+        """
+        The origin of the segment coordinate system
+        """
+        return self._origin
+
+    @origin.setter
+    def origin(self, value: Marker | str | Callable):
+        """
+        Setter for the origin of the segment coordinate system
+        """
+        if isinstance(value, str):
+            value = Marker(name=value)
+        elif isinstance(value, Marker):
+            value = value
+        elif callable(value):
+            value = Marker(function=value)
+        else:
+            raise RuntimeError(f"The origin must be a Marker, a str or a Callable, not {type(value)}")
+        self._origin = value
 
     def get_axes(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
     ) -> tuple[AxisReal, AxisReal, AxisReal.Name]:
 
         # Find the two adjacent axes and reorder accordingly (assuming right-hand RT)
@@ -120,7 +135,7 @@ class SegmentCoordinateSystem:
         return scs
 
     def to_scs(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
     ) -> SegmentCoordinateSystemReal:
         """
         This constructs a SegmentCoordinateSystemReal by evaluating the function that defines the marker to get an
@@ -137,13 +152,6 @@ class SegmentCoordinateSystem:
             The segment coordinate system in which the marker is defined. If None, the marker is assumed to be in the global
             coordinate system.
         """
-        if self.is_local:
-            parent_scs = RotoTransMatrix()
-        elif parent_scs is None:
-            raise RuntimeError(
-                "If you want to provide a global mesh, you must provide the segment's coordinate system."
-            )
-
         first_axis, second_axis, third_axis_name = self.get_axes(data, model, parent_scs)
         first_axis_vector, second_axis_vector, third_axis_vector = self.get_axes_vectors(first_axis, second_axis)
         origin = self.origin.to_marker(data, model, parent_scs).position

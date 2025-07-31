@@ -98,7 +98,7 @@ class Marker:
         self._is_anatomical = value
 
     def to_marker(
-        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+        self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix
     ) -> "MarkerReal":
         """
         This constructs a MarkerReal by evaluating the function that defines the marker to get an actual position

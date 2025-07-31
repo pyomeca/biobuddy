@@ -52,7 +52,7 @@ class Mesh:
             functions_list = None
         self._functions = functions_list
 
-    def to_mesh(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "MeshReal":
+    def to_mesh(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MeshReal":
         """
         This construct a MeshReal object by evaluating the functions that defines the mesh to get actual positions.
 
