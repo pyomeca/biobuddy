@@ -116,7 +116,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                     )
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 ),
-            is_local=False
+                is_local=False,
             ),
         )
     )
@@ -211,7 +211,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                     )
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 ),
-            is_local=False
+                is_local=False,
             ),
         )
     )

@@ -86,7 +86,9 @@ class ViaPoint:
             position_function = None
         self._position_function = position_function
 
-    def to_via_point(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "ViaPointReal":
+    def to_via_point(
+        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+    ) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
 
@@ -109,10 +111,14 @@ class ViaPoint:
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         # Get the position of the contact points and do some sanity checks
-        p = np.nanmean(points_to_array(points=self.position_function(data.values, model), name="via point function"), axis=1)
+        p = np.nanmean(
+            points_to_array(points=self.position_function(data.values, model), name="via point function"), axis=1
+        )
         projected_p = scs.inverse @ p
         if np.isnan(projected_p).all():
             raise RuntimeError(f"All the values for {self.position_function} returned nan which is not permitted")
@@ -120,11 +126,12 @@ class ViaPoint:
         # Get the position of the contact points and do some sanity checks
         position = points_to_array(points=self.position_function(data.values, model), name="viapoint function")
 
-        return ViaPointReal(name=self.name,
-                            parent_name=self.parent_name,
-                            muscle_name=self.muscle_name,
-                            muscle_group=self.muscle_group,
-                            position=position,
-                            condition=None,  # Not implemented
-                            movement=None,  # Not implemented
-                            )
+        return ViaPointReal(
+            name=self.name,
+            parent_name=self.parent_name,
+            muscle_name=self.muscle_name,
+            muscle_group=self.muscle_group,
+            position=position,
+            condition=None,  # Not implemented
+            movement=None,  # Not implemented
+        )

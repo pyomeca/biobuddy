@@ -50,7 +50,9 @@ class SegmentCoordinateSystem:
         self.axis_to_keep = axis_to_keep
         self.is_local = is_local
 
-    def get_axes(self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal) -> tuple[AxisReal, AxisReal, AxisReal.Name]:
+    def get_axes(
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal
+    ) -> tuple[AxisReal, AxisReal, AxisReal.Name]:
 
         # Find the two adjacent axes and reorder accordingly (assuming right-hand RT)
         if self.first_axis.name == self.second_axis.name:
@@ -77,7 +79,9 @@ class SegmentCoordinateSystem:
 
         return first_axis, second_axis, third_axis_name
 
-    def get_axes_vectors(self, first_axis: AxisReal, second_axis: AxisReal) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_axes_vectors(
+        self, first_axis: AxisReal, second_axis: AxisReal
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         # Compute the third axis and recompute one of the previous two
         first_axis_vector = first_axis.axis()[:3, :]
         second_axis_vector = second_axis.axis()[:3, :]
@@ -91,14 +95,16 @@ class SegmentCoordinateSystem:
 
         return first_axis_vector, second_axis_vector, third_axis_vector
 
-    def get_scs_from_vectors(self,
-                             first_axis: AxisReal,
-                             second_axis: AxisReal,
-                            third_axis_name: AxisReal.Name,
-                             first_axis_vector: np.ndarray,
-                             second_axis_vector: np.ndarray,
-                             third_axis_vector: np.ndarray,
-                             origin: np.ndarray) -> RotoTransMatrix:
+    def get_scs_from_vectors(
+        self,
+        first_axis: AxisReal,
+        second_axis: AxisReal,
+        third_axis_name: AxisReal.Name,
+        first_axis_vector: np.ndarray,
+        second_axis_vector: np.ndarray,
+        third_axis_vector: np.ndarray,
+        origin: np.ndarray,
+    ) -> RotoTransMatrix:
         # Dispatch the result into a matrix
         n_frames = max(first_axis_vector.shape[1], second_axis_vector.shape[1])
         rt = np.zeros((4, 4, n_frames))
@@ -113,7 +119,9 @@ class SegmentCoordinateSystem:
 
         return scs
 
-    def to_scs(self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal) -> SegmentCoordinateSystemReal:
+    def to_scs(
+        self, data: Data, model: BiomechanicalModelReal, parent_scs: SegmentCoordinateSystemReal
+    ) -> SegmentCoordinateSystemReal:
         """
         This constructs a SegmentCoordinateSystemReal by evaluating the function that defines the marker to get an
         actual position
@@ -132,18 +140,16 @@ class SegmentCoordinateSystem:
         if self.is_local:
             parent_scs = RotoTransMatrix()
         elif parent_scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         first_axis, second_axis, third_axis_name = self.get_axes(data, model, parent_scs)
         first_axis_vector, second_axis_vector, third_axis_vector = self.get_axes_vectors(first_axis, second_axis)
         origin = self.origin.to_marker(data, model, parent_scs).position
-        scs = self.get_scs_from_vectors(first_axis,
-                                             second_axis,
-                                            third_axis_name,
-                                             first_axis_vector,
-                                             second_axis_vector,
-                                             third_axis_vector,
-                                            origin)
+        scs = self.get_scs_from_vectors(
+            first_axis, second_axis, third_axis_name, first_axis_vector, second_axis_vector, third_axis_vector, origin
+        )
 
         return SegmentCoordinateSystemReal(scs=scs, is_scs_local=True)
 

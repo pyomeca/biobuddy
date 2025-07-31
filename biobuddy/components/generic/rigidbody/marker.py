@@ -97,7 +97,9 @@ class Marker:
     def is_anatomical(self, value: bool) -> None:
         self._is_anatomical = value
 
-    def to_marker(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "MarkerReal":
+    def to_marker(
+        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+    ) -> "MarkerReal":
         """
         This constructs a MarkerReal by evaluating the function that defines the marker to get an actual position
 
@@ -117,7 +119,9 @@ class Marker:
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         # Get the position of the markers and do some sanity checks
         position = points_to_array(points=self.function(data.values, model), name=f"marker function")
@@ -129,8 +133,10 @@ class Marker:
         if np.isnan(marker_position).all():
             raise RuntimeError(f"All the values for {self.function} returned nan which is not permitted")
 
-        return MarkerReal(name=self.name,
-                          parent_name=self.parent_name,
-                          position=marker_position,
-                          is_technical=self.is_technical,
-                          is_anatomical=self.is_anatomical)
+        return MarkerReal(
+            name=self.name,
+            parent_name=self.parent_name,
+            position=marker_position,
+            is_technical=self.is_technical,
+            is_anatomical=self.is_anatomical,
+        )

@@ -75,7 +75,9 @@ class Contact:
     def axis(self, value: Translations) -> None:
         self._axis = value
 
-    def to_contact(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "ContactReal":
+    def to_contact(
+        self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal"
+    ) -> "ContactReal":
         """
         This constructs the ContactReal by evaluating the function that defines the contact to get an actual position
 
@@ -97,7 +99,9 @@ class Contact:
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         # Get the position of the contact points and do some sanity checks
         p = np.nanmean(points_to_array(points=self.function(data.values, model), name="contact real function"), axis=1)

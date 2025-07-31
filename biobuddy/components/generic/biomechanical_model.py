@@ -91,11 +91,7 @@ class BiomechanicalModel(ModelUtils):
             scs = SegmentCoordinateSystemReal()
             if segment.segment_coordinate_system is not None:
                 parent_scs_global = model.segment_coordinate_system_in_global(segment.parent_name)
-                scs = segment.segment_coordinate_system.to_scs(
-                    data,
-                    model,
-                    parent_scs_global
-                )
+                scs = segment.segment_coordinate_system.to_scs(data, model, parent_scs_global)
                 scs_global = parent_scs_global @ scs.scs
 
             inertia_parameters = None

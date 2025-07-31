@@ -109,12 +109,14 @@ class MeshFile:
             mesh_scale: np.ndarray = self.scaling_function(data.values, model)
             if not isinstance(mesh_scale, np.ndarray):
                 raise RuntimeError(
-                    f"The scaling_function {self.scaling_function} must return a vector of dimension 3 (XYZ)")
+                    f"The scaling_function {self.scaling_function} must return a vector of dimension 3 (XYZ)"
+                )
             if mesh_scale.shape == (3, 1):
                 mesh_scale = mesh_scale.reshape((3,))
             elif mesh_scale.shape != (3,):
                 raise RuntimeError(
-                    f"The scaling_function {self.scaling_function} must return a vector of dimension 3 (XYZ)")
+                    f"The scaling_function {self.scaling_function} must return a vector of dimension 3 (XYZ)"
+                )
 
         if self.rotation_function is None:
             mesh_rotation = np.array([0, 0, 0])

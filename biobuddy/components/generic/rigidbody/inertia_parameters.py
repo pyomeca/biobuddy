@@ -108,7 +108,9 @@ class InertiaParameters:
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         # Transform into local coordinates if needed
         com = scs.inverse @ com_p

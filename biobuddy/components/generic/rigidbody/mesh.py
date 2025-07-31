@@ -75,7 +75,9 @@ class Mesh:
         if self.is_local:
             scs = RotoTransMatrix()
         elif scs is None:
-            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
 
         # Get the position of the all the mesh points and do some sanity checks
         all_p = points_to_array(points=None, name="mesh_real")
