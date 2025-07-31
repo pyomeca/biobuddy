@@ -67,6 +67,8 @@ def main(visualization):
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+    # Fix the via points before translating to biomod as there are some conditional and moving via points
+    original_osim_model.fix_via_points(q=np.zeros((original_osim_model.nb_q,)))
     # original_osim_model.segments["ground"].segment_coordinate_system.scs = np.array(
     #     [
     #         [1.000000, 0.000000, 0.000000, 0.000000],

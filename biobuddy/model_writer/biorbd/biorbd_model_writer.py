@@ -40,28 +40,12 @@ class BiorbdModelWriter:
 
         if model.muscle_groups:
             out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLE GROUPS\n"
+            out_string += "// MUSCLES\n"
             out_string += "// --------------------------------------------------------------\n\n"
             for muscle_group in model.muscle_groups:
                 out_string += muscle_group.to_biomod()
                 out_string += "\n"
             out_string += "\n\n\n"  # Give some space after muscle groups
-
-        if model.muscles:
-            out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLES\n"
-            out_string += "// --------------------------------------------------------------\n\n"
-            for muscle in model.muscles:
-                out_string += muscle.to_biomod()
-                out_string += "\n\n\n"  # Give some space between muscles
-
-        if model.via_points:
-            out_string += "// --------------------------------------------------------------\n"
-            out_string += "// MUSCLES VIA POINTS\n"
-            out_string += "// --------------------------------------------------------------\n\n"
-            for via_point in model.via_points:
-                out_string += via_point.to_biomod()
-                out_string += "\n\n\n"  # Give some space between via points
 
         if model.warnings:
             out_string += "\n/*-------------- WARNINGS---------------\n"

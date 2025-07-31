@@ -14,9 +14,9 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
 )
 from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.generic.muscle.muscle_group import MuscleGroup
+from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.real.muscle.via_point_real import ViaPointReal
-from ...utils.translations import Translations
+from ...utils.enums import Translations
 
 
 TOKENS_TO_IGNORE_NO_COMPONENTS = [
@@ -216,7 +216,7 @@ class BiomodConfigurationParser:
                 elif (
                     isinstance(current_component, ViaPointReal)
                     or isinstance(current_component, MuscleReal)
-                    or isinstance(current_component, MuscleGroup)
+                    or isinstance(current_component, MuscleGroupReal)
                     or isinstance(current_component, MarkerReal)
                     or isinstance(current_component, InertialMeasurementUnitReal)
                     or isinstance(current_component, SegmentReal)

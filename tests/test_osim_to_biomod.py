@@ -421,6 +421,7 @@ def test_kinematics():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir="Geometry_cleaned",
     )
+    model.fix_via_points()
     model.to_biomod(biomod_filepath, with_mesh=False)
 
     # Test that the model created is valid
@@ -521,6 +522,7 @@ def test_translation_osim_to_biomod():
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
                     )
+                    model.fix_via_points()
                     model.to_biomod(biomod_filepath, with_mesh=False)
 
                     # Test that the model created is valid

@@ -4,7 +4,8 @@ import numpy as np
 
 from ....utils.aliases import Point, point_to_array, Points, points_to_array
 from ....utils.protocols import Data
-from ....utils.translations import Translations
+from ....utils.enums import Translations
+from ....utils.checks import check_name
 
 
 class ContactReal:
@@ -28,7 +29,7 @@ class ContactReal:
             The axis of the contact
         """
         self.name = name
-        self.parent_name = parent_name
+        self.parent_name = check_name(parent_name)
         self.position = position
         self.axis = axis
 
@@ -54,7 +55,7 @@ class ContactReal:
 
     @position.setter
     def position(self, value: Point):
-        self._position = point_to_array(point=value, name="position")
+        self._position = points_to_array(points=value, name="position")
 
     @property
     def axis(self) -> Translations:
@@ -64,37 +65,9 @@ class ContactReal:
     def axis(self, value: Translations):
         self._axis = value
 
-    @staticmethod
-    def from_data(
-        data: Data,
-        name: str,
-        function: Callable[[dict[str, np.ndarray]], Points],
-        parent_name: str,
-        axis: Translations = None,
-    ):
-        """
-        This is a constructor for the Contact class. It evaluates the function that defines the contact to get an
-        actual position
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        name
-            The name of the new contact
-        function
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the contacts in the local joint coordinates.
-        parent_name
-            The name of the parent the contact is attached to
-        axis
-            The axis of the contact
-        """
-
-        # Get the position of the contact points and do some sanity checks
-        p = points_to_array(points=function(data.values), name=f"contact real function")
-        return ContactReal(name, parent_name, p, axis)
-
     def to_biomod(self):
+        if self.axis is None:
+            raise RuntimeError("The axis of the contact must be defined before exporting to biomod.")
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"contact\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"

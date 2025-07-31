@@ -293,8 +293,6 @@ segment	tibia_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
-		-6.283185	6.283185
-		-6.283185	6.283185
 
 endsegment
 
@@ -377,3 +375,116 @@ marker	RLEG3
 	anatomical	0
 endmarker
 
+
+// MUSCLE DEFINIION
+
+
+// pelvis > tibia_r
+musclegroup pelvis_to_tibia_r
+	OriginParent	pelvis
+	InsertionParent	tibia_r
+endmusclegroup
+
+	muscle	semiten_r
+		type	hill
+		statetype	degroote
+		musclegroup	pelvis_to_tibia_r
+		OriginPosition	-0.12634999999999999 -0.10988000000000001 0.060389999999999999
+		InsertionPosition	0.0027000000000000001 -0.095600000000000004 -0.019300000000000001
+		optimalLength	0.20100000000000001
+		maximalForce	410
+		tendonSlackLength	0.2555
+		pennationAngle	0.087266460000000004
+	endmuscle
+
+		viapoint	semiten_r-P3
+			parent	tibia_r
+			muscle	semiten_r
+			musclegroup	pelvis_to_tibia_r
+			position	-0.03322 -0.052819999999999999 -0.022880000000000001
+		endviapoint
+
+		viapoint	semiten_r-P4
+			parent	tibia_r
+			muscle	semiten_r
+			musclegroup	pelvis_to_tibia_r
+			position	-0.011299999999999999 -0.0746 -0.024500000000000001
+		endviapoint
+
+	muscle	bifemlh_r
+		type	hill
+		statetype	degroote
+		musclegroup	pelvis_to_tibia_r
+		OriginPosition	-0.12595999999999999 -0.10256999999999999 0.069440000000000002
+		InsertionPosition	-0.023400000000000001 -0.056300000000000003 0.034299999999999997
+		optimalLength	0.109
+		maximalForce	896
+		tendonSlackLength	0.32600000000000001
+		pennationAngle	0
+	endmuscle
+
+		viapoint	bifemlh_r-P2
+			parent	tibia_r
+			muscle	bifemlh_r
+			musclegroup	pelvis_to_tibia_r
+			position	-0.030099999999999998 -0.035999999999999997 0.029430000000000001
+		endviapoint
+
+	muscle	sar_r
+		type	hill
+		statetype	degroote
+		musclegroup	pelvis_to_tibia_r
+		OriginPosition	-0.015299999999999999 -0.0012999999999999999 0.1242
+		InsertionPosition	0.024299999999999999 -0.084000000000000005 -0.0252
+		optimalLength	0.52000000000000002
+		maximalForce	156
+		tendonSlackLength	0.10000000000000001
+		pennationAngle	0
+	endmuscle
+
+		viapoint	sar_r-P2
+			parent	femur_r
+			muscle	sar_r
+			musclegroup	pelvis_to_tibia_r
+			position	-0.0030000000000000001 -0.35680000000000001 -0.042099999999999999
+		endviapoint
+
+		viapoint	sar_r-P3
+			parent	tibia_r
+			muscle	sar_r
+			musclegroup	pelvis_to_tibia_r
+			position	-0.0055999999999999999 -0.0419 -0.039899999999999998
+		endviapoint
+
+		viapoint	sar_r-P4
+			parent	tibia_r
+			muscle	sar_r
+			musclegroup	pelvis_to_tibia_r
+			position	0.0060000000000000001 -0.058900000000000001 -0.038300000000000001
+		endviapoint
+
+	muscle	tfl_r
+		type	hill
+		statetype	degroote
+		musclegroup	pelvis_to_tibia_r
+		OriginPosition	-0.031099999999999999 0.021399999999999999 0.1241
+		InsertionPosition	0.0060000000000000001 -0.0487 0.029700000000000001
+		optimalLength	0.095000000000000001
+		maximalForce	233
+		tendonSlackLength	0.42499999999999999
+		pennationAngle	0.052359879999999998
+	endmuscle
+
+		viapoint	tfl_r-P2
+			parent	femur_r
+			muscle	tfl_r
+			musclegroup	pelvis_to_tibia_r
+			position	0.029399999999999999 -0.099500000000000005 0.059700000000000003
+		endviapoint
+
+		viapoint	tfl_r-P3
+			parent	femur_r
+			muscle	tfl_r
+			musclegroup	pelvis_to_tibia_r
+			position	0.0054000000000000003 -0.40489999999999998 0.035700000000000003
+		endviapoint

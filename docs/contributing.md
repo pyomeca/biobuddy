@@ -48,7 +48,7 @@ During your development, you can create a `sandbox` folder.
 Everything in this folder will automatically be ignored by Git. 
 If by accident you add a binary file in the history file (by not using a sandbox), your pull-request will be rejected and you will have to produce a new pull-request free from the binary file. 
 
-When you have completed the implementation of your new feature, navigate to your pull-request in GitHub and select `Pariterre` in the `Reviewers` drop menu. 
+When you have completed the implementation of your new feature, navigate to your pull-request in GitHub and select `EveCharbie` in the `Reviewers` drop menu. 
 At the same time, if you think your review is ready to be merged, remove the `[WIP]` tag in the name (otherwise, your pull-request won't be merged). 
 If your pull-request is accepted, there is nothing more to do, Congrats! 
 If changes are required, reply to all the comments and, as stated previously, respond `Done!` and tag them as resolved. 

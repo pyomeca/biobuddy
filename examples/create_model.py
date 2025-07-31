@@ -36,10 +36,10 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     bio_model = BiomechanicalModel()
 
     # The ground segment
-    bio_model.segments.append(Segment(name="GROUND"))
+    bio_model.add_segment(Segment(name="GROUND"))
 
     # The pendulum segment
-    bio_model.segments.append(
+    bio_model.add_segment(
         Segment(
             name="PENDULUM",
             translations=Translations.XYZ,
@@ -51,9 +51,9 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
             mesh_file=MeshFile(
                 mesh_file_name=mesh_path,
                 mesh_color=np.array([0, 0, 1]),
-                scaling_function=lambda m: np.array([1, 1, 10]),
-                rotation_function=lambda m: np.array([np.pi / 2, 0, 0]),
-                translation_function=lambda m: np.array([0.1, 0, 0]),
+                scaling_function=lambda m, model: np.array([1, 1, 10]),
+                rotation_function=lambda m, model: np.array([np.pi / 2, 0, 0]),
+                translation_function=lambda m, model: np.array([0.1, 0, 0]),
             ),
         )
     )
@@ -61,45 +61,58 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     bio_model.segments["PENDULUM"].add_contact(
         Contact(
             name="PENDULUM_CONTACT",
-            function=lambda m: np.array([0, 0, 0]),
+            function=lambda m, model: np.array([0, 0, 0]),
             parent_name="PENDULUM",
             axis=Translations.XYZ,
         )
     )
 
     # The pendulum muscle group
-    bio_model.muscle_groups.append(
+    bio_model.add_muscle_group(
         MuscleGroup(name="PENDULUM_MUSCLE_GROUP", origin_parent_name="GROUND", insertion_parent_name="PENDULUM")
     )
 
     # The pendulum muscle
-    bio_model.muscles.append(
+    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].add_muscle(
         Muscle(
             "PENDULUM_MUSCLE",
             muscle_type=MuscleType.HILL_THELEN,
             state_type=MuscleStateType.DEGROOTE,
             muscle_group="PENDULUM_MUSCLE_GROUP",
-            origin_position_function=lambda m, model: np.array([0, 0, 0]),
-            insertion_position_function=lambda m, model: np.array([0, 0, 1]),
+            origin_position=ViaPoint(
+                name="PENDULUM_ORIGIN",
+                parent_name="GROUND",
+                muscle_name="PENDULUM_MUSCLE",
+                muscle_group="PENDULUM_MUSCLE_GROUP",
+                position_function=lambda m, model: np.array([0, 0, 0]),
+            ),
+            insertion_position=ViaPoint(
+                name="PENDULUM_ORIGIN",
+                parent_name="PENDULUM",
+                muscle_name="PENDULUM_MUSCLE",
+                muscle_group="PENDULUM_MUSCLE_GROUP",
+                position_function=lambda m, model: np.array([0, 0, 1]),
+            ),
             optimal_length_function=lambda m, model: 0.1,
             maximal_force_function=lambda m, model: 100.0,
             tendon_slack_length_function=lambda m, model: 0.05,
             pennation_angle_function=lambda m, model: 0.05,
+            maximal_velocity_function=lambda m, model: 10.0,
             maximal_excitation=1,
         )
     )
-    bio_model.via_points.append(
+    bio_model.muscle_groups["PENDULUM_MUSCLE_GROUP"].muscles["PENDULUM_MUSCLE"].add_via_point(
         ViaPoint(
             "PENDULUM_MUSCLE",
-            position_function=lambda m, model: np.array([0, 0, 0.5]),
             parent_name="PENDULUM",
             muscle_name="PENDULUM_MUSCLE",
             muscle_group="PENDULUM_MUSCLE_GROUP",
+            position_function=lambda m, model: np.array([0, 0, 0.5]),
         )
     )
 
     # Put the model together
-    real_model = bio_model.to_real({})
+    real_model = bio_model.to_real({}, None)
 
     # Pprint it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath)
@@ -114,6 +127,8 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
 
     if remove_temporary:
         os.remove(kinematic_model_filepath)
+
+    return real_model
 
 
 def main():
