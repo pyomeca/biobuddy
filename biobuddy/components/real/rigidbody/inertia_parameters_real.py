@@ -60,42 +60,6 @@ class InertiaParametersReal:
         elif self.inertia.shape[1] != 3:
             raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
 
-    @staticmethod
-    def from_data(
-        data: Data,
-        model: BiomechanicalModelReal,
-        relative_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], float],
-        center_of_mass: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
-        inertia: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], np.ndarray],
-    ):
-        """
-        This is a constructor for the InertiaParameterReal class.
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        model
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
-        relative_mass
-            The callback function that returns the relative mass of the segment with respect to the full body
-        center_of_mass
-            The callback function that returns the position of the center of mass
-            from the segment coordinate system on the main axis
-        inertia
-            The callback function that returns the inertia xx, yy and zz parameters of the segment
-        """
-
-        mass = relative_mass(data.values, model)
-
-        com = points_to_array(points=center_of_mass(data.values, model), name=f"center_of_mass function")
-        if np.isnan(com).all():
-            raise RuntimeError(f"All the values for {com} returned nan which is not permitted")
-        inertia = points_to_array(points=inertia(data.values, model), name="inertia parameter function")
-
-        return InertiaParametersReal(mass, com, inertia)
-
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         if self.mass is not None:

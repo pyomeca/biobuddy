@@ -6,6 +6,7 @@ from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
+from ...utils.linear_algebra import RotoTransMatrix
 from ..model_utils import ModelUtils
 
 
@@ -89,18 +90,21 @@ class BiomechanicalModel(ModelUtils):
         for segment in self.segments:
             scs = SegmentCoordinateSystemReal()
             if segment.segment_coordinate_system is not None:
+                parent_scs_global = model.segment_coordinate_system_in_global(segment.parent_name)
                 scs = segment.segment_coordinate_system.to_scs(
                     data,
                     model,
+                    parent_scs_global
                 )
+                scs_global = parent_scs_global @ scs.scs
 
             inertia_parameters = None
             if segment.inertia_parameters is not None:
-                inertia_parameters = segment.inertia_parameters.to_inertia(data, model, scs)
+                inertia_parameters = segment.inertia_parameters.to_inertia(data, model, scs_global)
 
             mesh = None
             if segment.mesh is not None:
-                mesh = segment.mesh.to_mesh(data, model, scs)
+                mesh = segment.mesh.to_mesh(data, model, scs_global)
 
             mesh_file = None
             if segment.mesh_file is not None:
@@ -122,10 +126,10 @@ class BiomechanicalModel(ModelUtils):
             )
 
             for marker in segment.markers:
-                model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs))
+                model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
 
             for contact in segment.contacts:
-                model.segments[contact.parent_name].add_contact(contact.to_contact(data, model))
+                model.segments[contact.parent_name].add_contact(contact.to_contact(data, model, scs_global))
 
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(
@@ -137,11 +141,11 @@ class BiomechanicalModel(ModelUtils):
             )
 
             for muscle in muscle_group.muscles:
-                model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model))
+                model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model, scs_global))
 
                 for via_point in muscle.via_points:
                     model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
-                        via_point.to_via_point(data, model)
+                        via_point.to_via_point(data, model, scs_global)
                     )
 
         model.validate_model()

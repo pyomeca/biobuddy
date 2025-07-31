@@ -1,9 +1,9 @@
 from typing import Callable, Any
 
 from ..muscle.via_point import ViaPoint
+from ...muscle_utils import MuscleType, MuscleStateType
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
-from ...muscle_utils import MuscleType, MuscleStateType
 
 
 class Muscle:
@@ -219,22 +219,41 @@ class Muscle:
     def maximal_excitation(self, value: float):
         self._maximal_excitation = value
 
-    def to_muscle(self, data: Data, model) -> "MuscleReal":
+    def to_muscle(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "MuscleReal":
+        """
+        This constructs a MuscleReal by evaluating the function that defines the muscle to get an actual position
+
+        Parameters
+        ----------
+        data
+            The data to pick the data from
+        model
+            The model as it is constructed at that particular time. It is useful if some values must be obtained from
+            previously computed values
+        scs
+            The segment coordinate system in which the muscle is defined. This is useful for the origin and insertion
+            positions to be transformed correctly.
+        """
         from ...real.muscle.muscle_real import MuscleReal
 
-        return MuscleReal.from_data(
-            data,
-            model,
+        origin_position = self.origin_position.to_via_point(data, model, scs)
+        insertion_position = self.insertion_position.to_via_point(data, model, scs)
+        muscle_real = MuscleReal(
             self.name,
             self.muscle_type,
             self.state_type,
             self.muscle_group,
-            self.origin_position,
-            self.insertion_position,
-            self.optimal_length_function,
-            self.maximal_force_function,
-            self.tendon_slack_length_function,
-            self.pennation_angle_function,
-            self.maximal_excitation,
-            self.via_points,
+            origin_position,
+            insertion_position,
+            optimal_length=self.optimal_length_function(model, data.values),
+            maximal_force=self.maximal_force_function(model, data.values),
+            tendon_slack_length=self.tendon_slack_length_function(model, data.values),
+            pennation_angle=self.pennation_angle_function(model, data.values),
+            maximal_excitation=self.maximal_excitation,
         )
+
+        for via_point in self.via_points:
+            via_point_real = via_point.to_via_point(data, model, scs)
+            muscle_real.add_via_point(via_point_real)
+
+        return muscle_real

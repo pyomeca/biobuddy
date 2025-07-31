@@ -80,45 +80,6 @@ class MarkerReal:
     def is_anatomical(self, value: bool):
         self._is_anatomical = value
 
-    @staticmethod
-    def from_data(
-        data: Data,
-        model: BiomechanicalModelReal,
-        name: str,
-        function: Callable[[dict[str, np.ndarray], BiomechanicalModelReal], Points],
-        parent_name: str,
-        is_technical: bool = True,
-        is_anatomical: bool = False,
-    ):
-        """
-        This is a constructor for the MarkerReal class. It evaluates the function that defines the marker to get an
-        actual position
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        model
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
-        name
-            The name of the new marker
-        function
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the marker
-        parent_name
-            The name of the parent the marker is attached to
-        is_technical
-            If the marker should be flagged as a technical marker
-        is_anatomical
-            If the marker should be flagged as an anatomical marker
-        """
-
-        # Get the position of the markers and do some sanity checks
-        projected_p = points_to_array(points=function(data.values, model), name=f"marker function")
-        if np.isnan(projected_p).all():
-            raise RuntimeError(f"All the values for {function} returned nan which is not permitted")
-        return MarkerReal(name, parent_name, projected_p, is_technical=is_technical, is_anatomical=is_anatomical)
-
     @property
     def mean_position(self) -> np.ndarray:
         """

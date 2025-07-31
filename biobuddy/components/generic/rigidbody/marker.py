@@ -1,11 +1,10 @@
 from typing import Callable
 import numpy as np
 
-from ...real.biomechanical_model_real import BiomechanicalModelReal
-from ...real.rigidbody.marker_real import MarkerReal
-from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ....utils.protocols import Data
 from ....utils.checks import check_name
+from ....utils.aliases import points_to_array
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class Marker:
@@ -16,6 +15,7 @@ class Marker:
         parent_name: str = None,
         is_technical: bool = True,
         is_anatomical: bool = False,
+        is_local: bool = False,
     ):
         """
         This is a pre-constructor for the Marker class. It allows to create a generic model by marker names
@@ -33,12 +33,17 @@ class Marker:
             If the marker should be flagged as a technical marker
         is_anatomical
             If the marker should be flagged as an anatomical marker
+        is_local
+            Indicates whether the marker is defined in the local segment coordinate system.
+            If True, the marker is defined in the local coordinate system of the parent segment.
+            If False, the marker is defined in the global coordinate system.
         """
         self.name = name
         self.function = function
         self.parent_name = check_name(parent_name)
         self.is_technical = is_technical
         self.is_anatomical = is_anatomical
+        self.is_local = is_local
 
     @property
     def name(self) -> str:
@@ -92,13 +97,40 @@ class Marker:
     def is_anatomical(self, value: bool) -> None:
         self._is_anatomical = value
 
-    def to_marker(self, data: Data, model: BiomechanicalModelReal) -> MarkerReal:
-        return MarkerReal.from_data(
-            data,
-            model,
-            self.name,
-            self.function,
-            self.parent_name,
-            is_technical=self.is_technical,
-            is_anatomical=self.is_anatomical,
-        )
+    def to_marker(self, data: Data, model: "BiomechanicalModelReal", scs: "SegmentCoordinateSystemReal") -> "MarkerReal":
+        """
+        This constructs a MarkerReal by evaluating the function that defines the marker to get an actual position
+
+        Parameters
+        ----------
+        data
+            The data to pick the data from
+        model
+            The model as it is constructed at that particular time. It is useful if some values must be obtained from
+            previously computed values
+        scs
+            The segment coordinate system in which the marker is defined. If None, the marker is assumed to be in the global
+            coordinate system.
+        """
+        from ...real.rigidbody.marker_real import MarkerReal
+
+        if self.is_local:
+            scs = RotoTransMatrix()
+        elif scs is None:
+            raise RuntimeError("If you want to provide a global mesh, you must provide the segment's coordinate system.")
+
+        # Get the position of the markers and do some sanity checks
+        position = points_to_array(points=self.function(data.values, model), name=f"marker function")
+        try:
+            marker_position = scs.inverse @ position
+        except:
+            print("ddd")
+
+        if np.isnan(marker_position).all():
+            raise RuntimeError(f"All the values for {self.function} returned nan which is not permitted")
+
+        return MarkerReal(name=self.name,
+                          parent_name=self.parent_name,
+                          position=marker_position,
+                          is_technical=self.is_technical,
+                          is_anatomical=self.is_anatomical)

@@ -63,7 +63,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
             parent_name="Ground",
             translations=Translations.XYZ,
             rotations=Rotations.XYZ,
-            inertia_parameters=de_leva[SegmentName.TRUNK],  # TODO: merge
+            inertia_parameters=de_leva[SegmentName.TRUNK],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"]),
                 first_axis=Axis(
@@ -74,7 +74,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                 second_axis=Axis(name=Axis.Name.Z),
                 axis_to_keep=Axis.Name.Z,
             ),
-            mesh=Mesh(("LPSIS", "RPSIS", "RASIS", "LASIS", "LPSIS")),
+            mesh=Mesh(("LPSIS", "RPSIS", "RASIS", "LASIS", "LPSIS"), is_local=False),
         )
     )
     reduced_model.segments["Pelvis"].add_marker(Marker("LPSIS", is_technical=True, is_anatomical=True))
@@ -115,7 +115,8 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                         static_trial.values, None
                     )
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
-                )
+                ),
+            is_local=False
             ),
         )
     )
@@ -138,7 +139,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                 ),
                 axis_to_keep=Axis.Name.Z,
             ),
-            mesh=Mesh(("RMFE", "RSPH", "RLM", "RLFE")),
+            mesh=Mesh(("RMFE", "RSPH", "RLM", "RLFE"), is_local=False),
         )
     )
     reduced_model.segments["RTibia"].add_marker(Marker("RLM", is_technical=True, is_anatomical=True))
@@ -173,7 +174,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                 axis_to_keep=Axis.Name.Z,
             ),
             inertia_parameters=foot_inertia_parameters,
-            mesh=Mesh(("RLM", "RTT2", "RSPH", "RLM")),
+            mesh=Mesh(("RLM", "RTT2", "RSPH", "RLM"), is_local=False),
         )
     )
     reduced_model.segments["RFoot"].add_marker(Marker("RTT2", is_technical=True, is_anatomical=True))
@@ -209,7 +210,8 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                         static_trial.values, None
                     )
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
-                )
+                ),
+            is_local=False
             ),
         )
     )
@@ -232,7 +234,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                 ),
                 axis_to_keep=Axis.Name.Z,
             ),
-            mesh=Mesh(("LMFE", "LSPH", "LLM", "LLFE")),
+            mesh=Mesh(("LMFE", "LSPH", "LLM", "LLFE"), is_local=False),
         )
     )
     reduced_model.segments["LTibia"].add_marker(Marker("LLM", is_technical=True, is_anatomical=True))
@@ -265,7 +267,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
                 axis_to_keep=Axis.Name.Z,
             ),
             inertia_parameters=foot_inertia_parameters,
-            mesh=Mesh(("LLM", "LTT2", "LSPH", "LLM")),
+            mesh=Mesh(("LLM", "LTT2", "LSPH", "LLM"), is_local=False),
         )
     )
     reduced_model.segments["LFoot"].add_marker(Marker("LTT2", is_technical=True, is_anatomical=True))

@@ -331,7 +331,7 @@ def test_model_creation_from_data():
                 second_axis=Axis(name=Axis.Name.X, start="BOTTOM_HEAD", end="HEAD_XZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD")),
+            mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD"), is_local=False),
             inertia_parameters=de_leva[SegmentName.HEAD],
         )
     )

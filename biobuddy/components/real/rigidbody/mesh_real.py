@@ -33,37 +33,6 @@ class MeshReal:
     def add_positions(self, value: Points):
         self._positions = np.hstack((self._positions, points_to_array(points=value, name="positions")))
 
-    @staticmethod
-    def from_data(
-        data: Data,
-        model: BiomechanicalModelReal,
-        functions: tuple[Callable[[dict[str, np.ndarray], BiomechanicalModelReal], Point], ...],
-    ):
-        """
-        This is a constructor for the MeshReal class. It evaluates the functions that defines the mesh to get
-        actual positions
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        model
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
-        functions
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the mesh points
-        """
-
-        # Get the position of the all the mesh points and do some sanity checks
-        all_p = points_to_array(points=None, name="mesh_real")
-        for f in functions:
-            projected_p = np.nanmean(points_to_array(points=f(data.values, model), name="mesh function"), axis=1)
-            if np.isnan(projected_p).all():
-                raise RuntimeError(f"All the values for {f} returned nan which is not permitted")
-            all_p = np.hstack((all_p, projected_p))
-
-        return MeshReal(all_p)
-
     def to_biomod(self):
         # Do a sanity check
         if np.any(np.isnan(self.positions)):

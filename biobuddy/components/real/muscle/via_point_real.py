@@ -106,43 +106,6 @@ class ViaPointReal:
     def movement(self, value: PathPointMovement) -> None:
         self._movement = value
 
-    @staticmethod
-    def from_data(
-        data: Data,
-        model: "BiomechanicalModel",
-        name: str,
-        parent_name: str,
-        muscle_name: str,
-        muscle_group: str,
-        position_function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-    ):
-        """
-        This is a constructor for the Contact class. It evaluates the function that defines the contact to get an
-        actual position
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        model
-            The model as it is constructed at that particular time. It is useful if some values must be obtained from
-            previously computed values
-        name
-            The name of the new via point
-        parent_name
-            The name of the parent the via point is attached to
-        muscle_name
-            The name of the muscle that passes through this via point
-        muscle_group
-            The muscle group the muscle belongs to
-        position_function
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the via point in the local joint coordinates.
-        """
-
-        # Get the position of the contact points and do some sanity checks
-        position = points_to_array(points=position_function(data.values, model), name="viapoint function")
-        return ViaPointReal(name, parent_name, muscle_name, muscle_group, position)
-
     def to_biomod(self):
         """Define the print function, so it automatically formats things in the file properly."""
         if self.condition is not None:

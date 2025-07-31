@@ -90,18 +90,18 @@ class Axis:
         else:
             raise RuntimeError("End must be a Marker, a str, or a callable")
 
-    def to_axis(self, data: Data, kinematic_chain: BiomechanicalModelReal) -> AxisReal:
+    def to_axis(self, data: Data, model: BiomechanicalModelReal, scs: SegmentCoordinateSystemReal) -> AxisReal:
         """
         Compute the axis from actual data
         Parameters
         ----------
         data
             The actual data
-        kinematic_chain
+        model
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
         """
 
-        start = self.start.to_marker(data, kinematic_chain)
-        end = self.end.to_marker(data, kinematic_chain)
+        start = self.start.to_marker(data, model, scs)
+        end = self.end.to_marker(data, model, scs)
         return AxisReal(self.name, start, end)
