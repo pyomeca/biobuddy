@@ -3,6 +3,7 @@ import numpy as np
 
 from ..components.generic.rigidbody.inertia_parameters import InertiaParameters
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
+from ..components.generic.biomechanical_model import BiomechanicalModel
 from ..components.generic.rigidbody.segment import Segment
 from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystem
 from ..components.generic.rigidbody.mesh import Mesh
@@ -53,16 +54,38 @@ class DeLevaTable:
 
         # The following attributes will be set either by from_data or from_measurements
         self.inertial_table = None
-        self.top_head_position = None
-        self.shoulder_position = None
+        self.total_height = None
+        self.pelvis_height = None
+        self.trunk_length = None
+        self.hand_length = None
+        self.lower_arm_length = None
+        self.upper_arm_length = None
+        self.shoulder_width = None
+        self.thigh_length = None
+        self.tibia_length = None
+        self.hip_width = None
+        self.foot_length = None
+
+        # The following attributes will be set by get_joint_position_from_measurements
         self.pelvis_position = None
-        self.elbow_position = None
-        self.wrist_position = None
-        self.finger_position = None
-        self.knee_position = None
-        self.ankle_position = None
-        self.heel_position = None
-        self.toes_position = None
+        self.neck_position = None
+        self.top_head_position = None
+        self.right_shoulder_position = None
+        self.right_elbow_position = None
+        self.right_wrist_position = None
+        self.right_finger_position = None
+        self.left_shoulder_position = None
+        self.left_elbow_position = None
+        self.left_wrist_position = None
+        self.left_finger_position = None
+        self.right_hip_position = None
+        self.right_knee_position = None
+        self.right_ankle_position = None
+        self.right_toe_position = None
+        self.left_hip_position = None
+        self.left_knee_position = None
+        self.left_ankle_position = None
+        self.left_toe_position = None
 
     def define_inertial_table(self):
         """
@@ -75,97 +98,97 @@ class DeLevaTable:
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0694 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.5002), start=self.shoulder_position, end=self.top_head_position
+                        (1 - 0.5002), start=self.neck_position, end=self.top_head_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0694 * self.total_mass,
                         coef=(0.303, 0.315, 0.261),
                         start=self.top_head_position,
-                        end=self.shoulder_position,
+                        end=self.neck_position,
                     ),
                 ),
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4346 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.5138), start=self.pelvis_position, end=self.shoulder_position
+                        (1 - 0.5138), start=self.pelvis_position, end=self.neck_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.4346 * self.total_mass,
                         coef=(0.328, 0.306, 0.169),
-                        start=self.shoulder_position,
+                        start=self.neck_position,
                         end=self.pelvis_position,
                     ),
                 ),
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0271 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.5772), start=self.shoulder_position, end=self.elbow_position
+                        (1 - 0.5772), start=self.right_shoulder_position, end=self.right_elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0271 * self.total_mass,
                         coef=(0.285, 0.269, 0.158),
-                        start=self.shoulder_position,
-                        end=self.elbow_position,
+                        start=self.right_shoulder_position,
+                        end=self.right_elbow_position,
                     ),
                 ),
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0162 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.4574), start=self.elbow_position, end=self.wrist_position
+                        (1 - 0.4574), start=self.right_elbow_position, end=self.right_wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0162 * self.total_mass,
                         coef=(0.276, 0.265, 0.121),
-                        start=self.elbow_position,
-                        end=self.wrist_position,
+                        start=self.right_elbow_position,
+                        end=self.right_wrist_position,
                     ),
                 ),
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0061 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.7900), start=self.wrist_position, end=self.finger_position
+                        (1 - 0.7900), start=self.right_wrist_position, end=self.right_finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0061 * self.total_mass,
                         coef=(0.628, 0.513, 0.401),
-                        start=self.wrist_position,
-                        end=self.finger_position,
+                        start=self.right_wrist_position,
+                        end=self.right_finger_position,
                     ),
                 ),
                 SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 0.1416 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.4095, start=self.pelvis_position, end=self.knee_position
+                        0.4095, start=self.right_hip_position, end=self.right_knee_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.1416 * self.total_mass,
                         coef=(0.329, 0.329, 0.149),
-                        start=self.pelvis_position,
-                        end=self.knee_position,
+                        start=self.right_hip_position,
+                        end=self.right_knee_position,
                     ),
                 ),
                 SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 0.0433 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.4459, start=self.knee_position, end=self.ankle_position
+                        0.4459, start=self.right_knee_position, end=self.right_ankle_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0433 * self.total_mass,
                         coef=(0.255, 0.249, 0.103),
-                        start=self.knee_position,
-                        end=self.ankle_position,
+                        start=self.right_knee_position,
+                        end=self.right_ankle_position,
                     ),
                 ),
                 SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 0.0137 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.4415, start=self.heel_position, end=self.toes_position
+                        0.4415, start=self.right_ankle_position, end=self.right_toe_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0137 * self.total_mass,
                         coef=(0.257, 0.245, 0.124),
-                        start=self.heel_position,
-                        end=self.toes_position,
+                        start=self.right_ankle_position,
+                        end=self.right_toe_position,
                     ),
                 ),
             },
@@ -173,142 +196,154 @@ class DeLevaTable:
                 SegmentName.HEAD: InertiaParameters(
                     mass=lambda m, bio: 0.0669 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.4841), start=self.shoulder_position, end=self.top_head_position
+                        (1 - 0.4841), start=self.neck_position, end=self.top_head_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0669 * self.total_mass,
                         coef=(0.271, 0.295, 0.261),
                         start=self.top_head_position,
-                        end=self.shoulder_position,
+                        end=self.neck_position,
                     ),
                 ),
                 SegmentName.TRUNK: InertiaParameters(
                     mass=lambda m, bio: 0.4257 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.4964), start=self.pelvis_position, end=self.shoulder_position
+                        (1 - 0.4964), start=self.pelvis_position, end=self.neck_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.4257 * self.total_mass,
                         coef=(0.307, 0.292, 0.147),
-                        start=self.shoulder_position,
+                        start=self.neck_position,
                         end=self.pelvis_position,
                     ),
                 ),
                 SegmentName.UPPER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0255 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.5754), start=self.shoulder_position, end=self.elbow_position
+                        (1 - 0.5754), start=self.right_shoulder_position, end=self.right_elbow_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0255 * self.total_mass,
                         coef=(0.278, 0.260, 0.148),
-                        start=self.shoulder_position,
-                        end=self.elbow_position,
+                        start=self.right_shoulder_position,
+                        end=self.right_elbow_position,
                     ),
                 ),
                 SegmentName.LOWER_ARM: InertiaParameters(
                     mass=lambda m, bio: 0.0138 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.4559), start=self.elbow_position, end=self.wrist_position
+                        (1 - 0.4559), start=self.right_elbow_position, end=self.right_wrist_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0138 * self.total_mass,
                         coef=(0.261, 0.257, 0.094),
-                        start=self.elbow_position,
-                        end=self.wrist_position,
+                        start=self.right_elbow_position,
+                        end=self.right_wrist_position,
                     ),
                 ),
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0056 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.7474), start=self.wrist_position, end=self.finger_position
+                        (1 - 0.7474), start=self.right_wrist_position, end=self.right_finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0056 * self.total_mass,
                         coef=(0.531, 0.454, 0.335),
-                        start=self.wrist_position,
-                        end=self.finger_position,
+                        start=self.right_wrist_position,
+                        end=self.right_finger_position,
                     ),
                 ),
                 SegmentName.THIGH: InertiaParameters(
                     mass=lambda m, bio: 0.1478 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.3612, start=self.pelvis_position, end=self.knee_position
+                        0.3612, start=self.right_hip_position, end=self.right_knee_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.1478 * self.total_mass,
                         coef=(0.369, 0.364, 0.162),
-                        start=self.pelvis_position,
-                        end=self.knee_position,
+                        start=self.right_hip_position,
+                        end=self.right_knee_position,
                     ),
                 ),
                 SegmentName.SHANK: InertiaParameters(
                     mass=lambda m, bio: 0.0481 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.4416, start=self.knee_position, end=self.ankle_position
+                        0.4416, start=self.right_knee_position, end=self.right_ankle_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0481 * self.total_mass,
                         coef=(0.271, 0.267, 0.093),
-                        start=self.knee_position,
-                        end=self.ankle_position,
+                        start=self.right_knee_position,
+                        end=self.right_ankle_position,
                     ),
                 ),
                 SegmentName.FOOT: InertiaParameters(
                     mass=lambda m, bio: 0.0129 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        0.4014, start=self.heel_position, end=self.toes_position
+                        0.4014, start=self.right_ankle_position, end=self.right_toe_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0129 * self.total_mass,
                         coef=(0.299, 0.279, 0.124),
-                        start=self.heel_position,
-                        end=self.toes_position,
+                        start=self.right_ankle_position,
+                        end=self.right_toe_position,
                     ),
                 ),
             },
         }
 
-    def get_joint_position_from_measurements(self,
-                                             total_height: float,
-                                             pelvis_height: float,
-                                             trunk_length: float,
-                                             shoulder_width: float,
-                                             upper_arm_length: float,
-                                                lower_arm_length: float,
-                                                hand_length: float,
-                                             thigh_length: float,
-                                             tibia_length: float,
-                                             foot_length: float) -> None:
+    def get_joint_position_from_measurements(self) -> None:
 
+        # Upper body
+        self.pelvis_position = np.array([0.0, 0.0, self.pelvis_height, 1.0])
+        self.neck_position = np.array([0.0, 0.0, self.pelvis_height + self.trunk_length, 1.0])
+        self.top_head_position = np.array([0.0, 0.0, self.total_height, 1.0])
 
+        # Right arm
+        self.right_shoulder_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length, 1.0])
+        self.right_elbow_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0])
+        self.right_wrist_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length, 1.0])
+        self.right_finger_position = np.array([0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length - self.hand_length, 1.0])
 
-        self.pelvis_position = np.array([0.0, 0.0, pelvis_height, 1.0])
-        self.shoulder_position = np.array([0.0, 0.0, shoulder_height, 1.0])
-        self.top_head_position = np.array([0.0, 0.0, total_height, 1.0])
-        self.elbow_position = self.shoulder_position - np.array([0.0, 0.0, upper_arm_length, 0.0])
-        self.wrist_position = self.elbow_position - np.array([0.0, 0.0, lower_arm_length, 0.0])
-        self.finger_position = self.wrist_position - np.array([0.0, 0.0, hand_length, 0.0])
-        self.knee_position = np.array([0.0, 0.0, knee_height, 1.0])
-        self.ankle_position = np.array([0.0, 0.0, ankle_height, 1.0])
-        self.heel_position = np.array([0.0, 0.0, 0.0, 1.0])
-        self.toes_position = np.array([0.0, foot_length, 0.0, 1.0])
+        # Left arm
+        self.left_shoulder_position = np.array([0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0])
+        self.left_elbow_position = np.array(
+            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0])
+        self.left_wrist_position = np.array(
+            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length, 1.0])
+        self.left_finger_position = np.array([0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length - self.hand_length, 1.0])
 
+        # Right leg
+        self.right_hip_position = np.array([0, -self.hip_width/2, self.pelvis_height, 1])
+        self.right_knee_position = np.array([0, -self.hip_width/2, self.pelvis_height - self.thigh_length, 1])
+        self.right_ankle_position = np.array([0, -self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
+        # Toes position is false due to the heel being behind the ankle
+        self.right_toe_position = np.array([self.foot_length, -self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
 
+        # Left leg
+        self.left_hip_position = np.array([0, self.hip_width / 2, self.pelvis_height, 1])
+        self.left_knee_position = np.array([0, self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
+        self.left_ankle_position = np.array(
+            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
+        # Toes position is false due to the heel being behind the ankle
+        self.left_toe_position = np.array([self.foot_length, self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
 
 
     def from_data(self, data: Data):
-        self.top_head_position = data.values["TOP_HEAD"]
-        self.shoulder_position = data.values["SHOULDER"]
-        self.pelvis_position = data.values["PELVIS"]
-        self.elbow_position = data.values["ELBOW"]
-        self.wrist_position = data.values["WRIST"]
-        self.finger_position = data.values["FINGER"]
-        self.knee_position = data.values["KNEE"]
-        self.ankle_position = data.values["ANKLE"]
-        self.heel_position = data.values["HEEL"]
-        self.toes_position = data.values["TOE"]
 
+        self.total_height = data.values["TOP_HEAD"]
+        self.pelvis_height = data.values["PELVIS"]
+        self.trunk_length = data.values["SHOULDER"] - data.values["PELVIS"]
+        self.hand_length = data.values["WRIST"] - data.values["FINGER"]
+        self.lower_arm_length = data.values["ELBOW"] - data.values["WRIST"]
+        self.upper_arm_length = data.values["SHOULDER"] - data.values["ELBOW"]
+        self.shoulder_width = np.array([0, 0, 0, 1])  # Not defined
+        self.thigh_length = data.values["PELVIS"] - data.values["KNEE"]
+        self.tibia_length = data.values["KNEE"] - data.values["ANKLE"]
+        self.hip_width = np.array([0, 0, 0, 1])  # Not defined
+        self.foot_length = data.values["HEEL"] - data.values["TOE"]
+
+        self.get_joint_position_from_measurements()
         self.define_inertial_table()
 
     def from_measurements(
@@ -336,6 +371,7 @@ class DeLevaTable:
         self.shoulder_width = shoulder_span
         self.thigh_length = pelvis_height - knee_height
         self.tibia_length = knee_height - ankle_height
+        self.hip_width = hip_width
         self.foot_length = foot_length
 
         self.get_joint_position_from_measurements()
@@ -356,192 +392,213 @@ class DeLevaTable:
     def to_simple_model(self) -> BiomechanicalModelReal:
         """
         Creates a simple BiomechanicalModelReal based on the measurements used to create the De Leva table.
-        TODO: This could be handled differently so that the positions are already hadled properly in the from_ methods
         """
 
+        # Define the position of the joints
+        self.get_joint_position_from_measurements()
+
         # Generate the personalized kinematic model
-        model_real = BiomechanicalModelReal()
+        model = BiomechanicalModel()
 
-        model_real.add_segment(Segment(name="Ground"))
+        model.add_segment(Segment(name="Ground"))
 
-        model_real.add_segment(
+        model.add_segment(
             Segment(
                 name="TRUNK",
                 parent_name="Ground",
                 translations=Translations.XYZ,
                 rotations=Rotations.XYZ,
-                inertia_parameters=self.inertial_table[SegmentName.TRUNK],
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.TRUNK],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=self.pelvis_position,
+                    origin=lambda m, model: self.pelvis_position,
                 ),
-                mesh=Mesh([lambda m, model: np.array([0, 0, 0]),
-                          lambda m, model: self.shoulder_position - self.pelvis_position], is_local=True),
+                mesh=Mesh((lambda m, model: self.pelvis_position,
+                          lambda m, model: self.neck_position), is_local=False),
             )
         )
 
-        model_real.add_segment(
+        model.add_segment(
             Segment(
-                name="RTHIGH",
+                name="HEAD",
+                parent_name="TRUNK",
+                translations=Translations.XYZ,
+                rotations=Rotations.XYZ,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.HEAD],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.neck_position,
+                ),
+                mesh=Mesh((lambda m, model: self.neck_position,
+                          lambda m, model: self.top_head_position), is_local=False),
+            )
+        )
+
+        model.add_segment(
+            Segment(
+                name="R_THIGH",
                 parent_name="TRUNK",
                 rotations=Rotations.XY,
-                inertia_parameters=self.inertial_table[SegmentName.THIGH],
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.THIGH],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=self.pelvis_position,
+                    origin=lambda m, model: self.right_hip_position,
                 ),
-                mesh=Mesh([lambda m, model: np.array([0, 0, 0]),
-                           lambda m, model: self.shoulder_position - self.pelvis_position], is_local=True),
+                mesh=Mesh((lambda m, model: self.right_hip_position,
+                           lambda m, model: self.right_knee_position), is_local=False),
             )
         )
-        reduced_model.segments["RFemur"].add_marker(Marker("RLFE", is_technical=True, is_anatomical=True))
-        reduced_model.segments["RFemur"].add_marker(Marker("RMFE", is_technical=True, is_anatomical=True))
 
-        reduced_model.add_segment(
+        model.add_segment(
             Segment(
-                name="RTibia",
-                parent_name="RFemur",
+                name="R_SHANK",
+                parent_name="R_THIGH",
                 rotations=Rotations.X,
-                inertia_parameters=de_leva[SegmentName.SHANK],
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.SHANK],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
-                    first_axis=Axis(name=Axis.Name.X, start="RSPH", end="RLM"),
-                    second_axis=Axis(
-                        name=Axis.Name.Z,
-                        start=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]),
-                        end=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
-                    ),
-                    axis_to_keep=Axis.Name.Z,
+                    origin=lambda m, model: self.right_knee_position,
                 ),
-                mesh=Mesh(("RMFE", "RSPH", "RLM", "RLFE"), is_local=False),
+                mesh=Mesh((lambda m, model: self.right_knee_position,
+                           lambda m, model: self.right_ankle_position), is_local=False),
             )
         )
-        reduced_model.segments["RTibia"].add_marker(Marker("RLM", is_technical=True, is_anatomical=True))
-        reduced_model.segments["RTibia"].add_marker(Marker("RSPH", is_technical=True, is_anatomical=True))
 
-        # The foot is a special case since the position of the ankle relatively to the foot length is not given in De Leva
-        # So here we assume that the foot com is in the middle of the three foot markers
-        foot_inertia_parameters = de_leva[SegmentName.FOOT]
-        rt_matrix = RotoTransMatrix()
-        rt_matrix.from_euler_angles_and_translation(
-            angle_sequence="y",
-            angles=np.array([-np.pi / 2]),
-            translation=np.array([0.0, 0.0, 0.0]),
-        )
-        foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
-            np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
-            - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
-            axis=1,
-        )
-
-        reduced_model.add_segment(
+        model.add_segment(
             Segment(
-                name="RFoot",
-                parent_name="RTibia",
+                name="R_FOOT",
+                parent_name="R_SHANK",
                 rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.FOOT],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]),
-                    first_axis=Axis(
-                        Axis.Name.Z, start=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM"]), end="RTT2"
-                    ),
-                    second_axis=Axis(Axis.Name.X, start="RSPH", end="RLM"),
-                    axis_to_keep=Axis.Name.Z,
+                    origin=lambda m, model: self.right_ankle_position,
                 ),
-                inertia_parameters=foot_inertia_parameters,
-                mesh=Mesh(("RLM", "RTT2", "RSPH", "RLM"), is_local=False),
+                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
+                           lambda m, model: np.array([0, self.foot_length, 0, 1])), is_local=True),
             )
         )
-        reduced_model.segments["RFoot"].add_marker(Marker("RTT2", is_technical=True, is_anatomical=True))
 
-        reduced_model.add_segment(
+        model.add_segment(
             Segment(
-                name="LFemur",
-                parent_name="Pelvis",
+                name="L_THIGH",
+                parent_name="TRUNK",
                 rotations=Rotations.XY,
-                inertia_parameters=de_leva[SegmentName.THIGH],
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.THIGH],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                        static_trial.values, None
-                    )
-                                          - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
-                    first_axis=Axis(name=Axis.Name.X, start="LLFE", end="LMFE"),
-                    second_axis=Axis(
-                        name=Axis.Name.Z,
-                        start=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
-                        end=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"]),
-                    ),
-                    axis_to_keep=Axis.Name.Z,
+                    origin=lambda m, model: self.left_hip_position,
                 ),
-                mesh=Mesh(
-                    (
-                        lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                            static_trial.values, None
-                        )
-                                       - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
-                        "LMFE",
-                        "LLFE",
-                        lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                            static_trial.values, None
-                        )
-                                       - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
-                    ),
-                    is_local=False,
-                ),
+                mesh=Mesh((lambda m, model: self.left_hip_position,
+                           lambda m, model: self.left_knee_position), is_local=False),
             )
         )
-        reduced_model.segments["LFemur"].add_marker(Marker("LLFE", is_technical=True, is_anatomical=True))
-        reduced_model.segments["LFemur"].add_marker(Marker("LMFE", is_technical=True, is_anatomical=True))
 
-        reduced_model.add_segment(
+        model.add_segment(
             Segment(
-                name="LTibia",
-                parent_name="LFemur",
+                name="L_SHANK",
+                parent_name="L_THIGH",
                 rotations=Rotations.X,
-                inertia_parameters=de_leva[SegmentName.SHANK],
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.SHANK],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
-                    first_axis=Axis(name=Axis.Name.X, start="LLM", end="LSPH"),
-                    second_axis=Axis(
-                        name=Axis.Name.Z,
-                        start=SegmentCoordinateSystemUtils.mean_markers(["LSPH", "LLM"]),
-                        end=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
-                    ),
-                    axis_to_keep=Axis.Name.Z,
+                    origin=lambda m, model: self.left_knee_position,
                 ),
-                mesh=Mesh(("LMFE", "LSPH", "LLM", "LLFE"), is_local=False),
+                mesh=Mesh((lambda m, model: self.left_knee_position,
+                           lambda m, model: self.left_ankle_position), is_local=False),
             )
         )
-        reduced_model.segments["LTibia"].add_marker(Marker("LLM", is_technical=True, is_anatomical=True))
-        reduced_model.segments["LTibia"].add_marker(Marker("LSPH", is_technical=True, is_anatomical=True))
 
-        foot_inertia_parameters = de_leva[SegmentName.FOOT]
-        rt_matrix = RotoTransMatrix()
-        rt_matrix.from_euler_angles_and_translation(
-            angle_sequence="y",
-            angles=np.array([-np.pi / 2]),
-            translation=np.array([0.0, 0.0, 0.0]),
-        )
-        foot_inertia_parameters.center_of_mass = lambda m, bio: rt_matrix.rt_matrix @ np.nanmean(
-            np.nanmean(np.array([m[name] for name in ["LSPH", "LLM", "LTT2"]]), axis=0)
-            - np.nanmean(np.array([m[name] for name in ["LSPH", "LLM"]]), axis=0),
-            axis=1,
-        )
-
-        reduced_model.add_segment(
+        model.add_segment(
             Segment(
-                name="LFoot",
-                parent_name="LTibia",
+                name="L_FOOT",
+                parent_name="L_SHANK",
                 rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.FOOT],
                 segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=SegmentCoordinateSystemUtils.mean_markers(["LSPH", "LLM"]),
-                    first_axis=Axis(
-                        Axis.Name.Z, start=SegmentCoordinateSystemUtils.mean_markers(["LLM", "LSPH"]), end="LTT2"
-                    ),
-                    second_axis=Axis(Axis.Name.X, start="LLM", end="LSPH"),
-                    axis_to_keep=Axis.Name.Z,
+                    origin=lambda m, model: self.left_ankle_position,
                 ),
-                inertia_parameters=foot_inertia_parameters,
-                mesh=Mesh(("LLM", "LTT2", "LSPH", "LLM"), is_local=False),
+                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
+                           lambda m, model: np.array([0, self.foot_length, 0, 1])), is_local=True),
             )
         )
-        reduced_model.segments["LFoot"].add_marker(Marker("LTT2", is_technical=True, is_anatomical=True))
 
+        model.add_segment(
+            Segment(
+                name="R_UPPER_ARM",
+                parent_name="TRUNK",
+                rotations=Rotations.ZX,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_ARM],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.right_shoulder_position,
+                ),
+                mesh=Mesh((lambda m, model: self.right_shoulder_position,
+                           lambda m, model: self.right_elbow_position), is_local=False),
+            )
+        )
 
+        model.add_segment(
+            Segment(
+                name="R_LOWER_ARM",
+                parent_name="R_UPPER_ARM",
+                rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.LOWER_ARM],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.right_elbow_position,
+                ),
+                mesh=Mesh((lambda m, model: self.right_elbow_position,
+                           lambda m, model: self.right_wrist_position), is_local=False),
+            )
+        )
+
+        model.add_segment(
+            Segment(
+                name="R_HAND",
+                parent_name="R_LOWER_ARM",
+                rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.HAND],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.right_wrist_position,
+                ),
+                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
+                           lambda m, model: np.array([0, 0, -self.hand_length, 1])), is_local=True),
+            )
+        )
+
+        model.add_segment(
+            Segment(
+                name="L_UPPER_ARM",
+                parent_name="TRUNK",
+                rotations=Rotations.ZX,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_ARM],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.left_shoulder_position,
+                ),
+                mesh=Mesh((lambda m, model: self.left_shoulder_position,
+                           lambda m, model: self.left_elbow_position), is_local=False),
+            )
+        )
+
+        model.add_segment(
+            Segment(
+                name="L_LOWER_ARM",
+                parent_name="L_UPPER_ARM",
+                rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.LOWER_ARM],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.left_elbow_position,
+                ),
+                mesh=Mesh((lambda m, model: self.left_elbow_position,
+                           lambda m, model: self.left_wrist_position), is_local=False),
+            )
+        )
+
+        model.add_segment(
+            Segment(
+                name="L_HAND",
+                parent_name="L_LOWER_ARM",
+                rotations=Rotations.X,
+                inertia_parameters=self.inertial_table[self.sex][SegmentName.HAND],
+                segment_coordinate_system=SegmentCoordinateSystem(
+                    origin=lambda m, model: self.left_wrist_position,
+                ),
+                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
+                           lambda m, model: np.array([0, 0, -self.hand_length, 1])), is_local=True),
+            )
+        )
+
+        model_real = model.to_real({})
+        return model_real

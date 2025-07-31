@@ -64,8 +64,10 @@ def main():
     wrist_span_coeff = [0.80, 0.82, 0.84]
     finger_span_coeff = [1.0, 1.02, 1.04]
     foot_length_coeff = [0.3, 0.32, 0.34]
+    hip_width_coeff = [0.30, 0.32, 0.34]
 
     # Create all combinations using itertools.product
+    model_number = 0
     for combination in itertools.product(
             total_mass,
             total_height,
@@ -78,6 +80,7 @@ def main():
             wrist_span_coeff,
             finger_span_coeff,
             foot_length_coeff,
+            hip_width_coeff,
     ):
         (this_mass,
          this_height,
@@ -89,7 +92,8 @@ def main():
          this_elbow_span_coeff,
          this_wrist_span_coeff,
          this_finger_span_coeff,
-         this_foot_length_coeff) = combination
+         this_foot_length_coeff,
+         this_hip_width_coeff) = combination
 
         # Get the measurements for this model
         this_ankle_height = this_ankle_height_coeff * this_height
@@ -101,6 +105,7 @@ def main():
         this_wrist_span = this_wrist_span_coeff * this_height
         this_finger_span = this_finger_span_coeff * this_height
         this_foot_length = this_foot_length_coeff * this_height
+        this_hip_width = this_hip_width_coeff * this_height
 
         # Create the inertial table for this model
         inertia_table = DeLevaTable(this_mass, sex=Sex.FEMALE)
@@ -113,16 +118,22 @@ def main():
                                         wrist_span=this_wrist_span,
                                         elbow_span=this_elbow_span,
                                         shoulder_span=this_shoulder_span,
+                                        hip_width=this_hip_width,
                                         foot_length=this_foot_length)
 
         # Create the model
         real_model = inertia_table.to_simple_model()
+        real_model.animate()
 
         # Modify the model to merge both arms together
         # TODO: ...
 
         # Modify the model to place the root segment at the hands
         # TODO: ...
+
+        # Exporting the output model as a biomod file
+        real_model.to_biomod(f"population_model_{model_number}.biomod")
+        model_number += 1
 
 
 if __name__ == "__main__":
