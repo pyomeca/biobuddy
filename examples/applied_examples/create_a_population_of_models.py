@@ -132,7 +132,7 @@ def main():
         # TODO: ...
 
         # Exporting the output model as a biomod file
-        real_model.to_biomod(f"population_model_{model_number}.biomod")
+        real_model.to_biomod(f"population_model_{model_number}.bioMod")
         model_number += 1
 
 

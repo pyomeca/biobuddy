@@ -330,18 +330,23 @@ class DeLevaTable:
 
 
     def from_data(self, data: Data):
+        """
+        Create the De Leva table from a Data object containing the measurements of the subject.
+        This is useful if you want to measure segment length using the markers from a static trial.
+        Only the z (3rd) components are used to measure segment length, except for the foot length.
+        """
 
-        self.total_height = data.values["TOP_HEAD"]
-        self.pelvis_height = data.values["PELVIS"]
-        self.trunk_length = data.values["SHOULDER"] - data.values["PELVIS"]
-        self.hand_length = data.values["WRIST"] - data.values["FINGER"]
-        self.lower_arm_length = data.values["ELBOW"] - data.values["WRIST"]
-        self.upper_arm_length = data.values["SHOULDER"] - data.values["ELBOW"]
-        self.shoulder_width = np.array([0, 0, 0, 1])  # Not defined
-        self.thigh_length = data.values["PELVIS"] - data.values["KNEE"]
-        self.tibia_length = data.values["KNEE"] - data.values["ANKLE"]
-        self.hip_width = np.array([0, 0, 0, 1])  # Not defined
-        self.foot_length = data.values["HEEL"] - data.values["TOE"]
+        self.total_height = data.values["TOP_HEAD"][2]
+        self.pelvis_height = data.values["PELVIS"][2]
+        self.trunk_length = data.values["SHOULDER"][2] - data.values["PELVIS"][2]
+        self.hand_length = data.values["WRIST"][2] - data.values["FINGER"][2]
+        self.lower_arm_length = data.values["ELBOW"][2] - data.values["WRIST"][2]
+        self.upper_arm_length = data.values["SHOULDER"][2] - data.values["ELBOW"][2]
+        self.shoulder_width = 0  # Not defined
+        self.thigh_length = data.values["PELVIS"][2] - data.values["KNEE"][2]
+        self.tibia_length = data.values["KNEE"][2] - data.values["ANKLE"][2]
+        self.hip_width = 0  # Not defined
+        self.foot_length = np.linalg.norm(data.values["HEEL"] - data.values["TOE"])
 
         self.get_joint_position_from_measurements()
         self.define_inertial_table()
@@ -360,6 +365,9 @@ class DeLevaTable:
         hip_width: float,
         foot_length: float,
     ):
+        """
+        Create the De Leva table from a manual measurements of the subject.
+        """
 
         # Define some length from measurements
         self.total_height = total_height
