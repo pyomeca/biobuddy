@@ -9,8 +9,8 @@ from .mesh_real import MeshReal
 from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...generic.rigidbody.range_of_motion import RangeOfMotion
 from ....utils.linear_algebra import RotoTransMatrix
-from ....utils.rotations import Rotations
-from ....utils.translations import Translations
+from ....utils.enums import Rotations
+from ....utils.enums import Translations
 from ....utils.named_list import NamedList
 from ...segment_utils import SegmentUtils
 from ....utils.checks import check_name

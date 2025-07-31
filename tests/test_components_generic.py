@@ -13,14 +13,22 @@ from biobuddy import (
     Marker,
     Axis,
     SegmentCoordinateSystem,
+    SegmentCoordinateSystemReal,
     Mesh,
     MeshFile,
     InertiaParameters,
     Contact,
     Segment,
+    Translations,
+    Rotations,
+    RotoTransMatrix,
 )
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData
+
+
+MOCK_RT = RotoTransMatrix()
+MOCK_RT.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
 
 
 # ------- Via Point ------- #
@@ -53,8 +61,8 @@ def test_init_via_points():
     np.testing.assert_array_equal(result, np.array([4, 5, 6]))
 
 
-def test_to_via_point():
-    # Mock the ViaPointReal class and from_data method
+def test_to_via_point_local():
+    # Mock the ViaPointReal class
     mock_data = MockC3dData()
     mock_model = None
 
@@ -64,18 +72,19 @@ def test_to_via_point():
         parent_name="parent1",
         muscle_name="muscle1",
         muscle_group="group1",
+        is_local=True,
     )
     # Not possible to evaluate the via point without a position function
     with pytest.raises(
         RuntimeError, match="You must provide a position function to evaluate the ViaPoint into a ViaPointReal."
     ):
-        via_point_real = via_point.to_via_point(mock_data, mock_model)
+        via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
 
     # Set the function
     via_point.position_function = lambda m, bio: m["HV"]
 
     # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model)
+    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
         np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
             4,
@@ -93,12 +102,62 @@ def test_to_via_point():
     via_point.position_function = "HV"
 
     # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model)
+    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+
+
+def test_to_via_point_global():
+    # Mock the ViaPointReal class
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Crete a via point
+    via_point = ViaPoint(
+        name="test_via_point",
+        parent_name="parent1",
+        muscle_name="muscle1",
+        muscle_group="group1",
+        is_local=False,
+    )
+    # Not possible to evaluate the via point without a position function
+    with pytest.raises(
+        RuntimeError, match="You must provide a position function to evaluate the ViaPoint into a ViaPointReal."
+    ):
+        via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+
+    # Set the function
+    via_point.position_function = lambda m, bio: m["HV"]
+
+    # Call to_via_point
+    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    npt.assert_almost_equal(
+        np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
+            4,
+        ),
+        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.mean(via_point_real.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+    )
+
+    # Set the marker name
+    via_point.position_function = "HV"
+
+    # Call to_via_point
+    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    npt.assert_almost_equal(
+        np.mean(via_point_real.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
 
 
@@ -265,7 +324,7 @@ def test_muscle_origin_insertion():
         muscle.insertion_position = insertion_bad
 
 
-def test_muscle_to_muscle():
+def test_muscle_to_muscle_local():
     # Create mock functions for muscle parameters
     mock_optimal_length = lambda params, bio: 0.1
     mock_maximal_force = lambda params, bio: 100.0
@@ -274,8 +333,8 @@ def test_muscle_to_muscle():
     mock_maximal_velocity = lambda params, bio: 10.0
 
     # Create mock via points
-    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV")
-    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="HV")
+    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV", is_local=True)
+    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="HV", is_local=True)
 
     # Create a muscle
     muscle = Muscle(
@@ -297,7 +356,7 @@ def test_muscle_to_muscle():
     mock_model = None
 
     # Call to_muscle
-    muscle_real = muscle.to_muscle(mock_data, mock_model)
+    muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
 
     # Basic verification that the conversion happened
     assert muscle_real.name == "test_muscle"
@@ -322,6 +381,66 @@ def test_muscle_to_muscle():
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+
+
+def test_muscle_to_muscle_global():
+    # Create mock functions for muscle parameters
+    mock_optimal_length = lambda params, bio: 0.1
+    mock_maximal_force = lambda params, bio: 100.0
+    mock_tendon_slack = lambda params, bio: 0.2
+    mock_pennation_angle = lambda params, bio: 0.1
+    mock_maximal_velocity = lambda params, bio: 10.0
+
+    # Create mock via points
+    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV", is_local=False)
+    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="HV", is_local=False)
+
+    # Create a muscle
+    muscle = Muscle(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="test_group",
+        origin_position=origin,
+        insertion_position=insertion,
+        optimal_length_function=mock_optimal_length,
+        maximal_force_function=mock_maximal_force,
+        tendon_slack_length_function=mock_tendon_slack,
+        pennation_angle_function=mock_pennation_angle,
+        maximal_velocity_function=mock_maximal_velocity,
+    )
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Call to_muscle
+    muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
+
+    # Basic verification that the conversion happened
+    assert muscle_real.name == "test_muscle"
+    assert muscle_real.muscle_group == "test_group"
+    assert muscle_real.maximal_excitation == 1.0
+
+    # Test the muscle parameters evaluation
+    npt.assert_almost_equal(muscle_real.optimal_length, 0.1)
+    npt.assert_almost_equal(muscle_real.maximal_force, 100.0)
+    npt.assert_almost_equal(muscle_real.tendon_slack_length, 0.2)
+    npt.assert_almost_equal(muscle_real.pennation_angle, 0.1)
+
+    # Test the origin and insertion positions
+    npt.assert_almost_equal(
+        np.mean(muscle_real.origin_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.mean(muscle_real.insertion_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
 
 
@@ -357,7 +476,7 @@ def test_muscle_functions():
     mock_model = None
 
     # Call to_muscle
-    muscle_real = muscle.to_muscle(mock_data, mock_model)
+    muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
 
     # Test the muscle parameters evaluation with known values
     npt.assert_almost_equal(muscle_real.optimal_length, 0.15)
@@ -575,7 +694,7 @@ def test_muscle_group_with_via_points():
     mock_model = None
 
     # Convert to real muscle
-    muscle_real = muscle.to_muscle(mock_data, mock_model)
+    muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
 
     # Test the via points positions
     npt.assert_almost_equal(
@@ -672,16 +791,16 @@ def test_init_marker():
     npt.assert_array_equal(result, np.array([1, 2, 3, 1]))
 
 
-def test_marker_to_marker():
+def test_marker_to_marker_local():
     # Create a marker with a position function
-    marker = Marker(name="SUP", parent_name="segment1")
+    marker = Marker(name="SUP", parent_name="segment1", is_local=True)
 
     # Mock data and model
     mock_data = MockC3dData()
     mock_model = None
 
     # Marker without a position function is by default its name in the c3d
-    marker_real = marker.to_marker(mock_data, mock_model)
+    marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
         marker_real.position.reshape(
             4,
@@ -693,7 +812,7 @@ def test_marker_to_marker():
     marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
 
     # Call to_via_point
-    marker_real = marker.to_marker(mock_data, mock_model)
+    marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
         marker.function(mock_data.values, mock_model).reshape(
             4,
@@ -707,6 +826,44 @@ def test_marker_to_marker():
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+
+
+def test_marker_to_marker_global():
+    # Create a marker with a position function
+    marker = Marker(name="SUP", parent_name="segment1", is_local=False)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Marker without a position function is by default its name in the c3d
+    marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
+    npt.assert_almost_equal(
+        marker_real.position.reshape(
+            4,
+        ),
+        np.array([-0.47436502, 0.4726582, 0.57603569, 1.0]),
+    )
+
+    # Set the function
+    marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
+
+    # Call to_via_point
+    marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
+    npt.assert_almost_equal(
+        marker.function(mock_data.values, mock_model).reshape(
+            4,
+        ),
+        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+
+    # Test the marker position
+    npt.assert_almost_equal(
+        marker_real.position.reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
     )
 
 
@@ -724,7 +881,7 @@ def test_init_axis():
     assert callable(axis.end.function)
 
 
-def test_axis_to_axis():
+def test_axis_to_axis_global():
     # Create an axis with marker functions
     axis = Axis(name=Axis.Name.X, start="HV", end="HV")  # Using same marker for simplicity
 
@@ -733,7 +890,38 @@ def test_axis_to_axis():
     mock_model = None
 
     # Convert to real axis
-    axis_real = axis.to_axis(mock_data, mock_model)
+    axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
+
+    # Test the axis properties
+    assert axis_real.name == Axis.Name.X
+
+    # Test start and end positions
+    npt.assert_almost_equal(
+        axis_real.start_point.position.reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+    )
+    npt.assert_almost_equal(
+        axis_real.end_point.position.reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+    )
+
+
+def test_axis_to_axis_local():
+    # Create an axis with marker functions
+    axis = Axis(
+        name=Axis.Name.X, start=Marker("HV", is_local=True), end=Marker("HV", is_local=True)
+    )  # Using same marker for simplicity
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Convert to real axis
+    axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
 
     # Test the axis properties
     assert axis_real.name == Axis.Name.X
@@ -770,7 +958,7 @@ def test_init_segment_coordinate_system():
     assert scs.axis_to_keep == Axis.Name.X
 
 
-def test_segment_coordinate_system_to_scs():
+def test_segment_coordinate_system_to_scs_global():
     # Create axes for the coordinate system
     first_axis = Axis(name=Axis.Name.Z, start="HV", end="SUP")
     second_axis = Axis(name=Axis.Name.Y, start="LA", end="RA")
@@ -782,7 +970,36 @@ def test_segment_coordinate_system_to_scs():
     mock_data = MockC3dData()
     mock_model = None
 
-    result = scs.to_scs(mock_data, mock_model)
+    result = scs.to_scs(mock_data, mock_model, MOCK_RT)
+
+    npt.assert_almost_equal(
+        result.scs.rt_matrix,
+        np.array(
+            [
+                [0.6345035, -0.50665328, 0.58370178, -0.65174504],
+                [-0.27024383, -0.85294839, -0.44659525, 0.60837317],
+                [0.72413644, 0.12562444, -0.67811866, 0.78210787],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
+
+
+def test_segment_coordinate_system_to_scs_local():
+    # Create axes for the coordinate system
+    first_axis = Axis(name=Axis.Name.Z, start=Marker("HV", is_local=True), end=Marker("SUP", is_local=True))
+    second_axis = Axis(name=Axis.Name.Y, start=Marker("LA", is_local=True), end=Marker("RA", is_local=True))
+
+    # Create a segment coordinate system
+    scs = SegmentCoordinateSystem(
+        origin=Marker("HV", is_local=True), first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.Z
+    )
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    result = scs.to_scs(mock_data, mock_model, MOCK_RT)
 
     npt.assert_almost_equal(
         result.scs.rt_matrix,
@@ -814,7 +1031,7 @@ def test_init_mesh():
     assert len(mesh.functions) == 2
 
 
-def test_mesh_to_mesh():
+def test_mesh_to_mesh_global():
     # Create a mesh with marker functions
     mesh = Mesh(functions=("HV", "STR", "SUP", "HV"))
 
@@ -823,15 +1040,39 @@ def test_mesh_to_mesh():
     mock_model = None
 
     # Convert to real mesh
-    mesh_real = mesh.to_mesh(mock_data, mock_model)
+    mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
 
     npt.assert_almost_equal(
         mesh_real.positions,
         np.array(
             [
-                [0.5758053, 0.5758053, 0.5758053, 0.5758053],
-                [0.60425486, 0.60425486, 0.60425486, 0.60425486],
-                [1.67896849, 1.67896849, 1.67896849, 1.67896849],
+                [-0.65174504, -0.31463354, -0.47436502, -0.65174504],
+                [0.60837317, 0.35748207, 0.4726582, 0.60837317],
+                [0.78210787, 0.49102046, 0.57603569, 0.78210787],
+                [1.0, 1.0, 1.0, 1.0],
+            ]
+        ),
+    )
+
+
+def test_mesh_to_mesh_local():
+    # Create a mesh with marker functions
+    mesh = Mesh(functions=("HV", "STR", "SUP", "HV"), is_local=True)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Convert to real mesh
+    mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
+
+    npt.assert_almost_equal(
+        mesh_real.positions,
+        np.array(
+            [
+                [0.5758053, 0.60645725, 0.5515919, 0.5758053],
+                [0.60425486, 0.59659578, 0.60041439, 0.60425486],
+                [1.67896849, 1.16874875, 1.37607094, 1.67896849],
                 [1.0, 1.0, 1.0, 1.0],
             ]
         ),
@@ -930,20 +1171,48 @@ def test_init_inertia_parameters():
     assert inertia_params.inertia == inertia_func
 
 
-def test_inertia_parameters_to_inertia():
+def test_inertia_parameters_to_inertia_global():
     # Create inertia parameters with functions
     mass_func = lambda data, model: 10.0
     com_func = lambda data, model: np.array([0.1, 0.2, 0.3])
     inertia_func = lambda data, model: np.array([1.0, 2.0, 3.0])
 
-    inertia_params = InertiaParameters(mass=mass_func, center_of_mass=com_func, inertia=inertia_func)
+    inertia_params = InertiaParameters(mass=mass_func, center_of_mass=com_func, inertia=inertia_func, is_local=False)
 
     # Mock data and model
     mock_data = MockC3dData()
     mock_model = None
 
     # Convert to real inertia parameters
-    inertia_real = inertia_params.to_inertia(mock_data, mock_model)
+    inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
+
+    # Test the properties of the real inertia parameters
+    npt.assert_almost_equal(inertia_real.mass, 10.0)
+    npt.assert_almost_equal(
+        inertia_real.center_of_mass.reshape(
+            4,
+        ),
+        np.array([-0.25467601, -0.22376214, -0.41841443, 1.0]),
+    )
+    npt.assert_almost_equal(
+        inertia_real.inertia.reshape(4, 4), np.array([[1, 0, 0, 0], [0, 2, 0, 0], [0, 0, 3, 0], [0, 0, 0, 1]])
+    )
+
+
+def test_inertia_parameters_to_inertia_local():
+    # Create inertia parameters with functions
+    mass_func = lambda data, model: 10.0
+    com_func = lambda data, model: np.array([0.1, 0.2, 0.3])
+    inertia_func = lambda data, model: np.array([1.0, 2.0, 3.0])
+
+    inertia_params = InertiaParameters(mass=mass_func, center_of_mass=com_func, inertia=inertia_func, is_local=True)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = None
+
+    # Convert to real inertia parameters
+    inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
 
     # Test the properties of the real inertia parameters
     npt.assert_almost_equal(inertia_real.mass, 10.0)
@@ -988,9 +1257,6 @@ def test_init_contact():
     assert contact.parent_name == "segment1"
     assert contact.axis is None
 
-    # Test initialization with all parameters
-    from biobuddy.utils.translations import Translations
-
     contact = Contact(
         name="test_contact",
         function=lambda m, bio: np.array([1, 2, 3, 1]),
@@ -1015,7 +1281,7 @@ def test_init_contact():
     )
 
 
-def test_contact_to_contact():
+def test_contact_to_contact_global():
     # Create a contact with a position function
     contact = Contact(name="test_contact", function="HV", parent_name="segment1")
 
@@ -1024,7 +1290,7 @@ def test_contact_to_contact():
     mock_data = MockC3dData()
 
     # Convert to real contact
-    contact_real = contact.to_contact(mock_data, mock_model)
+    contact_real = contact.to_contact(mock_data, mock_model, MOCK_RT)
 
     # Test the contact properties
     assert contact_real.name == "test_contact"
@@ -1035,14 +1301,36 @@ def test_contact_to_contact():
         np.mean(contact_real.position, axis=1).reshape(
             4,
         ),
-        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+        np.array([-0.651745, 0.6083732, 0.7821079, 1.0]),
+    )
+
+
+def test_contact_to_contact_local():
+    # Create a contact with a position function
+    contact = Contact(name="test_contact", function="HV", parent_name="segment1", is_local=True)
+
+    # Mock data
+    mock_model = None
+    mock_data = MockC3dData()
+
+    # Convert to real contact
+    contact_real = contact.to_contact(mock_data, mock_model, MOCK_RT)
+
+    # Test the contact properties
+    assert contact_real.name == "test_contact"
+    assert contact_real.parent_name == "segment1"
+
+    # Test the contact position
+    npt.assert_almost_equal(
+        np.mean(contact_real.position, axis=1).reshape(
+            4,
+        ),
+        np.array([0.5758053, 0.6042549, 1.6789685, 1.0]),
     )
 
 
 # ------- Segment ------- #
 def test_init_segment():
-    from biobuddy.utils.rotations import Rotations
-    from biobuddy.utils.translations import Translations
 
     # Test initialization with minimal parameters
     segment = Segment(name="test_segment")
@@ -1087,8 +1375,6 @@ def test_init_segment():
 
 
 def test_segment_dof_names_auto_generation():
-    from biobuddy.utils.rotations import Rotations
-    from biobuddy.utils.translations import Translations
 
     # Test auto-generation of dof_names
     segment = Segment(name="test_segment", translations=Translations.XY, rotations=Rotations.Z)

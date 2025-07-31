@@ -4,7 +4,7 @@ import numpy as np
 
 from ....utils.aliases import Point, point_to_array, Points, points_to_array
 from ....utils.protocols import Data
-from ....utils.translations import Translations
+from ....utils.enums import Translations
 from ....utils.checks import check_name
 
 
@@ -64,39 +64,6 @@ class ContactReal:
     @axis.setter
     def axis(self, value: Translations):
         self._axis = value
-
-    @staticmethod
-    def from_data(
-        data: Data,
-        model: "BiomechanicalModelReal",
-        name: str,
-        function: Callable[[dict[str, np.ndarray], "BiomechanicalModelReal"], Points],
-        parent_name: str,
-        axis: Translations = None,
-    ):
-        """
-        This is a constructor for the Contact class. It evaluates the function that defines the contact to get an
-        actual position
-
-        Parameters
-        ----------
-        data
-            The data to pick the data from
-        model
-            The biomechanical model to which the contact belongs
-        name
-            The name of the new contact
-        function
-            The function (f(m) -> np.ndarray, where m is a dict of markers (XYZ1 x time)) that defines the contacts in the local joint coordinates.
-        parent_name
-            The name of the parent the contact is attached to
-        axis
-            The axis of the contact
-        """
-
-        # Get the position of the contact points and do some sanity checks
-        p = points_to_array(points=function(data.values, model), name=f"contact real function")
-        return ContactReal(name, parent_name, p, axis)
 
     def to_biomod(self):
         if self.axis is None:

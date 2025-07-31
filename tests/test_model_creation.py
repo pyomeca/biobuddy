@@ -1,5 +1,6 @@
 import os
 import pytest
+from pathlib import Path
 
 import numpy as np
 import numpy.testing as npt
@@ -20,18 +21,11 @@ from biobuddy import (
     SegmentCoordinateSystem,
     Axis,
     Mesh,
-    C3dData,
-    RangeOfMotion,
-    Ranges,
-    MeshFile,
-    Contact,
-    MuscleGroup,
-    Muscle,
     MuscleType,
     MuscleStateType,
-    ViaPoint,
     Sex,
     SegmentName,
+    C3dData,
 )
 from test_utils import destroy_model
 
@@ -202,6 +196,7 @@ def test_model_creation_from_static(remove_temporary: bool = True):
         )
     )
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE", parent_name="FOOT", position=np.array([0, 0, 0])))
+    bio_model.segments["FOOT"].add_marker(MarkerReal(name="HEEL", parent_name="FOOT", position=np.array([0, 0, -0.01])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="TOE", parent_name="FOOT", position=np.array([0, 0, 0.25])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_Z", parent_name="FOOT", position=np.array([0, 0, 1])))
     bio_model.segments["FOOT"].add_marker(MarkerReal(name="ANKLE_YZ", parent_name="FOOT", position=np.array([0, 1, 1])))
@@ -214,50 +209,62 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     assert bio_model.nb_q == 7
     assert model.nbSegment() == 9
     assert bio_model.nb_segments == 9
-    assert model.nbMarkers() == 25
-    assert bio_model.nb_markers == 25
+    assert model.nbMarkers() == 26
+    assert bio_model.nb_markers == 26
     value = model.markers(np.zeros((model.nbQ(),)))[-3].to_array()
     np.testing.assert_almost_equal(value, [0, 0.25, -0.85], decimal=4)
 
     # Test the attributes of the model
-    assert bio_model.segment_names == [
-        "root",
-        "TRUNK",
-        "HEAD",
-        "UPPER_ARM",
-        "LOWER_ARM",
-        "HAND",
-        "THIGH",
-        "SHANK",
-        "FOOT",
-    ]
-    assert bio_model.marker_names == [
-        "PELVIS",
-        "BOTTOM_HEAD",
-        "TOP_HEAD",
-        "HEAD_Z",
-        "HEAD_XZ",
-        "SHOULDER",
-        "SHOULDER_X",
-        "SHOULDER_XY",
-        "ELBOW",
-        "ELBOW_Y",
-        "ELBOW_XY",
-        "WRIST",
-        "FINGER",
-        "HAND_Y",
-        "HAND_YZ",
-        "THIGH_ORIGIN",
-        "THIGH_X",
-        "THIGH_Y",
-        "KNEE",
-        "KNEE_Z",
-        "KNEE_XZ",
-        "ANKLE",
-        "TOE",
-        "ANKLE_Z",
-        "ANKLE_YZ",
-    ]
+    assert all(
+        segment_name
+        in [
+            "root",
+            "TRUNK",
+            "HEAD",
+            "UPPER_ARM",
+            "LOWER_ARM",
+            "HAND",
+            "THIGH",
+            "SHANK",
+            "FOOT",
+        ]
+        for segment_name in bio_model.segment_names
+    )
+    assert len(bio_model.segment_names) == 9
+
+    assert all(
+        marker_name
+        in [
+            "PELVIS",
+            "BOTTOM_HEAD",
+            "TOP_HEAD",
+            "HEAD_Z",
+            "HEAD_XZ",
+            "SHOULDER",
+            "SHOULDER_X",
+            "SHOULDER_XY",
+            "ELBOW",
+            "ELBOW_Y",
+            "ELBOW_XY",
+            "WRIST",
+            "FINGER",
+            "HAND_Y",
+            "HAND_YZ",
+            "THIGH_ORIGIN",
+            "THIGH_X",
+            "THIGH_Y",
+            "KNEE",
+            "KNEE_Z",
+            "KNEE_XZ",
+            "ANKLE",
+            "TOE",
+            "HEEL",
+            "ANKLE_Z",
+            "ANKLE_YZ",
+        ]
+        for marker_name in bio_model.marker_names
+    )
+    assert len(bio_model.marker_names) == 26
 
     destroy_model(bio_model)
 
@@ -282,9 +289,13 @@ def test_model_creation_from_data():
     kinematic_model_filepath = "temporary.bioMod"
     test_model_creation_from_static(remove_temporary=False)
 
+    # Prepare a fake model and a fake static from the previous test
+    fake_data = FakeData(Model(kinematic_model_filepath))
+
     # Fill the kinematic chain model
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
+    de_leva.from_data(fake_data)
 
     model.add_segment(
         Segment(
@@ -320,7 +331,7 @@ def test_model_creation_from_data():
                 second_axis=Axis(name=Axis.Name.X, start="BOTTOM_HEAD", end="HEAD_XZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD")),
+            mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD"), is_local=False),
             inertia_parameters=de_leva[SegmentName.HEAD],
         )
     )
@@ -434,11 +445,10 @@ def test_model_creation_from_data():
     )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
     model.segments["FOOT"].add_marker(Marker("TOE"))
+    model.segments["FOOT"].add_marker(Marker("HEEL"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_Z"))
     model.segments["FOOT"].add_marker(Marker("ANKLE_YZ"))
 
-    # Prepare a fake model and a fake static from the previous test
-    fake_data = FakeData(Model(kinematic_model_filepath))
     real_model = model.to_real(fake_data)
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
@@ -453,19 +463,153 @@ def test_model_creation_from_data():
     assert biorbd_model.nbSegment() == 9
     assert real_model.nb_segments == 9
     assert model.nb_segments == 9
-    assert biorbd_model.nbMarkers() == 25
-    assert real_model.nb_markers == 25
-    assert model.nb_markers == 25
+    assert biorbd_model.nbMarkers() == 26
+    assert real_model.nb_markers == 26
+    assert model.nb_markers == 26
     biorbd_markers = biorbd_model.markers(np.zeros((biorbd_model.nbQ(),)))[-3].to_array()
-    np.testing.assert_almost_equal(biorbd_markers, [0, 0.25, -0.85], decimal=4)
+    np.testing.assert_almost_equal(biorbd_markers, [0, -0.01, -0.85], decimal=4)
     biobuddy_markers = real_model.markers_in_global(np.zeros((real_model.nb_q,)))[:3, -3, 0]
-    np.testing.assert_almost_equal(biobuddy_markers, [0, 0.25, -0.85], decimal=4)
+    np.testing.assert_almost_equal(biobuddy_markers, [0, -0.01, -0.85], decimal=4)
 
     destroy_model(model)
     destroy_model(real_model)
 
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
+
+
+def test_model_creation_from_data_lower_body():
+
+    from examples.create_model_from_c3d import model_creation_from_measured_data
+
+    # Load the static trial
+    current_path_file = Path(__file__).parent
+    static_trial = C3dData(f"{current_path_file}/../examples/data/static_lower_body.c3d")
+
+    # Create the model
+    model_real = model_creation_from_measured_data(
+        static_trial=static_trial, remove_temporary=True, animate_model=False
+    )
+
+    # Check some values of the model
+    assert model_real.nb_q == 14
+    assert model_real.nb_segments == 9
+    assert model_real.nb_markers == 16
+
+    # Test segment
+    segment = model_real.segments["Pelvis"]
+    assert segment.name == "Pelvis"
+    assert segment.parent_name == "Ground"
+    assert segment.translations == Translations.XYZ
+    assert segment.rotations == Rotations.XYZ
+    assert segment.nb_q == 6
+    npt.assert_almost_equal(segment.inertia_parameters.mass, 28.096200000000003)
+    npt.assert_almost_equal(
+        segment.inertia_parameters.center_of_mass.reshape(
+            4,
+        ),
+        np.array([0.0, 0.0, 0.22295421, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.51902017, 0.46954064, 0.11899868])
+    )
+    npt.assert_almost_equal(
+        segment.segment_coordinate_system.scs.rt_matrix,
+        np.array(
+            [
+                [-0.06364053, 0.99797289, 0.0, 0.24594278],
+                [-0.99797289, -0.06364053, 0.0, 0.53419547],
+                [0.0, 0.0, 1.0, 0.97607442],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        segment.mesh.positions,
+        np.array(
+            [
+                [-0.04585975, 0.04703374, 0.10769938, -0.10887336, -0.04585975],
+                [-0.10007909, -0.09855995, 0.09855995, 0.10007909, -0.10007909],
+                [0.01530446, 0.01463813, -0.00959209, -0.02035051, 0.01530446],
+                [1.0, 1.0, 1.0, 1.0, 1.0],
+            ]
+        ),
+    )
+
+    # Test markers
+    npt.assert_almost_equal(
+        segment.markers["LPSIS"].position.reshape(
+            4,
+        ),
+        np.array([-0.04585975, -0.10007909, 0.01530446, 1.0]),
+    )
+    npt.assert_almost_equal(
+        segment.markers["RPSIS"].position.reshape(
+            4,
+        ),
+        np.array([0.04703374, -0.09855995, 0.01463813, 1.0]),
+    )
+    npt.assert_almost_equal(
+        segment.markers["LASIS"].position.reshape(
+            4,
+        ),
+        np.array([-0.10887336, 0.10007909, -0.02035051, 1.0]),
+    )
+    npt.assert_almost_equal(
+        segment.markers["RA"].position.reshape(
+            4,
+        ),
+        np.array([0.17473068, -0.00946185, 0.44572759, 1.0]),
+    )
+
+    # Test segment
+    segment = model_real.segments["RFoot"]
+    assert segment.name == "RFoot"
+    assert segment.parent_name == "RTibia"
+    assert segment.translations == Translations.NONE
+    assert segment.rotations == Rotations.X
+    assert segment.nb_q == 1
+    assert segment.nb_markers == 1
+    npt.assert_almost_equal(segment.inertia_parameters.mass, 0.8514)
+    npt.assert_almost_equal(
+        segment.inertia_parameters.center_of_mass.reshape(
+            4,
+        ),
+        np.array([0.01104557, 0.00422068, 0.04311145, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.00879901, 0.00766125, 0.00151333])
+    )
+    npt.assert_almost_equal(
+        segment.segment_coordinate_system.scs.rt_matrix,
+        np.array(
+            [
+                [9.79470459e-01, -1.88107239e-01, 7.24795638e-02, 5.55111512e-17],
+                [-9.89117223e-02, -1.35164447e-01, 9.85873746e-01, -2.77555756e-17],
+                [-1.75653328e-01, -9.72803289e-01, -1.50995594e-01, -3.93526241e-01],
+                [0.00000000e00, 0.00000000e00, 0.00000000e00, 1.00000000e00],
+            ]
+        ),
+    )
+    npt.assert_almost_equal(
+        segment.mesh.positions,
+        np.array(
+            [
+                [4.05993515e-02, -4.16333634e-17, -4.05993515e-02, 4.05993515e-02],
+                [1.38777878e-17, 0.00000000e00, 1.38777878e-17, 1.38777878e-17],
+                [4.07329215e-03, 1.35427279e-01, -4.07329215e-03, 4.07329215e-03],
+                [1.00000000e00, 1.00000000e00, 1.00000000e00, 1.00000000e00],
+            ]
+        ),
+    )
+
+    # Test markers
+    npt.assert_almost_equal(
+        segment.markers["RTT2"].position.reshape(
+            4,
+        ),
+        np.array([-4.16333634e-17, 0.00000000e00, 1.35427279e-01, 1.00000000e00]),
+    )
 
 
 def test_complex_model():

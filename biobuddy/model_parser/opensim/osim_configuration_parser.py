@@ -7,7 +7,7 @@ from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...components.real.rigidbody.marker_weight import MarkerWeight
 from ...model_modifiers.scale_tool import ScaleTool
-from ...utils.translations import Translations
+from ...utils.enums import Translations
 
 
 def _get_file_version(model: etree.ElementTree) -> int:

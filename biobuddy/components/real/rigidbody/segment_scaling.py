@@ -2,7 +2,8 @@ import xml.etree.cElementTree as ET
 import numpy as np
 from typing import TypeAlias
 
-from ....utils.translations import Translations
+from .marker_real import MarkerReal
+from ....utils.enums import Translations
 
 
 class ScaleFactor:

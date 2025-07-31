@@ -1,11 +1,11 @@
 from typing import Callable
 import numpy as np
 
-from ...real.biomechanical_model_real import BiomechanicalModelReal
-from ...real.rigidbody.contact_real import ContactReal
 from ....utils.protocols import Data
-from ....utils.translations import Translations
+from ....utils.enums import Translations
 from ....utils.checks import check_name
+from ....utils.linear_algebra import RotoTransMatrix
+from ....utils.aliases import points_to_array
 
 
 class Contact:
@@ -15,23 +15,30 @@ class Contact:
         function: Callable | str = None,
         parent_name: str = None,
         axis: Translations = None,
+        is_local: bool = False,
     ):
         """
         Parameters
         ----------
         name
             The name of the new contact
+
         function
             The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the contact with.
         parent_name
             The name of the parent the contact is attached to
         axis
             The axis of the contact
+        is_local
+            Indicates whether the contact is defined in the local segment coordinate system.
+            If True, the contact is defined in the local coordinate system of the parent segment.
+            If False, the contact is defined in the global coordinate system.
         """
         self.name = name
         self.function = function
         self.parent_name = check_name(parent_name)
         self.axis = axis
+        self.is_local = is_local
 
     @property
     def name(self) -> str:
@@ -68,14 +75,36 @@ class Contact:
     def axis(self, value: Translations) -> None:
         self._axis = value
 
-    def to_contact(self, data: Data, model: BiomechanicalModelReal) -> ContactReal:
+    def to_contact(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ContactReal":
+        """
+        This constructs the ContactReal by evaluating the function that defines the contact to get an actual position
+
+        Parameters
+        ----------
+        data
+            The data to pick the data from
+        model
+            The biomechanical model to which the contact belongs
+        scs
+            The segment coordinate system in which the mesh is defined. If None, the mesh is assumed to be in the global
+            coordinate system.
+        """
+        from ...real.rigidbody.contact_real import ContactReal
+
         if self.function is None:
             raise RuntimeError("You must provide a position function to evaluate the Contact into a ContactReal.")
-        return ContactReal.from_data(
-            data,
-            model,
-            self.name,
-            self.function,
-            self.parent_name,
-            self.axis,
-        )
+
+        if self.is_local:
+            scs = RotoTransMatrix()
+        elif scs is None:
+            raise RuntimeError(
+                "If you want to provide a global mesh, you must provide the segment's coordinate system."
+            )
+
+        # Get the position of the contact points and do some sanity checks
+        p = np.nanmean(points_to_array(points=self.function(data.values, model), name="contact real function"), axis=1)
+        projected_p = scs.inverse @ p
+        if np.isnan(projected_p).all():
+            raise RuntimeError(f"All the values for {self.function} returned nan which is not permitted")
+
+        return ContactReal(self.name, self.parent_name, projected_p, self.axis)

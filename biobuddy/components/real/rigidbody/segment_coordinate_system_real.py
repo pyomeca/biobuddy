@@ -14,7 +14,6 @@ class SegmentCoordinateSystemReal:
     def __init__(
         self,
         scs: RotoTransMatrix = RotoTransMatrix(),
-        parent_scs: "Self" = None,  # TODO: remove
         is_scs_local: bool = False,
     ):
         """
@@ -22,14 +21,10 @@ class SegmentCoordinateSystemReal:
         ----------
         scs
             The scs of the SegmentCoordinateSystemReal
-        parent_scs
-            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
-            is in parent's local reference frame
         is_scs_local
             If the scs is already in local reference frame
         """
         self.scs = scs
-        self.parent_scs = parent_scs
         self.is_in_global = not is_scs_local
 
     @property
@@ -39,14 +34,6 @@ class SegmentCoordinateSystemReal:
     @scs.setter
     def scs(self, value: RotoTransMatrix):
         self._scs = value
-
-    @property
-    def parent_scs(self) -> "Self":
-        return self._parent_scs
-
-    @parent_scs.setter
-    def parent_scs(self, value: "Self"):
-        self._parent_scs = value
 
     @property
     def is_in_global(self) -> bool:
@@ -65,78 +52,8 @@ class SegmentCoordinateSystemReal:
         self._is_in_global = not value
 
     @staticmethod
-    def from_markers(
-        origin: MarkerReal,
-        first_axis: AxisReal,
-        second_axis: AxisReal,
-        axis_to_keep: AxisReal.Name,
-        parent_scs: "Self" = None,
-    ) -> "SegmentCoordinateSystemReal":
-        """
-        Parameters
-        ----------
-        origin
-            The marker at the origin of the SegmentCoordinateSystemReal
-        first_axis
-            The first axis defining the segment_coordinate_system
-        second_axis
-            The second axis defining the segment_coordinate_system
-        axis_to_keep
-            The Axis.Name of the axis to keep while recomputing the reference frame. It must be the same as either
-            first_axis.name or second_axis.name
-        parent_scs
-            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
-            is in parent's local reference frame
-        """
-
-        # Find the two adjacent axes and reorder accordingly (assuming right-hand RT)
-        if first_axis.name == second_axis.name:
-            raise ValueError("The two axes cannot be the same axis")
-
-        if first_axis.name == AxisReal.Name.X:
-            third_axis_name = AxisReal.Name.Y if second_axis.name == AxisReal.Name.Z else AxisReal.Name.Z
-            if second_axis.name == AxisReal.Name.Z:
-                first_axis, second_axis = second_axis, first_axis
-        elif first_axis.name == AxisReal.Name.Y:
-            third_axis_name = AxisReal.Name.Z if second_axis.name == AxisReal.Name.X else AxisReal.Name.X
-            if second_axis.name == AxisReal.Name.X:
-                first_axis, second_axis = second_axis, first_axis
-        elif first_axis.name == AxisReal.Name.Z:
-            third_axis_name = AxisReal.Name.X if second_axis.name == AxisReal.Name.Y else AxisReal.Name.Y
-            if second_axis.name == AxisReal.Name.Y:
-                first_axis, second_axis = second_axis, first_axis
-        else:
-            raise ValueError("first_axis should be an X, Y or Z axis")
-
-        # Compute the third axis and recompute one of the previous two
-        first_axis_vector = first_axis.axis()[:3, :]
-        second_axis_vector = second_axis.axis()[:3, :]
-        third_axis_vector = np.cross(first_axis_vector, second_axis_vector, axis=0)
-        if axis_to_keep == first_axis.name:
-            second_axis_vector = np.cross(third_axis_vector, first_axis_vector, axis=0)
-        elif axis_to_keep == second_axis.name:
-            first_axis_vector = np.cross(second_axis_vector, third_axis_vector, axis=0)
-        else:
-            raise ValueError("Name of axis to keep should be one of the two axes")
-
-        # Dispatch the result into a matrix
-        n_frames = first_axis_vector.shape[1]
-        rt = np.zeros((4, 4, n_frames))
-        rt[:3, first_axis.name, :] = first_axis_vector / np.linalg.norm(first_axis_vector, axis=0)
-        rt[:3, second_axis.name, :] = second_axis_vector / np.linalg.norm(second_axis_vector, axis=0)
-        rt[:3, third_axis_name, :] = third_axis_vector / np.linalg.norm(third_axis_vector, axis=0)
-        rt[:3, 3, :] = origin.position[:3, :]
-        rt[3, 3, :] = 1
-        all_scs = RotoTransMatrixTimeSeries(n_frames)
-        all_scs.from_rt_matrix(rt)
-        scs = all_scs.mean_homogenous_matrix()
-
-        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=False)
-
-    @staticmethod
     def from_rt_matrix(
         rt_matrix: np.ndarray,
-        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
@@ -146,22 +63,18 @@ class SegmentCoordinateSystemReal:
         ----------
         rt_matrix: np.ndarray
             The RT matrix
-        parent_scs
-            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
-            is in parent's local reference frame
         is_scs_local
             If the scs is already in local reference frame
         """
         scs = RotoTransMatrix()
         scs.from_rt_matrix(rt_matrix)
-        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=is_scs_local)
+        return SegmentCoordinateSystemReal(scs=scs, is_scs_local=is_scs_local)
 
     @staticmethod
     def from_euler_and_translation(
         angles: Points,
         angle_sequence: str,
         translation: Point,
-        parent_scs: "Self" = None,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
@@ -175,26 +88,12 @@ class SegmentCoordinateSystemReal:
             The angle sequence of the angles
         translations
             The XYZ translations
-        parent_scs
-            The scs of the parent (is used when printing the model so SegmentCoordinateSystemReal
-            is in parent's local reference frame
         is_scs_local
             If the scs is already in local reference frame
         """
         scs = RotoTransMatrix()
         scs.from_euler_angles_and_translation(angles=angles, angle_sequence=angle_sequence, translation=translation)
-        return SegmentCoordinateSystemReal(scs=scs, parent_scs=parent_scs, is_scs_local=is_scs_local)
-
-    # def __matmul__(self, other) -> np.ndarray:
-    #     if isinstance(other, SegmentCoordinateSystemReal):
-    #         other = other.scs
-    #
-    #     if not isinstance(other, np.ndarray):
-    #         raise ValueError(
-    #             "SCS multiplication must be performed against np.narray or SegmentCoordinateSystemReal classes"
-    #         )
-    #
-    #     return multiply_homogeneous_matrix(self=self, other=other)
+        return SegmentCoordinateSystemReal(scs=scs, is_scs_local=is_scs_local)
 
     @property
     def inverse(self) -> "Self":

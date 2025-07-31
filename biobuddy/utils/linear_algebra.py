@@ -45,7 +45,7 @@ def rot_z_matrix(angle):
     )
 
 
-def get_rotation_vector_from_sequence(sequence: str):
+def get_vector_from_sequence(sequence: str):
     if sequence == "x":
         rotation_vector = np.array([1, 0, 0])
     elif sequence == "y":

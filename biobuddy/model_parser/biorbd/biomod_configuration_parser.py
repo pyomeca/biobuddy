@@ -16,7 +16,7 @@ from ...components.real.rigidbody.segment_real import (
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.real.muscle.via_point_real import ViaPointReal
-from ...utils.translations import Translations
+from ...utils.enums import Translations
 
 
 TOKENS_TO_IGNORE_NO_COMPONENTS = [

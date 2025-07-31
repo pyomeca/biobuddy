@@ -21,8 +21,8 @@ from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.c3d_data import C3dData
-from ..utils.translations import Translations
-from ..utils.rotations import Rotations
+from ..utils.enums import Translations
+from ..utils.enums import Rotations
 from ..utils.aliases import Point
 
 _logger = logging.getLogger(__name__)
@@ -646,7 +646,6 @@ class ScaleTool:
         for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
             self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
                 scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
-                parent_scs=None,
                 is_scs_local=(
                     segment_name == "base"
                 ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent

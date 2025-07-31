@@ -159,52 +159,6 @@ def test_init_mesh_file_real():
     npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
 
 
-def test_mesh_file_real_from_data():
-    # Create mock data
-    mock_data = MockC3dData()
-
-    # Test from_data with functions
-    def scaling_function(markers, model):
-        return np.array([1.5, 1.5, 1.5])
-
-    def rotation_function(markers, model):
-        return np.array([0.1, 0.2, 0.3])
-
-    def translation_function(markers, model):
-        return np.array([1.0, 2.0, 3.0])
-
-    mesh_file_real = MeshFileReal.from_data(
-        data=mock_data,
-        model=None,
-        mesh_file_name="test.obj",
-        mesh_color=[1.0, 0.0, 0.0],
-        scaling_function=scaling_function,
-        rotation_function=rotation_function,
-        translation_function=translation_function,
-    )
-
-    assert mesh_file_real.mesh_file_name == "test.obj"
-    npt.assert_array_equal(mesh_file_real.mesh_color, np.array([1.0, 0.0, 0.0]))
-    npt.assert_array_equal(mesh_file_real.mesh_scale, np.array([[1.5], [1.5], [1.5], [1.0]]))
-    npt.assert_array_equal(mesh_file_real.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
-    npt.assert_array_equal(mesh_file_real.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
-
-    # Test with invalid mesh_file_name
-    with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(
-            data=mock_data, model=None, mesh_file_name=123, mesh_color=[1.0, 0.0, 0.0]
-        )  # Not a string
-
-    # Test with invalid mesh_color shape
-    with pytest.raises(RuntimeError):
-        MeshFileReal.from_data(
-            data=mock_data,
-            model=None,
-            mesh_file_name="test.obj",
-            mesh_color=[1.0, 0.0, 0.0, 1.0],  # Should be RGB (3 values)
-        )
-
-
 def test_mesh_file_real_to_biomod():
     # Create a mesh file
     mesh_file = MeshFileReal(
@@ -286,7 +240,6 @@ def test_init_segment_coordinate_system_real():
     # Test initialization with default values
     scs = SegmentCoordinateSystemReal()
     assert isinstance(scs.scs, RotoTransMatrix)
-    assert scs.parent_scs is None
     assert scs.is_in_global is True
     assert scs.is_in_local is False
 
@@ -296,51 +249,11 @@ def test_init_segment_coordinate_system_real():
         angle_sequence="xyz", angles=np.array([0.1, 0.2, 0.3]), translation=np.array([1.0, 2.0, 3.0])
     )
 
-    parent_scs = SegmentCoordinateSystemReal()
-    scs = SegmentCoordinateSystemReal(scs=rt_matrix, parent_scs=parent_scs, is_scs_local=True)
+    scs = SegmentCoordinateSystemReal(scs=rt_matrix, is_scs_local=True)
 
     assert scs.scs == rt_matrix
-    assert scs.parent_scs == parent_scs
     assert scs.is_in_global is False
     assert scs.is_in_local is True
-
-
-def test_segment_coordinate_system_real_from_markers():
-    # Create markers for the coordinate system
-    origin = MarkerReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-
-    # Create axes
-    x_start = MarkerReal(name="x_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-    x_end = MarkerReal(name="x_end", parent_name="segment1", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
-    x_axis = AxisReal(name=AxisReal.Name.X, start=x_start, end=x_end)
-
-    y_start = MarkerReal(name="y_start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-    y_end = MarkerReal(name="y_end", parent_name="segment1", position=np.array([[0.0], [1.0], [0.0], [1.0]]))
-    y_axis = AxisReal(name=AxisReal.Name.Y, start=y_start, end=y_end)
-
-    # Create SCS
-    scs = SegmentCoordinateSystemReal.from_markers(
-        origin=origin, first_axis=x_axis, second_axis=y_axis, axis_to_keep=AxisReal.Name.X
-    )
-
-    # Test the resulting SCS
-    assert isinstance(scs, SegmentCoordinateSystemReal)
-    assert scs.is_in_global is True
-
-    # Test with same axis names (should raise error)
-    with pytest.raises(ValueError):
-        SegmentCoordinateSystemReal.from_markers(
-            origin=origin, first_axis=x_axis, second_axis=x_axis, axis_to_keep=AxisReal.Name.X  # Same as first_axis
-        )
-
-    # Test with invalid axis_to_keep
-    with pytest.raises(ValueError):
-        SegmentCoordinateSystemReal.from_markers(
-            origin=origin,
-            first_axis=x_axis,
-            second_axis=y_axis,
-            axis_to_keep=AxisReal.Name.Z,  # Not one of the provided axes
-        )
 
 
 def test_segment_coordinate_system_real_from_rt_matrix():
