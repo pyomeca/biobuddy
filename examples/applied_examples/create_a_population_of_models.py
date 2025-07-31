@@ -30,12 +30,6 @@ from biobuddy import (
 
 def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: bool = True, animate_model: bool = True):
 
-
-
-
-
-
-
     # Put the model together, print it and print it to a bioMod file
     model_real = reduced_model.to_real(static_trial)
     model_real.to_biomod(output_model_filepath)
@@ -69,31 +63,33 @@ def main():
     # Create all combinations using itertools.product
     model_number = 0
     for combination in itertools.product(
-            total_mass,
-            total_height,
-            ankle_height,
-            knee_height_coeff,
-            pelvis_height_coeff,
-            shoulder_height_coeff,
-            shoulder_width_coeff,
-            elbow_span_coeff,
-            wrist_span_coeff,
-            finger_span_coeff,
-            foot_length_coeff,
-            hip_width_coeff,
+        total_mass,
+        total_height,
+        ankle_height,
+        knee_height_coeff,
+        pelvis_height_coeff,
+        shoulder_height_coeff,
+        shoulder_width_coeff,
+        elbow_span_coeff,
+        wrist_span_coeff,
+        finger_span_coeff,
+        foot_length_coeff,
+        hip_width_coeff,
     ):
-        (this_mass,
-         this_height,
-         this_ankle_height_coeff,
-         this_knee_height_coeff,
-         this_pelvis_height_coeff,
-         this_shoulder_height_coeff,
-         this_shoulder_span_coeff,
-         this_elbow_span_coeff,
-         this_wrist_span_coeff,
-         this_finger_span_coeff,
-         this_foot_length_coeff,
-         this_hip_width_coeff) = combination
+        (
+            this_mass,
+            this_height,
+            this_ankle_height_coeff,
+            this_knee_height_coeff,
+            this_pelvis_height_coeff,
+            this_shoulder_height_coeff,
+            this_shoulder_span_coeff,
+            this_elbow_span_coeff,
+            this_wrist_span_coeff,
+            this_finger_span_coeff,
+            this_foot_length_coeff,
+            this_hip_width_coeff,
+        ) = combination
 
         # Get the measurements for this model
         this_ankle_height = this_ankle_height_coeff * this_height
@@ -109,17 +105,19 @@ def main():
 
         # Create the inertial table for this model
         inertia_table = DeLevaTable(this_mass, sex=Sex.FEMALE)
-        inertia_table.from_measurements(total_height=this_height,
-                                        ankle_height=this_ankle_height,
-                                        knee_height=this_knee_height,
-                                        pelvis_height=this_pelvis_height,
-                                        shoulder_height=this_shoulder_height,
-                                        finger_span=this_finger_span,
-                                        wrist_span=this_wrist_span,
-                                        elbow_span=this_elbow_span,
-                                        shoulder_span=this_shoulder_span,
-                                        hip_width=this_hip_width,
-                                        foot_length=this_foot_length)
+        inertia_table.from_measurements(
+            total_height=this_height,
+            ankle_height=this_ankle_height,
+            knee_height=this_knee_height,
+            pelvis_height=this_pelvis_height,
+            shoulder_height=this_shoulder_height,
+            finger_span=this_finger_span,
+            wrist_span=this_wrist_span,
+            elbow_span=this_elbow_span,
+            shoulder_span=this_shoulder_span,
+            hip_width=this_hip_width,
+            foot_length=this_foot_length,
+        )
 
         # Create the model
         real_model = inertia_table.to_simple_model()

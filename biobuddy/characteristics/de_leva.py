@@ -8,7 +8,7 @@ from ..components.generic.rigidbody.segment import Segment
 from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystem
 from ..components.generic.rigidbody.mesh import Mesh
 from ..utils.protocols import Data
-from ..utils.enums import  Translations, Rotations
+from ..utils.enums import Translations, Rotations
 
 
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
@@ -300,34 +300,82 @@ class DeLevaTable:
         self.top_head_position = np.array([0.0, 0.0, self.total_height, 1.0])
 
         # Right arm
-        self.right_shoulder_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length, 1.0])
-        self.right_elbow_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0])
-        self.right_wrist_position = np.array([0.0, -self.shoulder_width/2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length, 1.0])
-        self.right_finger_position = np.array([0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length - self.hand_length, 1.0])
+        self.right_shoulder_position = np.array(
+            [0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0]
+        )
+        self.right_elbow_position = np.array(
+            [0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0]
+        )
+        self.right_wrist_position = np.array(
+            [
+                0.0,
+                -self.shoulder_width / 2,
+                self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
+                1.0,
+            ]
+        )
+        self.right_finger_position = np.array(
+            [
+                0.0,
+                -self.shoulder_width / 2,
+                self.pelvis_height
+                + self.trunk_length
+                - self.upper_arm_length
+                - self.lower_arm_length
+                - self.hand_length,
+                1.0,
+            ]
+        )
 
         # Left arm
-        self.left_shoulder_position = np.array([0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0])
+        self.left_shoulder_position = np.array(
+            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0]
+        )
         self.left_elbow_position = np.array(
-            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0])
+            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0]
+        )
         self.left_wrist_position = np.array(
-            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length, 1.0])
-        self.left_finger_position = np.array([0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length - self.hand_length, 1.0])
+            [
+                0.0,
+                self.shoulder_width / 2,
+                self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
+                1.0,
+            ]
+        )
+        self.left_finger_position = np.array(
+            [
+                0.0,
+                self.shoulder_width / 2,
+                self.pelvis_height
+                + self.trunk_length
+                - self.upper_arm_length
+                - self.lower_arm_length
+                - self.hand_length,
+                1.0,
+            ]
+        )
 
         # Right leg
-        self.right_hip_position = np.array([0, -self.hip_width/2, self.pelvis_height, 1])
-        self.right_knee_position = np.array([0, -self.hip_width/2, self.pelvis_height - self.thigh_length, 1])
-        self.right_ankle_position = np.array([0, -self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
+        self.right_hip_position = np.array([0, -self.hip_width / 2, self.pelvis_height, 1])
+        self.right_knee_position = np.array([0, -self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
+        self.right_ankle_position = np.array(
+            [0, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+        )
         # Toes position is false due to the heel being behind the ankle
-        self.right_toe_position = np.array([self.foot_length, -self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
+        self.right_toe_position = np.array(
+            [self.foot_length, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+        )
 
         # Left leg
         self.left_hip_position = np.array([0, self.hip_width / 2, self.pelvis_height, 1])
         self.left_knee_position = np.array([0, self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
         self.left_ankle_position = np.array(
-            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
+            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+        )
         # Toes position is false due to the heel being behind the ankle
-        self.left_toe_position = np.array([self.foot_length, self.hip_width/2, self.pelvis_height - self.thigh_length - self.tibia_length, 1])
-
+        self.left_toe_position = np.array(
+            [self.foot_length, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+        )
 
     def from_data(self, data: Data):
         """
@@ -396,7 +444,6 @@ class DeLevaTable:
         """
         return self.inertial_table[self.sex][segment_name]
 
-
     def to_simple_model(self) -> BiomechanicalModelReal:
         """
         Creates a simple BiomechanicalModelReal based on the measurements used to create the De Leva table.
@@ -420,8 +467,7 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.pelvis_position,
                 ),
-                mesh=Mesh((lambda m, model: self.pelvis_position,
-                          lambda m, model: self.neck_position), is_local=False),
+                mesh=Mesh((lambda m, model: self.pelvis_position, lambda m, model: self.neck_position), is_local=False),
             )
         )
 
@@ -435,8 +481,9 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.neck_position,
                 ),
-                mesh=Mesh((lambda m, model: self.neck_position,
-                          lambda m, model: self.top_head_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.neck_position, lambda m, model: self.top_head_position), is_local=False
+                ),
             )
         )
 
@@ -449,8 +496,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_hip_position,
                 ),
-                mesh=Mesh((lambda m, model: self.right_hip_position,
-                           lambda m, model: self.right_knee_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.right_hip_position, lambda m, model: self.right_knee_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -463,8 +512,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_knee_position,
                 ),
-                mesh=Mesh((lambda m, model: self.right_knee_position,
-                           lambda m, model: self.right_ankle_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.right_knee_position, lambda m, model: self.right_ankle_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -477,8 +528,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_ankle_position,
                 ),
-                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
-                           lambda m, model: np.array([0, self.foot_length, 0, 1])), is_local=True),
+                mesh=Mesh(
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, self.foot_length, 0, 1])),
+                    is_local=True,
+                ),
             )
         )
 
@@ -491,8 +544,9 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_hip_position,
                 ),
-                mesh=Mesh((lambda m, model: self.left_hip_position,
-                           lambda m, model: self.left_knee_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.left_hip_position, lambda m, model: self.left_knee_position), is_local=False
+                ),
             )
         )
 
@@ -505,8 +559,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_knee_position,
                 ),
-                mesh=Mesh((lambda m, model: self.left_knee_position,
-                           lambda m, model: self.left_ankle_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.left_knee_position, lambda m, model: self.left_ankle_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -519,8 +575,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_ankle_position,
                 ),
-                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
-                           lambda m, model: np.array([0, self.foot_length, 0, 1])), is_local=True),
+                mesh=Mesh(
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, self.foot_length, 0, 1])),
+                    is_local=True,
+                ),
             )
         )
 
@@ -533,8 +591,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_shoulder_position,
                 ),
-                mesh=Mesh((lambda m, model: self.right_shoulder_position,
-                           lambda m, model: self.right_elbow_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.right_shoulder_position, lambda m, model: self.right_elbow_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -547,8 +607,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_elbow_position,
                 ),
-                mesh=Mesh((lambda m, model: self.right_elbow_position,
-                           lambda m, model: self.right_wrist_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.right_elbow_position, lambda m, model: self.right_wrist_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -561,8 +623,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_wrist_position,
                 ),
-                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
-                           lambda m, model: np.array([0, 0, -self.hand_length, 1])), is_local=True),
+                mesh=Mesh(
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, 0, -self.hand_length, 1])),
+                    is_local=True,
+                ),
             )
         )
 
@@ -575,8 +639,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_shoulder_position,
                 ),
-                mesh=Mesh((lambda m, model: self.left_shoulder_position,
-                           lambda m, model: self.left_elbow_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.left_shoulder_position, lambda m, model: self.left_elbow_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -589,8 +655,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_elbow_position,
                 ),
-                mesh=Mesh((lambda m, model: self.left_elbow_position,
-                           lambda m, model: self.left_wrist_position), is_local=False),
+                mesh=Mesh(
+                    (lambda m, model: self.left_elbow_position, lambda m, model: self.left_wrist_position),
+                    is_local=False,
+                ),
             )
         )
 
@@ -603,8 +671,10 @@ class DeLevaTable:
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_wrist_position,
                 ),
-                mesh=Mesh((lambda m, model: np.array([0, 0, 0, 1]),
-                           lambda m, model: np.array([0, 0, -self.hand_length, 1])), is_local=True),
+                mesh=Mesh(
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, 0, -self.hand_length, 1])),
+                    is_local=True,
+                ),
             )
         )
 

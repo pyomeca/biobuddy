@@ -338,12 +338,18 @@ def test_de_leva_table_constructor_from_data():
 
     # Test the simple model
     male_model = male_table.to_simple_model()
-    npt.assert_almost_equal(male_model.total_com_in_global().reshape(4, ), np.array([3.75010100e-03, 0.00000000e+00, 5.51861312e+00, 1.00000000e+00]))
+    npt.assert_almost_equal(
+        male_model.total_com_in_global().reshape(
+            4,
+        ),
+        np.array([3.75010100e-03, 0.00000000e00, 5.51861312e00, 1.00000000e00]),
+    )
     male_model.to_biomod("temporary_path.bioMod")
     male_model_biomod = biorbd.Model("temporary_path.bioMod")
-    npt.assert_almost_equal(male_model_biomod.bodyInertia(np.zeros((male_model.nb_q, ))).to_array(), np.array([[291.05129115,   0.        ,   1.18616789],
-                                                                                                                   [  0.        , 287.28984476,   0.        ],
-                                                                                                                   [  1.18616789,   0.        ,  11.3270676 ]]))
+    npt.assert_almost_equal(
+        male_model_biomod.bodyInertia(np.zeros((male_model.nb_q,))).to_array(),
+        np.array([[291.05129115, 0.0, 1.18616789], [0.0, 287.28984476, 0.0], [1.18616789, 0.0, 11.3270676]]),
+    )
 
 
 def test_de_leva_table_constructor_from_measurements():
@@ -444,12 +450,18 @@ def test_de_leva_table_constructor_from_measurements():
 
     # Test the simple model
     female_model = female_table.to_simple_model()
-    npt.assert_almost_equal(female_model.total_com_in_global().reshape(4, ), np.array([0.00362464, 0.        , 0.96805604, 1.]))
+    npt.assert_almost_equal(
+        female_model.total_com_in_global().reshape(
+            4,
+        ),
+        np.array([0.00362464, 0.0, 0.96805604, 1.0]),
+    )
     female_model.to_biomod("temporary_path.bioMod")
     female_model_biomod = biorbd.Model("temporary_path.bioMod")
-    npt.assert_almost_equal(female_model_biomod.bodyInertia(np.zeros((female_model.nb_q, ))).to_array(), np.array([[12.48572688,  0.        ,  0.24308271],
-                                                                                                                       [ 0.        , 12.40117603,  0.        ],
-                                                                                                                       [ 0.24308271,  0.        ,  0.44822015]]))
+    npt.assert_almost_equal(
+        female_model_biomod.bodyInertia(np.zeros((female_model.nb_q,))).to_array(),
+        np.array([[12.48572688, 0.0, 0.24308271], [0.0, 12.40117603, 0.0], [0.24308271, 0.0, 0.44822015]]),
+    )
 
 
 def test_de_leva_table_getitem():
@@ -543,7 +555,8 @@ def test_de_leva_table_mass_calculations():
         )
         # Female
         npt.assert_almost_equal(
-            female_table[segment].center_of_mass(mock_values, BiomechanicalModel())[:3], expected_female_com[segment][:3]
+            female_table[segment].center_of_mass(mock_values, BiomechanicalModel())[:3],
+            expected_female_com[segment][:3],
         )
 
     # Test inertia values
@@ -574,11 +587,11 @@ def test_de_leva_table_mass_calculations():
     )
     npt.assert_almost_equal(
         male_table[SegmentName.SHANK].inertia(mock_values, BiomechanicalModel()),
-        np.array([0.7883631 , 0.75170012, 0.12862352]),
+        np.array([0.7883631, 0.75170012, 0.12862352]),
     )
     npt.assert_almost_equal(
         male_table[SegmentName.FOOT].inertia(mock_values, BiomechanicalModel()),
-        np.array([0.00608707, 0.0055319 , 0.00141705]),
+        np.array([0.00608707, 0.0055319, 0.00141705]),
     )
 
     # Female
@@ -592,7 +605,7 @@ def test_de_leva_table_mass_calculations():
     )
     npt.assert_almost_equal(
         female_table[SegmentName.UPPER_ARM].inertia(mock_values, BiomechanicalModel()),
-        np.array([0.13795194, 0.120666  , 0.03909864]),
+        np.array([0.13795194, 0.120666, 0.03909864]),
     )
     npt.assert_almost_equal(
         female_table[SegmentName.LOWER_ARM].inertia(mock_values, BiomechanicalModel()),
@@ -762,7 +775,8 @@ def test_model_evaluation():
         segment.inertia_parameters.center_of_mass(MOCK_DATA().values, model)[:3], np.array([0.0, 0.0, 1.5108])
     )
     npt.assert_almost_equal(
-        segment.inertia_parameters.inertia(MOCK_DATA().values, model)[:3], np.array([25.27673356, 22.86703742, 5.79533932])
+        segment.inertia_parameters.inertia(MOCK_DATA().values, model)[:3],
+        np.array([25.27673356, 22.86703742, 5.79533932]),
     )
     npt.assert_almost_equal(segment.mesh.functions[0](MOCK_DATA().values, model)[:3], np.array([0, 0, 5]))
     npt.assert_almost_equal(segment.mesh.functions[1](MOCK_DATA().values, model)[:3], np.array([0, 0, 8]))
