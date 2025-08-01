@@ -2,7 +2,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from biobuddy import ViaPointReal, PathPointCondition, PathPointMovement, SimmSpline
+from biobuddy import ViaPointReal, PathPointCondition, PathPointMovement, SimmSpline, SegmentReal
 from test_utils import create_simple_model
 
 
@@ -259,3 +259,22 @@ def test_fix_moving_insertion():
         ),
         np.array([0.25, 0.25, 0.25, 1.0]),
     )
+
+
+def test_check_kinematic_chain_loop():
+    # create a simple model
+    model = create_simple_model()
+
+    # Check that the model is valid
+    model.validate_model()
+
+    # Check that it is not allowed to have a closed-loop
+    model.add_segment(
+        SegmentReal(
+            name="grand-child",
+            parent_name="child",
+        )
+    )
+    model.segments["child"].parent_name = "grand-child"
+    with pytest.raises(RuntimeError, match="The segment child was caught up in a kinematic chain loop, which is not permitted. Please verify the parent-child relationships in yor model."):
+        model.validate_model()

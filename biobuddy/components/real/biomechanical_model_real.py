@@ -199,11 +199,36 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                             f"A via point can either have a movement or a condition, but not both at the same time, {via_point.name} has both."
                         )
 
+    def validate_kinematic_chain(self):
+        """
+        Explore the kinematic chain by going from child to parent to make sure that there are no closed-loops in the kinematic chain.
+        """
+        visited = []
+        for segment in self.segments:
+            if segment.name not in visited:
+
+                path = []
+                current = segment.name
+                while current is not None:
+                    if current in path:
+                        raise RuntimeError(f"The segment {current} was caught up in a kinematic chain loop, which is not permitted."
+                                           f" Please verify the parent-child relationships in yor model.")
+                    if current != "base" and current not in self.segment_names:
+                        raise RuntimeError(f"The segment {current} was not found in the model.")
+
+                    if current == "base":
+                        current = None
+                    else:
+                        path += [current]
+                        visited += [current]
+                        current = self.segments[current].parent_name
+
     def validate_model(self):
         self.segments_rt_to_local()
         self.validate_dofs()
         self.validate_parents()
         self.validate_moving_via_points()
+        self.validate_kinematic_chain()
 
     def muscle_origin_on_this_segment(self, segment_name: str) -> list[str]:
         """
