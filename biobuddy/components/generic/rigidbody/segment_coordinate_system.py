@@ -14,9 +14,9 @@ class SegmentCoordinateSystem:
     def __init__(
         self,
         origin: Callable | str | Marker,
-        first_axis: Axis,
-        second_axis: Axis,
-        axis_to_keep: AxisReal.Name,
+        first_axis: Axis = Axis(Axis.Name.X),
+        second_axis: Axis = Axis(Axis.Name.Y),
+        axis_to_keep: AxisReal.Name = Axis.Name.X,
     ):
         """
         Set the SegmentCoordinateSystemReal matrix of the segment. To compute the third axis, a first cross product of
