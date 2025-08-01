@@ -25,22 +25,9 @@ from biobuddy import (
     ViewAs,
     SegmentCoordinateSystemUtils,
     RotoTransMatrix,
+    MergeSegmentsTool,
+    SegmentMerge,
 )
-
-
-def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: bool = True, animate_model: bool = True):
-
-    # Put the model together, print it and print it to a bioMod file
-    model_real = reduced_model.to_real(static_trial)
-    model_real.to_biomod(output_model_filepath)
-
-    if animate_model:
-        model_real.animate(view_as=ViewAs.BIORBD, model_path=output_model_filepath)
-
-    if remove_temporary:
-        os.remove(output_model_filepath)
-
-    return model_real
 
 
 def main():
@@ -121,10 +108,15 @@ def main():
 
         # Create the model
         real_model = inertia_table.to_simple_model()
-        real_model.animate()
 
         # Modify the model to merge both arms together
-        # TODO: ...
+        merge_tool = MergeSegmentsTool(real_model)
+        merge_tool.add(SegmentMerge("UPPER_ARMS", "L_UPPER_ARM", "R_UPPER_ARM"))
+        merge_tool.add(SegmentMerge("LOWER_ARMS", "L_LOWER_ARM", "R_LOWER_ARM"))
+        merge_tool.add(SegmentMerge("HANDS", "L_HAND", "R_HAND"))
+
+        merged_model = merge_tool.merge()
+        merged_model.animate()
 
         # Modify the model to place the root segment at the hands
         # TODO: ...

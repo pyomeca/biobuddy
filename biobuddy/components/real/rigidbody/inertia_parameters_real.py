@@ -52,13 +52,14 @@ class InertiaParametersReal:
 
     @inertia.setter
     def inertia(self, value: Points):
-        self._inertia = points_to_array(points=value, name="inertia")
-        if self.inertia.shape[1] == 0:
+        if value.shape[1] == 0:
             return
-        if self.inertia.shape[1] == 1:
-            self._inertia = np.diag(self.inertia[:, 0])
-        elif self.inertia.shape[1] != 3:
-            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
+        if value.shape[1] == 1:
+            self._inertia = np.diag(value[:, 0])
+        elif value.shape == (3, 3) or value.shape == (4, 4):
+            self._inertia = points_to_array(points=value, name="inertia")
+        else:
+            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,), (4,), (3, 3), or (4, 4) not {value.shape}")
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
