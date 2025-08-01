@@ -83,10 +83,17 @@ def points_to_array(points: Points, name: str) -> np.ndarray:
         if len(points.shape) == 1:
             points = points[:, None]
 
-        if len(points.shape) != 2 or points.shape[0] not in (3, 4):
+        if len(points.shape) != 2:
             raise RuntimeError(
                 f"The {name} must be a np.ndarray of shape (3,), (3, x) (4,) or (4, x), but received: {points.shape}"
             )
+        elif points.shape[0] not in (3, 4):
+            if points.shape[1] == 3 or points.shape[1] == 4:
+                points = points.T
+            else:
+                raise RuntimeError(
+                    f"The {name} must be a np.ndarray of shape (3,), (3, x) (4,) or (4, x), but received: {points.shape}"
+                )
 
         if points.shape[0] == 3:
             points = np.vstack((points, np.ones(points.shape[1])))
@@ -147,4 +154,4 @@ def inertia_to_array(inertia: Points, name: str = "unknown") -> np.ndarray:
 
         return out_inertia
     else:
-        raise RuntimeError(f"The {name} must be a list or np.ndarray, but received: {type(points)}")
+        raise RuntimeError(f"The {name} must be a list or np.ndarray, but received: {type(inertia)}")
