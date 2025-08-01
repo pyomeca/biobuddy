@@ -276,5 +276,8 @@ def test_check_kinematic_chain_loop():
         )
     )
     model.segments["child"].parent_name = "grand-child"
-    with pytest.raises(RuntimeError, match="The segment child was caught up in a kinematic chain loop, which is not permitted. Please verify the parent-child relationships in yor model."):
+    with pytest.raises(
+        RuntimeError,
+        match="The segment child was caught up in a kinematic chain loop, which is not permitted. Please verify the parent-child relationships in yor model.",
+    ):
         model.validate_model()

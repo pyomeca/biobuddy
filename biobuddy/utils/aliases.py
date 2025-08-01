@@ -138,7 +138,9 @@ def inertia_to_array(inertia: Points, name: str = "unknown") -> np.ndarray:
         if inertia.shape[1] == 1:
             inertia = np.diag(inertia[:, 0])
         elif inertia.shape[1] not in (3, 4):
-            raise RuntimeError(f"The {name} must be a np.ndarray of shape (3, 3), (4, 4), (3, 1) or (4, 1), but received: {inertia.shape}")
+            raise RuntimeError(
+                f"The {name} must be a np.ndarray of shape (3, 3), (4, 4), (3, 1) or (4, 1), but received: {inertia.shape}"
+            )
 
         out_inertia = np.identity(4)
         out_inertia[:3, :3] = inertia[:3, :3]

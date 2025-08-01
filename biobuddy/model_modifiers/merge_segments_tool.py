@@ -38,6 +38,10 @@ class SegmentMerge:
             The name of the segment that will be the origin of the merged segments.
             If None, the origin is the mean of the origin of the first and second segments.
         """
+        if merged_origin_name is not None and merged_origin_name not in [first_segment_name, second_segment_name]:
+            raise RuntimeError(
+                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins."
+            )
         self.name = name
         self.first_segment_name = first_segment_name
         self.second_segment_name = second_segment_name
@@ -68,7 +72,9 @@ class MergeSegmentsTool:
     def add(self, merge_segment: SegmentMerge):
         self.segments_to_merge._append(merge_segment)
 
-    def get_merged_parent(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str) -> str:
+    def get_merged_parent(
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str
+    ) -> str:
 
         if merged_origin_name is None:
             if first_segment.parent_name != second_segment.parent_name:
@@ -80,11 +86,15 @@ class MergeSegmentsTool:
         elif merged_origin_name == second_segment.name:
             merged_parent = second_segment.parent_name
         else:
-            raise RuntimeError("The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins.")
+            raise RuntimeError(
+                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins."
+            )
 
         return merged_parent
 
-    def get_merged_dofs(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str) -> tuple[Translations, Rotations, list[str], RangeOfMotion, RangeOfMotion]:
+    def get_merged_dofs(
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str
+    ) -> tuple[Translations, Rotations, list[str], RangeOfMotion, RangeOfMotion]:
 
         first_translations = first_segment.translations
         first_rotations = first_segment.rotations
@@ -99,7 +109,9 @@ class MergeSegmentsTool:
 
         if merged_origin_name is None:
             if first_translations != second_translations or first_rotations != second_rotations:
-                raise NotImplementedError("You cannot use merged_origin_name=None if the two segments have different degrees of freedom.")
+                raise NotImplementedError(
+                    "You cannot use merged_origin_name=None if the two segments have different degrees of freedom."
+                )
             else:
                 merged_translations = first_translations
                 merged_rotations = first_rotations
@@ -120,11 +132,14 @@ class MergeSegmentsTool:
             merged_qdot_ranges = second_qdot_ranges
         else:
             raise RuntimeError(
-                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins.")
+                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins."
+            )
 
         return merged_translations, merged_rotations, merged_dof_names, merged_q_ranges, merged_qdot_ranges
 
-    def get_merged_scs(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str) -> SegmentCoordinateSystemReal:
+    def get_merged_scs(
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_origin_name: str
+    ) -> SegmentCoordinateSystemReal:
         # Get the new origin
         if merged_origin_name is None:
             first_scs = first_segment.segment_coordinate_system.scs
@@ -135,14 +150,16 @@ class MergeSegmentsTool:
             second_euler = second_scs.euler_angles("xyz")
             if any(first_euler != second_euler):
                 raise NotImplementedError(
-                    "You want to merge segments that are not aligned in orientation. This should be allowed, but is not implemented yet.")
+                    "You want to merge segments that are not aligned in orientation. This should be allowed, but is not implemented yet."
+                )
             else:
                 merged_scs.rotation_matrix = first_scs.rotation_matrix
         elif merged_origin_name not in [first_segment.name, second_segment.name]:
             raise RuntimeError(
-                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins.")
+                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins."
+            )
         else:
-            merged_scs = self.merged_model.segments[merged_origin_name].segment_coordinate_system.scs
+            merged_scs = self.original_model.segments[merged_origin_name].segment_coordinate_system.scs
 
         merged_scs = SegmentCoordinateSystemReal(scs=merged_scs, is_scs_local=True)
         return merged_scs
@@ -158,19 +175,21 @@ class MergeSegmentsTool:
         b = com_distance[1]
         c = com_distance[2]
 
-        inertia[0, 0] = mass * (b ** 2 + c ** 2)
-        inertia[0, 1] = - mass * (-a * b)
-        inertia[0, 2] = - mass * (-a * c)
-        inertia[1, 0] = - mass * (-a * b)
-        inertia[1, 1] = mass * (c ** 2 + a ** 2)
-        inertia[1, 2] = - mass * (-b * c)
-        inertia[2, 0] = - mass * (-a * c)
-        inertia[2, 1] = - mass * (-b * c)
-        inertia[2, 2] = mass * (a ** 2 + b ** 2)
+        inertia[0, 0] = mass * (b**2 + c**2)
+        inertia[0, 1] = -mass * (-a * b)
+        inertia[0, 2] = -mass * (-a * c)
+        inertia[1, 0] = -mass * (-a * b)
+        inertia[1, 1] = mass * (c**2 + a**2)
+        inertia[1, 2] = -mass * (-b * c)
+        inertia[2, 0] = -mass * (-a * c)
+        inertia[2, 1] = -mass * (-b * c)
+        inertia[2, 2] = mass * (a**2 + b**2)
 
         return inertia
 
-    def get_merged_inertia_parameters(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs_in_global: RotoTransMatrix) -> InertiaParametersReal:
+    def get_merged_inertia_parameters(
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs_in_global: RotoTransMatrix
+    ) -> InertiaParametersReal:
 
         # Mass (sum)
         merged_mass = first_segment.inertia_parameters.mass + second_segment.inertia_parameters.mass
@@ -178,26 +197,38 @@ class MergeSegmentsTool:
         # Center of mass (mean position weighted by the mass of the segments)
         first_segment_scs_global = self.original_model.segment_coordinate_system_in_global(first_segment.name)
         second_segment_scs_global = self.original_model.segment_coordinate_system_in_global(second_segment.name)
-        first_com_in_global = point_from_local_to_global(first_segment.inertia_parameters.center_of_mass, first_segment_scs_global)
-        second_com_in_global = point_from_local_to_global(second_segment.inertia_parameters.center_of_mass, second_segment_scs_global)
-        merged_com_in_global = (first_com_in_global * first_segment.inertia_parameters.mass + second_com_in_global * second_segment.inertia_parameters.mass) / merged_mass
+        first_com_in_global = point_from_local_to_global(
+            first_segment.inertia_parameters.center_of_mass, first_segment_scs_global
+        )
+        second_com_in_global = point_from_local_to_global(
+            second_segment.inertia_parameters.center_of_mass, second_segment_scs_global
+        )
+        merged_com_in_global = (
+            first_com_in_global * first_segment.inertia_parameters.mass
+            + second_com_in_global * second_segment.inertia_parameters.mass
+        ) / merged_mass
         merged_com = point_from_global_to_local(merged_com_in_global, merged_scs_in_global)
 
         # Inertia (sum of both inertia + transport inertia)
         first_com_distance = merged_com_in_global - first_com_in_global
         second_com_distance = merged_com_in_global - second_com_in_global
-        first_inertia = first_segment.inertia_parameters.inertia + self.transport_inertia(first_com_distance, first_segment.inertia_parameters.mass)
-        second_inertia = second_segment.inertia_parameters.inertia + self.transport_inertia(second_com_distance, second_segment.inertia_parameters.mass)
+        first_inertia = first_segment.inertia_parameters.inertia + self.transport_inertia(
+            first_com_distance, first_segment.inertia_parameters.mass
+        )
+        second_inertia = second_segment.inertia_parameters.inertia + self.transport_inertia(
+            second_com_distance, second_segment.inertia_parameters.mass
+        )
         merged_inertia = first_inertia + second_inertia
 
         merged_inertia_parameters = InertiaParametersReal(
-            mass=merged_mass,
-            center_of_mass=merged_com,
-            inertia=merged_inertia)
+            mass=merged_mass, center_of_mass=merged_com, inertia=merged_inertia
+        )
 
         return merged_inertia_parameters
 
-    def get_merged_mesh(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal) -> MeshReal:
+    def get_merged_mesh(
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal
+    ) -> MeshReal:
         first_mesh_points = first_segment.mesh.positions
         second_mesh_points = second_segment.mesh.positions
         first_segment_scs_global = self.original_model.segment_coordinate_system_in_global(first_segment.name)
@@ -217,7 +248,13 @@ class MergeSegmentsTool:
         merged_mesh = MeshReal(merged_mesh_points)
         return merged_mesh
 
-    def get_merged_markers(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal, merged_segment_name: str) -> NamedList[MarkerReal]:
+    def get_merged_markers(
+        self,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merged_scs: SegmentCoordinateSystemReal,
+        merged_segment_name: str,
+    ) -> NamedList[MarkerReal]:
         """
         Get the merged markers from the two segments.
         The markers are transformed to the new segment coordinate system.
@@ -252,7 +289,13 @@ class MergeSegmentsTool:
 
         return merged_markers
 
-    def get_merged_contacts(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal, merged_segment_name: str) -> NamedList[ContactReal]:
+    def get_merged_contacts(
+        self,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merged_scs: SegmentCoordinateSystemReal,
+        merged_segment_name: str,
+    ) -> NamedList[ContactReal]:
         """
         Get the merged contacts from the two segments.
         The contacts are transformed to the new segment coordinate system.
@@ -260,7 +303,9 @@ class MergeSegmentsTool:
         merged_contacts = NamedList[ContactReal]()
 
         for contact in first_segment.contacts:
-            contact_in_global = point_from_local_to_global(contact.position, first_segment.segment_coordinate_system.scs)
+            contact_in_global = point_from_local_to_global(
+                contact.position, first_segment.segment_coordinate_system.scs
+            )
             contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs.scs)
             merged_contacts._append(
                 ContactReal(
@@ -272,7 +317,9 @@ class MergeSegmentsTool:
             )
 
         for contact in second_segment.contacts:
-            contact_in_global = point_from_local_to_global(contact.position, second_segment.segment_coordinate_system.scs)
+            contact_in_global = point_from_local_to_global(
+                contact.position, second_segment.segment_coordinate_system.scs
+            )
             contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs.scs)
             merged_contacts._append(
                 ContactReal(
@@ -285,7 +332,13 @@ class MergeSegmentsTool:
 
         return merged_contacts
 
-    def get_merged_imus(self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal, merged_segment_name: str) -> NamedList[InertialMeasurementUnitReal]:
+    def get_merged_imus(
+        self,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merged_scs: SegmentCoordinateSystemReal,
+        merged_segment_name: str,
+    ) -> NamedList[InertialMeasurementUnitReal]:
         """
         Get the merged inertial measurement units from the two segments.
         The imus are transformed to the new segment coordinate system.
@@ -293,8 +346,10 @@ class MergeSegmentsTool:
         merged_imus = NamedList[InertialMeasurementUnitReal]()
 
         for imu in first_segment.imus:
-            raise NotImplementedError("This piece of code bellow was not tested yet, but if you encounter this error and"
-                                      " observe that the code works, please open a PR on GitHub.")
+            raise NotImplementedError(
+                "This piece of code bellow was not tested yet, but if you encounter this error and"
+                " observe that the code works, please open a PR on GitHub."
+            )
             imu_in_global = first_segment.segment_coordinate_system.scs @ imu.scs
             imu_in_new_local = merged_scs.scs.inverse @ imu_in_global
             merged_imus._append(
@@ -309,7 +364,8 @@ class MergeSegmentsTool:
 
         for imu in second_segment.imus:
             raise NotImplementedError(
-                "This piece of code bellow was not tested yet, but if you encounter this error and observe that the code works, please open a PR on GitHub.")
+                "This piece of code bellow was not tested yet, but if you encounter this error and observe that the code works, please open a PR on GitHub."
+            )
             imu_in_global = second_segment.segment_coordinate_system.scs @ imu.scs
             imu_in_new_local = merged_scs.scs.inverse @ imu_in_global
             merged_imus._append(
@@ -336,8 +392,10 @@ class MergeSegmentsTool:
         # Then, modify it based on the merge tasks
         for merge_task in self.segments_to_merge:
 
-            if (merge_task.first_segment_name not in self.merged_model.segment_names or
-                merge_task.second_segment_name not in self.merged_model.segment_names):
+            if (
+                merge_task.first_segment_name not in self.merged_model.segment_names
+                or merge_task.second_segment_name not in self.merged_model.segment_names
+            ):
                 raise RuntimeError(
                     f"Segments {merge_task.first_segment_name} and/or {merge_task.second_segment_name} "
                     "not found in the original model."
@@ -352,14 +410,16 @@ class MergeSegmentsTool:
             self.merged_model.remove_segment(merge_task.second_segment_name)
 
             merged_parent_name = self.get_merged_parent(first_segment, second_segment, merge_task.merged_origin_name)
-            (merged_translations,
-             merged_rotations,
-             merged_dof_names,
-             merged_q_range,
-             merged_qdot_range) = self.get_merged_dofs(first_segment, second_segment, merge_task.merged_origin_name)
+            (merged_translations, merged_rotations, merged_dof_names, merged_q_range, merged_qdot_range) = (
+                self.get_merged_dofs(first_segment, second_segment, merge_task.merged_origin_name)
+            )
             merged_scs_local = self.get_merged_scs(first_segment, second_segment, merge_task.merged_origin_name)
-            merged_scs_global = self.merged_model.segment_coordinate_system_in_global(merged_parent_name) @ merged_scs_local.scs
-            merged_inertia_parameters = self.get_merged_inertia_parameters(first_segment, second_segment, merged_scs_global)
+            merged_scs_global = (
+                self.merged_model.segment_coordinate_system_in_global(merged_parent_name) @ merged_scs_local.scs
+            )
+            merged_inertia_parameters = self.get_merged_inertia_parameters(
+                first_segment, second_segment, merged_scs_global
+            )
             merged_mesh = self.get_merged_mesh(first_segment, second_segment, merged_scs_local)
 
             merged_segment = SegmentReal(
@@ -377,15 +437,21 @@ class MergeSegmentsTool:
             )
 
             # Add markers
-            merged_markers = self.get_merged_markers(first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name)
+            merged_markers = self.get_merged_markers(
+                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
+            )
             merged_segment.markers = merged_markers
 
             # Add contacts
-            merged_contacts = self.get_merged_contacts(first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name)
+            merged_contacts = self.get_merged_contacts(
+                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
+            )
             merged_segment.contacts = merged_contacts
 
             # Add imus
-            merged_imus = self.get_merged_imus(first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name)
+            merged_imus = self.get_merged_imus(
+                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
+            )
             merged_segment.imus = merged_imus
 
             # Add the merged segment to the new model
@@ -395,7 +461,10 @@ class MergeSegmentsTool:
             first_children = self.merged_model.children_segment_names(merge_task.first_segment_name)
             for child in first_children:
                 # Get the new segment coordinate system for the child segment
-                global_scs = first_segment.segment_coordinate_system.scs @ self.merged_model.segments[child].segment_coordinate_system.scs
+                global_scs = (
+                    first_segment.segment_coordinate_system.scs
+                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+                )
                 local_scs = merged_scs_local.scs.inverse @ global_scs
                 # Modify the child segment
                 self.merged_model.segments[child].parent_name = merge_task.name
@@ -404,7 +473,10 @@ class MergeSegmentsTool:
             second_children = self.merged_model.children_segment_names(merge_task.second_segment_name)
             for child in second_children:
                 # Get the new segment coordinate system for the child segment
-                global_scs = second_segment.segment_coordinate_system.scs @ self.merged_model.segments[child].segment_coordinate_system.scs
+                global_scs = (
+                    second_segment.segment_coordinate_system.scs
+                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+                )
                 local_scs = merged_scs_local.scs.inverse @ global_scs
                 # Modify the child segment
                 self.merged_model.segments[child].parent_name = merge_task.name

@@ -18,6 +18,9 @@ from biobuddy import (
     MuscleStateType,
     Translations,
     Rotations,
+    RangeOfMotion,
+    Ranges,
+    MeshReal,
 )
 
 
@@ -414,6 +417,8 @@ def create_simple_model():
             inertia_parameters=InertiaParametersReal(
                 mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
             ),
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-np.pi] * 6, max_bound=[np.pi] * 6),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 
@@ -430,6 +435,7 @@ def create_simple_model():
             inertia_parameters=InertiaParametersReal(
                 mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01
             ),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 

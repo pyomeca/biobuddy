@@ -211,8 +211,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 current = segment.name
                 while current is not None:
                     if current in path:
-                        raise RuntimeError(f"The segment {current} was caught up in a kinematic chain loop, which is not permitted."
-                                           f" Please verify the parent-child relationships in yor model.")
+                        raise RuntimeError(
+                            f"The segment {current} was caught up in a kinematic chain loop, which is not permitted."
+                            f" Please verify the parent-child relationships in yor model."
+                        )
                     if current != "base" and current not in self.segment_names:
                         raise RuntimeError(f"The segment {current} was not found in the model.")
 
