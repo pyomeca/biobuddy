@@ -117,7 +117,7 @@ class InertiaParameters:
         # Inertia
         if self.inertia is None:
             raise RuntimeError("To compute the inertia parameters, you must provide a inertia function.")
-        inertia = inertia_to_array(points=self.inertia(data.values, model), name="inertia parameter function")
+        inertia = inertia_to_array(inertia=self.inertia(data.values, model), name="inertia parameter function")
         # Do not transform inertia because it does not make any sens to express it elsewhere than at the CoM
 
         return InertiaParametersReal(mass, com, inertia)

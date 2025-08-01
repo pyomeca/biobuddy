@@ -27,6 +27,8 @@ from biobuddy import (
     RotoTransMatrix,
     MergeSegmentsTool,
     SegmentMerge,
+    ModifyKinematicChainTool,
+    ChangeFirstSegment,
 )
 
 
@@ -108,18 +110,20 @@ def main():
 
         # Create the model
         real_model = inertia_table.to_simple_model()
+        # real_model.animate()
 
         # Modify the model to merge both arms together
         merge_tool = MergeSegmentsTool(real_model)
-        merge_tool.add(SegmentMerge("UPPER_ARMS", "L_UPPER_ARM", "R_UPPER_ARM"))
-        merge_tool.add(SegmentMerge("LOWER_ARMS", "L_LOWER_ARM", "R_LOWER_ARM"))
-        merge_tool.add(SegmentMerge("HANDS", "L_HAND", "R_HAND"))
-
+        merge_tool.add(SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM"))
+        merge_tool.add(SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM"))
+        merge_tool.add(SegmentMerge(name="HANDS", first_segment_name="L_HAND", second_segment_name="R_HAND"))
         merged_model = merge_tool.merge()
-        merged_model.animate()
+        # merged_model.animate()
 
         # Modify the model to place the root segment at the hands
-        # TODO: ...
+        kinematic_chain_modifier = ModifyKinematicChainTool(merged_model)
+        kinematic_chain_modifier.add(ChangeFirstSegment(segment_name="HANDS", origin_position=np.array([0, 0, 0])))
+        hand_root_model = kinematic_chain_modifier.modify()
 
         # Exporting the output model as a biomod file
         real_model.to_biomod(f"population_model_{model_number}.bioMod")
