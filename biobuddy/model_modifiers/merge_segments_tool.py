@@ -176,13 +176,13 @@ class MergeSegmentsTool:
         c = com_distance[2]
 
         inertia[0, 0] = mass * (b**2 + c**2)
-        inertia[0, 1] = -mass * (-a * b)
-        inertia[0, 2] = -mass * (-a * c)
-        inertia[1, 0] = -mass * (-a * b)
+        inertia[0, 1] = mass * (-a * b)
+        inertia[0, 2] = mass * (-a * c)
+        inertia[1, 0] = mass * (-a * b)
         inertia[1, 1] = mass * (c**2 + a**2)
-        inertia[1, 2] = -mass * (-b * c)
-        inertia[2, 0] = -mass * (-a * c)
-        inertia[2, 1] = -mass * (-b * c)
+        inertia[1, 2] = mass * (-b * c)
+        inertia[2, 0] = mass * (-a * c)
+        inertia[2, 1] = mass * (-b * c)
         inertia[2, 2] = mass * (a**2 + b**2)
 
         return inertia
@@ -227,7 +227,7 @@ class MergeSegmentsTool:
         return merged_inertia_parameters
 
     def get_merged_mesh(
-        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs: SegmentCoordinateSystemReal
+        self, first_segment: SegmentReal, second_segment: SegmentReal, merged_scs_global: RotoTransMatrix
     ) -> MeshReal:
         first_mesh_points = first_segment.mesh.positions
         second_mesh_points = second_segment.mesh.positions
@@ -237,24 +237,24 @@ class MergeSegmentsTool:
 
         for i_mesh in range(first_mesh_points.shape[1]):
             point_in_global = point_from_local_to_global(first_mesh_points[:, i_mesh], first_segment_scs_global)
-            point_in_new_local = point_from_global_to_local(point_in_global, merged_scs.scs)
+            point_in_new_local = point_from_global_to_local(point_in_global, merged_scs_global)
             merged_mesh_points = np.hstack((merged_mesh_points, point_in_new_local))
 
         for i_mesh in range(second_mesh_points.shape[1]):
             point_in_global = point_from_local_to_global(second_mesh_points[:, i_mesh], second_segment_scs_global)
-            point_in_new_local = point_from_global_to_local(point_in_global, merged_scs.scs)
+            point_in_new_local = point_from_global_to_local(point_in_global, merged_scs_global)
             merged_mesh_points = np.hstack((merged_mesh_points, point_in_new_local))
 
         merged_mesh = MeshReal(merged_mesh_points)
         return merged_mesh
 
-    def get_merged_markers(
+    def add_merged_markers(
         self,
         first_segment: SegmentReal,
         second_segment: SegmentReal,
-        merged_scs: SegmentCoordinateSystemReal,
+        merged_scs_global: RotoTransMatrix,
         merged_segment_name: str,
-    ) -> NamedList[MarkerReal]:
+    ):
         """
         Get the merged markers from the two segments.
         The markers are transformed to the new segment coordinate system.
@@ -262,8 +262,9 @@ class MergeSegmentsTool:
         merged_markers = NamedList[MarkerReal]()
 
         for marker in first_segment.markers:
-            marker_in_global = point_from_local_to_global(marker.position, first_segment.segment_coordinate_system.scs)
-            marker_in_new_local = point_from_global_to_local(marker_in_global, merged_scs.scs)
+            global_scs = self.original_model.segment_coordinate_system_in_global(first_segment.name)
+            marker_in_global = point_from_local_to_global(marker.position, global_scs)
+            marker_in_new_local = point_from_global_to_local(marker_in_global, merged_scs_global)
             merged_markers._append(
                 MarkerReal(
                     name=deepcopy(marker.name),
@@ -275,8 +276,9 @@ class MergeSegmentsTool:
             )
 
         for marker in second_segment.markers:
-            marker_in_global = point_from_local_to_global(marker.position, second_segment.segment_coordinate_system.scs)
-            marker_in_new_local = point_from_global_to_local(marker_in_global, merged_scs.scs)
+            global_scs = self.original_model.segment_coordinate_system_in_global(second_segment.name)
+            marker_in_global = point_from_local_to_global(marker.position, global_scs)
+            marker_in_new_local = point_from_global_to_local(marker_in_global, merged_scs_global)
             merged_markers._append(
                 MarkerReal(
                     name=deepcopy(marker.name),
@@ -287,15 +289,16 @@ class MergeSegmentsTool:
                 )
             )
 
-        return merged_markers
+        self.merged_model.segments[merged_segment_name].markers = merged_markers
+        return
 
-    def get_merged_contacts(
+    def add_merged_contacts(
         self,
         first_segment: SegmentReal,
         second_segment: SegmentReal,
-        merged_scs: SegmentCoordinateSystemReal,
+        merged_scs_global: RotoTransMatrix,
         merged_segment_name: str,
-    ) -> NamedList[ContactReal]:
+    ):
         """
         Get the merged contacts from the two segments.
         The contacts are transformed to the new segment coordinate system.
@@ -303,10 +306,9 @@ class MergeSegmentsTool:
         merged_contacts = NamedList[ContactReal]()
 
         for contact in first_segment.contacts:
-            contact_in_global = point_from_local_to_global(
-                contact.position, first_segment.segment_coordinate_system.scs
-            )
-            contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs.scs)
+            global_scs = self.original_model.segment_coordinate_system_in_global(first_segment.name)
+            contact_in_global = point_from_local_to_global(contact.position, global_scs)
+            contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs_global)
             merged_contacts._append(
                 ContactReal(
                     name=deepcopy(contact.name),
@@ -317,10 +319,9 @@ class MergeSegmentsTool:
             )
 
         for contact in second_segment.contacts:
-            contact_in_global = point_from_local_to_global(
-                contact.position, second_segment.segment_coordinate_system.scs
-            )
-            contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs.scs)
+            global_scs = self.original_model.segment_coordinate_system_in_global(second_segment.name)
+            contact_in_global = point_from_local_to_global(contact.position, global_scs)
+            contact_in_new_local = point_from_global_to_local(contact_in_global, merged_scs_global)
             merged_contacts._append(
                 ContactReal(
                     name=deepcopy(contact.name),
@@ -330,15 +331,16 @@ class MergeSegmentsTool:
                 )
             )
 
-        return merged_contacts
+        self.merged_model.segments[merged_segment_name].contacts = merged_contacts
+        return
 
-    def get_merged_imus(
+    def add_merged_imus(
         self,
         first_segment: SegmentReal,
         second_segment: SegmentReal,
-        merged_scs: SegmentCoordinateSystemReal,
+        merged_scs_global: RotoTransMatrix,
         merged_segment_name: str,
-    ) -> NamedList[InertialMeasurementUnitReal]:
+    ):
         """
         Get the merged inertial measurement units from the two segments.
         The imus are transformed to the new segment coordinate system.
@@ -350,8 +352,9 @@ class MergeSegmentsTool:
                 "This piece of code bellow was not tested yet, but if you encounter this error and"
                 " observe that the code works, please open a PR on GitHub."
             )
-            imu_in_global = first_segment.segment_coordinate_system.scs @ imu.scs
-            imu_in_new_local = merged_scs.scs.inverse @ imu_in_global
+            global_scs = self.original_model.segment_coordinate_system_in_global(first_segment.name)
+            imu_in_global = global_scs @ imu.scs
+            imu_in_new_local = merged_scs_global.inverse @ imu_in_global
             merged_imus._append(
                 InertialMeasurementUnitReal(
                     name=deepcopy(imu.name),
@@ -366,8 +369,9 @@ class MergeSegmentsTool:
             raise NotImplementedError(
                 "This piece of code bellow was not tested yet, but if you encounter this error and observe that the code works, please open a PR on GitHub."
             )
-            imu_in_global = second_segment.segment_coordinate_system.scs @ imu.scs
-            imu_in_new_local = merged_scs.scs.inverse @ imu_in_global
+            global_scs = self.original_model.segment_coordinate_system_in_global(second_segment.name)
+            imu_in_global = global_scs @ imu.scs
+            imu_in_new_local = merged_scs_global.inverse @ imu_in_global
             merged_imus._append(
                 InertialMeasurementUnitReal(
                     name=deepcopy(imu.name),
@@ -378,7 +382,166 @@ class MergeSegmentsTool:
                 )
             )
 
-        return merged_imus
+        self.merged_model.segments[merged_segment_name].imus = merged_imus
+        return
+
+    def transform_point_to_merged_coordinate_system(self,
+                                                    point_position: np.ndarray,
+                                                    parent_name: str,
+                                                    first_segment: SegmentReal,
+                                                    second_segment: SegmentReal,
+                                                    merged_scs_global: RotoTransMatrix) -> np.ndarray:
+        """
+        Transform a point from its original parent coordinate system to the merged coordinate system.
+
+        Parameters
+        -----------
+        point_position
+            The position of the point in its original parent's local coordinates
+        parent_name
+            The name of the parent segment
+        first_segment
+            The first segment being merged
+        second_segment
+            The second segment being merged
+        merged_scs_global
+            The global coordinate system of the merged segment
+
+        Returns
+        ----------
+            The point position in the merged coordinate system's local coordinates
+        """
+        if parent_name == first_segment.name or parent_name == second_segment.name:
+            original_scs_global = self.original_model.segment_coordinate_system_in_global(parent_name)
+            point_in_global = point_from_local_to_global(point_position, original_scs_global)
+            return point_from_global_to_local(point_in_global, merged_scs_global)
+        else:
+            # Return unchanged if not one of the merge segments
+            return point_position
+
+    def update_muscle_attachment_point(self,
+                                       muscle_group_name: str,
+                                       muscle_name: str,
+                                       point_type: str,
+                                       new_position: np.ndarray,
+                                       merged_segment_name: str):
+        """
+        Update a specific attachment point (origin or insertion) of a muscle.
+
+        Parameters
+        ----------
+        muscle_group_name
+            Name of the muscle group
+        muscle_name
+            Name of the muscle
+        point_type
+            Either 'origin' or 'insertion'
+        new_position
+            The new position for the attachment point
+        """
+        muscle = self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name]
+        if point_type == 'origin':
+            origin_via_point = deepcopy(muscle.origin_position)
+            origin_via_point.position = new_position
+            origin_via_point.parent_name = merged_segment_name
+            muscle.origin_position = origin_via_point
+        elif point_type == 'insertion':
+            insertion_via_point = deepcopy(muscle.insertion_position)
+            insertion_via_point.position = new_position
+            insertion_via_point.parent_name = merged_segment_name
+            muscle.insertion_position = insertion_via_point
+
+    def add_merged_muscles(self,
+                           first_segment: SegmentReal,
+                           second_segment: SegmentReal,
+                           merged_scs_global: RotoTransMatrix,
+                           merged_segment_name: str):
+        """
+        Modify all muscles by transforming their attachment points and via points to the merged coordinate system.
+
+        Parameters
+        ----------
+        first_segment
+            The first segment being merged
+        second_segment
+            The second segment being merged
+        merged_scs_global
+            The global coordinate system of the merged segment
+        merged_segment_name
+            The name of the merged segment to which the muscles will be attached
+        """
+        for muscle_group in self.original_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+
+                # Transform origin point
+                if muscle_group.origin_parent_name in [first_segment.name, second_segment.name]:
+                    new_origin = self.transform_point_to_merged_coordinate_system(
+                        muscle.origin_position.position,
+                        muscle_group.origin_parent_name,
+                        first_segment,
+                        second_segment,
+                        merged_scs_global
+                    )
+                    self.update_muscle_attachment_point(muscle_group.name, muscle.name, 'origin', new_origin, merged_segment_name)
+
+                # Transform insertion point
+                if muscle_group.insertion_parent_name in [first_segment.name,
+                                                          second_segment.name]:
+                    new_insertion = self.transform_point_to_merged_coordinate_system(
+                        muscle.insertion_position.position,
+                        muscle_group.insertion_parent_name,
+                        first_segment,
+                        second_segment,
+                        merged_scs_global
+                    )
+                    self.update_muscle_attachment_point(muscle_group.name, muscle.name, 'insertion', new_insertion, merged_segment_name)
+
+                # Transform via points
+                for via_point in muscle.via_points:
+                    if via_point.parent_name in [first_segment.name, second_segment.name]:
+                        new_via_position = self.transform_point_to_merged_coordinate_system(
+                            via_point.position,
+                            via_point.parent_name,
+                            first_segment,
+                            second_segment,
+                            merged_scs_global
+                        )
+                        merged_via_point = deepcopy(self.original_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[via_point.name])
+                        merged_via_point.position = new_via_position
+                        merged_via_point.parent_name = merged_segment_name
+                        self.merged_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[via_point.name] = merged_via_point
+
+    def add_merged_children(self,
+                            first_segment: SegmentReal,
+                            second_segment: SegmentReal,
+                            merge_task: SegmentMerge,
+                            merged_scs_local: SegmentCoordinateSystemReal):
+
+        # Switch the child segments' parent
+        first_children = self.merged_model.children_segment_names(merge_task.first_segment_name)
+        for child in first_children:
+            # Get the new segment coordinate system for the child segment
+            global_scs = (
+                    first_segment.segment_coordinate_system.scs
+                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+            )
+            local_scs = merged_scs_local.scs.inverse @ global_scs
+            # Modify the child segment
+            self.merged_model.segments[child].parent_name = merge_task.name
+            self.merged_model.segments[child].scs = local_scs
+
+        second_children = self.merged_model.children_segment_names(merge_task.second_segment_name)
+        for child in second_children:
+            # Get the new segment coordinate system for the child segment
+            global_scs = (
+                    second_segment.segment_coordinate_system.scs
+                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+            )
+            local_scs = merged_scs_local.scs.inverse @ global_scs
+            # Modify the child segment
+            self.merged_model.segments[child].parent_name = merge_task.name
+            self.merged_model.segments[child].scs = local_scs
+            return
 
     def merge(
         self,
@@ -420,7 +583,7 @@ class MergeSegmentsTool:
             merged_inertia_parameters = self.get_merged_inertia_parameters(
                 first_segment, second_segment, merged_scs_global
             )
-            merged_mesh = self.get_merged_mesh(first_segment, second_segment, merged_scs_local)
+            merged_mesh = self.get_merged_mesh(first_segment, second_segment, merged_scs_global)
 
             merged_segment = SegmentReal(
                 name=merge_task.name,
@@ -436,50 +599,16 @@ class MergeSegmentsTool:
                 mesh_file=None,  # It is not possible for now to have multiple meshes in a segment, so we set it to None
             )
 
-            # Add markers
-            merged_markers = self.get_merged_markers(
-                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
-            )
-            merged_segment.markers = merged_markers
-
-            # Add contacts
-            merged_contacts = self.get_merged_contacts(
-                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
-            )
-            merged_segment.contacts = merged_contacts
-
-            # Add imus
-            merged_imus = self.get_merged_imus(
-                first_segment, second_segment, merged_scs_local, merged_segment_name=merge_task.name
-            )
-            merged_segment.imus = merged_imus
-
             # Add the merged segment to the new model
             self.merged_model.add_segment(merged_segment)
 
-            # Switch the child segments' parent
-            first_children = self.merged_model.children_segment_names(merge_task.first_segment_name)
-            for child in first_children:
-                # Get the new segment coordinate system for the child segment
-                global_scs = (
-                    first_segment.segment_coordinate_system.scs
-                    @ self.merged_model.segments[child].segment_coordinate_system.scs
-                )
-                local_scs = merged_scs_local.scs.inverse @ global_scs
-                # Modify the child segment
-                self.merged_model.segments[child].parent_name = merge_task.name
-                self.merged_model.segments[child].scs = local_scs
+            # Add components
+            self.add_merged_markers(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
+            self.add_merged_contacts(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
+            self.add_merged_imus(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
+            self.add_merged_muscles(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
 
-            second_children = self.merged_model.children_segment_names(merge_task.second_segment_name)
-            for child in second_children:
-                # Get the new segment coordinate system for the child segment
-                global_scs = (
-                    second_segment.segment_coordinate_system.scs
-                    @ self.merged_model.segments[child].segment_coordinate_system.scs
-                )
-                local_scs = merged_scs_local.scs.inverse @ global_scs
-                # Modify the child segment
-                self.merged_model.segments[child].parent_name = merge_task.name
-                self.merged_model.segments[child].scs = local_scs
+            # Modify the children
+            self.add_merged_children(first_segment, second_segment, merge_task, merged_scs_local)
 
         return self.merged_model
