@@ -385,12 +385,14 @@ class MergeSegmentsTool:
         self.merged_model.segments[merged_segment_name].imus = merged_imus
         return
 
-    def transform_point_to_merged_coordinate_system(self,
-                                                    point_position: np.ndarray,
-                                                    parent_name: str,
-                                                    first_segment: SegmentReal,
-                                                    second_segment: SegmentReal,
-                                                    merged_scs_global: RotoTransMatrix) -> np.ndarray:
+    def transform_point_to_merged_coordinate_system(
+        self,
+        point_position: np.ndarray,
+        parent_name: str,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merged_scs_global: RotoTransMatrix,
+    ) -> np.ndarray:
         """
         Transform a point from its original parent coordinate system to the merged coordinate system.
 
@@ -419,12 +421,14 @@ class MergeSegmentsTool:
             # Return unchanged if not one of the merge segments
             return point_position
 
-    def update_muscle_attachment_point(self,
-                                       muscle_group_name: str,
-                                       muscle_name: str,
-                                       point_type: str,
-                                       new_position: np.ndarray,
-                                       merged_segment_name: str):
+    def update_muscle_attachment_point(
+        self,
+        muscle_group_name: str,
+        muscle_name: str,
+        point_type: str,
+        new_position: np.ndarray,
+        merged_segment_name: str,
+    ):
         """
         Update a specific attachment point (origin or insertion) of a muscle.
 
@@ -440,22 +444,24 @@ class MergeSegmentsTool:
             The new position for the attachment point
         """
         muscle = self.merged_model.muscle_groups[muscle_group_name].muscles[muscle_name]
-        if point_type == 'origin':
+        if point_type == "origin":
             origin_via_point = deepcopy(muscle.origin_position)
             origin_via_point.position = new_position
             origin_via_point.parent_name = merged_segment_name
             muscle.origin_position = origin_via_point
-        elif point_type == 'insertion':
+        elif point_type == "insertion":
             insertion_via_point = deepcopy(muscle.insertion_position)
             insertion_via_point.position = new_position
             insertion_via_point.parent_name = merged_segment_name
             muscle.insertion_position = insertion_via_point
 
-    def add_merged_muscles(self,
-                           first_segment: SegmentReal,
-                           second_segment: SegmentReal,
-                           merged_scs_global: RotoTransMatrix,
-                           merged_segment_name: str):
+    def add_merged_muscles(
+        self,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merged_scs_global: RotoTransMatrix,
+        merged_segment_name: str,
+    ):
         """
         Modify all muscles by transforming their attachment points and via points to the merged coordinate system.
 
@@ -480,50 +486,57 @@ class MergeSegmentsTool:
                         muscle_group.origin_parent_name,
                         first_segment,
                         second_segment,
-                        merged_scs_global
+                        merged_scs_global,
                     )
-                    self.update_muscle_attachment_point(muscle_group.name, muscle.name, 'origin', new_origin, merged_segment_name)
+                    self.update_muscle_attachment_point(
+                        muscle_group.name, muscle.name, "origin", new_origin, merged_segment_name
+                    )
 
                 # Transform insertion point
-                if muscle_group.insertion_parent_name in [first_segment.name,
-                                                          second_segment.name]:
+                if muscle_group.insertion_parent_name in [first_segment.name, second_segment.name]:
                     new_insertion = self.transform_point_to_merged_coordinate_system(
                         muscle.insertion_position.position,
                         muscle_group.insertion_parent_name,
                         first_segment,
                         second_segment,
-                        merged_scs_global
+                        merged_scs_global,
                     )
-                    self.update_muscle_attachment_point(muscle_group.name, muscle.name, 'insertion', new_insertion, merged_segment_name)
+                    self.update_muscle_attachment_point(
+                        muscle_group.name, muscle.name, "insertion", new_insertion, merged_segment_name
+                    )
 
                 # Transform via points
                 for via_point in muscle.via_points:
                     if via_point.parent_name in [first_segment.name, second_segment.name]:
                         new_via_position = self.transform_point_to_merged_coordinate_system(
-                            via_point.position,
-                            via_point.parent_name,
-                            first_segment,
-                            second_segment,
-                            merged_scs_global
+                            via_point.position, via_point.parent_name, first_segment, second_segment, merged_scs_global
                         )
-                        merged_via_point = deepcopy(self.original_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[via_point.name])
+                        merged_via_point = deepcopy(
+                            self.original_model.muscle_groups[muscle_group.name]
+                            .muscles[muscle.name]
+                            .via_points[via_point.name]
+                        )
                         merged_via_point.position = new_via_position
                         merged_via_point.parent_name = merged_segment_name
-                        self.merged_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[via_point.name] = merged_via_point
+                        self.merged_model.muscle_groups[muscle_group.name].muscles[muscle.name].via_points[
+                            via_point.name
+                        ] = merged_via_point
 
-    def add_merged_children(self,
-                            first_segment: SegmentReal,
-                            second_segment: SegmentReal,
-                            merge_task: SegmentMerge,
-                            merged_scs_local: SegmentCoordinateSystemReal):
+    def add_merged_children(
+        self,
+        first_segment: SegmentReal,
+        second_segment: SegmentReal,
+        merge_task: SegmentMerge,
+        merged_scs_local: SegmentCoordinateSystemReal,
+    ):
 
         # Switch the child segments' parent
         first_children = self.merged_model.children_segment_names(merge_task.first_segment_name)
         for child in first_children:
             # Get the new segment coordinate system for the child segment
             global_scs = (
-                    first_segment.segment_coordinate_system.scs
-                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+                first_segment.segment_coordinate_system.scs
+                @ self.merged_model.segments[child].segment_coordinate_system.scs
             )
             local_scs = merged_scs_local.scs.inverse @ global_scs
             # Modify the child segment
@@ -534,8 +547,8 @@ class MergeSegmentsTool:
         for child in second_children:
             # Get the new segment coordinate system for the child segment
             global_scs = (
-                    second_segment.segment_coordinate_system.scs
-                    @ self.merged_model.segments[child].segment_coordinate_system.scs
+                second_segment.segment_coordinate_system.scs
+                @ self.merged_model.segments[child].segment_coordinate_system.scs
             )
             local_scs = merged_scs_local.scs.inverse @ global_scs
             # Modify the child segment
@@ -603,10 +616,16 @@ class MergeSegmentsTool:
             self.merged_model.add_segment(merged_segment)
 
             # Add components
-            self.add_merged_markers(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
-            self.add_merged_contacts(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
+            self.add_merged_markers(
+                first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name
+            )
+            self.add_merged_contacts(
+                first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name
+            )
             self.add_merged_imus(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
-            self.add_merged_muscles(first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name)
+            self.add_merged_muscles(
+                first_segment, second_segment, merged_scs_global, merged_segment_name=merge_task.name
+            )
 
             # Modify the children
             self.add_merged_children(first_segment, second_segment, merge_task, merged_scs_local)

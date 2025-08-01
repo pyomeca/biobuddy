@@ -113,12 +113,14 @@ def test_merge_segments_tool_merge():
     # Check the segment's dofs
     assert merged_model.segments["both"].translations == Translations.XYZ
     assert merged_model.segments["both"].rotations == Rotations.XYZ
-    assert merged_model.segments["both"].dof_names == ['parent_transX',
-                                                     'parent_transY',
-                                                     'parent_transZ',
-                                                     'parent_rotX',
-                                                     'parent_rotY',
-                                                     'parent_rotZ']
+    assert merged_model.segments["both"].dof_names == [
+        "parent_transX",
+        "parent_transY",
+        "parent_transZ",
+        "parent_rotX",
+        "parent_rotY",
+        "parent_rotZ",
+    ]
     assert merged_model.segments["both"].q_ranges.min_bound == [-np.pi] * 6
     assert merged_model.segments["both"].qdot_ranges is None
 
@@ -141,17 +143,20 @@ def test_merge_segments_tool_merge():
     npt.assert_almost_equal(biorbd_inertia, biobuddy_inertia[:3, :3], decimal=5)
 
     # Check the merged segment's mesh
-    npt.assert_almost_equal(merged_model.segments["both"].mesh.positions, np.array([[ 0. ,  0.2,  0.5,  0.7],
-                                                                                       [ 0. ,  0.1, -0.2, -0.1],
-                                                                                       [ 0. ,  0.3,  0.1,  0.4],
-                                                                                       [ 1. ,  1. ,  1. ,  1. ]]), decimal=5)
+    npt.assert_almost_equal(
+        merged_model.segments["both"].mesh.positions,
+        np.array([[0.0, 0.2, 0.5, 0.7], [0.0, 0.1, -0.2, -0.1], [0.0, 0.3, 0.1, 0.4], [1.0, 1.0, 1.0, 1.0]]),
+        decimal=5,
+    )
 
     # Check the merged segment's markers
     for i_marker in range(merged_model.nb_markers):
         biorbd_marker = biorbd_merged.marker(q_zeros, i_marker).to_array()
         biobuddy_marker = merged_model.segments["both"].markers[i_marker].position.reshape(
             4,
-        )[:3] + np.array([0.1, 0.2, 0.3])
+        )[
+            :3
+        ] + np.array([0.1, 0.2, 0.3])
         npt.assert_almost_equal(biorbd_marker, biobuddy_marker)
 
     # Check the merged segment's contacts
@@ -159,15 +164,16 @@ def test_merge_segments_tool_merge():
         biorbd_contact = biorbd_merged.rigidContact(q_zeros, i_contact).to_array()
         biobuddy_contact = merged_model.segments["both"].contacts[i_contact].position.reshape(
             4,
-        )[:3] + np.array([0.1, 0.2, 0.3])
+        )[
+            :3
+        ] + np.array([0.1, 0.2, 0.3])
         npt.assert_almost_equal(biorbd_contact, biobuddy_contact)
 
     # Test Via point positions
     for i_muscle, muscle_name in enumerate(merged_model.muscle_names):
         muscle_points_in_global_biobuddy = merged_model.via_points_in_global(muscle_name)
         muscle_points_in_global_biorbd = [
-            m.to_array()
-            for m in biorbd_merged.muscle(i_muscle).musclesPointsInGlobal(biorbd_merged, q_zeros)
+            m.to_array() for m in biorbd_merged.muscle(i_muscle).musclesPointsInGlobal(biorbd_merged, q_zeros)
         ]
     for i_via_point in range(len(muscle_points_in_global_biorbd) - 2):
         npt.assert_array_almost_equal(
@@ -178,11 +184,20 @@ def test_merge_segments_tool_merge():
 
     # TODO: test muscle insertion vs biorbd
     # Origin did not move because it is attached to the merged_origin_name
-    origin_position = merged_model.muscle_groups["parent_to_child"].muscles["muscle1"].origin_position.position.reshape(4, )
-    npt.assert_almost_equal(origin_position, np.array([0. , 0.1, 0. , 1. ]), decimal=5)
+    origin_position = (
+        merged_model.muscle_groups["parent_to_child"]
+        .muscles["muscle1"]
+        .origin_position.position.reshape(
+            4,
+        )
+    )
+    npt.assert_almost_equal(origin_position, np.array([0.0, 0.1, 0.0, 1.0]), decimal=5)
     # Insertion moved because it is attached to the segment to merge
-    insertion_position = merged_model.muscle_groups["parent_to_child"].muscles["muscle1"].insertion_position.position.reshape(4, )
-    npt.assert_almost_equal(insertion_position, np.array([1. , 0.2, 0.4, 1. ]), decimal=5)
-
-
-
+    insertion_position = (
+        merged_model.muscle_groups["parent_to_child"]
+        .muscles["muscle1"]
+        .insertion_position.position.reshape(
+            4,
+        )
+    )
+    npt.assert_almost_equal(insertion_position, np.array([1.0, 0.2, 0.4, 1.0]), decimal=5)
