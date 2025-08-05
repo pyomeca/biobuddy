@@ -142,8 +142,8 @@ def test_fix_moving_via_points():
         RuntimeError,
         match="A via point can either have a movement or a condition, but not both at the same time, via_point1 has both.",
     ):
-        model.muscle_groups["parent_to_child"].muscles["muscle1"].via_points["via_point1"].condition = PathPointCondition(
-            dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2
+        model.muscle_groups["parent_to_child"].muscles["muscle1"].via_points["via_point1"].condition = (
+            PathPointCondition(dof_name=f"child_rotX", range_min=0, range_max=np.pi / 2)
         )
         model.validate_model()
 
