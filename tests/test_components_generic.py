@@ -1444,8 +1444,8 @@ def test_segment_add_remove_contact():
 
     # Create a contact with no parent_name
     contact2 = Contact(name="test_contact2", parent_name=None)
-    with pytest.raises(ValueError, match="Contacts must have parents"):
-        segment.add_contact(contact2)
+    segment.add_contact(contact2)
+    assert segment.name == segment.contacts["test_contact2"].parent_name
 
     # Create a contact with non-matching parent_name
     contact3 = Contact(name="test_contact3", parent_name="other_segment")

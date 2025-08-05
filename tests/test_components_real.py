@@ -570,8 +570,8 @@ def test_segment_real_add_remove_contact():
 
     # Create a contact with no parent_name
     contact2 = ContactReal(name="test_contact2", parent_name=None)
-    with pytest.raises(ValueError):
-        segment.add_contact(contact2)
+    segment.add_contact(contact2)
+    assert segment.name == segment.contacts["test_contact2"].parent_name
 
     # Create a contact with non-matching parent_name
     contact3 = ContactReal(name="test_contact3", parent_name="other_segment")
@@ -599,8 +599,8 @@ def test_segment_real_add_remove_imu():
 
     # Create an IMU with no parent_name
     imu2 = InertialMeasurementUnitReal(name="test_imu2", parent_name=None)
-    with pytest.raises(RuntimeError):
-        segment.add_imu(imu2)
+    segment.add_imu(imu2)
+    assert segment.name == segment.imus["test_imu2"].parent_name
 
     # Remove an IMU
     segment.remove_imu(imu.name)
