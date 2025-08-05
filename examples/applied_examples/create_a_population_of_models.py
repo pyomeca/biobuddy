@@ -122,11 +122,12 @@ def main():
 
         # Modify the model to place the root segment at the hands
         kinematic_chain_modifier = ModifyKinematicChainTool(merged_model)
-        kinematic_chain_modifier.add(ChangeFirstSegment(segment_name="HANDS", origin_position=np.array([0, 0, 0])))
+        kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="HANDS", new_segment_name="PELVIS"))
         hand_root_model = kinematic_chain_modifier.modify()
+        hand_root_model.animate()
 
         # Exporting the output model as a biomod file
-        real_model.to_biomod(f"population_model_{model_number}.bioMod")
+        hand_root_model.to_biomod(f"population_model_{model_number}.bioMod")
         model_number += 1
 
 

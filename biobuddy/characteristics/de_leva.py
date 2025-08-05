@@ -472,7 +472,7 @@ class DeLevaTable:
             Segment(
                 name="HEAD",
                 parent_name="TRUNK",
-                translations=Translations.XYZ,
+                translations=Translations.NONE,
                 rotations=Rotations.XYZ,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.HEAD],
                 segment_coordinate_system=SegmentCoordinateSystem(
