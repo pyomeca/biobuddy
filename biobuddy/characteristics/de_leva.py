@@ -455,12 +455,9 @@ class DeLevaTable:
         # Generate the personalized kinematic model
         model = BiomechanicalModel()
 
-        model.add_segment(Segment(name="Ground"))
-
         model.add_segment(
             Segment(
                 name="TRUNK",
-                parent_name="Ground",
                 translations=Translations.XYZ,
                 rotations=Rotations.XYZ,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.TRUNK],

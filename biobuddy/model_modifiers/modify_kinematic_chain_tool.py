@@ -12,7 +12,7 @@ from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
 from ..components.generic.rigidbody.range_of_motion import RangeOfMotion
 from ..utils.named_list import NamedList
-from ..utils.linear_algebra import RotoTransMatrix, point_from_global_to_local, point_from_local_to_global
+from ..utils.linear_algebra import RotoTransMatrix, RotationMatrix, point_from_global_to_local, point_from_local_to_global
 from ..utils.enums import Translations, Rotations
 from ..utils.aliases import points_to_array, Point
 
@@ -75,9 +75,62 @@ class ChangeFirstSegment:
             modified_qdot_ranges = original_model.segments[current_parent].qdot_ranges
         return modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges
 
-    def get_modified_scs(self):
+    def get_modified_inertia(self, original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix) -> InertiaParametersReal:
 
+        # The mass is the same
+        mass = deepcopy(original_model.segments[segment_name].inertia_parameters.mass)
 
+        # Center of mass
+        com_in_global = original_model.segment_com_in_global(segment_name)
+        modified_com = point_from_global_to_local(com_in_global, current_scs_global)
+
+        # Inertia stays the same, as it is expressed around the com, but is rotated if needed
+        rt_to_new_scs = original_model.segments[segment_name].segment_coordinate_system.scs.rt_matrix.inverse @ current_scs_global
+        if rt_to_new_scs.rotation_matrix != RotationMatrix():
+            raise NotImplementedError("The rotation of inertia matrix is not implemented yet.")
+        modified_inertia = deepcopy(original_model.segments[segment_name].inertia_parameters.inertia)
+
+        modified_inertia_parameters = InertiaParametersReal(
+            mass=mass, center_of_mass=modified_com, inertia=modified_inertia
+        )
+        return modified_inertia_parameters
+
+    def get_modified_scs_local(self, current_scs_global: RotoTransMatrix) -> SegmentCoordinateSystemReal:
+        """
+        Get the modified segment coordinate system in local coordinates.
+        """
+        merged_scs = SegmentCoordinateSystemReal(scs=current_scs_global.inverse, is_scs_local=True)
+        return merged_scs
+
+    def get_modified_mesh(self, original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix) -> MeshReal:
+
+        mesh_points = original_model.segments[segment_name].mesh.positions
+        segment_scs_global = original_model.segment_coordinate_system_in_global(segment_name)
+        modified_mesh_points = points_to_array(None, name="modified_mesh_points")
+
+        for i_mesh in range(mesh_points.shape[1]):
+            point_in_global = point_from_local_to_global(mesh_points[:, i_mesh], segment_scs_global)
+            point_in_new_local = point_from_global_to_local(point_in_global, current_scs_global)
+            modified_mesh_points = np.hstack((modified_mesh_points, point_in_new_local))
+
+        modified_mesh = MeshReal(modified_mesh_points)
+        return modified_mesh
+
+    def get_modified_mesh(self, original_model: BiomechanicalModelReal, segment_name: str,
+                          current_scs_global: RotoTransMatrix) -> MeshReal:
+
+        mesh_points = original_model.segments[segment_name].mesh.positions
+        segment_scs_global = original_model.segment_coordinate_system_in_global(segment_name)
+        modified_mesh_points = points_to_array(None, name="modified_mesh_points")
+
+        for i_mesh in range(mesh_points.shape[1]):
+            point_in_global = point_from_local_to_global(mesh_points[:, i_mesh], segment_scs_global)
+            point_in_new_local = point_from_global_to_local(point_in_global, current_scs_global)
+            modified_mesh_points = np.hstack((modified_mesh_points, point_in_new_local))
+
+        modified_mesh = MeshReal(modified_mesh_points)
+        return modified_mesh
+    
     def modify(self, original_model: BiomechanicalModelReal, modified_model: BiomechanicalModelReal) -> BiomechanicalModelReal:
 
         # Get the segments to invert
@@ -86,9 +139,9 @@ class ChangeFirstSegment:
         # Invert the segments
         current_parent = "root"
         if self.first_scs is None:
-            current_scs = modified_model.segment_coordinate_system_in_global(self.first_segment_name)
+            current_scs_global = modified_model.segment_coordinate_system_in_global(self.first_segment_name)
         else:
-            current_scs = self.first_scs
+            current_scs_global = self.first_scs
 
         for segment in segment_to_invert:
 
@@ -99,10 +152,15 @@ class ChangeFirstSegment:
              modified_rotations,
              modified_dof_names,
              modified_q_ranges,
-             modified_qdot_ranges) = self.get_modified_dofs(self, original_model, current_parent)
+             modified_qdot_ranges) = self.get_modified_dofs(original_model, current_parent)
 
-            # Charbie was here ;)
-            modified_scs_local = self.get_modified_scs()
+            modified_inertia_parameters = self.get_modified_inertia(original_model, segment.name, current_scs_global)
+
+            modified_scs_local = self.get_modified_scs_local(current_scs_global)
+
+            modified_mesh = self.get_modified_mesh(original_model, segment.name, current_scs_global)
+
+            modified_mesh_file = self.get_modified_mesh_file(original_model, segment.name, current_scs_global)
 
             merged_segment = SegmentReal(
                 name=segment.name,
@@ -112,10 +170,10 @@ class ChangeFirstSegment:
                 dof_names=modified_dof_names,
                 q_ranges=modified_q_ranges,
                 qdot_ranges=modified_qdot_ranges,
-                segment_coordinate_system=SegmentCoordinateSystemReal(scs=current_scs),
-                inertia_parameters=merged_inertia_parameters,
-                mesh=merged_mesh,
-                mesh_file=None,  # It is not possible for now to have multiple meshes in a segment, so we set it to None
+                segment_coordinate_system=modified_scs_local,
+                inertia_parameters=modified_inertia_parameters,
+                mesh=modified_mesh,
+                mesh_file=modified_mesh_file,
             )
 
             current_scs = current_scs
