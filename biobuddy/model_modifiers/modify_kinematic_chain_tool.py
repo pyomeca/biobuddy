@@ -403,9 +403,13 @@ class ChangeFirstSegment:
         current_parent = "root"
         # By default, the position of the new first segment is the center of mass of the first segment
         # in the global reference frame
-        if (original_model.segments[self.first_segment_name].inertia_parameters is None or
-                original_model.segments[self.first_segment_name].inertia_parameters.center_of_mass is None):
-            raise RuntimeError("The first segment must have inertia parameters with a center of mass defined, as the root segment will be defined at this point in the global reference frame.")
+        if (
+            original_model.segments[self.first_segment_name].inertia_parameters is None
+            or original_model.segments[self.first_segment_name].inertia_parameters.center_of_mass is None
+        ):
+            raise RuntimeError(
+                "The first segment must have inertia parameters with a center of mass defined, as the root segment will be defined at this point in the global reference frame."
+            )
         current_scs_global = RotoTransMatrix()
         current_scs_global.translation = modified_model.segment_com_in_global(self.first_segment_name)
 
