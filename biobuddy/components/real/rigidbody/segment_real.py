@@ -182,10 +182,10 @@ class SegmentReal(SegmentUtils):
         contact
             The contact to add
         """
-        if contact.parent_name is None:
-            raise ValueError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
-        elif contact.parent_name != self.name:
-            raise ValueError("The contact name should be the same as the 'key'.")
+        if contact.parent_name is not None and contact.parent_name != self.name:
+            raise ValueError(
+                "The contact name should be the same as the 'key'. Alternatively, contact.name can be left undefined"
+            )
         contact.parent_name = self.name
         self.contacts._append(contact)
 
@@ -193,8 +193,11 @@ class SegmentReal(SegmentUtils):
         self.contacts._remove(contact)
 
     def add_imu(self, imu: InertialMeasurementUnitReal):
-        if imu.parent_name is None:
-            raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
+        if imu.parent_name is not None and imu.parent_name != self.name:
+            raise ValueError(
+                "The imu name should be the same as the 'key'. Alternatively, imu.name can be left undefined"
+            )
+        imu.parent_name = self.name
         self.imus._append(imu)
 
     def remove_imu(self, imu: str):

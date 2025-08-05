@@ -527,7 +527,7 @@ class RotoTransMatrix:
 
     @translation.setter
     def translation(self, trans: np.ndarray):
-        self._rt[:3, 3] = trans[:3].reshape(
+        self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(
             3,
         )
 

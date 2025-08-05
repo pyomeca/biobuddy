@@ -124,19 +124,22 @@ class ChangeFirstSegment:
     @staticmethod
     def get_modified_mesh(
         original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix
-    ) -> MeshReal:
+    ) -> MeshReal | None:
 
-        mesh_points = original_model.segments[segment_name].mesh.positions
-        segment_scs_global = original_model.segment_coordinate_system_in_global(segment_name)
-        modified_mesh_points = points_to_array(None, name="modified_mesh_points")
+        if original_model.segments[segment_name].mesh is None:
+            return None
+        else:
+            mesh_points = original_model.segments[segment_name].mesh.positions
+            segment_scs_global = original_model.segment_coordinate_system_in_global(segment_name)
+            modified_mesh_points = points_to_array(None, name="modified_mesh_points")
 
-        for i_mesh in range(mesh_points.shape[1]):
-            point_in_global = point_from_local_to_global(mesh_points[:, i_mesh], segment_scs_global)
-            point_in_new_local = point_from_global_to_local(point_in_global, current_scs_global)
-            modified_mesh_points = np.hstack((modified_mesh_points, point_in_new_local))
+            for i_mesh in range(mesh_points.shape[1]):
+                point_in_global = point_from_local_to_global(mesh_points[:, i_mesh], segment_scs_global)
+                point_in_new_local = point_from_global_to_local(point_in_global, current_scs_global)
+                modified_mesh_points = np.hstack((modified_mesh_points, point_in_new_local))
 
-        modified_mesh = MeshReal(modified_mesh_points)
-        return modified_mesh
+            modified_mesh = MeshReal(modified_mesh_points)
+            return modified_mesh
 
     @staticmethod
     def get_modified_mesh_file(
@@ -257,6 +260,8 @@ class ChangeFirstSegment:
         -----------
         point_position
             The position of the point in its original parent's local coordinates
+        original_model
+            The original biomechanical model, before modifications
         parent_name
             The name of the parent segment
         segment_name
@@ -290,6 +295,8 @@ class ChangeFirstSegment:
 
         Parameters
         ----------
+        modified_model
+            The biomechanical model being modified
         muscle_group_name
             Name of the muscle group
         muscle_name
@@ -314,12 +321,12 @@ class ChangeFirstSegment:
             muscle.insertion_position = insertion_via_point
         return modified_model
 
-    def add_merged_muscles(
+    def add_modified_muscles(
         self,
         original_model: BiomechanicalModelReal,
         modified_model: BiomechanicalModelReal,
-        current_scs_global: RotoTransMatrix,
         segment_name: str,
+        current_scs_global: RotoTransMatrix,
     ):
         """
         Modify all muscles by transforming their attachment points and via points to the new coordinate system.
@@ -347,7 +354,7 @@ class ChangeFirstSegment:
 
                 # Transform insertion point
                 if muscle_group.insertion_parent_name == segment_name:
-                    new_insertion = self.transform_point_to_merged_coordinate_system(
+                    new_insertion = self.transform_point_to_modified_coordinate_system(
                         point_position=muscle.insertion_position.position,
                         original_model=original_model,
                         parent_name=muscle_group.insertion_parent_name,
@@ -366,7 +373,7 @@ class ChangeFirstSegment:
                 # Transform via points
                 for via_point in muscle.via_points:
                     if via_point.parent_name == segment_name:
-                        new_via_position = self.transform_point_to_merged_coordinate_system(
+                        new_via_position = self.transform_point_to_modified_coordinate_system(
                             point_position=via_point.position,
                             original_model=original_model,
                             parent_name=via_point.parent_name,
@@ -385,16 +392,6 @@ class ChangeFirstSegment:
                         ] = modified_via_point
         return modified_model
 
-    @staticmethod
-    def add_modified_muscles(
-        original_model: BiomechanicalModelReal,
-        modified_model: BiomechanicalModelReal,
-        segment_name: str,
-        current_scs_global: RotoTransMatrix,
-    ) -> BiomechanicalModelReal:
-
-        return modified_model
-
     def modify(self, original_model: BiomechanicalModelReal) -> BiomechanicalModelReal:
 
         # Copy the original model to modify
@@ -406,6 +403,9 @@ class ChangeFirstSegment:
         current_parent = "root"
         # By default, the position of the new first segment is the center of mass of the first segment
         # in the global reference frame
+        if (original_model.segments[self.first_segment_name].inertia_parameters is None or
+                original_model.segments[self.first_segment_name].inertia_parameters.center_of_mass is None):
+            raise RuntimeError("The first segment must have inertia parameters with a center of mass defined, as the root segment will be defined at this point in the global reference frame.")
         current_scs_global = RotoTransMatrix()
         current_scs_global.translation = modified_model.segment_com_in_global(self.first_segment_name)
 
