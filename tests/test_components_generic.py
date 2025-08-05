@@ -1454,6 +1454,7 @@ def test_segment_add_remove_contact():
 
     # Remove a contact
     segment.remove_contact(contact.name)
+    segment.remove_contact("test_contact2")
     assert len(segment.contacts) == 0
 
     # Remove a contact that does not exist

@@ -580,6 +580,7 @@ def test_segment_real_add_remove_contact():
 
     # Remove a contact
     segment.remove_contact(contact.name)
+    segment.remove_contact("test_contact2")
     assert len(segment.contacts) == 0
 
 
@@ -604,6 +605,7 @@ def test_segment_real_add_remove_imu():
 
     # Remove an IMU
     segment.remove_imu(imu.name)
+    segment.remove_imu("test_imu2")
     assert len(segment.imus) == 0
 
 
