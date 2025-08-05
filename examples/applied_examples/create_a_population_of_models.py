@@ -114,8 +114,12 @@ def main():
 
         # Modify the model to merge both arms together
         merge_tool = MergeSegmentsTool(real_model)
-        merge_tool.add(SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM"))
-        merge_tool.add(SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM"))
+        merge_tool.add(
+            SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM")
+        )
+        merge_tool.add(
+            SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM")
+        )
         merge_tool.add(SegmentMerge(name="HANDS", first_segment_name="L_HAND", second_segment_name="R_HAND"))
         merged_model = merge_tool.merge()
         # merged_model.animate()

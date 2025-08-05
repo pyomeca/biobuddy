@@ -28,9 +28,7 @@ _logger = logging.getLogger(__name__)
 
 
 class ChangeFirstSegment:
-    def __init__(self,
-                 first_segment_name: str,
-                 new_segment_name: str = "LINK"):
+    def __init__(self, first_segment_name: str, new_segment_name: str = "LINK"):
         """
         Initialize a ChangeFirstSegment configuration.
         This is used to change the root segment of a model, and invert all the segments in the kinematic chain between
@@ -48,13 +46,17 @@ class ChangeFirstSegment:
         self.first_segment_name = first_segment_name
         self.new_segment_name = new_segment_name
 
-    def get_segments_to_invert(self, original_model: BiomechanicalModelReal) -> tuple[list[SegmentReal], list[SegmentReal]]:
+    def get_segments_to_invert(
+        self, original_model: BiomechanicalModelReal
+    ) -> tuple[list[SegmentReal], list[SegmentReal]]:
         """
         Get all the segments between the new first segment (self.first_segment_name) and the old first segment (the child of 'root').
         """
         old_first_segment = original_model.children_segment_names("root")
         if len(old_first_segment) != 1:
-            raise NotImplementedError("Only inversion of kinematic chains with one first segment (only one segment is the child of root) is implemented.")
+            raise NotImplementedError(
+                "Only inversion of kinematic chains with one first segment (only one segment is the child of root) is implemented."
+            )
         segment_names = original_model.get_chain_between_segments(old_first_segment[0], self.first_segment_name)
         segments_to_invert = []
         remaining_segments = []
@@ -67,7 +69,9 @@ class ChangeFirstSegment:
         return segments_to_invert, remaining_segments
 
     @staticmethod
-    def get_modified_dofs(original_model: BiomechanicalModelReal, current_parent: str) -> tuple[Translations, Rotations, list[str], RangeOfMotion, RangeOfMotion]:
+    def get_modified_dofs(
+        original_model: BiomechanicalModelReal, current_parent: str
+    ) -> tuple[Translations, Rotations, list[str], RangeOfMotion, RangeOfMotion]:
         if current_parent == "root":
             modified_translations = Translations.XYZ
             modified_rotations = Rotations.XYZ
@@ -83,7 +87,9 @@ class ChangeFirstSegment:
         return modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges
 
     @staticmethod
-    def get_modified_inertia(original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix) -> InertiaParametersReal:
+    def get_modified_inertia(
+        original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix
+    ) -> InertiaParametersReal:
 
         # The mass is the same
         mass = deepcopy(original_model.segments[segment_name].inertia_parameters.mass)
@@ -104,9 +110,9 @@ class ChangeFirstSegment:
         return modified_inertia_parameters
 
     @staticmethod
-    def get_modified_scs_local(modified_model: BiomechanicalModelReal,
-                               current_parent: str,
-                               current_scs_global: RotoTransMatrix) -> SegmentCoordinateSystemReal:
+    def get_modified_scs_local(
+        modified_model: BiomechanicalModelReal, current_parent: str, current_scs_global: RotoTransMatrix
+    ) -> SegmentCoordinateSystemReal:
         """
         Get the modified segment coordinate system in local coordinates.
         """
@@ -116,7 +122,9 @@ class ChangeFirstSegment:
         return modified_scs
 
     @staticmethod
-    def get_modified_mesh(original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix) -> MeshReal:
+    def get_modified_mesh(
+        original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix
+    ) -> MeshReal:
 
         mesh_points = original_model.segments[segment_name].mesh.positions
         segment_scs_global = original_model.segment_coordinate_system_in_global(segment_name)
@@ -131,8 +139,9 @@ class ChangeFirstSegment:
         return modified_mesh
 
     @staticmethod
-    def get_modified_mesh_file(original_model: BiomechanicalModelReal, segment_name: str,
-                          current_scs_global: RotoTransMatrix) -> MeshFileReal | None:
+    def get_modified_mesh_file(
+        original_model: BiomechanicalModelReal, segment_name: str, current_scs_global: RotoTransMatrix
+    ) -> MeshFileReal | None:
 
         mesh_file = original_model.segments[segment_name].mesh_file
         if mesh_file is None:
@@ -150,11 +159,12 @@ class ChangeFirstSegment:
             return modified_mesh_file
 
     @staticmethod
-    def add_modified_markers(original_model: BiomechanicalModelReal,
-                             modified_model: BiomechanicalModelReal,
-                             segment_name: str,
-                             current_scs_global: RotoTransMatrix) -> BiomechanicalModelReal:
-
+    def add_modified_markers(
+        original_model: BiomechanicalModelReal,
+        modified_model: BiomechanicalModelReal,
+        segment_name: str,
+        current_scs_global: RotoTransMatrix,
+    ) -> BiomechanicalModelReal:
 
         modified_markers = NamedList[MarkerReal]()
 
@@ -176,10 +186,12 @@ class ChangeFirstSegment:
         return modified_model
 
     @staticmethod
-    def add_modified_contacts(original_model: BiomechanicalModelReal,
-                             modified_model: BiomechanicalModelReal,
-                             segment_name: str,
-                             current_scs_global: RotoTransMatrix) -> BiomechanicalModelReal:
+    def add_modified_contacts(
+        original_model: BiomechanicalModelReal,
+        modified_model: BiomechanicalModelReal,
+        segment_name: str,
+        current_scs_global: RotoTransMatrix,
+    ) -> BiomechanicalModelReal:
 
         modified_contacts = NamedList[ContactReal]()
 
@@ -199,12 +211,13 @@ class ChangeFirstSegment:
         modified_model.segments[segment_name].contacts = modified_contacts
         return modified_model
 
-
     @staticmethod
-    def add_modified_imus(original_model: BiomechanicalModelReal,
-                             modified_model: BiomechanicalModelReal,
-                             segment_name: str,
-                             current_scs_global: RotoTransMatrix) -> BiomechanicalModelReal:
+    def add_modified_imus(
+        original_model: BiomechanicalModelReal,
+        modified_model: BiomechanicalModelReal,
+        segment_name: str,
+        current_scs_global: RotoTransMatrix,
+    ) -> BiomechanicalModelReal:
 
         modified_imus = NamedList[InertialMeasurementUnitReal]()
 
@@ -315,7 +328,7 @@ class ChangeFirstSegment:
             for muscle in muscle_group.muscles:
 
                 # Transform origin point
-                if muscle_group.origin_parent_name  == segment_name:
+                if muscle_group.origin_parent_name == segment_name:
                     new_origin = self.transform_point_to_modified_coordinate_system(
                         point_position=muscle.origin_position.position,
                         original_model=original_model,
@@ -329,7 +342,7 @@ class ChangeFirstSegment:
                         muscle_name=muscle.name,
                         point_type="origin",
                         new_position=new_origin,
-                        segment_name=segment_name
+                        segment_name=segment_name,
                     )
 
                 # Transform insertion point
@@ -347,7 +360,7 @@ class ChangeFirstSegment:
                         muscle_name=muscle.name,
                         point_type="insertion",
                         new_position=new_insertion,
-                        segment_name=segment_name
+                        segment_name=segment_name,
                     )
 
                 # Transform via points
@@ -373,10 +386,12 @@ class ChangeFirstSegment:
         return modified_model
 
     @staticmethod
-    def add_modified_muscles(original_model: BiomechanicalModelReal,
-                             modified_model: BiomechanicalModelReal,
-                             segment_name: str,
-                             current_scs_global: RotoTransMatrix) -> BiomechanicalModelReal:
+    def add_modified_muscles(
+        original_model: BiomechanicalModelReal,
+        modified_model: BiomechanicalModelReal,
+        segment_name: str,
+        current_scs_global: RotoTransMatrix,
+    ) -> BiomechanicalModelReal:
 
         return modified_model
 
@@ -400,11 +415,9 @@ class ChangeFirstSegment:
             # Remove them from the model
             modified_model.remove_segment(segment.name)
 
-            (modified_translations,
-             modified_rotations,
-             modified_dof_names,
-             modified_q_ranges,
-             modified_qdot_ranges) = self.get_modified_dofs(original_model, current_parent)
+            (modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges) = (
+                self.get_modified_dofs(original_model, current_parent)
+            )
 
             modified_inertia_parameters = self.get_modified_inertia(original_model, segment.name, current_scs_global)
 
@@ -432,16 +445,12 @@ class ChangeFirstSegment:
             modified_model.add_segment(modified_segment)
 
             # Add components
-            modified_model = self.add_modified_markers(
-                original_model, modified_model, segment.name, current_scs_global
-            )
+            modified_model = self.add_modified_markers(original_model, modified_model, segment.name, current_scs_global)
             modified_model = self.add_modified_contacts(
                 original_model, modified_model, segment.name, current_scs_global
             )
             modified_model = self.add_modified_imus(original_model, modified_model, segment.name, current_scs_global)
-            modified_model = self.add_modified_muscles(
-                original_model, modified_model, segment.name, current_scs_global
-            )
+            modified_model = self.add_modified_muscles(original_model, modified_model, segment.name, current_scs_global)
 
             # Advance the current scs one segment
             current_scs_global = original_model.segment_coordinate_system_in_global(segment.name)
@@ -459,7 +468,9 @@ class ChangeFirstSegment:
             q_ranges=None,
             qdot_ranges=None,
             segment_coordinate_system=modified_scs_local,
-            inertia_parameters=InertiaParametersReal(mass=0, center_of_mass=np.array([0, 0, 0]), inertia=np.zeros((3, 3))),
+            inertia_parameters=InertiaParametersReal(
+                mass=0, center_of_mass=np.array([0, 0, 0]), inertia=np.zeros((3, 3))
+            ),
             mesh=None,
             mesh_file=None,
         )
