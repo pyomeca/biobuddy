@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import biorbd
 from deepdiff import DeepDiff
+from copy import deepcopy
 
 from biobuddy import (
     MergeSegmentsTool,
@@ -19,7 +20,11 @@ def test_segment_merge_init():
     """Test the initialization of SegmentMerge"""
 
     # Without merged_origin_name
-    segment_merge = SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM")
+    segment_merge = SegmentMerge(
+        name="UPPER_ARMS",
+        first_segment_name="L_UPPER_ARM",
+        second_segment_name="R_UPPER_ARM",
+    )
     assert segment_merge.name == "UPPER_ARMS"
     assert segment_merge.first_segment_name == "L_UPPER_ARM"
     assert segment_merge.second_segment_name == "R_UPPER_ARM"
@@ -70,7 +75,7 @@ def test_merge_segment_tool_init():
     assert merge_tool.segments_to_merge["UPPER_ARMS"].second_segment_name == "R_UPPER_ARM"
 
 
-def test_merge_segments_tool_merge():
+def test_merge_segments_tool_merge_on_top():
     """Test the merge functionality of MergeSegmentsTool"""
 
     original_model = create_simple_model()
@@ -201,3 +206,169 @@ def test_merge_segments_tool_merge():
         )
     )
     npt.assert_almost_equal(insertion_position, np.array([1.0, 0.2, 0.4, 1.0]), decimal=5)
+
+
+def test_merge_segments_tool_merge_on_top_second_Segment():
+    """Test the merge functionality of MergeSegmentsTool"""
+
+    original_model = create_simple_model()
+    parent_rt = RotoTransMatrix()
+    parent_rt.translation = np.array([0.1, 0.2, 0.3])
+    original_model.segments["parent"].segment_coordinate_system.scs = parent_rt
+    child_rt = RotoTransMatrix()
+    child_rt.translation = np.array([0.5, -0.2, 0.1])
+    original_model.segments["child"].segment_coordinate_system.scs = child_rt
+    sister_segment = deepcopy(original_model.segments["child"])
+    sister_segment.name = "sister"
+    original_model.add_segment(sister_segment)
+    nephew_segment = deepcopy(original_model.segments["child"])
+    nephew_segment.name = "nephew"
+    nephew_segment.parent_name = "sister"
+    original_model.add_segment(nephew_segment)
+
+    # Create an equivalent biorbd model for comparison
+    original_model.segments["child"].translations = Translations.NONE
+    original_model.segments["child"].rotations = Rotations.Y
+    original_model.segments["child"].dof_names = ["RotY"]
+    original_model.to_biomod("merged_model.bioMod")
+    biorbd_merged = biorbd.Model("merged_model.bioMod")
+    q_zeros = np.zeros((biorbd_merged.nbQ(),))
+
+    # Merge in BioBuddy
+    merge_tool = MergeSegmentsTool(original_model)
+    merge_tool.add(
+        SegmentMerge(name="both", first_segment_name="nephew", second_segment_name="child", merged_origin_name="child")
+    )
+    merged_model = merge_tool.merge()
+
+    # Check the segment's parent name
+    assert merged_model.segments["both"].parent_name == "parent"
+
+    # Check the segment's dofs
+    assert merged_model.segments["both"].translations == Translations.NONE
+    assert merged_model.segments["both"].translations == original_model.segments["child"].translations
+    assert merged_model.segments["both"].rotations == Rotations.Y
+    assert merged_model.segments["both"].rotations == original_model.segments["child"].rotations
+    assert merged_model.segments["both"].dof_names == ["RotY"]
+
+def test_merge_segments_tool_merge_mean():
+    """Test the merge functionality of MergeSegmentsTool"""
+
+    from examples.applied_examples.create_a_population_of_models import create_hand_root_model
+
+    this_height = 1.7
+    merged_model = create_hand_root_model(
+        this_height=this_height,
+        this_ankle_height=0.01 * this_height,
+        this_knee_height=0.25 * this_height,
+        this_pelvis_height=0.50 * this_height,
+        this_shoulder_height=0.80 * this_height,
+        this_finger_span=1 * this_height,
+        this_wrist_span=0.9 * this_height,
+        this_elbow_span=0.6 * this_height,
+        this_shoulder_span=0.3 * this_height,
+        this_hip_width=0.3 * this_height,
+        this_foot_length=0.3 * this_height,
+        this_mass=70)
+
+    # Check the number of elements
+    assert merged_model.nb_segments == 13
+
+    # Check the segment's name
+    assert merged_model.segment_names == ['root',
+                                         'HANDS',
+                                         'LOWER_ARMS',
+                                         'UPPER_ARMS',
+                                         'TRUNK',
+                                         'PELVIS',
+                                         'HEAD',
+                                         'R_THIGH',
+                                         'R_SHANK',
+                                         'R_FOOT',
+                                         'L_THIGH',
+                                         'L_SHANK',
+                                         'L_FOOT']
+
+    # Check the segment's parent name
+    assert merged_model.segments["HANDS"].parent_name == "root"
+    assert merged_model.segments["LOWER_ARMS"].parent_name == "HANDS"
+    assert merged_model.segments["UPPER_ARMS"].parent_name == "LOWER_ARMS"
+    assert merged_model.segments["TRUNK"].parent_name == "UPPER_ARMS"
+    assert merged_model.segments["PELVIS"].parent_name == "TRUNK"
+    assert merged_model.segments["HEAD"].parent_name == "PELVIS"
+    assert merged_model.segments["R_THIGH"].parent_name == "PELVIS"
+
+    # Check the segment's dofs
+    assert merged_model.segments["HANDS"].translations == Translations.XYZ
+    assert merged_model.segments["HANDS"].rotations == Rotations.XYZ
+    assert merged_model.segments["LOWER_ARMS"].translations == Translations.NONE
+    assert merged_model.segments["LOWER_ARMS"].rotations == Rotations.X
+    assert merged_model.segments["PELVIS"].translations == Translations.NONE
+    assert merged_model.segments["PELVIS"].rotations == Rotations.NONE
+
+    # Check the segment's scs
+    npt.assert_almost_equal(merged_model.segments["HANDS"].segment_coordinate_system.scs.rt_matrix,
+                            np.array([[1.      , 0.      , 0.      , 0.      ],
+                           [0.      , 1.      , 0.      , 0.      ],
+                           [0.      , 0.      , 1.      , 0.828529],
+                           [0.      , 0.      , 0.      , 1.      ]]))
+    npt.assert_almost_equal(merged_model.segments["LOWER_ARMS"].segment_coordinate_system.scs.rt_matrix,
+                            np.array([[1.      , 0.      , 0.      , 0.      ],
+                               [0.      , 1.      , 0.      , 0.      ],
+                               [0.      , 0.      , 1.      , 0.021471],
+                               [0.      , 0.      , 0.      , 1.      ]]))
+    npt.assert_almost_equal(merged_model.segments["UPPER_ARMS"].segment_coordinate_system.scs.rt_matrix,
+                            np.array([[1.   , 0.   , 0.   , 0.   ],
+                                       [0.   , 1.   , 0.   , 0.   ],
+                                       [0.   , 0.   , 1.   , 0.255],
+                                       [0.   , 0.   , 0.   , 1.   ]]))
+    npt.assert_almost_equal(merged_model.segments["TRUNK"].segment_coordinate_system.scs.rt_matrix,
+                            np.array([[1.   , 0.   , 0.   , 0.   ],
+                                       [0.   , 1.   , 0.   , 0.   ],
+                                       [0.   , 0.   , 1.   , 0.255],
+                                       [0.   , 0.   , 0.   , 1.   ]]))
+    npt.assert_almost_equal(merged_model.segments["PELVIS"].segment_coordinate_system.scs.rt_matrix,
+                            np.array([[ 1.  ,  0.  ,  0.  ,  0.  ],
+                                       [ 0.  ,  1.  ,  0.  ,  0.  ],
+                                       [ 0.  ,  0.  ,  1.  , -0.51],
+                                       [ 0.  ,  0.  ,  0.  ,  1.  ]]))
+    npt.assert_almost_equal(merged_model.segments["R_THIGH"].segment_coordinate_system.scs.rt_matrix,
+                           np.array([[ 1.   ,  0.   ,  0.   ,  0.   ],
+                                   [ 0.   ,  1.   ,  0.   , -0.255],
+                                   [ 0.   ,  0.   ,  1.   ,  0.   ],
+                                   [ 0.   ,  0.   ,  0.   ,  1.   ]]))
+
+    # Check the merged segment's com
+    npt.assert_almost_equal(merged_model.segments["HANDS"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0, 0, 0]), decimal=5)
+    npt.assert_almost_equal(merged_model.segments["LOWER_ARMS"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0.       , 0.       , 0.1162545]), decimal=5)
+    npt.assert_almost_equal(merged_model.segments["UPPER_ARMS"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0.      , 0.      , 0.146727]), decimal=5)
+    npt.assert_almost_equal(merged_model.segments["TRUNK"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0.      ,  0.      , -0.253164]), decimal=5)
+    npt.assert_almost_equal(merged_model.segments["PELVIS"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0, 0, 0]), decimal=5)
+    npt.assert_almost_equal(merged_model.segments["R_THIGH"].inertia_parameters.center_of_mass.reshape(
+        4,
+    )[:3], np.array([0.     ,  0.     , -0.15351]), decimal=5)
+
+
+def test_merge_tool_errors():
+
+    original_model = create_simple_model()
+    merge_tool = MergeSegmentsTool(original_model)
+
+    # Without merged_origin_name but the parent is not the same
+    with pytest.raises(ValueError, match="You cannot use merged_origin_name=None if the two segments have different parents."):
+        merge_tool.add(SegmentMerge(
+            name="bad_merge",
+            first_segment_name="parent",
+            second_segment_name="child",
+        ))
+        merge_tool.merge()

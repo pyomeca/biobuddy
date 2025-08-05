@@ -31,6 +31,60 @@ from biobuddy import (
     ChangeFirstSegment,
 )
 
+def create_hand_root_model(
+        this_height,
+        this_ankle_height,
+        this_knee_height,
+        this_pelvis_height,
+        this_shoulder_height,
+        this_finger_span,
+        this_wrist_span,
+        this_elbow_span,
+        this_shoulder_span,
+        this_hip_width,
+        this_foot_length,
+        this_mass,
+):
+
+    # Create the inertial table for this model
+    inertia_table = DeLevaTable(this_mass, sex=Sex.FEMALE)
+    inertia_table.from_measurements(
+        total_height=this_height,
+        ankle_height=this_ankle_height,
+        knee_height=this_knee_height,
+        pelvis_height=this_pelvis_height,
+        shoulder_height=this_shoulder_height,
+        finger_span=this_finger_span,
+        wrist_span=this_wrist_span,
+        elbow_span=this_elbow_span,
+        shoulder_span=this_shoulder_span,
+        hip_width=this_hip_width,
+        foot_length=this_foot_length,
+    )
+
+    # Create the model
+    real_model = inertia_table.to_simple_model()
+    # real_model.animate()
+
+    # Modify the model to merge both arms together
+    merge_tool = MergeSegmentsTool(real_model)
+    merge_tool.add(
+        SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM")
+    )
+    merge_tool.add(
+        SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM")
+    )
+    merge_tool.add(SegmentMerge(name="HANDS", first_segment_name="L_HAND", second_segment_name="R_HAND"))
+    merged_model = merge_tool.merge()
+    # merged_model.animate()
+
+    # Modify the model to place the root segment at the hands
+    kinematic_chain_modifier = ModifyKinematicChainTool(merged_model)
+    kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="HANDS", new_segment_name="PELVIS"))
+    hand_root_model = kinematic_chain_modifier.modify()
+    # hand_root_model.animate()
+
+    return hand_root_model
 
 def main():
 
@@ -92,43 +146,20 @@ def main():
         this_foot_length = this_foot_length_coeff * this_height
         this_hip_width = this_hip_width_coeff * this_height
 
-        # Create the inertial table for this model
-        inertia_table = DeLevaTable(this_mass, sex=Sex.FEMALE)
-        inertia_table.from_measurements(
-            total_height=this_height,
-            ankle_height=this_ankle_height,
-            knee_height=this_knee_height,
-            pelvis_height=this_pelvis_height,
-            shoulder_height=this_shoulder_height,
-            finger_span=this_finger_span,
-            wrist_span=this_wrist_span,
-            elbow_span=this_elbow_span,
-            shoulder_span=this_shoulder_span,
-            hip_width=this_hip_width,
-            foot_length=this_foot_length,
+        hand_root_model = create_hand_root_model(
+            this_height,
+            this_ankle_height,
+            this_knee_height,
+            this_pelvis_height,
+            this_shoulder_height,
+            this_finger_span,
+            this_wrist_span,
+            this_elbow_span,
+            this_shoulder_span,
+            this_hip_width,
+            this_foot_length,
+            this_mass,
         )
-
-        # Create the model
-        real_model = inertia_table.to_simple_model()
-        # real_model.animate()
-
-        # Modify the model to merge both arms together
-        merge_tool = MergeSegmentsTool(real_model)
-        merge_tool.add(
-            SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM")
-        )
-        merge_tool.add(
-            SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM")
-        )
-        merge_tool.add(SegmentMerge(name="HANDS", first_segment_name="L_HAND", second_segment_name="R_HAND"))
-        merged_model = merge_tool.merge()
-        # merged_model.animate()
-
-        # Modify the model to place the root segment at the hands
-        kinematic_chain_modifier = ModifyKinematicChainTool(merged_model)
-        kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="HANDS", new_segment_name="PELVIS"))
-        hand_root_model = kinematic_chain_modifier.modify()
-        hand_root_model.animate()
 
         # Exporting the output model as a biomod file
         hand_root_model.to_biomod(f"population_model_{model_number}.bioMod")

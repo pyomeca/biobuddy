@@ -154,10 +154,6 @@ class MergeSegmentsTool:
                 )
             else:
                 merged_scs.rotation_matrix = first_scs.rotation_matrix
-        elif merged_origin_name not in [first_segment.name, second_segment.name]:
-            raise RuntimeError(
-                "The merged origin name must be one of the two segments being merged or None if you want it to be the mean of both origins."
-            )
         else:
             merged_scs = self.original_model.segments[merged_origin_name].segment_coordinate_system.scs
 
