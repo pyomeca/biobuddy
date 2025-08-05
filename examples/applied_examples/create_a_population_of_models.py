@@ -31,19 +31,20 @@ from biobuddy import (
     ChangeFirstSegment,
 )
 
+
 def create_hand_root_model(
-        this_height,
-        this_ankle_height,
-        this_knee_height,
-        this_pelvis_height,
-        this_shoulder_height,
-        this_finger_span,
-        this_wrist_span,
-        this_elbow_span,
-        this_shoulder_span,
-        this_hip_width,
-        this_foot_length,
-        this_mass,
+    this_height,
+    this_ankle_height,
+    this_knee_height,
+    this_pelvis_height,
+    this_shoulder_height,
+    this_finger_span,
+    this_wrist_span,
+    this_elbow_span,
+    this_shoulder_span,
+    this_hip_width,
+    this_foot_length,
+    this_mass,
 ):
 
     # Create the inertial table for this model
@@ -68,12 +69,8 @@ def create_hand_root_model(
 
     # Modify the model to merge both arms together
     merge_tool = MergeSegmentsTool(real_model)
-    merge_tool.add(
-        SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM")
-    )
-    merge_tool.add(
-        SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM")
-    )
+    merge_tool.add(SegmentMerge(name="UPPER_ARMS", first_segment_name="L_UPPER_ARM", second_segment_name="R_UPPER_ARM"))
+    merge_tool.add(SegmentMerge(name="LOWER_ARMS", first_segment_name="L_LOWER_ARM", second_segment_name="R_LOWER_ARM"))
     merge_tool.add(SegmentMerge(name="HANDS", first_segment_name="L_HAND", second_segment_name="R_HAND"))
     merged_model = merge_tool.merge()
     # merged_model.animate()
@@ -85,6 +82,7 @@ def create_hand_root_model(
     # hand_root_model.animate()
 
     return hand_root_model
+
 
 def main():
 
