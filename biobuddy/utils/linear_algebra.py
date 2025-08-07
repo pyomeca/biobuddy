@@ -180,6 +180,9 @@ def get_closest_rotation_matrix(rotation_matrix: np.ndarray) -> np.ndarray:
         raise ValueError(f"Expected 3x3 matrix, got shape {rotation_matrix.shape}")
 
     current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), "fro"))
+    if np.any(np.isnan(rotation_matrix)):
+        rotation_matrix[:, :] = np.nan
+        return rotation_matrix
     if current_norm_error > 0.1:
         # The input is far from being valid
         raise RuntimeError(f"The rotation matrix {rotation_matrix} is far from SO(3).")
@@ -207,6 +210,9 @@ def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     """
     if rt_matrix.shape != (4, 4):
         raise ValueError(f"Expected 4x4 matrix, got shape {rt_matrix.shape}")
+    if np.any(np.isnan(rt_matrix)):
+        rt_matrix[:, :] = np.nan
+        return rt_matrix
     if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
         raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
 
