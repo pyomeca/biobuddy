@@ -504,7 +504,7 @@ class DeLevaTable:
             Segment(
                 name="R_SHANK",
                 parent_name="R_THIGH",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.SHANK],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_knee_position,
@@ -520,7 +520,7 @@ class DeLevaTable:
             Segment(
                 name="R_FOOT",
                 parent_name="R_SHANK",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.FOOT],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_ankle_position,
@@ -551,7 +551,7 @@ class DeLevaTable:
             Segment(
                 name="L_SHANK",
                 parent_name="L_THIGH",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.SHANK],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_knee_position,
@@ -567,7 +567,7 @@ class DeLevaTable:
             Segment(
                 name="L_FOOT",
                 parent_name="L_SHANK",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.FOOT],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_ankle_position,
@@ -599,7 +599,7 @@ class DeLevaTable:
             Segment(
                 name="R_LOWER_ARM",
                 parent_name="R_UPPER_ARM",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.LOWER_ARM],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_elbow_position,
@@ -615,7 +615,7 @@ class DeLevaTable:
             Segment(
                 name="R_HAND",
                 parent_name="R_LOWER_ARM",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.HAND],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.right_wrist_position,
@@ -647,7 +647,7 @@ class DeLevaTable:
             Segment(
                 name="L_LOWER_ARM",
                 parent_name="L_UPPER_ARM",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.LOWER_ARM],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_elbow_position,
@@ -663,7 +663,7 @@ class DeLevaTable:
             Segment(
                 name="L_HAND",
                 parent_name="L_LOWER_ARM",
-                rotations=Rotations.X,
+                rotations=Rotations.Y,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.HAND],
                 segment_coordinate_system=SegmentCoordinateSystem(
                     origin=lambda m, model: self.left_wrist_position,
