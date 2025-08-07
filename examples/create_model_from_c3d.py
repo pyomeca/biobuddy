@@ -50,6 +50,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
         elbow_span=total_height * 0.5,
         shoulder_span=total_height * 0.2,
         foot_length=total_height * 0.2,
+        hip_width=0,
     )
 
     # Generate the personalized kinematic model

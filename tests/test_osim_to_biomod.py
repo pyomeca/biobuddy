@@ -521,6 +521,7 @@ def test_translation_osim_to_biomod():
                         filepath=osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
+                        mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
                     )
                     model.fix_via_points()
                     model.to_biomod(biomod_filepath, with_mesh=False)

@@ -87,10 +87,12 @@ There are many different components available to build a model (see this [exampl
 
 ![Build_segment](docs/images/Build_segment.png)
 
-# Model personalization
+# Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:
 - [Scaling](###scaling)
 - [Identifying joint centers](###joint-center-identification)
+- [Merging segments](#merging-segments)
+- [Modifying the kinematic chain](#modifying-the-kinematic-chain)
 
 ### Scaling:
 The scaling is performed by the `ScaleTool` which can be initialized from scratch like this:
@@ -176,6 +178,44 @@ joint position and axis are modified.
 
 ![SCoRE_SARA](docs/images/SCoRE_SARA.png)
 
+### Merging segments:
+The `MergeSegmentTool` allows you to merge two segments into one (including inertial parameters and all the components on the segment).
+You can define which segments you want to merge using `SegmentMerge`, which requires the names of the segments to merge and the name of the new segment.
+```python3
+merge_tool = MergeSegmentsTool(original_model)
+# By default, segments merge together setting the new segment coordinate as the mean of the old coordinates
+merge_tool.add(
+   SegmentMerge(
+      name="LOWER_ARMS", 
+      first_segment_name="L_LOWER_ARM", 
+      second_segment_name="R_LOWER_ARM",
+   )
+)
+# But you can also merge one segment on top of another one by specifying the segment coordinate system to keep
+merge_tool.add(
+   SegmentMerge(
+      name="R_LOWER_ARM_AND_HAND", 
+      first_segment_name="R_LOWER_ARM", 
+      second_segment_name="R_HAND", 
+      merged_origin_name="R_LOWER_ARM",
+   )
+)
+modified_model = merge_tool.merge()
+```
+
+![merge_segments](docs/images/merge_segments.png)
+
+### Modifying the kinematic chain:
+The `ModifyKinematicChainTool` allows you to modify the kinematic chain of your model.
+For now, the only modification available is to change which segment is the first segment of the kinematic chain (`ChangeFirstSegment`).
+It inverts all segments between the original first segment and the new first segment.
+```python3
+kinematic_chain_modifier = ModifyKinematicChainTool(original_model)
+kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="FOOT"))
+modified_model = kinematic_chain_modifier.modify()
+```
+
+![kinematic_chain_modifier](docs/images/kinematic_chain_modifier.png)
 
 # Note
 Understandably, not all modeling formats have the same functionalities, so some features may not be available for all 
