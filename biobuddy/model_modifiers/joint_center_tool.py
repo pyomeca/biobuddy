@@ -500,7 +500,7 @@ class RigidSegmentIdentification:
             markers_in_global, static_markers_in_local, marker_names
         )
 
-        rt_optimal = np.zeros((4, 4, nb_frames))
+        rt_optimal = np.zeros((4, 4, nb_frames)) * np.nan
         init = rt_init[0].rt_matrix  # Initialize with the first frame
         for i_frame in range(nb_frames):
 
