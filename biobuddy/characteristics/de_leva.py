@@ -11,6 +11,8 @@ from ..utils.protocols import Data
 from ..utils.enums import Translations, Rotations
 
 
+# TODO: Add a figure to the documentation to illustrate the segment definitions
+
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
 
@@ -146,11 +148,11 @@ class DeLevaTable:
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0061 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.7900), start=self.right_wrist_position, end=self.right_finger_position
+                        0.3624, start=self.right_wrist_position, end=self.right_finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0061 * self.total_mass,
-                        coef=(0.628, 0.513, 0.401),
+                        coef=(0.288, 0.235, 0.184),
                         start=self.right_wrist_position,
                         end=self.right_finger_position,
                     ),
@@ -244,11 +246,11 @@ class DeLevaTable:
                 SegmentName.HAND: InertiaParameters(
                     mass=lambda m, bio: 0.0056 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.7474), start=self.right_wrist_position, end=self.right_finger_position
+                        0.3427, start=self.right_wrist_position, end=self.right_finger_position
                     ),
                     inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
                         mass=0.0056 * self.total_mass,
-                        coef=(0.531, 0.454, 0.335),
+                        coef=(0.244, 0.208, 0.184),
                         start=self.right_wrist_position,
                         end=self.right_finger_position,
                     ),
