@@ -13,6 +13,7 @@ from ..utils.enums import Translations, Rotations
 
 # TODO: Add a figure to the documentation to illustrate the segment definitions
 
+
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
 

@@ -342,13 +342,13 @@ def test_de_leva_table_constructor_from_data():
         male_model.total_com_in_global().reshape(
             4,
         ),
-        np.array([3.75010100e-03, 0.00000000e+00, 5.51640248e+00, 1.00000000e+00]),
+        np.array([3.75010100e-03, 0.00000000e00, 5.51640248e00, 1.00000000e00]),
     )
     male_model.to_biomod("temporary_path.bioMod")
     male_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
         male_model_biomod.bodyInertia(np.zeros((male_model.nb_q,))).to_array(),
-        np.array([[290.94771259,   0.        ,   1.18558758], [0.        , 287.1803482 ,   0.        ], [1.18558758,   0.        ,  11.3342956]]),
+        np.array([[290.94771259, 0.0, 1.18558758], [0.0, 287.1803482, 0.0], [1.18558758, 0.0, 11.3342956]]),
     )
 
 
@@ -454,13 +454,13 @@ def test_de_leva_table_constructor_from_measurements():
         female_model.total_com_in_global().reshape(
             4,
         ),
-        np.array([0.00362464, 0.        , 0.96795513, 1.]),
+        np.array([0.00362464, 0.0, 0.96795513, 1.0]),
     )
     female_model.to_biomod("temporary_path.bioMod")
     female_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
         female_model_biomod.bodyInertia(np.zeros((female_model.nb_q,))).to_array(),
-        np.array([[12.4874833 ,  0.        ,  0.24305711], [0.        , 12.40340046,  0.        ], [0.24305711,  0.        ,  0.44760615]]),
+        np.array([[12.4874833, 0.0, 0.24305711], [0.0, 12.40340046, 0.0], [0.24305711, 0.0, 0.44760615]]),
     )
 
 
