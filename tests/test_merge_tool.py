@@ -208,7 +208,7 @@ def test_merge_segments_tool_merge_on_top():
     npt.assert_almost_equal(insertion_position, np.array([1.0, 0.2, 0.4, 1.0]), decimal=5)
 
 
-def test_merge_segments_tool_merge_on_top_second_Segment():
+def test_merge_segments_tool_merge_on_top_second_segment():
     """Test the merge functionality of MergeSegmentsTool"""
 
     original_model = create_simple_model()
@@ -306,18 +306,18 @@ def test_merge_segments_tool_merge_mean():
     assert merged_model.segments["HANDS"].translations == Translations.XYZ
     assert merged_model.segments["HANDS"].rotations == Rotations.XYZ
     assert merged_model.segments["LOWER_ARMS"].translations == Translations.NONE
-    assert merged_model.segments["LOWER_ARMS"].rotations == Rotations.X
+    assert merged_model.segments["LOWER_ARMS"].rotations == Rotations.Y
     assert merged_model.segments["PELVIS"].translations == Translations.NONE
     assert merged_model.segments["PELVIS"].rotations == Rotations.NONE
 
     # Check the segment's scs
     npt.assert_almost_equal(
         merged_model.segments["HANDS"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.828529], [0.0, 0.0, 0.0, 1.0]]),
+        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.8208705], [0.0, 0.0, 0.0, 1.0]]),
     )
     npt.assert_almost_equal(
         merged_model.segments["LOWER_ARMS"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.021471], [0.0, 0.0, 0.0, 1.0]]),
+        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0291295], [0.0, 0.0, 0.0, 1.0]]),
     )
     npt.assert_almost_equal(
         merged_model.segments["UPPER_ARMS"].segment_coordinate_system.scs.rt_matrix,

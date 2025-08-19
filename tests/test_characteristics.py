@@ -39,7 +39,7 @@ class MOCK_DATA:
             "ELBOW_Y": np.array([1, 0.5, 7]),
             "ELBOW_XY": np.array([1.5, 0.5, 7]),
             "WRIST": np.array([2, 0, 6]),
-            "FINGER": np.array([3, 0, 6]),
+            "FINGER": np.array([3, 0, 5.5]),
             "HAND_Y": np.array([2, 0.5, 6]),
             "HAND_YZ": np.array([2.5, 0.5, 6]),
             "KNEE": np.array([0, 0, 3]),
@@ -314,8 +314,8 @@ def test_de_leva_table_constructor_from_data():
     npt.assert_almost_equal(male_table.left_elbow_position, np.array([0.0, 0.0, 7, 1.0]))
     npt.assert_almost_equal(male_table.right_wrist_position, np.array([0.0, 0.0, 6, 1.0]))
     npt.assert_almost_equal(male_table.left_wrist_position, np.array([0.0, 0.0, 6, 1.0]))
-    npt.assert_almost_equal(male_table.right_finger_position, np.array([0.0, 0.0, 6, 1.0]))
-    npt.assert_almost_equal(male_table.left_finger_position, np.array([0.0, 0.0, 6, 1.0]))
+    npt.assert_almost_equal(male_table.right_finger_position, np.array([0.0, 0.0, 5.5, 1.0]))
+    npt.assert_almost_equal(male_table.left_finger_position, np.array([0.0, 0.0, 5.5, 1.0]))
     npt.assert_almost_equal(male_table.right_knee_position, np.array([0.0, 0.0, 3, 1.0]))
     npt.assert_almost_equal(male_table.left_knee_position, np.array([0.0, 0.0, 3, 1.0]))
     npt.assert_almost_equal(male_table.right_ankle_position, np.array([0.0, 0.0, 1, 1.0]))
@@ -327,7 +327,7 @@ def test_de_leva_table_constructor_from_data():
     npt.assert_almost_equal(male_table.total_height, 10)
     npt.assert_almost_equal(male_table.pelvis_height, 5)
     npt.assert_almost_equal(male_table.trunk_length, 3)
-    npt.assert_almost_equal(male_table.hand_length, 0)
+    npt.assert_almost_equal(male_table.hand_length, 0.5)
     npt.assert_almost_equal(male_table.lower_arm_length, 1)
     npt.assert_almost_equal(male_table.upper_arm_length, 1)
     npt.assert_almost_equal(male_table.shoulder_width, 0)
@@ -342,13 +342,13 @@ def test_de_leva_table_constructor_from_data():
         male_model.total_com_in_global().reshape(
             4,
         ),
-        np.array([3.75010100e-03, 0.00000000e00, 5.51861312e00, 1.00000000e00]),
+        np.array([3.75010100e-03, 0.00000000e+00, 5.51640248e+00, 1.00000000e+00]),
     )
     male_model.to_biomod("temporary_path.bioMod")
     male_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
         male_model_biomod.bodyInertia(np.zeros((male_model.nb_q,))).to_array(),
-        np.array([[291.05129115, 0.0, 1.18616789], [0.0, 287.28984476, 0.0], [1.18616789, 0.0, 11.3270676]]),
+        np.array([[290.94771259,   0.        ,   1.18558758], [0.        , 287.1803482 ,   0.        ], [1.18558758,   0.        ,  11.3342956]]),
     )
 
 
@@ -454,13 +454,13 @@ def test_de_leva_table_constructor_from_measurements():
         female_model.total_com_in_global().reshape(
             4,
         ),
-        np.array([0.00362464, 0.0, 0.96805604, 1.0]),
+        np.array([0.00362464, 0.        , 0.96795513, 1.]),
     )
     female_model.to_biomod("temporary_path.bioMod")
     female_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
         female_model_biomod.bodyInertia(np.zeros((female_model.nb_q,))).to_array(),
-        np.array([[12.48572688, 0.0, 0.24308271], [0.0, 12.40117603, 0.0], [0.24308271, 0.0, 0.44822015]]),
+        np.array([[12.4874833 ,  0.        ,  0.24305711], [0.        , 12.40340046,  0.        ], [0.24305711,  0.        ,  0.44760615]]),
     )
 
 
@@ -533,7 +533,7 @@ def test_de_leva_table_mass_calculations():
         SegmentName.TRUNK: (1 - 0.5138) * (mock_values["SHOULDER"] - mock_values["PELVIS"]),
         SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5772) * (mock_values["ELBOW"][2] - mock_values["SHOULDER"][2])]),
         SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4574) * (mock_values["WRIST"][2] - mock_values["ELBOW"][2])]),
-        SegmentName.HAND: np.array([0, 0, (1 - 0.7900) * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
+        SegmentName.HAND: np.array([0, 0, 0.3624 * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
         SegmentName.THIGH: np.array([0, 0, 0.4095 * (mock_values["KNEE"][2] - mock_values["PELVIS"][2])]),
         SegmentName.SHANK: np.array([0, 0, 0.4459 * (mock_values["ANKLE"][2] - mock_values["KNEE"][2])]),
         SegmentName.FOOT: np.array([0.4415 * (mock_values["TOE"][1] - mock_values["HEEL"][1]), 0, 0]),
@@ -543,7 +543,7 @@ def test_de_leva_table_mass_calculations():
         SegmentName.TRUNK: (1 - 0.4964) * (mock_values["SHOULDER"] - mock_values["PELVIS"]),
         SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5754) * (mock_values["ELBOW"][2] - mock_values["SHOULDER"][2])]),
         SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4559) * (mock_values["WRIST"][2] - mock_values["ELBOW"][2])]),
-        SegmentName.HAND: np.array([0, 0, (1 - 0.7474) * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
+        SegmentName.HAND: np.array([0, 0, 0.3427 * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
         SegmentName.THIGH: np.array([0, 0, 0.3612 * (mock_values["KNEE"][2] - mock_values["PELVIS"][2])]),
         SegmentName.SHANK: np.array([0, 0, 0.4416 * (mock_values["ANKLE"][2] - mock_values["KNEE"][2])]),
         SegmentName.FOOT: np.array([0.4014 * (mock_values["TOE"][1] - mock_values["HEEL"][1]), 0, 0]),
@@ -579,7 +579,7 @@ def test_de_leva_table_mass_calculations():
     )
     npt.assert_almost_equal(
         male_table[SegmentName.HAND].inertia(mock_values, BiomechanicalModel()),
-        np.array([0, 0, 0]),
+        np.array([0.00885427, 0.00589527, 0.00361413]),
     )
     npt.assert_almost_equal(
         male_table[SegmentName.THIGH].inertia(mock_values, BiomechanicalModel()),
@@ -613,7 +613,7 @@ def test_de_leva_table_mass_calculations():
     )
     npt.assert_almost_equal(
         female_table[SegmentName.HAND].inertia(mock_values, BiomechanicalModel()),
-        np.array([0, 0, 0]),
+        np.array([0.00583453, 0.00423987, 0.00331789]),
     )
     npt.assert_almost_equal(
         female_table[SegmentName.THIGH].inertia(mock_values, BiomechanicalModel()),
