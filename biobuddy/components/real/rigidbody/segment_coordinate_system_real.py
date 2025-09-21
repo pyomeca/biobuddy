@@ -86,7 +86,7 @@ class SegmentCoordinateSystemReal:
             The actual angles
         angle_sequence
             The angle sequence of the angles
-        translations
+        translation
             The XYZ translations
         is_scs_local
             If the scs is already in local reference frame
