@@ -157,10 +157,17 @@ def test_init_mesh_file_real():
     npt.assert_array_equal(mesh_file.mesh_scale, np.array([[2.0], [2.0], [2.0], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
-    npt.assert_almost_equal(mesh_file.mesh_rt.rt_matrix, np.array([[ 0.93629336, -0.28962948,  0.19866933,  1.        ],
-                                                           [ 0.31299183,  0.94470249, -0.0978434 ,  2.        ],
-                                                           [-0.15934508,  0.153792  ,  0.97517033,  3.        ],
-                                                           [ 0.        ,  0.        ,  0.        ,  1.        ]]))
+    npt.assert_almost_equal(
+        mesh_file.mesh_rt.rt_matrix,
+        np.array(
+            [
+                [0.93629336, -0.28962948, 0.19866933, 1.0],
+                [0.31299183, 0.94470249, -0.0978434, 2.0],
+                [-0.15934508, 0.153792, 0.97517033, 3.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
 
 
 def test_mesh_file_real_to_biomod():
