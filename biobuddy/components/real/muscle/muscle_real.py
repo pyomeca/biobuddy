@@ -269,6 +269,10 @@ class MuscleReal:
                 raise ValueError("The maximal excitation must be a float.")
         self._maximal_excitation = value
 
+    @property
+    def nb_via_points(self) -> int:
+        return len(self.via_points)
+
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = f"muscle\t{self.name}\n"

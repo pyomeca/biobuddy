@@ -5,6 +5,7 @@ import numpy as np
 from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.protocols import Data
 from ....utils.aliases import point_to_array
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class MeshFileReal:
@@ -94,6 +95,12 @@ class MeshFileReal:
     @mesh_translation.setter
     def mesh_translation(self, value: np.ndarray[float]):
         self._mesh_translation = None if value is None else point_to_array(value, "mesh_translation")
+
+    @property
+    def mesh_rt(self):
+        mesh_rt = RotoTransMatrix()
+        mesh_rt.from_euler_angles_and_translation("xyz", self.mesh_rotation[:3, 0], self.mesh_translation[:3, 0])
+        return mesh_rt
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
