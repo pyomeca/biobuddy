@@ -180,6 +180,9 @@ def get_closest_rotation_matrix(rotation_matrix: np.ndarray) -> np.ndarray:
         raise ValueError(f"Expected 3x3 matrix, got shape {rotation_matrix.shape}")
 
     current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), "fro"))
+    if np.any(np.isnan(rotation_matrix)):
+        rotation_matrix[:, :] = np.nan
+        return rotation_matrix
     if current_norm_error > 0.1:
         # The input is far from being valid
         raise RuntimeError(f"The rotation matrix {rotation_matrix} is far from SO(3).")
@@ -207,6 +210,9 @@ def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     """
     if rt_matrix.shape != (4, 4):
         raise ValueError(f"Expected 4x4 matrix, got shape {rt_matrix.shape}")
+    if np.any(np.isnan(rt_matrix)):
+        rt_matrix[:, :] = np.nan
+        return rt_matrix
     if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
         raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
 
@@ -527,7 +533,9 @@ class RotoTransMatrix:
 
     @translation.setter
     def translation(self, trans: np.ndarray):
-        self._rt[:3, 3] = trans
+        self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(
+            3,
+        )
 
     @property
     def rotation_matrix(self) -> np.ndarray:
@@ -650,3 +658,16 @@ def point_from_global_to_local(point_in_global: Point, jcs_in_global: RotoTransM
 
 def point_from_local_to_global(point_in_local: Point, jcs_in_global: RotoTransMatrix) -> Point:
     return jcs_in_global @ point_to_array(point=point_in_local)
+
+
+def local_rt_between_global_rts(
+    parent_rt_in_global: RotoTransMatrix, child_rt_in_global: RotoTransMatrix
+) -> RotoTransMatrix:
+    """
+    Computes the local RotoTransMatrix between two global RotoTransMatrices.
+    """
+    if not isinstance(parent_rt_in_global, RotoTransMatrix) or not isinstance(child_rt_in_global, RotoTransMatrix):
+        raise TypeError("Both parent and child RTs must be instances of RotoTransMatrix.")
+
+    local_rt = parent_rt_in_global.inverse @ child_rt_in_global
+    return local_rt

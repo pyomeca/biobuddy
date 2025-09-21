@@ -540,6 +540,12 @@ def test_rototrans_matrix_class():
     angles_extracted = rt2.euler_angles("xyz")
     assert len(angles_extracted) == 3
 
+    # Test the initialization with nan
+    rt_matrix[0, 0] = np.nan
+    rt4 = RotoTransMatrix()
+    rt4.from_rt_matrix(rt_matrix)
+    npt.assert_equal(rt4.rt_matrix, np.eye(4) * np.nan)
+
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape \\(3, 3\\)"):
         rt.from_rotation_matrix_and_translation(np.eye(2), translation)
@@ -596,6 +602,13 @@ def test_rototrans_matrix_time_series():
     for i in range(n_frames):
         rt_frame = rt_series2[i]
         npt.assert_almost_equal(rt_frame.rt_matrix, rt_matrices[:, :, i])
+
+    # Test the initialization with nan
+    rt_matrices[0, 0, 2] = np.nan
+    rt_series3 = RotoTransMatrixTimeSeries(n_frames)
+    rt_series3.from_rt_matrix(rt_matrices)
+    npt.assert_equal(rt_series3[2].rt_matrix, np.eye(4) * np.nan)
+    npt.assert_equal(rt_series3[3].rt_matrix, rt_matrices[:, :, 3])
 
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape"):
