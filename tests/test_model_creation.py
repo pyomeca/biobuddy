@@ -283,6 +283,9 @@ class FakeData:
         self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
         self.nb_frames = 1
 
+    def mean_values(self):
+        return {name: self.values[name] for name in self.values.keys()}
+
 
 def test_model_creation_from_data():
 
