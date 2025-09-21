@@ -14,7 +14,7 @@ class MarkerReal:
     def __init__(
         self,
         name: str,
-        parent_name: str,
+        parent_name: str = None,
         position: Points = None,
         is_technical: bool = True,
         is_anatomical: bool = False,

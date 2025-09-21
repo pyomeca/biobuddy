@@ -18,6 +18,9 @@ from biobuddy import (
     MuscleStateType,
     Translations,
     Rotations,
+    RangeOfMotion,
+    Ranges,
+    MeshReal,
 )
 
 
@@ -404,16 +407,18 @@ def create_simple_model():
     """Create a simple model for testing"""
     model = BiomechanicalModelReal()
 
-    # Add a root segment
+    # Add a parent segment
     model.add_segment(
         SegmentReal(
-            name="root",
+            name="parent",
             translations=Translations.XYZ,
             rotations=Rotations.XYZ,
             segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
             inertia_parameters=InertiaParametersReal(
                 mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
             ),
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-np.pi] * 6, max_bound=[np.pi] * 6),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 
@@ -424,29 +429,30 @@ def create_simple_model():
     model.add_segment(
         SegmentReal(
             name="child",
-            parent_name="root",
+            parent_name="parent",
             rotations=Rotations.X,
             segment_coordinate_system=segment_coordinate_system_child,
             inertia_parameters=InertiaParametersReal(
                 mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01
             ),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 
     # Add markers to segments
-    model.segments["root"].add_marker(
+    model.segments["parent"].add_marker(
         MarkerReal(
-            name="root_marker",
-            parent_name="root",
+            name="parent_marker",
+            parent_name="parent",
             position=np.array([0.1, 0.2, 0.3, 1.0]),
             is_technical=True,
             is_anatomical=False,
         )
     )
-    model.segments["root"].add_marker(
+    model.segments["parent"].add_marker(
         MarkerReal(
-            name="root_marker2",
-            parent_name="root",
+            name="parent_marker2",
+            parent_name="parent",
             position=np.array([0.2, 0.2, 0.1, 1.0]),
             is_technical=True,
             is_anatomical=False,
@@ -473,16 +479,16 @@ def create_simple_model():
     )
 
     model.add_muscle_group(
-        MuscleGroupReal(name="root_to_child", origin_parent_name="root", insertion_parent_name="child")
+        MuscleGroupReal(name="parent_to_child", origin_parent_name="parent", insertion_parent_name="child")
     )
-    model.muscle_groups["root_to_child"].add_muscle(
+    model.muscle_groups["parent_to_child"].add_muscle(
         MuscleReal(
             name="muscle1",
             muscle_type=MuscleType.HILL_DE_GROOTE,
             state_type=MuscleStateType.DEGROOTE,
-            muscle_group="root_to_child",
+            muscle_group="parent_to_child",
             origin_position=ViaPointReal(
-                name=f"origin_muscle1", parent_name="root", position=np.array([0.0, 0.1, 0.0, 1.0])
+                name=f"origin_muscle1", parent_name="parent", position=np.array([0.0, 0.1, 0.0, 1.0])
             ),
             insertion_position=ViaPointReal(
                 name=f"insertion_muscle1", parent_name="child", position=np.array([0.5, 0.4, 0.3, 1.0])
@@ -495,7 +501,7 @@ def create_simple_model():
         )
     )
 
-    model.muscle_groups["root_to_child"].muscles["muscle1"].add_via_point(
+    model.muscle_groups["parent_to_child"].muscles["muscle1"].add_via_point(
         ViaPointReal(
             name="via_point1",
             parent_name="child",

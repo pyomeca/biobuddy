@@ -12,7 +12,7 @@ class ContactReal:
     def __init__(
         self,
         name: str,
-        parent_name: str,
+        parent_name: str = None,
         position: Point = None,
         axis: Translations = None,
     ):

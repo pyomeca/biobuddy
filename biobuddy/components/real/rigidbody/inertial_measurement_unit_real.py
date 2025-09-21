@@ -13,7 +13,7 @@ class InertialMeasurementUnitReal:
     def __init__(
         self,
         name: str,
-        parent_name: str,
+        parent_name: str = None,
         scs: RotoTransMatrix = RotoTransMatrix(),
         is_technical: bool = True,
         is_anatomical: bool = False,
