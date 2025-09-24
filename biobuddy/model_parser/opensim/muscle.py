@@ -100,7 +100,7 @@ def get_muscle_from_element(
             condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
         )
         movement, warning = (
-            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else (None, "")
+            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else tuple((None, ""))
         )
         if warning != "":
             warnings += warning
@@ -166,7 +166,10 @@ def get_muscle_from_element(
 
         for via_point in via_points[1:-1]:
 
-            position = np.array([float(v) for v in via_point.position.split()])
+            if via_point.movement is not None:
+                position = None
+            else:
+                position = np.array([float(v) for v in via_point.position.split()])
 
             muscle.add_via_point(
                 ViaPointReal(
@@ -175,6 +178,8 @@ def get_muscle_from_element(
                     muscle_name=name,
                     muscle_group=muscle_group_name,
                     position=position,
+                    condition=via_point.condition,
+                    movement=via_point.movement,
                 )
             )
 

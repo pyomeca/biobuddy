@@ -175,6 +175,12 @@ class ModelUtils:
                 idx += len(segment.dof_names)
         raise ValueError(f"DoF {dof_name} not found in the model")
 
+    def dof_names(self) -> list[str]:
+        names = []
+        for segment in self.segments:
+            names += segment.dof_names
+        return names
+
     def markers_indices(self, marker_names: list[str]) -> list[int]:
         """
         Get the indices of the markers of the model

@@ -3,7 +3,7 @@
 from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree, match_tag
-from .functions import spline_from_element
+from .functions import spline_from_element, piece_wise_linear_from_element
 from ...components.via_point_utils import PathPointCondition, PathPointMovement
 
 
@@ -28,14 +28,15 @@ def movement_from_element(element: etree.ElementTree) -> tuple[PathPointMovement
     dof_names = []
     locations = []
     moving_path_point = None
-    if not find_in_tree(element, "SimmSpline"):
-        warning += "Warning: No SimmSpline found in PathPointMovement locations. It will be ignored\n"
     for coord, loc in zip(coordinate_elts, location_elts):
         if match_tag(loc[0], "SimmSpline"):
             dof_names.append(coord.text.split("/")[-1])
             locations.append(spline_from_element(loc[0]))
+        elif match_tag(loc[0], "PiecewiseLinearFunction"):
+            dof_names.append(coord.text.split("/")[-1])
+            locations.append(piece_wise_linear_from_element(loc[0]))
         else:
-            warning += "Only SimmSpline functions are supported for PathPointMovement locations."
+            warning += "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
     if warning == "":
         moving_path_point = PathPointMovement(
             dof_names=dof_names,
@@ -60,8 +61,8 @@ class PathPoint:
         self.body = body
         self.muscle_group = muscle_group
         self.position = position
-        self.condition = (condition,)
-        self.movement = (movement,)
+        self.condition = condition
+        self.movement = movement
 
     @staticmethod
     def from_element(element: etree.ElementTree) -> "Self":
