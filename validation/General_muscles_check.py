@@ -8,9 +8,9 @@ import plotly.graph_objects as go
 def main():
     """
     Plot 3 graphs to check the capability of muscles within a musculoskeletal model (.bioMod model). Plot the max strength of each
-    muscle, their lever over each joint, and the max torque that each muscle can apply on each joint.
+    muscle, their moment arm over each joint, and the max torque that each muscle can apply on each joint.
 
-    Only the model path is required to perform the check. The muscle values will by default automatically be computed
+    Only the model path is required to perform the check. The muscles parameters will by default automatically be computed
     over the entire range of motion of each joint. Optionally, a custom range for the joints can be provided in the
     states_from_model_ranges function.
 
@@ -18,7 +18,9 @@ def main():
     the .bioMod file but are computed later on in your simulations, it is possible to do so in the indicated line in
     the compute_torques function.
     """
-    model_path = "wholebody_reference.bioMod"
+
+    model_path = "wholebody_reference.bioMod"  # Path to the model to check
+
     states = states_from_model_ranges(model_path)
     muscle_max_force, muscle_min_force = compute_muscle_forces(model_path, states)
     muscle_lengths = compute_muscle_lengths(model_path, states)
