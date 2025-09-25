@@ -20,6 +20,7 @@ from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
@@ -265,6 +266,61 @@ class OsimModelParser:
                 "Some probes were present in the original file. "
                 "This feature is not implemented in biorbd yet so it will be ignored."
             )
+
+    def _find_joint(
+            self,
+            joint_name: str,
+    ):
+        if joint_name != "":
+            for joint in self.joints:
+                if joint.name == joint_name:
+                    return joint
+        # If we reach this point the joint was not found or the joint_name is empty
+        return None
+
+    def _validate_dof_names(self):
+        """
+        This function checks that all the dof names in the model are unique and that the functions use the prefixed dof_name version.
+        """
+        dof_names = []
+        for joint in self.joints:
+            for dof in joint.spatial_transform:
+                if dof.coordinate and dof.coordinate.name:
+                    if dof.coordinate.name in dof_names:
+                        raise RuntimeError(f"DoF name {dof.coordinate.name} is not unique in the model.")
+                    dof_names.append(dof.coordinate.name)
+
+        for muscle in self.muscles:
+            for via_point in muscle.via_points:
+
+                # Change moving via point dof names
+                if via_point.movement is not None:
+                    new_dof_names = []
+                    for i_dof, joint_name in enumerate(via_point.movement.joint_names):
+                        joint = self._find_joint(joint_name)
+                        if joint is not None:
+                            new_dof_name = f"{joint.parent}_{via_point.movement.dof_names[i_dof]}"
+                            if new_dof_name in dof_names:
+                                new_dof_names += [new_dof_name]
+                            else:
+                                raise RuntimeError(
+                                    f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
+                                )
+                    via_point.movement.dof_names = new_dof_names
+
+                # Change conditional via point dof names
+                if via_point.condition is not None:
+                    joint = self._find_joint(via_point.condition.joint_name)
+                    if joint is not None:
+                        new_dof_name = f"{joint.parent}_{via_point.condition.dof_name}"
+                        if new_dof_name in dof_names:
+                            via_point.condition.dof_name = new_dof_name
+                        else:
+                            raise RuntimeError(
+                                f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
+                            )
+
+
 
     def _set_warnings(self):
         self.get_probe_set()
@@ -571,13 +627,18 @@ class OsimModelParser:
                 rot_dof = ""
             else:
                 rot_dof = list_rot_dof[count_dof_rot] if not coordinate.locked else "//" + list_rot_dof[count_dof_rot]
-                body_dof = name + "_" + spatial_transform[i].coordinate.name
+                body_dof = spatial_transform[i].coordinate.name
                 q_range = q_ranges[i]
 
             frame_offset.rotation_matrix = axis_basis[i] @ initial_rotation
             count_dof_rot += 1
+            if rot_dof != "":
+                dof_names = [body_dof]
+            else:
+                dof_names = None
             self.write_virtual_segment(
                 name=body_dof,
+                dof_names=dof_names,
                 parent_name=parent,
                 frame_offset=frame_offset,
                 q_range=self.get_q_range(q_range, body_dof),
@@ -755,6 +816,9 @@ class OsimModelParser:
         self.bodies = self._get_body_set()
         self.markers = self._get_marker_set()
         self.geometry_set = self._get_body_mesh_list()
+
+        # Validation
+        self._validate_dof_names()
 
         # Fill the biomechanical model
         self._set_header()

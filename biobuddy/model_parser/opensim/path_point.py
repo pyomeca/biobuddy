@@ -8,8 +8,13 @@ from ...components.via_point_utils import PathPointCondition, PathPointMovement
 
 
 def condition_from_element(element: etree.ElementTree) -> PathPointCondition:
+    if len(find_in_tree(element, "socket_coordinate").split("/")) > 1:
+        joint_name = find_in_tree(element, "socket_coordinate").split("/")[-2]
+    else:
+        joint_name = ""
     return PathPointCondition(
         dof_name=find_in_tree(element, "socket_coordinate").split("/")[-1],
+        joint_name=joint_name,
         range_min=find_in_tree(element, "range").split(" ")[0],
         range_max=find_in_tree(element, "range").split(" ")[1],
     )
@@ -27,20 +32,30 @@ def movement_from_element(element: etree.ElementTree) -> tuple[PathPointMovement
     )
     dof_names = []
     locations = []
+    joint_names = []
     moving_path_point = None
     for coord, loc in zip(coordinate_elts, location_elts):
         if match_tag(loc[0], "SimmSpline"):
-            dof_names.append(coord.text.split("/")[-1])
             locations.append(spline_from_element(loc[0]))
-        elif match_tag(loc[0], "PiecewiseLinearFunction"):
             dof_names.append(coord.text.split("/")[-1])
+            if len(coord.text.split("/")) > 1:
+                joint_names.append(coord.text.split("/")[-2])
+            else:
+                joint_names.append("")
+        elif match_tag(loc[0], "PiecewiseLinearFunction"):
             locations.append(piece_wise_linear_from_element(loc[0]))
+            dof_names.append(coord.text.split("/")[-1])
+            if len(coord.text.split("/")) > 1:
+                joint_names.append(coord.text.split("/")[-2])
+            else:
+                joint_names.append("")
         else:
             warning += "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
     if warning == "":
         moving_path_point = PathPointMovement(
             dof_names=dof_names,
             locations=locations,
+            joint_names=joint_names
         )
     return moving_path_point, warning
 

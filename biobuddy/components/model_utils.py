@@ -159,22 +159,16 @@ class ModelUtils:
 
     def dof_index(self, dof_name: str) -> int:
         """
-        Get the index of a degree of freedom from the model
+        Get the index of a degree of freedom from the model.
 
         Parameters
         ----------
         dof_name
             The name of the degree of freedom to get the index for
         """
-        idx = 0
-        for segment in self.segments:
-            if dof_name in segment.dof_names:
-                idx += segment.dof_names.index(dof_name)
-                return idx
-            else:
-                idx += len(segment.dof_names)
-        raise ValueError(f"DoF {dof_name} not found in the model")
+        return self.dof_names.index(dof_name)
 
+    @property
     def dof_names(self) -> list[str]:
         names = []
         for segment in self.segments:
