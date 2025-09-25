@@ -231,7 +231,7 @@ class SegmentReal(SegmentUtils):
 
         # Remove the dof ranges
         if self.q_ranges is not None:
-            if self.nb_q == 1:
+            if len(self.q_ranges.min_bound) == 1:
                 self.q_ranges = None
             else:
                 self.q_ranges = RangeOfMotion(
@@ -240,7 +240,7 @@ class SegmentReal(SegmentUtils):
                     max_bound=[m for i, m in enumerate(self.q_ranges.max_bound) if i != dof_index],
                 )
         if self.qdot_ranges is not None:
-            if self.nb_q == 1:
+            if len(self.qdot_ranges.min_bound) == 1:
                 self.qdot_ranges = None
             else:
                 self.qdot_ranges = self.qdot_ranges[~dof_index]
