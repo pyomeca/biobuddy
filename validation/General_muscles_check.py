@@ -39,9 +39,7 @@ def main():
     plot_torques(model_path, states, muscle_max_torque, muscle_min_torque)
 
 
-def states_from_model_ranges(
-    model_path: str, nb_states: int = 50, custom_ranges: np.ndarray = None
-) -> np.ndarray:
+def states_from_model_ranges(model_path: str, nb_states: int = 50, custom_ranges: np.ndarray = None) -> np.ndarray:
     """
     Create an array of model states (position vector q) from the model max and min ranges or from custom ranges
 
@@ -71,9 +69,7 @@ def states_from_model_ranges(
     return np.array(states)
 
 
-def compute_muscle_forces(
-    model_path: str, states: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def compute_muscle_forces(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute for each muscle the max force (muscle activation = 1) and the min force (muscle activation = 0) over every states
 
@@ -105,15 +101,11 @@ def compute_muscle_forces(
         # Compute max force array
         for state in muscle_states:
             state.setActivation(1)
-        model_max_force_array = (
-            model.muscleForces(muscle_states, q, qdot).to_array().copy()
-        )
+        model_max_force_array = model.muscleForces(muscle_states, q, qdot).to_array().copy()
         # Compute min force array
         for state in muscle_states:
             state.setActivation(0)
-        model_min_force_array = (
-            model.muscleForces(muscle_states, q, qdot).to_array().copy()
-        )
+        model_min_force_array = model.muscleForces(muscle_states, q, qdot).to_array().copy()
         for m in range(nb_muscles):
             model_max_force[m, i] = model_max_force_array[m]
             model_min_force[m, i] = model_min_force_array[m]
@@ -198,9 +190,7 @@ def compute_moment_arm(model_path: str, states: np.ndarray) -> np.ndarray:
     return muscle_moment_arm
 
 
-def compute_torques(
-    model_path: str, states: np.ndarray
-) -> tuple[np.ndarray, np.ndarray]:
+def compute_torques(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute for every state the minimal torque applied on every joint when no muscles are activated and the maximal
     torque when one muscle is activated for every individual muscle
@@ -238,9 +228,7 @@ def compute_torques(
                 else:
                     muscle_states[state].setActivation(0)
             # If you wish to add custom passive torques to your model and have them accounted for in the check, add them here
-            joint_max_torques[:, m, i] = (
-                model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
-            )
+            joint_max_torques[:, m, i] = model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
     # Compute min torques
     for state in muscle_states:
         state.setActivation(0)
@@ -248,9 +236,7 @@ def compute_torques(
         q = states[:, i]
         model.updateMuscles(q)
         # If you wish to add custom passive torques to your model and have them accounted for in the check, add them here
-        joint_min_torques[:, i] = (
-            model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
-        )
+        joint_min_torques[:, i] = model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
     return joint_max_torques, joint_min_torques
 
 
@@ -287,9 +273,7 @@ def plot_force_length(
     muscle_names = []
     for muscle in range(nb_muscles):
         muscle_names.append(f"{model.muscleNames()[muscle].to_string()}")
-    fig = make_subplots(
-        rows=nb_lines, cols=2, subplot_titles=["muscle_Forces", "muscle_Lengths"]
-    )
+    fig = make_subplots(rows=nb_lines, cols=2, subplot_titles=["muscle_Forces", "muscle_Lengths"])
     row = 1
     visible_arg = [False] * nb_muscles * 4
 
@@ -363,9 +347,7 @@ def plot_force_length(
     fig.show()
 
 
-def plot_moment_arm(
-    model_path: str, states: np.ndarray, muscle_moment_arm: np.ndarray
-) -> None:
+def plot_moment_arm(model_path: str, states: np.ndarray, muscle_moment_arm: np.ndarray) -> None:
     """
     Plot moment arm for each muscle of the model over each joint using plotly
 
@@ -431,9 +413,7 @@ def plot_moment_arm(
         updatemenus=[
             go.layout.Updatemenu(
                 active=0,
-                buttons=list(
-                    map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
-                ),
+                buttons=list(map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)),
             )
         ]
     )
@@ -523,9 +503,7 @@ def plot_torques(
         updatemenus=[
             go.layout.Updatemenu(
                 active=0,
-                buttons=list(
-                    map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
-                ),
+                buttons=list(map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)),
             )
         ]
     )
