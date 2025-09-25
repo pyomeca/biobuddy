@@ -227,3 +227,18 @@ class ModelUtils:
             if segment.rotations != Rotations.NONE:
                 dofs.append(segment.rotations)
         return dofs
+
+    def update_muscle_groups(self):
+        """
+        Update the muscle groups to make sure there are no empty muscle groups
+        """
+        original_muscle_groups = self.muscle_groups.copy()
+        for muscle_group in original_muscle_groups:
+            if len(muscle_group.muscles) == 0:
+                self.remove_muscle_group(muscle_group.name)
+
+
+
+
+
+
