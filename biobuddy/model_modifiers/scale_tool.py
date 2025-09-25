@@ -643,7 +643,6 @@ class ScaleTool:
             )
         self.scaled_model.modify_model_static_pose(q_original)
 
-
     def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
         if q.shape != (self.scaled_model.nb_q,):
             raise RuntimeError(f"The shape of q must be (nb_q, ), you have {q.shape}.")

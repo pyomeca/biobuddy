@@ -256,8 +256,3 @@ class ModelUtils:
 
         # Replace the jsc in local reference frames
         self.segments_rt_to_local()
-
-
-
-
-
