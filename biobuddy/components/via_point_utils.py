@@ -5,10 +5,10 @@ from .functions import Functions
 
 class PathPointMovement:
     def __init__(
-            self,
-            dof_names: list[str],
-            joint_names: list[str],
-            locations: list[Functions],
+        self,
+        dof_names: list[str],
+        joint_names: list[str],
+        locations: list[Functions],
     ):
         if len(dof_names) != 3:
             raise RuntimeError("dof_names must be a list of 3 dof_names (x, y, x).")
@@ -33,11 +33,11 @@ class PathPointMovement:
 
 class PathPointCondition:
     def __init__(
-            self,
-            dof_name: str,
-            joint_name: str,
-            range_min: float,
-            range_max: float,
+        self,
+        dof_name: str,
+        joint_name: str,
+        range_min: float,
+        range_max: float,
     ):
 
         self.dof_name = dof_name

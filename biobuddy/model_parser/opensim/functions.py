@@ -15,6 +15,7 @@ def spline_from_element(element: etree.ElementTree) -> SimmSpline:
         y_points=np.array(y_points_list),
     )
 
+
 def piece_wise_linear_from_element(element: etree.ElementTree) -> PiecewiseLinearFunction:
     x_points_list = find_in_tree(element, "x").split(" ")
     x_points_list[:] = [float(item) for item in x_points_list if item != ""]

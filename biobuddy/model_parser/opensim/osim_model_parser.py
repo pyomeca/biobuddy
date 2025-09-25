@@ -268,8 +268,8 @@ class OsimModelParser:
             )
 
     def _find_joint(
-            self,
-            joint_name: str,
+        self,
+        joint_name: str,
     ):
         if joint_name != "":
             for joint in self.joints:
@@ -319,8 +319,6 @@ class OsimModelParser:
                             raise RuntimeError(
                                 f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
                             )
-
-
 
     def _set_warnings(self):
         self.get_probe_set()

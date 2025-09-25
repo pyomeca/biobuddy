@@ -50,13 +50,11 @@ def movement_from_element(element: etree.ElementTree) -> tuple[PathPointMovement
             else:
                 joint_names.append("")
         else:
-            warning += "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
+            warning += (
+                "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
+            )
     if warning == "":
-        moving_path_point = PathPointMovement(
-            dof_names=dof_names,
-            locations=locations,
-            joint_names=joint_names
-        )
+        moving_path_point = PathPointMovement(dof_names=dof_names, locations=locations, joint_names=joint_names)
     return moving_path_point, warning
 
 

@@ -14,7 +14,9 @@ class Coordinate:
         self.locked = locked
 
     @staticmethod
-    def from_element(element: etree.ElementTree, parent_name: str, ignore_fixed: bool = False, ignore_clamped: bool = False) -> "Self":
+    def from_element(
+        element: etree.ElementTree, parent_name: str, ignore_fixed: bool = False, ignore_clamped: bool = False
+    ) -> "Self":
 
         if ignore_fixed:
             locked = False

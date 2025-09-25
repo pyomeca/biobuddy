@@ -28,7 +28,7 @@ class InterpolationFunction(ABC):
 
     @staticmethod
     def get_scalar_value(x: float) -> float:
-        """ Handle both scalar and array inputs. """
+        """Handle both scalar and array inputs."""
         if hasattr(x, "__len__") and not isinstance(x, str):
             if len(x) != 1:
                 raise ValueError("Only single value arrays are supported")
@@ -195,7 +195,8 @@ class SimmSpline(InterpolationFunction):
             return self.y_points[0] + (x_scalar - self.x_points[0]) * self.b[0]
         elif x_scalar > self.x_points[self.nb_nodes - 1]:
             return (
-                self.y_points[self.nb_nodes - 1] + (x_scalar - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
+                self.y_points[self.nb_nodes - 1]
+                + (x_scalar - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
             )
 
         # Check if close to endpoints (within numerical tolerance)
@@ -298,7 +299,6 @@ class SimmSpline(InterpolationFunction):
             return 2.0 * self.c[k] + 6.0 * dx * self.d[k]
 
 
-
 class PiecewiseLinearFunction(InterpolationFunction):
     """
     Python implementation of linear interpolation between each pair of points.
@@ -327,7 +327,9 @@ class PiecewiseLinearFunction(InterpolationFunction):
         self.a = np.zeros((self.nb_nodes - 1,))
         self.b = np.zeros((self.nb_nodes - 1,))
         for i_node in range(self.nb_nodes - 1):
-            self.a[i_node] = (self.y_points[i_node + 1] - self.y_points[i_node]) / (self.x_points[i_node + 1] - self.x_points[i_node])
+            self.a[i_node] = (self.y_points[i_node + 1] - self.y_points[i_node]) / (
+                self.x_points[i_node + 1] - self.x_points[i_node]
+            )
             self.b[i_node] = self.y_points[i_node] - self.a[i_node] * self.x_points[i_node]
 
     def get_coefficients(self):
