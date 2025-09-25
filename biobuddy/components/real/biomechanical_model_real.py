@@ -4,8 +4,6 @@ import numpy as np
 # from typing import Self
 
 from ..muscle_utils import MuscleType, MuscleStateType
-from ...utils.enums import Translations
-from ...utils.enums import Rotations
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
 from ..model_utils import ModelUtils

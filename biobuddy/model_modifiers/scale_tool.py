@@ -641,15 +641,8 @@ class ScaleTool:
             raise NotImplementedError(
                 "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
             )
+        self.scaled_model.modify_model_static_pose(q_original)
 
-        jcs_in_global = self.scaled_model.forward_kinematics(q_original)
-        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
-            self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
-                is_scs_local=(
-                    segment_name == "base"
-                ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
-            )
 
     def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
         if q.shape != (self.scaled_model.nb_q,):
@@ -689,7 +682,6 @@ class ScaleTool:
 
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
-            self.scaled_model.segments_rt_to_local()
             self.replace_markers_on_segments_local_scs(
                 q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
             )

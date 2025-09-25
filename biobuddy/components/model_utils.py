@@ -1,3 +1,4 @@
+import numpy as np
 from ..utils.enums import Translations, Rotations
 
 
@@ -237,6 +238,24 @@ class ModelUtils:
             if len(muscle_group.muscles) == 0:
                 self.remove_muscle_group(muscle_group.name)
 
+    def modify_model_static_pose(self, q_static: np.ndarray):
+        from .real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+
+        if q_static.shape != (self.nb_q,):
+            raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
+
+        # Find the joint coordinate systems in the global frame in the new static pose
+        jcs_in_global = self.forward_kinematics(q_static)
+        for i_segment, segment_name in enumerate(self.segments.keys()):
+            self.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
+                is_scs_local=(
+                    segment_name == "base"
+                ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
+            )
+
+        # Replace the jsc in local reference frames
+        self.segments_rt_to_local()
 
 
 
