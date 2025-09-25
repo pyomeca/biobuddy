@@ -4,6 +4,7 @@ from plotly.subplots import make_subplots
 from math import ceil
 import plotly.graph_objects as go
 
+
 def main():
     """
     Plot 3 graphs to check the capability of muscles within a musculoskeletal model (.bioMod model). Plot the max strength of each
@@ -17,18 +18,28 @@ def main():
     the .bioMod file but are computed later on in your simulations, it is possible to do so in the indicated line in
     the compute_torques function.
     """
-    model_path = 'wholebody_reference.bioMod'
+    model_path = "wholebody_reference.bioMod"
     states = states_from_model_ranges(model_path)
     muscle_max_force, muscle_min_force = compute_muscle_forces(model_path, states)
     muscle_lengths = compute_muscle_lengths(model_path, states)
     muscle_optimal_lengths = return_optimal_lengths(model_path)
     muscle_moment_arm = compute_moment_arm(model_path, states)
     muscle_max_torque, muscle_min_torque = compute_torques(model_path, states)
-    plot_force_length(model_path, states, muscle_max_force, muscle_min_force, muscle_lengths, muscle_optimal_lengths)
+    plot_force_length(
+        model_path,
+        states,
+        muscle_max_force,
+        muscle_min_force,
+        muscle_lengths,
+        muscle_optimal_lengths,
+    )
     plot_moment_arm(model_path, states, muscle_moment_arm)
     plot_torques(model_path, states, muscle_max_torque, muscle_min_torque)
 
-def states_from_model_ranges(model_path: str, nb_states: int = 50, custom_ranges: np.ndarray = None) -> np.ndarray:
+
+def states_from_model_ranges(
+    model_path: str, nb_states: int = 50, custom_ranges: np.ndarray = None
+) -> np.ndarray:
     """
     Create an array of model states (position vector q) from the model max and min ranges or from custom ranges
 
@@ -57,7 +68,10 @@ def states_from_model_ranges(model_path: str, nb_states: int = 50, custom_ranges
         states.append(joint_array)
     return np.array(states)
 
-def compute_muscle_forces(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+
+def compute_muscle_forces(
+    model_path: str, states: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute for each muscle the max force (muscle activation = 1) and the min force (muscle activation = 0) over every states
 
@@ -84,20 +98,25 @@ def compute_muscle_forces(model_path: str, states: np.ndarray) -> tuple[np.ndarr
     model_min_force = np.ndarray((nb_muscles, nb_frame))
     for i in range(nb_frame):
         q = states[:, i]
-        qdot = np.zeros(nb_dof) # Default the speed at 0
+        qdot = np.zeros(nb_dof)  # Default the speed at 0
         model.updateMuscles(q)
         # Compute max force array
         for state in muscle_states:
             state.setActivation(1)
-        model_max_force_array = model.muscleForces(muscle_states, q, qdot).to_array().copy()
+        model_max_force_array = (
+            model.muscleForces(muscle_states, q, qdot).to_array().copy()
+        )
         # Compute min force array
         for state in muscle_states:
             state.setActivation(0)
-        model_min_force_array = model.muscleForces(muscle_states, q, qdot).to_array().copy()
+        model_min_force_array = (
+            model.muscleForces(muscle_states, q, qdot).to_array().copy()
+        )
         for m in range(nb_muscles):
             model_max_force[m, i] = model_max_force_array[m]
             model_min_force[m, i] = model_min_force_array[m]
     return model_max_force, model_min_force
+
 
 def compute_muscle_lengths(model_path: str, states: np.ndarray) -> np.ndarray:
     """
@@ -126,6 +145,7 @@ def compute_muscle_lengths(model_path: str, states: np.ndarray) -> np.ndarray:
             muscle_length[m, i] = model.muscle(m).length(model, q, True)
     return muscle_length
 
+
 def return_optimal_lengths(model_path: str) -> np.ndarray:
     """
     Fetch muscles optimal lengths for every state
@@ -146,6 +166,7 @@ def return_optimal_lengths(model_path: str) -> np.ndarray:
     for m in range(nb_muscles):
         muscle_optimal_lengths[m] = model.muscle(m).characteristics().optimalLength()
     return muscle_optimal_lengths
+
 
 def compute_moment_arm(model_path: str, states: np.ndarray) -> np.ndarray:
     """
@@ -174,7 +195,10 @@ def compute_moment_arm(model_path: str, states: np.ndarray) -> np.ndarray:
             muscle_moment_arm[:, m, i] = bio_moment_arm_array[m]
     return muscle_moment_arm
 
-def compute_torques(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+
+def compute_torques(
+    model_path: str, states: np.ndarray
+) -> tuple[np.ndarray, np.ndarray]:
     """
     Compute for every state the minimal torque applied on every joint when no muscles are activated and the maximal
     torque when one muscle is activated for every individual muscle
@@ -212,7 +236,9 @@ def compute_torques(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np
                 else:
                     muscle_states[state].setActivation(0)
             # If you wish to add custom passive torques to your model and have them accounted for in the check, add them here
-            joint_max_torques[:, m, i] = model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+            joint_max_torques[:, m, i] = (
+                model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+            )
     # Compute min torques
     for state in muscle_states:
         state.setActivation(0)
@@ -220,11 +246,20 @@ def compute_torques(model_path: str, states: np.ndarray) -> tuple[np.ndarray, np
         q = states[:, i]
         model.updateMuscles(q)
         # If you wish to add custom passive torques to your model and have them accounted for in the check, add them here
-        joint_min_torques[:, i] = model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+        joint_min_torques[:, i] = (
+            model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+        )
     return joint_max_torques, joint_min_torques
 
-def plot_force_length(model_path: str, states: np.ndarray, muscle_max_force: np.ndarray, muscle_min_force: np.ndarray,
-                      muscle_lengths: np.ndarray, muscle_optimal_lengths: np.ndarray) -> None:
+
+def plot_force_length(
+    model_path: str,
+    states: np.ndarray,
+    muscle_max_force: np.ndarray,
+    muscle_min_force: np.ndarray,
+    muscle_lengths: np.ndarray,
+    muscle_optimal_lengths: np.ndarray,
+) -> None:
     """
     Plot force lengths graphs for the model using plotly
 
@@ -251,8 +286,8 @@ def plot_force_length(model_path: str, states: np.ndarray, muscle_max_force: np.
     for muscle in range(nb_muscles):
         muscle_names.append(f"{model.muscleNames()[muscle].to_string()}")
     fig = make_subplots(
-        rows=nb_lines, cols=2,
-        subplot_titles=['muscle_Forces', 'muscle_Lengths'])
+        rows=nb_lines, cols=2, subplot_titles=["muscle_Forces", "muscle_Lengths"]
+    )
     row = 1
     visible_arg = [False] * nb_muscles * 4
 
@@ -263,34 +298,38 @@ def plot_force_length(model_path: str, states: np.ndarray, muscle_max_force: np.
             go.Scatter(
                 x=x,
                 y=muscle_max_force[muscle, :],
-                name=muscle_names[muscle] + '_Max_Force'
+                name=muscle_names[muscle] + "_Max_Force",
             ),
-            row=row, col=col
+            row=row,
+            col=col,
         )
         fig.add_trace(
             go.Scatter(
                 x=x,
                 y=muscle_min_force[muscle, :],
-                name=muscle_names[muscle] + '_Min_Force',
+                name=muscle_names[muscle] + "_Min_Force",
             ),
-            row=row, col=col
+            row=row,
+            col=col,
         )
         col += 1
         fig.add_trace(
             go.Scatter(
                 x=x,
                 y=muscle_lengths[muscle, :],
-                name=muscle_names[muscle] + '_Length',
+                name=muscle_names[muscle] + "_Length",
             ),
-            row=row, col=col
+            row=row,
+            col=col,
         )
         fig.add_trace(
             go.Scatter(
                 x=x,
                 y=np.full(nb_frame, muscle_optimal_lengths[muscle]),
-                name=muscle_names[muscle] + '_Optimal_Length',
+                name=muscle_names[muscle] + "_Optimal_Length",
             ),
-            row=row, col=col
+            row=row,
+            col=col,
         )
 
     def create_layout_button_kin(muscle_name):
@@ -298,26 +337,33 @@ def plot_force_length(model_path: str, states: np.ndarray, muscle_max_force: np.
         visible = visible_arg.copy()
         for idx in range(4):
             visible[muscle_idx * 4 + idx] = True
-        button = dict(label=muscle_name,
-                      method='update',
-                      args=[{'visible': visible,
-                             'title': muscle_name,
-                             'showlegend': True}])
+        button = dict(
+            label=muscle_name,
+            method="update",
+            args=[{"visible": visible, "title": muscle_name, "showlegend": True}],
+        )
         return button
 
     fig.update_layout(
-        updatemenus=[go.layout.Updatemenu(
-            active=0,
-            buttons=list(
-                map(lambda muscle_name: create_layout_button_kin(muscle_name), muscle_names)
+        updatemenus=[
+            go.layout.Updatemenu(
+                active=0,
+                buttons=list(
+                    map(
+                        lambda muscle_name: create_layout_button_kin(muscle_name),
+                        muscle_names,
+                    )
+                ),
             )
-        )
         ]
     )
 
     fig.show()
 
-def plot_moment_arm(model_path: str, states: np.ndarray, muscle_moment_arm: np.ndarray) -> None:
+
+def plot_moment_arm(
+    model_path: str, states: np.ndarray, muscle_moment_arm: np.ndarray
+) -> None:
     """
     Plot moment arm for each muscle of the model over each joint using plotly
 
@@ -343,8 +389,10 @@ def plot_moment_arm(model_path: str, states: np.ndarray, muscle_moment_arm: np.n
         dof_names.append(model.nameDof()[dof].to_string())
 
     fig = make_subplots(
-        rows=nb_line, cols=ceil(nb_muscles / nb_line),
-        subplot_titles=tuple(muscle_names))
+        rows=nb_line,
+        cols=ceil(nb_muscles / nb_line),
+        subplot_titles=tuple(muscle_names),
+    )
 
     visible_arg = [False] * nb_dof * nb_muscles
 
@@ -359,9 +407,10 @@ def plot_moment_arm(model_path: str, states: np.ndarray, muscle_moment_arm: np.n
                 go.Scatter(
                     x=x,
                     y=muscle_moment_arm[dof, muscle, :],
-                    name=muscle_names[muscle] + '_Moment_Arm',
+                    name=muscle_names[muscle] + "_Moment_Arm",
                 ),
-                row=row, col=col
+                row=row,
+                col=col,
             )
 
     def create_layout_button_kin(dof_name):
@@ -369,27 +418,33 @@ def plot_moment_arm(model_path: str, states: np.ndarray, muscle_moment_arm: np.n
         visible = visible_arg.copy()
         for idx in range(nb_muscles):
             visible[dof_idx * nb_muscles + idx] = True
-        button = dict(label=dof_name,
-                      method='update',
-                      args=[{'visible': visible,
-                             'title': dof_name,
-                             'showlegend': True}])
+        button = dict(
+            label=dof_name,
+            method="update",
+            args=[{"visible": visible, "title": dof_name, "showlegend": True}],
+        )
         return button
 
     fig.update_layout(
-        updatemenus=[go.layout.Updatemenu(
-            active=0,
-            buttons=list(
-                map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
+        updatemenus=[
+            go.layout.Updatemenu(
+                active=0,
+                buttons=list(
+                    map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
+                ),
             )
-        )
         ]
     )
 
     fig.show()
 
-def plot_torques(model_path: str, states: np.ndarray, muscle_max_torques: np.ndarray,
-                 muscle_min_torques: np.ndarray) -> None:
+
+def plot_torques(
+    model_path: str,
+    states: np.ndarray,
+    muscle_max_torques: np.ndarray,
+    muscle_min_torques: np.ndarray,
+) -> None:
     """
     Plot the min and max torques at each joint of the model for each muscle activation using plotly
 
@@ -417,8 +472,10 @@ def plot_torques(model_path: str, states: np.ndarray, muscle_max_torques: np.nda
         dof_names.append(model.nameDof()[dof].to_string())
 
     fig = make_subplots(
-        rows=nb_line, cols=ceil(nb_muscles / nb_line),
-        subplot_titles=tuple(muscle_names))
+        rows=nb_line,
+        cols=ceil(nb_muscles / nb_line),
+        subplot_titles=tuple(muscle_names),
+    )
 
     visible_arg = [False] * nb_dof * nb_muscles * 2
 
@@ -433,17 +490,19 @@ def plot_torques(model_path: str, states: np.ndarray, muscle_max_torques: np.nda
                 go.Scatter(
                     x=x,
                     y=muscle_max_torques[dof, muscle, :],
-                    name=muscle_names[muscle] + '_Max_Torque',
+                    name=muscle_names[muscle] + "_Max_Torque",
                 ),
-                row=row, col=col
+                row=row,
+                col=col,
             )
             fig.add_trace(
                 go.Scatter(
                     x=x,
                     y=muscle_min_torques[dof, :],
-                    name=muscle_names[muscle] + '_Min_Torque',
+                    name=muscle_names[muscle] + "_Min_Torque",
                 ),
-                row=row, col=col
+                row=row,
+                col=col,
             )
 
     def create_layout_button_kin(dof_name):
@@ -451,24 +510,26 @@ def plot_torques(model_path: str, states: np.ndarray, muscle_max_torques: np.nda
         visible = visible_arg.copy()
         for idx in range(nb_muscles * 2):
             visible[dof_idx * nb_muscles * 2 + idx] = True
-        button = dict(label=dof_name,
-                      method='update',
-                      args=[{'visible': visible,
-                             'title': dof_name,
-                             'showlegend': True}])
+        button = dict(
+            label=dof_name,
+            method="update",
+            args=[{"visible": visible, "title": dof_name, "showlegend": True}],
+        )
         return button
 
     fig.update_layout(
-        updatemenus=[go.layout.Updatemenu(
-            active=0,
-            buttons=list(
-                map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
+        updatemenus=[
+            go.layout.Updatemenu(
+                active=0,
+                buttons=list(
+                    map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)
+                ),
             )
-        )
         ]
     )
 
     fig.show()
+
 
 if __name__ == "__main__":
     main()
