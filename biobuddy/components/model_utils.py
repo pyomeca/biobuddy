@@ -220,7 +220,8 @@ class ModelUtils:
         # TODO: make sure that the base segment is always defined
         # raise ValueError("No root segment found in the model. Please check your model.")
 
-    def degrees_of_freedom(self) -> list[Translations | Rotations]:
+    @property
+    def dofs(self) -> list[Translations | Rotations]:
         dofs = []
         for segment in self.segments:
             if segment.translations != Translations.NONE:
@@ -229,14 +230,70 @@ class ModelUtils:
                 dofs.append(segment.rotations)
         return dofs
 
+    def remove_dofs(self, dofs_to_remove: list[str]):
+        """
+        Remove the degrees of freedom from the model
+
+        Parameters
+        ----------
+        dofs_to_remove: A list of the names of the degrees of freedom to remove
+        """
+        for dof_name in dofs_to_remove:
+            for segment in self.segments:
+                if dof_name in segment.dof_names:
+                    segment.remove_dof(dof_name)
+
+    def remove_muscles(self, muscles_to_remove: list[str]):
+        """
+        Remove the muscles from the model
+
+        Parameters
+        ----------
+        muscles_to_remove: A list of the names of the muscles to remove
+        """
+        for muscle_group in self.muscle_groups.copy():
+            for muscle in muscle_group.muscles.copy():
+                if muscle.name in muscles_to_remove:
+                    self.muscle_groups[muscle_group.name].remove_muscle(muscle.name)
+
     def update_muscle_groups(self):
         """
-        Update the muscle groups to make sure there are no empty muscle groups
+        Update the muscle groups to remove any empty muscle groups
         """
         original_muscle_groups = self.muscle_groups.copy()
         for muscle_group in original_muscle_groups:
             if len(muscle_group.muscles) == 0:
                 self.remove_muscle_group(muscle_group.name)
+
+    def update_segments(self):
+        """
+        Update the segments to remove empty segments.
+        If a segment has no markers, no contacts and no imus, no dof, no mesh, no mesh file, no inertia parameters,
+        it is removed from the model and the kinematic chain is updated rto reflect this change.
+        TODO: I removed only segments that also do not have any RT, but this should not be a criteria (I should carry the RT).
+        """
+        original_segments = self.segments.copy()
+        for segment in original_segments:
+            no_inertia = segment.inertia_parameters is None or segment.inertia_parameters.mass <= 0.0001
+            if (
+                    segment.nb_markers == 0 and
+                    segment.nb_contacts == 0 and
+                    segment.nb_imus == 0 and
+                    segment.nb_q == 0 and
+                    segment.mesh is None and
+                    segment.mesh_file is None and
+                    no_inertia and
+                    segment.segment_coordinate_system.scs.is_identity
+            ):
+                # Except the root segment
+                if segment.name == "root":
+                    continue
+                # Update the kinematic chain
+                child_segments = self.children_segment_names(segment.name)
+                for child_name in child_segments:
+                    self.segments[child_name].parent_name = segment.parent_name
+                # Remove the segment
+                self.remove_segment(segment.name)
 
     def modify_model_static_pose(self, q_static: np.ndarray):
         from .real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal

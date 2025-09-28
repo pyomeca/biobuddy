@@ -568,7 +568,7 @@ class ScaleTool:
         method: str,
     ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.dofs[:2] == [
             Translations.XYZ,
             Rotations.XYZ,
         ]:
@@ -630,7 +630,7 @@ class ScaleTool:
             raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
 
         # Remove the fake root degrees of freedom if needed
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.dofs[:2] == [
             Translations.XYZ,
             Rotations.XYZ,
         ]:

@@ -4,6 +4,7 @@ from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..utils.enums import Translations
 
 # NOTE: The inertia parameters are not modified !
+# TODO: change muscle parameters !!
 
 AXIS_TO_INDEX = {
     Translations.X: 0,
@@ -11,9 +12,9 @@ AXIS_TO_INDEX = {
     Translations.Z: 2
 }
 
-class SymmetryTool:
+class FlatteningTool:
     """
-    A tool to symmetrize a model.
+    A tool to flatten a model to make it planar (3D model -> 2D model).
     """
     def __init__(
             self,
@@ -83,7 +84,7 @@ class SymmetryTool:
                     via_point.position[AXIS_TO_INDEX[self.axis]] = 0
                 muscle.insertion_position.position[AXIS_TO_INDEX[self.axis]] = 0
 
-    def symmetrize(self) -> BiomechanicalModelReal:
+    def flatten(self) -> BiomechanicalModelReal:
         """
         Perform the symmetrization of the model, meaning that for each segment, the joint coordinate systems, markers,
         contacts, muscles, etc. are shifted to the zero on the axis specified.
