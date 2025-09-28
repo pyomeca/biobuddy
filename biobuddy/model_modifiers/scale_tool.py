@@ -6,6 +6,7 @@ import xml.etree.cElementTree as ET
 from xml.dom import minidom
 import numpy as np
 
+from .modifiers_utils import modify_muscle_parameters
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
 from ..components.real.rigidbody.marker_weight import MarkerWeight
@@ -164,7 +165,7 @@ class ScaleTool:
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
 
-        self.modify_muscle_parameters()
+        modify_muscle_parameters(self.original_model, self.scaled_model)
         self.place_model_in_static_pose(
             marker_positions,
             marker_names,
@@ -686,35 +687,6 @@ class ScaleTool:
             )
         else:
             self.replace_markers_on_segments_local_scs(q_static, model_to_use)
-
-    def modify_muscle_parameters(self):
-        """
-        Modify the optimal length, tendon slack length and pennation angle of the muscles.
-        """
-        for muscle_group in self.original_model.muscle_groups:
-            for muscle_name in muscle_group.muscle_names:
-                if muscle_group.muscles[muscle_name].optimal_length is None:
-                    raise RuntimeError(
-                        f"The muscle {muscle_name} does not have an optimal length. Please set the optimal length of the muscle in the original model."
-                    )
-                elif muscle_group.muscles[muscle_name].tendon_slack_length is None:
-                    raise RuntimeError(
-                        f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
-                    )
-
-                original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
-                scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
-
-                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].optimal_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].optimal_length)
-                    * scaled_muscle_tendon_length
-                    / original_muscle_tendon_length
-                )
-                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].tendon_slack_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].tendon_slack_length)
-                    * scaled_muscle_tendon_length
-                    / original_muscle_tendon_length
-                )
 
     def from_biomod(
         self,
