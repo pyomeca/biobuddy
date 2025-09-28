@@ -3,7 +3,7 @@ This example shows how to create a very simple model (2 DoFs + 6 muscles planar 
 (26 dofs + 50 muscles 3D model).
 First, many segments, muscles, and dofs are removed from the model.
 Second, muscle wrapping objects are replaced with a via points that best matches the lever arm.
-Third, the model is flatten into a planar model by projecting all the segments, markers, muscles, and joints onto the
+Third, the model is flattened into a planar model by projecting all the segments, markers, muscles, and joints onto the
 XY plane.
 Finally, the model is exported as a new .bioMod file that can be used in complex computations like optimal control.
 """
@@ -199,27 +199,12 @@ from biobuddy import (
 _logger = logging.getLogger(__name__)
 
 
-def main():
-    # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler()
-        ],
-    )
-    visualization_flag = True
-
-    # Paths
-    current_path_file = Path(__file__).parent
-    biomod_filepath = f"{current_path_file}/../models/simple_arm_model.bioMod"
-    osim_filepath = f"{current_path_file}/../models/MOBL_ARMS_41.osim"
-    geometry_path = f"{current_path_file}/../models/Geometry_cleaned"
-
-    # # Convert the vtp files
-    # mesh = MeshParser(geometry_folder="Geometry")
-    # mesh.process_meshes(fail_on_error=False)
-    # mesh.write(geometry_path, format=MeshFormat.VTP)
+def create_planar_model(
+    osim_filepath: str,
+    biomod_filepath: str,
+    geometry_path: str,
+    with_mesh: bool = False,
+):
 
     # Read the original .osim file
     model = BiomechanicalModelReal().from_osim(
@@ -228,6 +213,7 @@ def main():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=geometry_path,
     )
+    # TODO: wrapping objects -> via points
     # Fix the via points before translating to biomod as there are some conditional and moving via points
     model.fix_via_points(q=np.zeros((model.nb_q,)))
 
@@ -292,7 +278,38 @@ def main():
     model.segments["radius"].mesh_file.mesh_rotation = np.array([0.25, 0, 0])
 
     # And convert it to a .bioMod file
-    model.to_biomod(biomod_filepath, with_mesh=visualization_flag)
+    model.to_biomod(biomod_filepath, with_mesh=with_mesh)
+
+
+def main():
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler()
+        ],
+    )
+    visualization_flag = True
+
+    # Paths
+    current_path_file = Path(__file__).parent
+    biomod_filepath = f"{current_path_file}/../models/simple_arm_model.bioMod"
+    osim_filepath = f"{current_path_file}/../models/MOBL_ARMS_41.osim"
+    geometry_path = f"{current_path_file}/../models/Geometry_cleaned"
+
+    # # Convert the vtp files
+    # mesh = MeshParser(geometry_folder="Geometry")
+    # mesh.process_meshes(fail_on_error=False)
+    # mesh.write(geometry_path, format=MeshFormat.VTP)
+
+    create_planar_model(
+        osim_filepath=osim_filepath,
+        biomod_filepath=biomod_filepath,
+        geometry_path=geometry_path,
+        with_mesh=True,
+    )
 
     if visualization_flag:
         import pyorerun

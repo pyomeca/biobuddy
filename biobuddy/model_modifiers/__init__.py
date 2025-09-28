@@ -2,7 +2,7 @@ from .scale_tool import ScaleTool
 from .joint_center_tool import JointCenterTool, Score, Sara
 from .merge_segments_tool import MergeSegmentsTool, SegmentMerge
 from .modify_kinematic_chain_tool import ChangeFirstSegment, ModifyKinematicChainTool
-from .symmetry_tool import FlatteningTool
+from .flattening_tool import FlatteningTool
 
 __all__ = [
     ScaleTool.__name__,
