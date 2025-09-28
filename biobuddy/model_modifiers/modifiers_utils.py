@@ -22,11 +22,8 @@ def modify_muscle_parameters(original_model: BiomechanicalModelReal, new_model: 
             length_ratio = new_muscle_tendon_length / original_muscle_tendon_length
 
             new_model.muscle_groups[muscle_group.name].muscles[muscle_name].optimal_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].optimal_length)
-                    * length_ratio
+                deepcopy(muscle_group.muscles[muscle_name].optimal_length) * length_ratio
             )
             new_model.muscle_groups[muscle_group.name].muscles[muscle_name].tendon_slack_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].tendon_slack_length)
-                    * length_ratio
+                deepcopy(muscle_group.muscles[muscle_name].tendon_slack_length) * length_ratio
             )
-

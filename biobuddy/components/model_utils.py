@@ -276,14 +276,14 @@ class ModelUtils:
         for segment in original_segments:
             no_inertia = segment.inertia_parameters is None or segment.inertia_parameters.mass <= 0.0001
             if (
-                    segment.nb_markers == 0 and
-                    segment.nb_contacts == 0 and
-                    segment.nb_imus == 0 and
-                    segment.nb_q == 0 and
-                    segment.mesh is None and
-                    segment.mesh_file is None and
-                    no_inertia and
-                    segment.segment_coordinate_system.scs.is_identity
+                segment.nb_markers == 0
+                and segment.nb_contacts == 0
+                and segment.nb_imus == 0
+                and segment.nb_q == 0
+                and segment.mesh is None
+                and segment.mesh_file is None
+                and no_inertia
+                and segment.segment_coordinate_system.scs.is_identity
             ):
                 # Except the root segment
                 if segment.name == "root":

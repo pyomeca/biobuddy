@@ -12,6 +12,7 @@ class MuscleStateType(Enum):
     DEFAULT = "default"
     BUCHANAN = "buchanan"
 
+
 class MuscleUtils:
     def __init__(self):
         pass

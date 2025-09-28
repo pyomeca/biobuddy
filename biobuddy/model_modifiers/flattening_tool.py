@@ -8,25 +8,18 @@ from ..utils.enums import Translations
 # NOTE: The inertia parameters are not modified !
 
 
-AXIS_TO_INDEX = {
-    Translations.X: 0,
-    Translations.Y: 1,
-    Translations.Z: 2
-}
+AXIS_TO_INDEX = {Translations.X: 0, Translations.Y: 1, Translations.Z: 2}
+
 
 class FlatteningTool:
     """
     A tool to flatten a model to make it planar (3D model -> 2D model).
     """
-    def __init__(
-            self,
-            model: BiomechanicalModelReal,
-            axis: Translations
-    ):
+
+    def __init__(self, model: BiomechanicalModelReal, axis: Translations):
         self.original_model = model
         self.flattened_model = deepcopy(model)
         self.axis = axis
-
 
     def _check_model(self):
         """
@@ -35,7 +28,9 @@ class FlatteningTool:
         """
         for segment in self.original_model.segments:
             if np.any(np.abs(segment.segment_coordinate_system.scs.rotation_matrix - np.eye(3)) > 1e-6):
-                raise ValueError(f"Segment {segment.name} has a rotated coordinate system. Flattening is only possible if all segment coordinate systems are aligned.")
+                raise ValueError(
+                    f"Segment {segment.name} has a rotated coordinate system. Flattening is only possible if all segment coordinate systems are aligned."
+                )
 
     def _modify_jcs(self):
         """
@@ -74,9 +69,11 @@ class FlatteningTool:
         """
         for segment in self.flattened_model.segments:
             if segment.nb_imus > 0:
-                raise NotImplementedError("This feature was never tested. If you encounter this error, please contact the developers.")
+                raise NotImplementedError(
+                    "This feature was never tested. If you encounter this error, please contact the developers."
+                )
             for imu in segment.imus:
-               imu.scs.translation[AXIS_TO_INDEX[self.axis]] = 0
+                imu.scs.translation[AXIS_TO_INDEX[self.axis]] = 0
 
     def _modify_muscles(self):
         """
