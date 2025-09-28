@@ -35,7 +35,7 @@ class FlatteningTool:
         """
         for segment in self.original_model.segments:
             if np.any(np.abs(segment.segment_coordinate_system.scs.rotation_matrix - np.eye(3)) > 1e-6):
-                raise ValueError(f"Segment {segment.name} has a rotated coordinate system. Symmetrization is only possible if all segment coordinate systems are aligned.")
+                raise ValueError(f"Segment {segment.name} has a rotated coordinate system. Flattening is only possible if all segment coordinate systems are aligned.")
 
     def _modify_jcs(self):
         """
@@ -73,6 +73,8 @@ class FlatteningTool:
         Modify the imus of the model to be centered on the specified axis.
         """
         for segment in self.flattened_model.segments:
+            if segment.nb_imus > 0:
+                raise NotImplementedError("This feature was never tested. If you encounter this error, please contact the developers.")
             for imu in segment.imus:
                imu.scs.translation[AXIS_TO_INDEX[self.axis]] = 0
 

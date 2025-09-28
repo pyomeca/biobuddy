@@ -1,13 +1,13 @@
 from typing import Callable, Any
 
 from ..muscle.via_point import ViaPoint
-from ...muscle_utils import MuscleType, MuscleStateType
+from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
 from ....utils.linear_algebra import RotoTransMatrix
 
 
-class Muscle:
+class Muscle(MuscleUtils):
     def __init__(
         self,
         name: str,
@@ -51,6 +51,8 @@ class Muscle:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        super().__init__()
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
