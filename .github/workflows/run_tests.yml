@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up Python
         run: |
-          conda install -cconda-forge python=3.11.11 pip 
+          conda install -cconda-forge python=3.10 pip 
 
       - name: Install dependencies
         run: | 
@@ -68,7 +68,7 @@ jobs:
         run: |
           pip install pytest pytest-cov codecov
           conda install -c conda-forge deepdiff
-          conda install https://conda.anaconda.org/conda-forge/linux-64/biorbd-1.11.2-py312h2324e82_1.conda
+          conda install https://conda.anaconda.org/conda-forge/linux-64/biorbd-1.11.2-py310h6208e1f_1.conda
           conda install -c opensim-org opensim=4.5.1
 
       - name: Run tests with code coverage
