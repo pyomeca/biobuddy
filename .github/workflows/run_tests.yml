@@ -68,7 +68,7 @@ jobs:
         run: |
           pip install pytest pytest-cov codecov
           conda install -c conda-forge deepdiff
-          conda install biorbd=1.11.2=py310h6208e1f_1.conda
+          conda install biorbd=1.11.2=py311h9439bbc_1 -cconda-forge
           conda install -c opensim-org opensim=4.5.1
 
       - name: Run tests with code coverage
