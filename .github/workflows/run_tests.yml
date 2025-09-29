@@ -68,6 +68,10 @@ jobs:
         run: |
           pip install pytest pytest-cov codecov
           conda install -c conda-forge biorbd=1.11.2 deepdiff
+
+      - name: Install opensim
+        run: |
+          sudo apt-get update && sudo apt-get install --yes build-essential libtool autoconf pkg-config gfortran libopenblas-dev liblapack-dev freeglut3-dev libxi-dev libxmu-dev doxygen patchelf
           conda install -c opensim-org opensim=4.5.1
 
       - name: Run tests with code coverage
