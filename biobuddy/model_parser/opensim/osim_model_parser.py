@@ -4,6 +4,7 @@ Note to the developers: This OpenSim parser is in an intermediary state. We have
 There are other casses (like muscle.py) where all the features are implemented so we can directly use the BioBuddy classes.
 The long term goal it to switch all the temporary classes to BioBuddy classes, but this will take time.
 """
+
 from copy import deepcopy
 from enum import Enum
 from time import strftime
@@ -308,8 +309,8 @@ class OsimModelParser:
                                 )
                     old_movement = deepcopy(via_point.movement)
                     via_point.movement = PathPointMovement(
-                        dof_names = new_dof_names,
-                        locations= old_movement.locations,
+                        dof_names=new_dof_names,
+                        locations=old_movement.locations,
                     )
 
                 # Change conditional via point dof names

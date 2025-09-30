@@ -9,6 +9,7 @@ class PathPointCondition:
     """
     Very similar to the BioBuddy version of this class, but it needs to be redeclared because of the joint_name logic.
     """
+
     def __init__(
         self,
         dof_name: str,
@@ -27,17 +28,22 @@ class PathPointCondition:
             joint_name = find_in_tree(element, "socket_coordinate").split("/")[-2]
         else:
             joint_name = ""
-        return PathPointCondition(
-            dof_name=find_in_tree(element, "socket_coordinate").split("/")[-1],
-            joint_name=joint_name,
-            range_min=find_in_tree(element, "range").split(" ")[0],
-            range_max=find_in_tree(element, "range").split(" ")[1],
-        ), ""
+        return (
+            PathPointCondition(
+                dof_name=find_in_tree(element, "socket_coordinate").split("/")[-1],
+                joint_name=joint_name,
+                range_min=find_in_tree(element, "range").split(" ")[0],
+                range_max=find_in_tree(element, "range").split(" ")[1],
+            ),
+            "",
+        )
+
 
 class PathPointMovement:
     """
     Very similar to the BioBuddy version of this class, but it needs to be redeclared because of the joint_name logic.
     """
+
     def __init__(
         self,
         dof_names: list[str],
@@ -79,9 +85,7 @@ class PathPointMovement:
                 else:
                     joint_names.append("")
             else:
-                warning += (
-                    "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
-                )
+                warning += "Only SimmSpline and PiecewiseLinearFunction functions are supported for PathPointMovement locations."
         if warning == "":
             moving_path_point = PathPointMovement(dof_names=dof_names, locations=locations, joint_names=joint_names)
         return moving_path_point, warning
