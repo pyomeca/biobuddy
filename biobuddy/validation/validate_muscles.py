@@ -30,9 +30,11 @@ class MuscleValidator:
         try:
             self.model.to_biomod("temporary.bioMod")
         except Exception as e:
-            raise NotImplementedError(f"Only biorbd is supported as a backend for now. If you need other dynamics "
-                                      f"engines, please contact the developers. "
-                                      f"The model provided is not biomodable: {e}.")
+            raise NotImplementedError(
+                f"Only biorbd is supported as a backend for now. If you need other dynamics "
+                f"engines, please contact the developers. "
+                f"The model provided is not biomodable: {e}."
+            )
 
         # Initialize the quantities that will be needed for the plots
         self.states: np.ndarray = self.states_from_model_ranges()
@@ -87,7 +89,7 @@ class MuscleValidator:
         model_min_force = np.ndarray((nb_muscles, self.nb_states))
         for i_frame in range(self.nb_states):
             q = self.states[:, i_frame]
-            qdot = np.zeros((nb_dof, ))  # Default the speed at 0
+            qdot = np.zeros((nb_dof,))  # Default the speed at 0
             biorbd_model.updateMuscles(q)
 
             # Compute max force array
@@ -101,7 +103,6 @@ class MuscleValidator:
             model_min_force[:, i_frame] = biorbd_model.muscleForces(muscle_states, q, qdot).to_array().copy()
 
         return model_max_force, model_min_force
-
 
     def compute_muscle_lengths(self) -> np.ndarray:
         """
@@ -123,7 +124,6 @@ class MuscleValidator:
                 muscle_length[i_muscle, i_frame] = biorbd_model.muscle(i_muscle).length(biorbd_model, q, True)
         return muscle_length
 
-
     def return_optimal_lengths(self) -> np.ndarray:
         """
         Fetch muscles optimal lengths for every state
@@ -133,7 +133,7 @@ class MuscleValidator:
         muscle_optimal_lengths: np.ndarray
             Muscle optimal lengths for every state
         """
-        muscle_optimal_lengths = np.zeros((self.model.nb_muscles, ))
+        muscle_optimal_lengths = np.zeros((self.model.nb_muscles,))
         i_muscle = 0
         for muscle_group in self.model.muscle_groups:
             for muscle in muscle_group.muscles:
@@ -176,7 +176,7 @@ class MuscleValidator:
         biorbd_model = biorbd.Model("temporary.bioMod")
 
         muscle_states = biorbd_model.stateSet()
-        qdot = np.zeros((self.model.nb_q, ))  # TODO: add quaternion handling
+        qdot = np.zeros((self.model.nb_q,))  # TODO: add quaternion handling
         joint_max_torques = np.ndarray((self.model.nb_q, self.model.nb_muscles, self.nb_states))
         joint_min_torques = np.ndarray((self.model.nb_q, self.nb_states))
         for i_frame in range(self.nb_states):
@@ -191,7 +191,9 @@ class MuscleValidator:
                     else:
                         muscle_states[state].setActivation(0)
                 # If you wish to add custom passive torques to your model and have them accounted for in the check, add them here
-                joint_max_torques[:, i_muscle, i_frame] = biorbd_model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+                joint_max_torques[:, i_muscle, i_frame] = (
+                    biorbd_model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
+                )
 
             # @vmagion: Could you confirm that there was an indentation missing here please ?
             # Compute min torques for each joint with only one activated muscle
@@ -202,10 +204,9 @@ class MuscleValidator:
 
         return joint_max_torques, joint_min_torques
 
-
     def plot_force_length(
-            self,
-        ) -> None:
+        self,
+    ) -> None:
         """
         Plot force lengths graphs for the model using plotly
         """
@@ -285,7 +286,6 @@ class MuscleValidator:
 
         fig.show()
 
-
     def plot_moment_arm(self) -> None:
         """
         Plot moment arm for each muscle of the model over each joint using plotly
@@ -346,10 +346,9 @@ class MuscleValidator:
 
         fig.show()
 
-
     def plot_torques(
-            self,
-        ) -> None:
+        self,
+    ) -> None:
         """
         Plot the min and max torques at each joint of the model for each muscle activation using plotly
         """
@@ -417,4 +416,3 @@ class MuscleValidator:
         )
 
         fig.show()
-
