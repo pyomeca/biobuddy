@@ -139,10 +139,10 @@ def test_kinematic_chain_tool_modify():
 
     # Check the segment's mesh
     npt.assert_almost_equal(
-        modified_model.segments["child"].mesh.positions, np.array([[0.0, 0.2], [-0.1, 0.0], [0.0, 0.3], [1.0, 1.0]])
+        modified_model.segments["parent"].mesh.positions, np.array([[0.0, 0.2], [0.0, 0.1], [-1.0, -0.7], [1.0, 1.0]])
     )
     npt.assert_almost_equal(
-        modified_model.segments["parent"].mesh.positions, np.array([[0.0, 0.2], [0.0, 0.1], [0.0, 0.3], [1.0, 1.0]])
+        modified_model.segments["child"].mesh.positions, np.array([[0.0, 0.2], [-0.1, 0.0], [0.0, 0.3], [1.0, 1.0]])
     )
     assert modified_model.segments["PELVIS"].mesh is None
 
