@@ -483,7 +483,7 @@ def create_simple_model():
     )
 
     model.segments["parent"].add_contact(
-        MarkerReal(
+        ContactReal(
             name="parent_contact1",
             parent_name="parent",
             position=np.array([0.05, 0.2, 0.15, 1.0]),
