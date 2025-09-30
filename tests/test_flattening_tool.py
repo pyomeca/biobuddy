@@ -11,6 +11,7 @@ from biobuddy import (
     InertialMeasurementUnitReal,
 )
 from biobuddy.model_modifiers.flattening_tool import AXIS_TO_INDEX
+from biobuddy.utils.linear_algebra import RotoTransMatrix
 from test_utils import create_simple_model, compare_models
 
 
@@ -126,19 +127,19 @@ def test_modify_contacts():
 
     # Before modification
     npt.assert_almost_equal(
-        flattening_tool.flattened_model.segments[1].contacts[0].position[:3].reshape((3,)), np.array([0.05, 0.2, 0.15])
+        flattening_tool.flattened_model.segments[2].contacts[0].position[:3].reshape((3,)), np.array([-0.05, 0.5, 0.35])
     )
 
     flattening_tool._modify_contacts()
 
     # After modification, Y should be 0
     npt.assert_almost_equal(
-        flattening_tool.flattened_model.segments[1].contacts[0].position[:3].reshape((3,)), np.array([0.05, 0.0, 0.15])
+        flattening_tool.flattened_model.segments[2].contacts[0].position[:3].reshape((3,)), np.array([-0.05, 0.0, 0.35])
     )
 
     # Original model should be unchanged
     npt.assert_almost_equal(
-        flattening_tool.original_model.segments[0].contacts[0].position[:3].reshape((3,)), np.array([0.05, 0.2, 0.15])
+        flattening_tool.original_model.segments[2].contacts[0].position[:3].reshape((3,)), np.array([-0.05, 0.5, 0.35])
     )
 
 
@@ -209,6 +210,7 @@ def test_modify_muscles():
 def test_flatten():
     """Test the flatten method"""
     model = create_simple_model()
+    model.segments["root"].segment_coordinate_system.scs = RotoTransMatrix()
     flattening_tool = FlatteningTool(model, Translations.Y)
 
     # Before flattening

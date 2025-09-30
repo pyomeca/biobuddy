@@ -4,7 +4,7 @@ import numpy as np
 from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree
-from .path_point import PathPoint, condition_from_element, movement_from_element
+from .path_point import PathPoint, PathPointMovement, PathPointCondition
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
@@ -96,16 +96,27 @@ def get_muscle_from_element(
     for path_point_elt in path_point_elts:
         via_point = PathPoint.from_element(path_point_elt)
         via_point.muscle = name
-        via_point.condition = (
-            condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
-        )
-        movement, warning = (
-            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else tuple((None, ""))
-        )
+
+        # Condition
+        condition = None
+        warning = ""
+        if path_point_elt.tag == "ConditionalPathPoint":
+            condition, warning = PathPointCondition.from_element(path_point_elt)
+        if warning != "":
+            warnings += warning
+        else:
+            via_point.condition = condition
+
+        # Movement
+        movement = None
+        warning = ""
+        if path_point_elt.tag == "MovingPathPoint":
+            movement, warning = PathPointMovement.from_element(path_point_elt)
         if warning != "":
             warnings += warning
         else:
             via_point.movement = movement
+
         via_points.append(via_point)
         path_points.append(via_point)
 

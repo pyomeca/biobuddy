@@ -4,7 +4,7 @@ Note to the developers: This OpenSim parser is in an intermediary state. We have
 There are other casses (like muscle.py) where all the features are implemented so we can directly use the BioBuddy classes.
 The long term goal it to switch all the temporary classes to BioBuddy classes, but this will take time.
 """
-
+from copy import deepcopy
 from enum import Enum
 from time import strftime
 
@@ -20,7 +20,7 @@ from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.real.muscle.via_point_real import ViaPointReal
+from ...components.real.muscle.via_point_real import ViaPointReal, PathPointMovement, PathPointCondition
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
@@ -306,7 +306,11 @@ class OsimModelParser:
                                 raise RuntimeError(
                                     f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
                                 )
-                    via_point.movement.dof_names = new_dof_names
+                    old_movement = deepcopy(via_point.movement)
+                    via_point.movement = PathPointMovement(
+                        dof_names = new_dof_names,
+                        locations= old_movement.locations,
+                    )
 
                 # Change conditional via point dof names
                 if via_point.condition is not None:
@@ -314,7 +318,12 @@ class OsimModelParser:
                     if joint is not None:
                         new_dof_name = f"{joint.parent}_{via_point.condition.dof_name}"
                         if new_dof_name in dof_names:
-                            via_point.condition.dof_name = new_dof_name
+                            old_condition = deepcopy(via_point.condition)
+                            via_point.condition = PathPointCondition(
+                                dof_name=new_dof_name,
+                                range_min=old_condition.range_min,
+                                range_max=old_condition.range_max,
+                            )
                         else:
                             raise RuntimeError(
                                 f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."

@@ -7,6 +7,7 @@ from biobuddy import (
     BiomechanicalModel,
     SegmentReal,
     MarkerReal,
+    ContactReal,
     InertiaParametersReal,
     SegmentCoordinateSystemReal,
     C3dData,
@@ -490,7 +491,7 @@ def create_simple_model():
     )
 
     model.segments["child"].add_contact(
-        MarkerReal(
+        ContactReal(
             name="child_contact1",
             parent_name="child",
             position=np.array([-0.05, 0.5, 0.35, 1.0]),

@@ -7,20 +7,16 @@ class PathPointMovement:
     def __init__(
         self,
         dof_names: list[str],
-        joint_names: list[str],
         locations: list[Functions],
     ):
         if len(dof_names) != 3:
             raise RuntimeError("dof_names must be a list of 3 dof_names (x, y, x).")
-        if len(joint_names) != 3:
-            raise RuntimeError("joint_names must be a list of 3 joint_names (x, y, x).")
         if len(locations) != 3:
             raise RuntimeError("locations must be a list of 3 Functions (x, y, x).")
         if not all(isinstance(loc, Functions) for loc in locations):
             raise RuntimeError("All locations must be instances of Functions.")
 
         self.dof_names = dof_names
-        self.joint_names = joint_names
         self.locations = locations
 
     def evaluate(self, angles: np.ndarray) -> np.ndarray:
@@ -35,13 +31,11 @@ class PathPointCondition:
     def __init__(
         self,
         dof_name: str,
-        joint_name: str,
         range_min: float,
         range_max: float,
     ):
 
         self.dof_name = dof_name
-        self.joint_name = joint_name
         self.range_min = float(range_min)
         self.range_max = float(range_max)
 
