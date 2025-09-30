@@ -116,7 +116,7 @@ def test_kinematic_chain_tool_modify():
         modified_model.segments["parent"].inertia_parameters.center_of_mass.reshape(
             4,
         ),
-        np.array([0, 0, 0.5, 1]),
+        np.array([0, 0, -0.5, 1]),
     )
     npt.assert_almost_equal(
         modified_model.segment_com_in_global("parent"), original_model.segment_com_in_global("parent")
