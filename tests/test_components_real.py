@@ -157,6 +157,17 @@ def test_init_mesh_file_real():
     npt.assert_array_equal(mesh_file.mesh_scale, np.array([[2.0], [2.0], [2.0], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
+    npt.assert_almost_equal(
+        mesh_file.mesh_rt.rt_matrix,
+        np.array(
+            [
+                [0.93629336, -0.28962948, 0.19866933, 1.0],
+                [0.31299183, 0.94470249, -0.0978434, 2.0],
+                [-0.15934508, 0.153792, 0.97517033, 3.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
 
 
 def test_mesh_file_real_to_biomod():
@@ -570,8 +581,8 @@ def test_segment_real_add_remove_contact():
 
     # Create a contact with no parent_name
     contact2 = ContactReal(name="test_contact2", parent_name=None)
-    with pytest.raises(ValueError):
-        segment.add_contact(contact2)
+    segment.add_contact(contact2)
+    assert segment.name == segment.contacts["test_contact2"].parent_name
 
     # Create a contact with non-matching parent_name
     contact3 = ContactReal(name="test_contact3", parent_name="other_segment")
@@ -580,6 +591,7 @@ def test_segment_real_add_remove_contact():
 
     # Remove a contact
     segment.remove_contact(contact.name)
+    segment.remove_contact("test_contact2")
     assert len(segment.contacts) == 0
 
 
@@ -599,11 +611,12 @@ def test_segment_real_add_remove_imu():
 
     # Create an IMU with no parent_name
     imu2 = InertialMeasurementUnitReal(name="test_imu2", parent_name=None)
-    with pytest.raises(RuntimeError):
-        segment.add_imu(imu2)
+    segment.add_imu(imu2)
+    assert segment.name == segment.imus["test_imu2"].parent_name
 
     # Remove an IMU
     segment.remove_imu(imu.name)
+    segment.remove_imu("test_imu2")
     assert len(segment.imus) == 0
 
 
@@ -769,7 +782,7 @@ def test_init_muscle_real():
     assert muscle.pennation_angle is None
     assert muscle.maximal_velocity is None
     assert muscle.maximal_excitation is None
-    assert len(muscle.via_points) == 0
+    assert muscle.nb_via_points == 0
 
     # Test initialization with all parameters
     muscle = MuscleReal(
@@ -847,7 +860,7 @@ def test_muscle_real_add_remove_via_point():
     muscle.add_via_point(via_point)
 
     # Verify via point was added and muscle_name was set
-    assert len(muscle.via_points) == 1
+    assert muscle.nb_via_points == 1
     assert via_point.muscle_name == "test_muscle"
 
     # Create a via point with matching muscle_name
@@ -858,7 +871,7 @@ def test_muscle_real_add_remove_via_point():
         position=np.array([[0.7], [0.0], [0.0], [1.0]]),
     )
     muscle.add_via_point(via_point2)
-    assert len(muscle.via_points) == 2
+    assert muscle.nb_via_points == 2
 
     # Create a via point with non-matching muscle_name
     via_point3 = ViaPointReal(
@@ -872,7 +885,7 @@ def test_muscle_real_add_remove_via_point():
 
     # Remove a via point
     muscle.remove_via_point("via_point")
-    assert len(muscle.via_points) == 1
+    assert muscle.nb_via_points == 1
     assert muscle.via_points[0].name == "via_point2"
 
 

@@ -83,8 +83,13 @@ class MuscleReal:
             raise ValueError(
                 f"The via points's muscle {via_point.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
             )
+        if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
+            raise ValueError(
+                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+            )
 
         via_point.muscle_name = self.name
+        via_point.muscle_group = self.muscle_group
         self.via_points._append(via_point)
 
     def remove_via_point(self, via_point_name: str) -> None:
@@ -263,6 +268,10 @@ class MuscleReal:
             else:
                 raise ValueError("The maximal excitation must be a float.")
         self._maximal_excitation = value
+
+    @property
+    def nb_via_points(self) -> int:
+        return len(self.via_points)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

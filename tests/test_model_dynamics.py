@@ -127,14 +127,11 @@ def test_biomechanics_model_real_utils_functions():
             for m in wholebody_model_biorbd.muscle(i_muscle).musclesPointsInGlobal(wholebody_model_biorbd, q_zeros)
         ]
         for i_via_point in range(len(muscle_points_in_global_biorbd) - 2):
-            try:
-                npt.assert_array_almost_equal(
-                    muscle_points_in_global_biobuddy[:3, i_via_point, 0],
-                    muscle_points_in_global_biorbd[i_via_point + 1],
-                    decimal=5,
-                )
-            except:
-                print(muscle_name)
+            npt.assert_array_almost_equal(
+                muscle_points_in_global_biobuddy[:3, i_via_point, 0],
+                muscle_points_in_global_biorbd[i_via_point + 1],
+                decimal=5,
+            )
 
         # Muscle tendon length
         muscle_tendon_biobuddy = wholebody_model.muscle_tendon_length(muscle_name, q_zeros)

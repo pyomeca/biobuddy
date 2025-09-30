@@ -392,6 +392,6 @@ def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarr
         angle_sequence = read_str(next_token=next_token)
         translations = read_float_vector(next_token=next_token, length=3)
         scs = SegmentCoordinateSystemReal.from_euler_and_translation(
-            angles=angles, angle_sequence=angle_sequence, translations=translations, is_scs_local=True
+            angles=angles, angle_sequence=angle_sequence, translation=translations, is_scs_local=True
         )
     return scs.scs

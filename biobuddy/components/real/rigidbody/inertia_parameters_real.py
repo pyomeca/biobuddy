@@ -4,7 +4,7 @@ import numpy as np
 
 from .protocols import CoordinateSystemRealProtocol
 from ..biomechanical_model_real import BiomechanicalModelReal
-from ....utils.aliases import Points, points_to_array
+from ....utils.aliases import Points, points_to_array, inertia_to_array
 from ....utils.protocols import Data
 from ....utils.linear_algebra import RotoTransMatrix
 
@@ -52,13 +52,7 @@ class InertiaParametersReal:
 
     @inertia.setter
     def inertia(self, value: Points):
-        self._inertia = points_to_array(points=value, name="inertia")
-        if self.inertia.shape[1] == 0:
-            return
-        if self.inertia.shape[1] == 1:
-            self._inertia = np.diag(self.inertia[:, 0])
-        elif self.inertia.shape[1] != 3:
-            raise RuntimeError(f"The inertia must be a np.ndarray of shape (3,) or (3, 3) not {self.inertia.shape}")
+        self._inertia = inertia_to_array(value)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
