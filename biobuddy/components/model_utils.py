@@ -1,3 +1,4 @@
+import numpy as np
 from ..utils.enums import Translations, Rotations
 
 
@@ -227,3 +228,25 @@ class ModelUtils:
             if segment.rotations != Rotations.NONE:
                 dofs.append(segment.rotations)
         return dofs
+
+    def dof_names(self) -> list[str]:
+        """
+        Returns the names of the degrees of freedom of the model
+        """
+        names = []
+        for segment in self.segments:
+            names += segment.dof_names
+        return names
+
+    def get_dof_ranges(self) -> np.ndarray:
+        """
+        Returns the min_bound and max_bound of the degrees of freedom of the model (2 x nb_q).
+        """
+        ranges = np.empty((2, 0))
+        for segment in self.segments:
+            if segment.nb_q > 0:
+                min_bounds = segment.q_ranges.min_bounds()
+                max_bounds = segment.q_ranges.max_bounds()
+                bound = np.vstack((min_bounds, max_bounds))
+                ranges = np.hstack((ranges, bound))
+        return ranges
