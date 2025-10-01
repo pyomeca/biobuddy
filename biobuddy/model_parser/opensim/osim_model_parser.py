@@ -298,7 +298,6 @@ class OsimModelParser:
                 locations=old_movement.locations,
             )
 
-
     def _modify_conditional_via_point_dof_name(self, via_point: ViaPointReal, muscle: MuscleReal, dof_names: list[str]):
         if via_point.condition is not None:
             joint = self._find_joint(via_point.condition.joint_name)
@@ -332,11 +331,17 @@ class OsimModelParser:
 
             # Change moving origin and insertion dof names
             self._modify_moving_via_point_dof_name(via_point=muscle.origin_position, muscle=muscle, dof_names=dof_names)
-            self._modify_moving_via_point_dof_name(via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names)
+            self._modify_moving_via_point_dof_name(
+                via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names
+            )
 
             # Change conditional origin and insertion dof names
-            self._modify_conditional_via_point_dof_name(via_point=muscle.origin_position, muscle=muscle, dof_names=dof_names)
-            self._modify_conditional_via_point_dof_name(via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names)
+            self._modify_conditional_via_point_dof_name(
+                via_point=muscle.origin_position, muscle=muscle, dof_names=dof_names
+            )
+            self._modify_conditional_via_point_dof_name(
+                via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names
+            )
 
             for via_point in muscle.via_points:
 
@@ -345,7 +350,6 @@ class OsimModelParser:
 
                 # Change conditional via point dof names
                 self._modify_conditional_via_point_dof_name(via_point=via_point, muscle=muscle, dof_names=dof_names)
-
 
     def _set_warnings(self):
         self.get_probe_set()

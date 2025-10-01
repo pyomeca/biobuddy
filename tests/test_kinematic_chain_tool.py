@@ -152,7 +152,9 @@ def test_kinematic_chain_tool_modify():
     )
 
     # Check that the contacts did not move in the global (but the order changed)
-    npt.assert_almost_equal(modified_model.contacts_in_global()[:, :, 0], original_model.contacts_in_global()[:, [1, 0], 0])
+    npt.assert_almost_equal(
+        modified_model.contacts_in_global()[:, :, 0], original_model.contacts_in_global()[:, [1, 0], 0]
+    )
 
     # Test Via point positions
     for i_muscle, muscle_name in enumerate(modified_model.muscle_names):
