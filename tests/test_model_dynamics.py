@@ -41,10 +41,10 @@ def test_biomechanics_model_real_utils_functions():
     nb_contacts = wholebody_model.nb_contacts
     assert nb_contacts == 0
     nb_muscles = wholebody_model.nb_muscles
-    assert nb_muscles == 52
+    assert nb_muscles == 56
     assert wholebody_model_biorbd.nbMuscles() == wholebody_model.nb_muscles
     nb_via_points = wholebody_model.nb_via_points
-    assert nb_via_points == 96
+    assert nb_via_points == 100
 
     q_random = np.random.rand(nb_q)
     q_zeros = np.zeros((nb_q,))
