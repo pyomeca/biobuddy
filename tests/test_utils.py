@@ -423,8 +423,11 @@ def create_simple_model():
     )
 
     # Add a child segment
-    segment_coordinate_system_child = SegmentCoordinateSystemReal()
-    segment_coordinate_system_child.from_euler_and_translation(np.zeros((3,)), "xyz", np.array([0.0, 0.0, 1.0, 1.0]))
+    segment_coordinate_system_child = SegmentCoordinateSystemReal().from_euler_and_translation(
+        angles=np.zeros((3,)),
+        angle_sequence="xyz",
+        translation=np.array([0.0, 0.0, 1.0, 1.0]),
+    )
     segment_coordinate_system_child.is_in_local = True
     model.add_segment(
         SegmentReal(
