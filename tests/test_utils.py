@@ -487,6 +487,7 @@ def create_simple_model():
             name="parent_contact1",
             parent_name="parent",
             position=np.array([0.05, 0.2, 0.15, 1.0]),
+            axis=Translations.XYZ,
         )
     )
 
@@ -495,6 +496,7 @@ def create_simple_model():
             name="child_contact1",
             parent_name="child",
             position=np.array([-0.05, 0.5, 0.35, 1.0]),
+            axis=Translations.Z,
         )
     )
 

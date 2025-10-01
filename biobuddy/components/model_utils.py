@@ -17,6 +17,13 @@ class ModelUtils:
         return list(self.segments.keys())
 
     @property
+    def dof_names(self) -> list[str]:
+        names = []
+        for segment in self.segments:
+            names += segment.dof_names
+        return names
+
+    @property
     def marker_names(self) -> list[str]:
         list_marker_names = []
         for segment in self.segments:
@@ -168,13 +175,6 @@ class ModelUtils:
             The name of the degree of freedom to get the index for
         """
         return self.dof_names.index(dof_name)
-
-    @property
-    def dof_names(self) -> list[str]:
-        names = []
-        for segment in self.segments:
-            names += segment.dof_names
-        return names
 
     def markers_indices(self, marker_names: list[str]) -> list[int]:
         """

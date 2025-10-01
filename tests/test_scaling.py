@@ -310,6 +310,10 @@ def test_scaling_wholebody():
 
     # Via point positions
     for muscle_group in original_model.muscle_groups:
+        if muscle_group.name in ["femur_r_to_tibia_r", "femur_l_to_tibia_l"]:
+            # These muscle groups have a moving insertion (vas_med_r and vas_med_l), which is not supported yet
+            continue
+
         for muscle in muscle_group.muscles:
             for via_point in muscle.via_points:
                 biobuddy_scaled_via_point = (

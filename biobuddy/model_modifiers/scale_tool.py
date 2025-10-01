@@ -159,6 +159,7 @@ class ScaleTool:
                 "No scaling configuration was set. Please set a scaling configuration using ScaleTool().from_xml(filepath=filepath) or ScaleTool().from_biomod(filepath=filepath)."
             )
 
+        self.check_that_via_points_are_fixed()
         self.check_that_makers_do_not_move(marker_positions, marker_names)
         self.check_segments()
         self.define_mean_experimental_markers(marker_positions, marker_names)
@@ -177,6 +178,27 @@ class ScaleTool:
         )
 
         return self.scaled_model
+
+    def check_that_via_points_are_fixed(self):
+        """
+        It is not possible yet to scale a model that has moving via points.
+        """
+        for muscle_group in self.original_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.origin_position.movement is not None:
+                    raise RuntimeError(
+                        f"The muscle {muscle.name} has a moving origin. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                    )
+                if muscle.insertion_position.movement is not None:
+                    raise RuntimeError(
+                        f"The muscle {muscle.name} has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                    )
+                for via_point in muscle.via_points:
+                    if via_point.movement is not None:
+                        if muscle.insertion_position.movement is not None:
+                            raise RuntimeError(
+                                f"The muscle {muscle.name} has a moving via point. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                            )
 
     def check_that_makers_do_not_move(self, marker_positions, marker_names):
         """

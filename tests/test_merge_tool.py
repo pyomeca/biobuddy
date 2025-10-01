@@ -106,7 +106,7 @@ def test_merge_segments_tool_merge_on_top():
     assert merged_model.nb_muscles == 1
     assert merged_model.nb_via_points == 1
     assert merged_model.nb_markers == 4
-    assert merged_model.nb_contacts == 0
+    assert merged_model.nb_contacts == 2
 
     # Check the segment's name
     assert merged_model.segments[1].name == "both"
@@ -166,7 +166,7 @@ def test_merge_segments_tool_merge_on_top():
 
     # Check the merged segment's contacts
     for i_contact in range(merged_model.nb_contacts):
-        biorbd_contact = biorbd_merged.rigidContact(q_zeros, i_contact).to_array()
+        biorbd_contact = biorbd_merged.rigidContact(q_zeros, i_contact, True).to_array()
         biobuddy_contact = merged_model.segments["both"].contacts[i_contact].position.reshape(
             4,
         )[

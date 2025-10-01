@@ -279,6 +279,43 @@ class OsimModelParser:
         # If we reach this point the joint was not found or the joint_name is empty
         return None
 
+    def _modify_moving_via_point_dof_name(self, via_point: ViaPointReal, muscle: MuscleReal, dof_names: list[str]):
+        if via_point.movement is not None:
+            new_dof_names = []
+            for i_dof, joint_name in enumerate(via_point.movement.joint_names):
+                joint = self._find_joint(joint_name)
+                if joint is not None:
+                    new_dof_name = f"{joint.parent}_{via_point.movement.dof_names[i_dof]}"
+                    if new_dof_name in dof_names:
+                        new_dof_names += [new_dof_name]
+                    else:
+                        raise RuntimeError(
+                            f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
+                        )
+            old_movement = deepcopy(via_point.movement)
+            via_point.movement = PathPointMovement(
+                dof_names=new_dof_names,
+                locations=old_movement.locations,
+            )
+
+
+    def _modify_conditional_via_point_dof_name(self, via_point: ViaPointReal, muscle: MuscleReal, dof_names: list[str]):
+        if via_point.condition is not None:
+            joint = self._find_joint(via_point.condition.joint_name)
+            if joint is not None:
+                new_dof_name = f"{joint.parent}_{via_point.condition.dof_name}"
+                if new_dof_name in dof_names:
+                    old_condition = deepcopy(via_point.condition)
+                    via_point.condition = PathPointCondition(
+                        dof_name=new_dof_name,
+                        range_min=old_condition.range_min,
+                        range_max=old_condition.range_max,
+                    )
+                else:
+                    raise RuntimeError(
+                        f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
+                    )
+
     def _validate_dof_names(self):
         """
         This function checks that all the dof names in the model are unique and that the functions use the prefixed dof_name version.
@@ -292,43 +329,23 @@ class OsimModelParser:
                     dof_names.append(dof.coordinate.name)
 
         for muscle in self.muscles:
+
+            # Change moving origin and insertion dof names
+            self._modify_moving_via_point_dof_name(via_point=muscle.origin_position, muscle=muscle, dof_names=dof_names)
+            self._modify_moving_via_point_dof_name(via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names)
+
+            # Change conditional origin and insertion dof names
+            self._modify_conditional_via_point_dof_name(via_point=muscle.origin_position, muscle=muscle, dof_names=dof_names)
+            self._modify_conditional_via_point_dof_name(via_point=muscle.insertion_position, muscle=muscle, dof_names=dof_names)
+
             for via_point in muscle.via_points:
 
                 # Change moving via point dof names
-                if via_point.movement is not None:
-                    new_dof_names = []
-                    for i_dof, joint_name in enumerate(via_point.movement.joint_names):
-                        joint = self._find_joint(joint_name)
-                        if joint is not None:
-                            new_dof_name = f"{joint.parent}_{via_point.movement.dof_names[i_dof]}"
-                            if new_dof_name in dof_names:
-                                new_dof_names += [new_dof_name]
-                            else:
-                                raise RuntimeError(
-                                    f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
-                                )
-                    old_movement = deepcopy(via_point.movement)
-                    via_point.movement = PathPointMovement(
-                        dof_names=new_dof_names,
-                        locations=old_movement.locations,
-                    )
+                self._modify_moving_via_point_dof_name(via_point=via_point, muscle=muscle, dof_names=dof_names)
 
                 # Change conditional via point dof names
-                if via_point.condition is not None:
-                    joint = self._find_joint(via_point.condition.joint_name)
-                    if joint is not None:
-                        new_dof_name = f"{joint.parent}_{via_point.condition.dof_name}"
-                        if new_dof_name in dof_names:
-                            old_condition = deepcopy(via_point.condition)
-                            via_point.condition = PathPointCondition(
-                                dof_name=new_dof_name,
-                                range_min=old_condition.range_min,
-                                range_max=old_condition.range_max,
-                            )
-                        else:
-                            raise RuntimeError(
-                                f"The dof name {new_dof_name} for the via point {via_point.name} in muscle {muscle.name} does not exist in the model. This should not happen, please contact the developers."
-                            )
+                self._modify_conditional_via_point_dof_name(via_point=via_point, muscle=muscle, dof_names=dof_names)
+
 
     def _set_warnings(self):
         self.get_probe_set()
@@ -630,11 +647,11 @@ class OsimModelParser:
                 initial_rotation = compute_matrix_rotation([0, 0, float(default_values[i])])
 
             coordinate = spatial_transform[i].coordinate
-            if coordinate is None:
+            if coordinate is None or coordinate.locked:
                 body_dof = name + f"_rotation_{i}"
                 rot_dof = ""
             else:
-                rot_dof = list_rot_dof[count_dof_rot] if not coordinate.locked else "//" + list_rot_dof[count_dof_rot]
+                rot_dof = list_rot_dof[count_dof_rot]
                 body_dof = spatial_transform[i].coordinate.name
                 q_range = q_ranges[i]
 
