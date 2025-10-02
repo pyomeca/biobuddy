@@ -188,7 +188,10 @@ def test_scaling_wholebody():
     )
 
     # Test errors from moving muscle origin or insertion
-    with pytest.raises(NotImplementedError, match=r"The muscle vas_med_r has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points\(\) before scaling the model."):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The muscle vas_med_r has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points\(\) before scaling the model.",
+    ):
         scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
         scaled_model = scale_tool.scale(
             static_c3d=c3d_data,

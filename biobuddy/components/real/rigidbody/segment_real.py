@@ -227,7 +227,10 @@ class SegmentReal(SegmentUtils):
         elif nb_rotations == 1:
             self.rotations = Rotations.NONE
         else:
-            new_dof_str = self.rotations.value[:dof_index-nb_translations] + self.rotations.value[dof_index-nb_translations + 1 :]
+            new_dof_str = (
+                self.rotations.value[: dof_index - nb_translations]
+                + self.rotations.value[dof_index - nb_translations + 1 :]
+            )
             self.rotations = Rotations(new_dof_str)
 
         # Remove the dof ranges
@@ -255,7 +258,7 @@ class SegmentReal(SegmentUtils):
             if len(self.dof_names) == 1:
                 self.dof_names = None
             else:
-                self.dof_names= [m for m in self.dof_names if m != dof_name]
+                self.dof_names = [m for m in self.dof_names if m != dof_name]
 
     def rt_from_local_q(self, local_q: np.ndarray) -> RotoTransMatrix:
 

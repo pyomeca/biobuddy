@@ -624,7 +624,7 @@ def test_segment_real_remove_dof():
     # Create a segment with translations and rotations
     q_ranges = RangeOfMotion(Ranges.Q, [-1, -1, -1, -0.5, -0.5, -0.5], [1, 1, 1, 0.5, 0.5, 0.5])
     qdot_ranges = RangeOfMotion(Ranges.Qdot, [-10, -10, -10, -5, -5, -5], [10, 10, 10, 5, 5, 5])
-    
+
     segment = SegmentReal(
         name="test_segment",
         translations=Translations.XYZ,
@@ -643,12 +643,18 @@ def test_segment_real_remove_dof():
 
     # Remove a translation DoF (first one: X)
     segment.remove_dof("test_segment_transX")
-    
+
     assert segment.nb_q == 5
     assert segment.translations == Translations.YZ
     assert segment.rotations == Rotations.XYZ
     assert len(segment.dof_names) == 5
-    assert segment.dof_names == ["test_segment_transY", "test_segment_transZ", "test_segment_rotX", "test_segment_rotY", "test_segment_rotZ"]
+    assert segment.dof_names == [
+        "test_segment_transY",
+        "test_segment_transZ",
+        "test_segment_rotX",
+        "test_segment_rotY",
+        "test_segment_rotZ",
+    ]
     assert len(segment.q_ranges.min_bound) == 5
     assert segment.q_ranges.min_bound == [-1, -1, -0.5, -0.5, -0.5]
     assert len(segment.qdot_ranges.min_bound) == 5
@@ -656,7 +662,7 @@ def test_segment_real_remove_dof():
 
     # Remove a rotation DoF (middle one: Y)
     segment.remove_dof("test_segment_rotY")
-    
+
     assert segment.nb_q == 4
     assert segment.translations == Translations.YZ
     assert segment.rotations == Rotations.XZ
@@ -670,7 +676,7 @@ def test_segment_real_remove_dof():
     segment.remove_dof("test_segment_transZ")
     segment.remove_dof("test_segment_rotX")
     segment.remove_dof("test_segment_rotZ")
-    
+
     assert segment.nb_q == 0
     assert segment.translations == Translations.NONE
     assert segment.rotations == Rotations.NONE
@@ -696,7 +702,7 @@ def test_segment_real_remove_dof_without_ranges():
 
     # Remove a DoF
     segment.remove_dof("test_segment_transX")
-    
+
     assert segment.nb_q == 2
     assert segment.translations == Translations.Y
     assert segment.rotations == Rotations.Z
