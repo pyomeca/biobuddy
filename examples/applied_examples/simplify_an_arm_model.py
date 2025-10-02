@@ -8,10 +8,6 @@ XY plane.
 Finally, the model is exported as a new .bioMod file that can be used in complex computations like optimal control.
 """
 
-"""
-This file was used to create the arm model used in the reaching learning example.
-"""
-
 # Define some components to remove
 segments_to_remove = [
     "thorax_parent_offset",

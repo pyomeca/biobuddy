@@ -45,6 +45,7 @@ model = BiomechanicalModelReal().from_osim(
 # Translate it into a .bioMod file
 model.to_biomod(biomod_filepath)
 ```
+See the example [read_and_write_models.py](examples/read_and_write_models.py) for more details.
 
 # Model creation
 A model can also be created from scratch using the `BiomechanicalModel`. In this generic model, everything can be defined 
@@ -83,6 +84,7 @@ model.segments["HEAD"].add_marker(Marker("HEAD_XZ"))
 # Evaluate the model with a motion capture trial
 model_real = model.to_real(C3dData(c3d_filepath))
 ```
+See the example [create_model_from_c3d.py](examples/create_model_from_c3d.py) for more details.
 
 There are many different components available to build a model (see this [example](examples/create_model.py) to see how to add those components to your model).
 
@@ -90,10 +92,11 @@ There are many different components available to build a model (see this [exampl
 
 # Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:
-- [Scaling](###scaling)
-- [Identifying joint centers](###joint-center-identification)
+- [Scaling](#scaling)
+- [Identifying joint centers](#joint-center-identification)
 - [Merging segments](#merging-segments)
 - [Modifying the kinematic chain](#modifying-the-kinematic-chain)
+- [Flattening to get a planar model](#flattening-the-model)
 
 ### Scaling:
 The scaling is performed by the `ScaleTool` which can be initialized from scratch like this:
@@ -131,6 +134,7 @@ mass of your participant using the `ScaleTool.scale` like this:
 scale_tool = ScaleTool.from_biomod(biomod_filepath)
 scaled_model = scale_tool.scale(static_c3d=C3dData(filepath), mass=mass)
 ```
+See the example [scaling_model.py](examples/scaling_model.py) for more details.
 
 For now, there are three scaling methods available:
 - `BodyWiseScaling`: scales the entire body based on the total height of the participant.
@@ -173,11 +177,14 @@ joint_center_tool.add(
 # Perform the joint center identification
 modified_model = joint_center_tool.replace_joint_centers()
 ```
+See the example [replace_joint_centers_functionally.py](examples/replace_joint_centers_functionally.py) for more details.
+
 For now, two algorithms were implemented `SCoRE` to locate the position of the joint center and `SARA` 
 to identify the joint axis of rotation. Please note that in both cases, all segment components stay the same, only the 
 joint position and axis are modified.
 
 ![SCoRE_SARA](docs/images/SCoRE_SARA.png)
+
 
 ### Merging segments:
 The `MergeSegmentTool` allows you to merge two segments into one (including inertial parameters and all the components on the segment).
@@ -203,8 +210,10 @@ merge_tool.add(
 )
 modified_model = merge_tool.merge()
 ```
+See the example [create_a_population_of_models.py](examples/applied_examples/create_a_population_of_models.py) for more details.
 
 ![merge_segments](docs/images/merge_segments.png)
+
 
 ### Modifying the kinematic chain:
 The `ModifyKinematicChainTool` allows you to modify the kinematic chain of your model.
@@ -215,8 +224,23 @@ kinematic_chain_modifier = ModifyKinematicChainTool(original_model)
 kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="FOOT"))
 modified_model = kinematic_chain_modifier.modify()
 ```
+See the example [create_a_population_of_models.py](examples/applied_examples/create_a_population_of_models.py) for more details.
 
 ![kinematic_chain_modifier](docs/images/kinematic_chain_modifier.png)
+
+
+### Flattening the model:
+The `FlatteningTool` allows you to transform a 3D into a 2D model.
+It projects all segment components (com, muscle via points, ...) on the plane orthogonal to the `axis` specified.
+Please note that for now the following components are not modified automatically (i.e., same as the original model):
+- Inertia (which should not have an impact of the model is used in a 2D simulation)
+- Degrees of freedom (these should be modified by the user after flattening the model)
+```python3
+symmetry_tool = FlatteningTool(model, axis=Translations.Z)
+model = symmetry_tool.flatten()
+```
+See the example [simplify_an_arm_model.py](examples/applied_examples/simplify_an_arm_model.py) for more details.
+
 
 # Note
 Understandably, not all modeling formats have the same functionalities, so some features may not be available for all 
