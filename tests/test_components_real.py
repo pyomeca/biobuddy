@@ -620,6 +620,96 @@ def test_segment_real_add_remove_imu():
     assert len(segment.imus) == 0
 
 
+def test_segment_real_remove_dof():
+    # Create a segment with translations and rotations
+    q_ranges = RangeOfMotion(Ranges.Q, [-1, -1, -1, -0.5, -0.5, -0.5], [1, 1, 1, 0.5, 0.5, 0.5])
+    qdot_ranges = RangeOfMotion(Ranges.Qdot, [-10, -10, -10, -5, -5, -5], [10, 10, 10, 5, 5, 5])
+
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ,
+        q_ranges=q_ranges,
+        qdot_ranges=qdot_ranges,
+    )
+
+    # Verify initial state
+    assert segment.nb_q == 6
+    assert segment.translations == Translations.XYZ
+    assert segment.rotations == Rotations.XYZ
+    assert len(segment.dof_names) == 6
+    assert len(segment.q_ranges.min_bound) == 6
+    assert len(segment.qdot_ranges.min_bound) == 6
+
+    # Remove a translation DoF (first one: X)
+    segment.remove_dof("test_segment_transX")
+
+    assert segment.nb_q == 5
+    assert segment.translations == Translations.YZ
+    assert segment.rotations == Rotations.XYZ
+    assert len(segment.dof_names) == 5
+    assert segment.dof_names == [
+        "test_segment_transY",
+        "test_segment_transZ",
+        "test_segment_rotX",
+        "test_segment_rotY",
+        "test_segment_rotZ",
+    ]
+    assert len(segment.q_ranges.min_bound) == 5
+    assert segment.q_ranges.min_bound == [-1, -1, -0.5, -0.5, -0.5]
+    assert len(segment.qdot_ranges.min_bound) == 5
+    assert segment.qdot_ranges.min_bound == [-10, -10, -5, -5, -5]
+
+    # Remove a rotation DoF (middle one: Y)
+    segment.remove_dof("test_segment_rotY")
+
+    assert segment.nb_q == 4
+    assert segment.translations == Translations.YZ
+    assert segment.rotations == Rotations.XZ
+    assert len(segment.dof_names) == 4
+    assert segment.dof_names == ["test_segment_transY", "test_segment_transZ", "test_segment_rotX", "test_segment_rotZ"]
+    assert len(segment.q_ranges.min_bound) == 4
+    assert segment.q_ranges.min_bound == [-1, -1, -0.5, -0.5]
+
+    # Remove all remaining DoFs one by one
+    segment.remove_dof("test_segment_transY")
+    segment.remove_dof("test_segment_transZ")
+    segment.remove_dof("test_segment_rotX")
+    segment.remove_dof("test_segment_rotZ")
+
+    assert segment.nb_q == 0
+    assert segment.translations == Translations.NONE
+    assert segment.rotations == Rotations.NONE
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+
+    # Test error when trying to remove non-existent DoF
+    with pytest.raises(RuntimeError, match="The dof .* is not part of the segment"):
+        segment.remove_dof("non_existent_dof")
+
+
+def test_segment_real_remove_dof_without_ranges():
+    # Create a segment without ranges
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XY,
+        rotations=Rotations.Z,
+    )
+
+    assert segment.nb_q == 3
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+
+    # Remove a DoF
+    segment.remove_dof("test_segment_transX")
+
+    assert segment.nb_q == 2
+    assert segment.translations == Translations.Y
+    assert segment.rotations == Rotations.Z
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+
+
 def test_segment_real_rt_from_local_q():
     # Create a segment with translations and rotations
     segment = SegmentReal(name="test_segment", translations=Translations.XYZ, rotations=Rotations.XYZ)

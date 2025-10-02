@@ -171,7 +171,6 @@ def test_simm_spline_errors():
         biobuddy_spline.evaluate_derivative(90.0, order=1)
 
 
-
 @pytest.mark.parametrize("nb_nodes", [2, 3])
 def test_linear_function(nb_nodes: int):
 
@@ -248,7 +247,6 @@ def test_linear_function(nb_nodes: int):
         a, b = biobuddy_spline.get_coefficients()
         npt.assert_almost_equal(a, np.array([expected_a_1, expected_a_2]))
         npt.assert_almost_equal(b, np.array([expected_b_1, expected_b_2]))
-
 
 
 def test_linear_function_errors():

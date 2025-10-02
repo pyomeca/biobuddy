@@ -219,14 +219,18 @@ class SegmentReal(SegmentUtils):
         nb_rotations = 0 if self.rotations == Rotations.NONE else len(self.rotations.value)
 
         # Remove the dof type
-        if nb_translations + nb_rotations == 1:
+        if nb_translations == 1:
             self.translations = Translations.NONE
-            self.rotations = Rotations.NONE
         elif dof_index < nb_translations:
             new_dof_str = self.translations.value[:dof_index] + self.translations.value[dof_index + 1 :]
             self.translations = Translations(new_dof_str)
+        elif nb_rotations == 1:
+            self.rotations = Rotations.NONE
         else:
-            new_dof_str = self.rotations.value[:dof_index] + self.rotations.value[dof_index + 1 :]
+            new_dof_str = (
+                self.rotations.value[: dof_index - nb_translations]
+                + self.rotations.value[dof_index - nb_translations + 1 :]
+            )
             self.rotations = Rotations(new_dof_str)
 
         # Remove the dof ranges
@@ -243,7 +247,6 @@ class SegmentReal(SegmentUtils):
             if len(self.qdot_ranges.min_bound) == 1:
                 self.qdot_ranges = None
             else:
-                self.qdot_ranges = self.qdot_ranges[~dof_index]
                 self.qdot_ranges = RangeOfMotion(
                     range_type=self.qdot_ranges.range_type,
                     min_bound=[m for i, m in enumerate(self.qdot_ranges.min_bound) if i != dof_index],
