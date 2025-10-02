@@ -53,7 +53,7 @@ def test_kinematic_chain_tool_modify():
     assert modified_model.nb_muscles == 1
     assert modified_model.nb_via_points == 1
     assert modified_model.nb_markers == 4
-    assert modified_model.nb_contacts == 0
+    assert modified_model.nb_contacts == 2
 
     # Check the segment's name
     assert modified_model.segment_names == ["root", "child", "parent", "PELVIS"]
@@ -151,8 +151,10 @@ def test_kinematic_chain_tool_modify():
         modified_model.markers_in_global()[:, :, 0], original_model.markers_in_global()[:, [2, 3, 0, 1], 0]
     )
 
-    # Check that the contacts did not move in the global (only one contact)
-    npt.assert_almost_equal(modified_model.contacts_in_global(), original_model.contacts_in_global())
+    # Check that the contacts did not move in the global (but the order changed)
+    npt.assert_almost_equal(
+        modified_model.contacts_in_global()[:, :, 0], original_model.contacts_in_global()[:, [1, 0], 0]
+    )
 
     # Test Via point positions
     for i_muscle, muscle_name in enumerate(modified_model.muscle_names):

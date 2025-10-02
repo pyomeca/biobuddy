@@ -1,16 +1,11 @@
-from typing import Callable, Any
-
 import numpy as np
 
-from ....utils.aliases import Points, points_to_array
-from ....utils.protocols import Data
-from ....utils.named_list import NamedList
 from .via_point_real import ViaPointReal
-from ...generic.muscle.via_point import ViaPoint
-from ...muscle_utils import MuscleType, MuscleStateType
+from ....utils.named_list import NamedList
+from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 
 
-class MuscleReal:
+class MuscleReal(MuscleUtils):
     def __init__(
         self,
         name: str,
@@ -54,6 +49,8 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        super().__init__()
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -268,10 +265,6 @@ class MuscleReal:
             else:
                 raise ValueError("The maximal excitation must be a float.")
         self._maximal_excitation = value
-
-    @property
-    def nb_via_points(self) -> int:
-        return len(self.via_points)
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly

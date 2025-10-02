@@ -1,0 +1,581 @@
+version 4
+
+
+// File extracted from /Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/MOBL_ARMS_41.osim on the 2025-09-28 15:00
+
+// Original file publication : Comp Meth Biomech Biomed Eng 2014
+
+// Original file credit : Katherine R. Saul, Wendy M. Murray, Craig M. Goehler, Melissa Daly, Meghan E. Vidt, Dustin L. Crouch
+
+// Force units : N
+
+// Length units : meters
+
+
+gravity	0.0	-9.80665	0.0
+
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	root
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	scapula
+	parent	root
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.70396
+	CenterOfMass	-0.054694	-0.035032	0.000000
+	inertia
+		0.001243	0.000449	0.000409
+		0.000449	0.001150	0.000241
+		0.000409	0.000241	0.001365
+endsegment
+
+
+
+segment	humerus
+	parent	scapula
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	z
+	mass	1.99757
+	CenterOfMass	0.018064	-0.140141	0.000000
+	inertia
+		0.012278	-0.000347	-0.000233
+		-0.000347	0.002551	0.001229
+		-0.000233	0.001229	0.012579
+	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/humerus.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0	1.0	1.0
+	meshrt	0.15	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	ulna_parent_offset
+	parent	humerus
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.006100
+		-0.000000	1.000000	0.000000	-0.290400
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	ulna
+	parent	ulna_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	z
+	mass	1.1053
+	CenterOfMass	0.009718	-0.095951	0.000000
+	inertia
+		0.005413	0.000317	-0.000076
+		0.000317	0.001153	0.001092
+		-0.000076	0.001092	0.004944
+	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/ulna.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0	1.0	1.0
+	meshrt	0.25	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+segment	radius_parent_offset
+	parent	ulna
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	0.000400
+		-0.000000	1.000000	0.000000	-0.011503
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+endsegment
+
+
+
+segment	radius
+	parent	radius_parent_offset
+	RTinMatrix	1
+	RT
+		1.000000	-0.000000	0.000000	-0.000000
+		-0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	mass	0.23359
+	CenterOfMass	0.033634	-0.181559	0.000000
+	inertia
+		0.000439	0.000030	-0.000004
+		0.000030	0.000089	0.000064
+		-0.000004	0.000064	0.000403
+	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/radius.vtp
+	meshcolor	1.0	1.0	1.0
+	meshscale	1.0	1.0	1.0
+	meshrt	0.25	0.0	0.0	xyz	0.0	0.0	0.0
+endsegment
+
+
+
+// --------------------------------------------------------------
+// MUSCLES
+// --------------------------------------------------------------
+
+musclegroup	scapula_to_ulna
+	OriginParent	scapula
+	InsertionParent	ulna
+endmusclegroup
+
+ // ------ MUSCLES ------
+muscle	TRIlong
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	scapula_to_ulna
+	originposition	-0.0457	-0.0407	0.0
+	insertionposition	-0.0219	0.0105	0.0
+	optimallength	0.1337
+	maximalforce	771.8000
+	tendonslacklength	0.1427
+	pennationangle	0.2094
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	TRIlong-P2
+	parent	humerus
+	muscle	TRIlong
+	musclegroup	scapula_to_ulna
+	position	-0.02714	-0.11441	0.0
+endviapoint
+
+
+viapoint	TRIlong-P3
+	parent	humerus
+	muscle	TRIlong
+	musclegroup	scapula_to_ulna
+	position	-0.03184	-0.22637	0.0
+endviapoint
+
+
+viapoint	TRIlong-P4
+	parent	humerus
+	muscle	TRIlong
+	musclegroup	scapula_to_ulna
+	position	-0.01743	-0.26757	0.0
+endviapoint
+
+
+
+musclegroup	humerus_to_ulna
+	OriginParent	humerus
+	InsertionParent	ulna
+endmusclegroup
+
+ // ------ MUSCLES ------
+muscle	TRIlat
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_to_ulna
+	originposition	-0.006	-0.1265	0.0
+	insertionposition	-0.0219	0.0105	0.0
+	optimallength	0.1115
+	maximalforce	717.5000
+	tendonslacklength	0.0961
+	pennationangle	0.1571
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	TRIlat-P2
+	parent	humerus
+	muscle	TRIlat
+	musclegroup	humerus_to_ulna
+	position	-0.02344	-0.14528	0.0
+endviapoint
+
+
+viapoint	TRIlat-P3
+	parent	humerus
+	muscle	TRIlat
+	musclegroup	humerus_to_ulna
+	position	-0.03184	-0.22637	0.0
+endviapoint
+
+
+viapoint	TRIlat-P4
+	parent	humerus
+	muscle	TRIlat
+	musclegroup	humerus_to_ulna
+	position	-0.01743	-0.26757	0.0
+endviapoint
+
+
+muscle	TRImed
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_to_ulna
+	originposition	-0.0084	-0.1369	0.0
+	insertionposition	-0.0219	0.0105	0.0
+	optimallength	0.1137
+	maximalforce	717.5000
+	tendonslacklength	0.0907
+	pennationangle	0.1571
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	TRImed-P2
+	parent	humerus
+	muscle	TRImed
+	musclegroup	humerus_to_ulna
+	position	-0.02601	-0.15139	0.0
+endviapoint
+
+
+viapoint	TRImed-P3
+	parent	humerus
+	muscle	TRImed
+	musclegroup	humerus_to_ulna
+	position	-0.03184	-0.22637	0.0
+endviapoint
+
+
+viapoint	TRImed-P4
+	parent	humerus
+	muscle	TRImed
+	musclegroup	humerus_to_ulna
+	position	-0.01743	-0.26757	0.0
+endviapoint
+
+
+muscle	BRA
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	humerus_to_ulna
+	originposition	0.0068	-0.1739	0.0
+	insertionposition	-0.0032	-0.0239	0.0
+	optimallength	0.0857
+	maximalforce	1177.3700
+	tendonslacklength	0.0534
+	pennationangle	0.0000
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	BRA-P2
+	parent	humerus
+	muscle	BRA
+	musclegroup	humerus_to_ulna
+	position	0.01894	-0.28559	0.0
+endviapoint
+
+
+viapoint	BRA-P3
+	parent	ulna
+	muscle	BRA
+	musclegroup	humerus_to_ulna
+	position	0.00498	-0.01463	0.0
+endviapoint
+
+
+
+musclegroup	scapula_to_radius
+	OriginParent	scapula
+	InsertionParent	radius
+endmusclegroup
+
+ // ------ MUSCLES ------
+muscle	BIClong
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	scapula_to_radius
+	originposition	-0.0312	-0.0235	0.0
+	insertionposition	-0.002	-0.0375	0.0
+	optimallength	0.1136
+	maximalforce	525.1000
+	tendonslacklength	0.2674
+	pennationangle	0.0000
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	BIClong-P2
+	parent	scapula
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	-0.02094	-0.01309	0.0
+endviapoint
+
+
+viapoint	BIClong-P3
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.02131	0.01793	0.0
+endviapoint
+
+
+viapoint	BIClong-P4
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.02378	-0.00511	0.0
+endviapoint
+
+
+viapoint	BIClong-P5
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.01345	-0.02827	0.0
+endviapoint
+
+
+viapoint	BIClong-P6
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.01068	-0.07736	0.0
+endviapoint
+
+
+viapoint	BIClong-P7
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.01703	-0.12125	0.0
+endviapoint
+
+
+viapoint	BIClong-P8
+	parent	humerus
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.0228	-0.1754	0.0
+endviapoint
+
+
+viapoint	default
+	parent	radius
+	muscle	BIClong
+	musclegroup	scapula_to_radius
+	position	0.0	0.0	0.0
+endviapoint
+
+
+muscle	BICshort
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	scapula_to_radius
+	originposition	0.0127	-0.0393	0.0
+	insertionposition	-0.002	-0.0375	0.0
+	optimallength	0.1306
+	maximalforce	316.8000
+	tendonslacklength	0.1901
+	pennationangle	0.0000
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	BICshort-P2
+	parent	scapula
+	muscle	BICshort
+	musclegroup	scapula_to_radius
+	position	0.00093	-0.06704	0.0
+endviapoint
+
+
+viapoint	BICshort-P3
+	parent	humerus
+	muscle	BICshort
+	musclegroup	scapula_to_radius
+	position	0.01117	-0.07576	0.0
+endviapoint
+
+
+viapoint	BICshort-P4
+	parent	humerus
+	muscle	BICshort
+	musclegroup	scapula_to_radius
+	position	0.01703	-0.12125	0.0
+endviapoint
+
+
+viapoint	BICshort-P5
+	parent	humerus
+	muscle	BICshort
+	musclegroup	scapula_to_radius
+	position	0.0228	-0.1754	0.0
+endviapoint
+
+
+viapoint	default
+	parent	radius
+	muscle	BICshort
+	musclegroup	scapula_to_radius
+	position	0.0	0.0	0.0
+endviapoint
+
+
+
+
+
+
+
+/*-------------- WARNINGS---------------
+
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some CoordinateLimitForce were present in the original file force set. Only muscles are supported so they will be ignored.
+Some wrapping objects were present on the muscle DELT1 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle DELT2 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle DELT3 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle SUPSP in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle INFSP in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle SUBSC in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle TMIN in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle TMAJ in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PECM1 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PECM2 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PECM3 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle LAT1 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle LAT2 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle LAT3 in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle CORB in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle TRIlong in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle TRIlat in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle TRImed in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle ANC in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle SUP in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle BIClong in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle BICshort in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle BRD in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle ECRL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle ECRB in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle ECU in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FCR in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FCU in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PT in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle PQ in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDSL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDSR in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDSM in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDSI in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDPL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDPR in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDPM in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FDPI in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EDCL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EDCR in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EDCM in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EDCI in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EDM in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EIP in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EPL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle EPB in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some wrapping objects were present on the muscle FPL in the original file force set.
+Wraping objects are not supported yet so they will be ignored.
+Some constraints were present in the original file. This feature is not implemented in biorbd yet so it will be ignored.
+
+*/

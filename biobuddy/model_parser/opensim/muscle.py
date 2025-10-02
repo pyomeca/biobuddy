@@ -4,7 +4,7 @@ import numpy as np
 from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree
-from .path_point import PathPoint, condition_from_element, movement_from_element
+from .path_point import PathPoint, PathPointMovement, PathPointCondition
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
@@ -86,6 +86,7 @@ def get_muscle_from_element(
     maximal_velocity = find_in_tree(element, "max_contraction_velocity")
     maximal_velocity = float(maximal_velocity) if maximal_velocity else 10.0
 
+    origin_or_insertion_problem = False
     path_points: list[PathPoint] = []
     via_points: list[PathPoint] = []
     path_point_elts = find_sub_elements_in_tree(
@@ -93,19 +94,36 @@ def get_muscle_from_element(
         parent_element_name=["GeometryPath", "PathPointSet", "objects"],
         sub_element_names=["PathPoint", "ConditionalPathPoint", "MovingPathPoint"],
     )
-    for path_point_elt in path_point_elts:
+    for i_path_point, path_point_elt in enumerate(path_point_elts):
         via_point = PathPoint.from_element(path_point_elt)
         via_point.muscle = name
-        via_point.condition = (
-            condition_from_element(path_point_elt) if path_point_elt.tag == "ConditionalPathPoint" else None
-        )
-        movement, warning = (
-            movement_from_element(path_point_elt) if path_point_elt.tag == "MovingPathPoint" else (None, "")
-        )
+
+        # Condition
+        condition = None
+        warning = ""
+        if path_point_elt.tag == "ConditionalPathPoint":
+            condition, warning = PathPointCondition.from_element(path_point_elt)
         if warning != "":
             warnings += warning
+            if i_path_point == 0 or i_path_point == len(path_point_elts) - 1:
+                # If there is a problem with the origin or insertion of a muscle, it is better to skip this muscle al together
+                return None, None, warnings
+        else:
+            via_point.condition = condition
+
+        # Movement
+        movement = None
+        warning = ""
+        if path_point_elt.tag == "MovingPathPoint":
+            movement, warning = PathPointMovement.from_element(path_point_elt)
+        if warning != "":
+            warnings += warning
+            if i_path_point == 0 or i_path_point == len(path_point_elts) - 1:
+                # If there is a problem with the origin or insertion of a muscle, it is better to skip this muscle al together
+                return None, None, warnings
         else:
             via_point.movement = movement
+
         via_points.append(via_point)
         path_points.append(via_point)
 
@@ -130,23 +148,29 @@ def get_muscle_from_element(
         return muscle_group, None, ""
     else:
 
-        origin_problem = path_points[0].condition is not None or path_points[0].movement is not None
-        insertion_problem = path_points[-1].condition is not None or path_points[-1].movement is not None
-        if origin_problem or insertion_problem:
-            warnings += (
-                f"\nThe muscle {name} has a conditional or moving insertion or origin, it is not implemented yet."
-            )
-            return muscle_group, None, warnings
+        if isinstance(path_points[0].movement, PathPointMovement):
+            origin_pos = None
+        else:
+            origin_pos = np.array([float(v) for v in via_points[0].position.split()])
+
+        if isinstance(path_points[-1].movement, PathPointMovement):
+            insertion_pos = None
+        else:
+            insertion_pos = np.array([float(v) for v in via_points[-1].position.split()])
 
         origin_position = ViaPointReal(
             name=f"origin_{name}",
             parent_name=via_points[0].body,
-            position=np.array([float(v) for v in via_points[0].position.split()]),
+            position=origin_pos,
+            condition=via_points[0].condition,
+            movement=via_points[0].movement,
         )
         insertion_position = ViaPointReal(
             name=f"insertion_{name}",
             parent_name=via_points[-1].body,
-            position=np.array([float(v) for v in via_points[-1].position.split()]),
+            position=insertion_pos,
+            condition=via_points[-1].condition,
+            movement=via_points[-1].movement,
         )
 
         muscle = MuscleReal(
@@ -166,8 +190,10 @@ def get_muscle_from_element(
 
         for via_point in via_points[1:-1]:
 
-            position = np.array([float(v) for v in via_point.position.split()])
-
+            if via_point.movement is not None:
+                position = None
+            else:
+                position = np.array([float(v) for v in via_point.position.split()])
             muscle.add_via_point(
                 ViaPointReal(
                     name=via_point.name,
@@ -175,6 +201,8 @@ def get_muscle_from_element(
                     muscle_name=name,
                     muscle_group=muscle_group_name,
                     position=position,
+                    condition=via_point.condition,
+                    movement=via_point.movement,
                 )
             )
 
