@@ -6,6 +6,7 @@ import opensim as osim
 
 from biobuddy import (
     SimmSpline,
+    PiecewiseLinearFunction,
 )
 
 
@@ -168,3 +169,113 @@ def test_simm_spline_errors():
         biobuddy_spline.evaluate_derivative(0.0, order=1)
     with pytest.raises(NotImplementedError, match="Extrapolation for derivatives is not implemented."):
         biobuddy_spline.evaluate_derivative(90.0, order=1)
+
+
+
+@pytest.mark.parametrize("nb_nodes", [2, 3])
+def test_linear_function(nb_nodes: int):
+
+    # Create sample data
+    if nb_nodes == 2:
+        x_points = [0, 45]
+        y_points = [0.02, 0.05]
+    else:
+        x_points = [0, 45, 90]
+        y_points = [0.02, 0.05, 0.01]
+
+    # Create spline
+    biobuddy_spline = PiecewiseLinearFunction(np.array(x_points), np.array(y_points))
+
+    # Test evaluation
+    if nb_nodes == 2:
+        test_x = 37.5
+        expected_a = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
+        expected_b = 0.02
+        expected_value = expected_a * test_x + expected_b
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+
+        # Test derivatives
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=2), 0, decimal=6)
+
+        # Get coefficients
+        a, b = biobuddy_spline.get_coefficients()
+        npt.assert_almost_equal(a, expected_a)
+        npt.assert_almost_equal(b, expected_b)
+
+        # Test for extrapolation
+        test_x = -10.0
+        expected_value = expected_a * test_x + expected_b
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+
+        test_x = 180.0
+        expected_value = expected_a * test_x + expected_b
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+
+        # Test for values at the end of the range
+        test_x = 0.0
+        expected_value = expected_a * test_x + expected_b
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+
+        test_x = 90.0
+        expected_value = expected_a * test_x + expected_b
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+
+    elif nb_nodes == 3:
+        # Test the first segment
+        test_x = 7.5
+        expected_a_1 = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
+        expected_b_1 = 0.02
+        expected_value = expected_a_1 * test_x + expected_b_1
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+
+        # Test derivatives
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_1, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=2), 0, decimal=6)
+
+        # Test the second segment
+        test_x = 57.5
+        expected_a_2 = (y_points[2] - y_points[1]) / (x_points[2] - x_points[1])
+        expected_b_2 = y_points[1] - expected_a_2 * x_points[1]
+        expected_value = expected_a_2 * test_x + expected_b_2
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+
+        # Test derivatives
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_2, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=2), 0, decimal=6)
+
+        # Get coefficients
+        a, b = biobuddy_spline.get_coefficients()
+        npt.assert_almost_equal(a, np.array([expected_a_1, expected_a_2]))
+        npt.assert_almost_equal(b, np.array([expected_b_1, expected_b_2]))
+
+
+
+def test_linear_function_errors():
+
+    # Test with less than two points
+    with pytest.raises(ValueError, match="At least 2 data points are required"):
+        PiecewiseLinearFunction(np.array([1.0]), np.array([1.0]))
+
+    # Test with mismatched lengths
+    with pytest.raises(ValueError, match="x_points and y_points must have the same length"):
+        PiecewiseLinearFunction(np.array([0, 1]), np.array([0, 1, 2]))
+
+    # Test non-increasing x
+    with pytest.raises(ValueError, match="x_points must be sorted in ascending order"):
+        PiecewiseLinearFunction(np.array([1.0, 0.5, 0.0]), np.array([1.0, 0.5, 0.0]))
+
+    # order
+    x_points = [0, 15, 30, 45, 60, 75, 90]
+    y_points = [0.02, 0.045, 0.055, 0.05, 0.04, 0.025, 0.01]
+    biobuddy_spline = PiecewiseLinearFunction(np.array(x_points), np.array(y_points))
+    with pytest.raises(
+        RuntimeError,
+        match="The order of the derivative must be an int larger or equal to 1.0",
+    ):
+        biobuddy_spline.evaluate_derivative(30, order=0)
+    with pytest.raises(
+        RuntimeError,
+        match="The order of the derivative must be an int larger or equal to 1.0",
+    ):
+        biobuddy_spline.evaluate_derivative(30, order=1.5)
