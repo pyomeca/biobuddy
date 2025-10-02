@@ -123,10 +123,7 @@ class Marker:
 
         # Get the position of the markers and do some sanity checks
         position = points_to_array(points=self.function(data.values, model), name=f"marker function")
-        try:
-            marker_position = scs.inverse @ position
-        except:
-            print("ddd")
+        marker_position = scs.inverse @ position
 
         if np.isnan(marker_position).all():
             raise RuntimeError(f"All the values for {self.function} returned nan which is not permitted")
