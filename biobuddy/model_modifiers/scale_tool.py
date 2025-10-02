@@ -186,17 +186,17 @@ class ScaleTool:
         for muscle_group in self.original_model.muscle_groups:
             for muscle in muscle_group.muscles:
                 if muscle.origin_position.movement is not None:
-                    raise RuntimeError(
+                    raise NotImplementedError(
                         f"The muscle {muscle.name} has a moving origin. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
                     )
                 if muscle.insertion_position.movement is not None:
-                    raise RuntimeError(
+                    raise NotImplementedError(
                         f"The muscle {muscle.name} has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
                     )
                 for via_point in muscle.via_points:
                     if via_point.movement is not None:
                         if muscle.insertion_position.movement is not None:
-                            raise RuntimeError(
+                            raise NotImplementedError(
                                 f"The muscle {muscle.name} has a moving via point. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
                             )
 
