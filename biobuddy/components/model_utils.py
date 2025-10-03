@@ -176,6 +176,20 @@ class ModelUtils:
         """
         return self.dof_names.index(dof_name)
 
+    def dof_parent_segment_name(self, dof_name: str) -> str:
+        """
+        Get the name of the segment to which a degree of freedom belongs.
+
+        Parameters
+        ----------
+        dof_name
+            The name of the degree of freedom to get the parent segment for
+        """
+        for segment in self.segments:
+            if dof_name in segment.dof_names:
+                return segment.name
+        raise ValueError(f"Degree of freedom {dof_name} not found in the model")
+
     def markers_indices(self, marker_names: list[str]) -> list[int]:
         """
         Get the indices of the markers of the model
