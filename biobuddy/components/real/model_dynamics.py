@@ -739,7 +739,7 @@ class ModelDynamics:
                     model_path = "temporary.bioMod"
                     self.to_biomod(model_path, with_mesh=False)
 
-                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=False)
+                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
             except ImportError:
