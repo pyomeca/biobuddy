@@ -98,3 +98,6 @@ class InertialMeasurementUnitReal:
         out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
         out_string += "endimu\n"
         return out_string
+
+    def to_osim(self):
+        raise NotImplementedError("Writing .osim files with IMU is not possible yet.")
