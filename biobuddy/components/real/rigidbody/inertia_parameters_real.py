@@ -70,3 +70,25 @@ class InertiaParametersReal:
             out_string += f"\t\t{self.inertia[2, 0]:0.6f}\t{self.inertia[2, 1]:0.6f}\t{self.inertia[2, 2]:0.6f}\n"
 
         return out_string
+
+    def to_osim(self):
+        """
+        Generate OpenSim XML representation of inertia parameters.
+        Note: In OpenSim, inertia parameters are written directly in the Body element,
+        so this method returns a dictionary for use by the body writer.
+        """
+        # OpenSim handles inertia at the body level, not as a separate element
+        # This method returns the data in a format suitable for the body writer
+        inertia_dict = {}
+        
+        if self.mass is not None:
+            inertia_dict['mass'] = self.mass
+        
+        if np.any(self.center_of_mass):
+            com = np.nanmean(self.center_of_mass, axis=1)[:3]
+            inertia_dict['mass_center'] = com
+        
+        if np.any(self.inertia):
+            inertia_dict['inertia'] = self.inertia
+        
+        return inertia_dict

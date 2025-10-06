@@ -146,13 +146,14 @@ class OpensimModelWriter:
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"../{parent_name}"
         
-        rt = segment.segment_coordinate_system.scs.rt_matrix
-        translation = etree.SubElement(parent_frame, "translation")
-        translation.text = f"{rt[0,3]:.8f} {rt[1,3]:.8f} {rt[2,3]:.8f}"
+        # Use the segment coordinate system's to_osim method
+        scs_data = segment.segment_coordinate_system.to_osim()
         
-        angles = rot2eul(rt[:3, :3])
+        translation = etree.SubElement(parent_frame, "translation")
+        translation.text = f"{scs_data['translation'][0]:.8f} {scs_data['translation'][1]:.8f} {scs_data['translation'][2]:.8f}"
+        
         orientation = etree.SubElement(parent_frame, "orientation")
-        orientation.text = f"{angles[0]:.8f} {angles[1]:.8f} {angles[2]:.8f}"
+        orientation.text = f"{scs_data['orientation'][0]:.8f} {scs_data['orientation'][1]:.8f} {scs_data['orientation'][2]:.8f}"
         
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
@@ -184,15 +185,132 @@ class OpensimModelWriter:
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"../{parent_name}"
         
-        rt = segment.segment_coordinate_system.scs.rt_matrix
-        translation = etree.SubElement(parent_frame, "translation")
-        translation.text = f"{rt[0,3]:.8f} {rt[1,3]:.8f} {rt[2,3]:.8f}"
+        # Use the segment coordinate system's to_osim method
+        scs_data = segment.segment_coordinate_system.to_osim()
         
-        angles = rot2eul(rt[:3, :3])
+        translation = etree.SubElement(parent_frame, "translation")
+        translation.text = f"{scs_data['translation'][0]:.8f} {scs_data['translation'][1]:.8f} {scs_data['translation'][2]:.8f}"
+        
         orientation = etree.SubElement(parent_frame, "orientation")
-        orientation.text = f"{angles[0]:.8f} {angles[1]:.8f} {angles[2]:.8f}"
+        orientation.text = f"{scs_data['orientation'][0]:.8f} {scs_data['orientation'][1]:.8f} {scs_data['orientation'][2]:.8f}"
         
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
         child_socket = etree.SubElement(child_frame, "socket_parent")
         child_socket.text = f"../{segment.name}"
+        
+        child_translation = etree.SubElement(child_frame, "translation")
+        child_translation.text = "0 0 0"
+        
+        child_orientation = etree.SubElement(child_frame, "orientation")
+        child_orientation.text = "0 0 0"
+        
+        # Spatial transform
+        spatial_transform = etree.SubElement(joint, "SpatialTransform")
+        
+        dof_counter = 0
+        
+        # Rotations (first 3 transform axes)
+        for i, axis_name in enumerate(['X', 'Y', 'Z']):
+            transform_axis = etree.SubElement(spatial_transform, "TransformAxis", name=f"rotation{i+1}")
+            
+            axis_elem = etree.SubElement(transform_axis, "axis")
+            axis_vector = [0, 0, 0]
+            axis_vector[i] = 1
+            axis_elem.text = f"{axis_vector[0]} {axis_vector[1]} {axis_vector[2]}"
+            
+            if segment.rotations != Rotations.NONE and axis_name.lower() in segment.rotations.value:
+                coord_name = segment.dof_names[dof_counter]
+                dof_counter += 1
+                
+                coordinates = etree.SubElement(transform_axis, "coordinates")
+                coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
+                
+                default_value = etree.SubElement(coord_elem, "default_value")
+                default_value.text = "0"
+                
+                if segment.q_ranges is not None:
+                    idx = segment.dof_names.index(coord_name)
+                    range_elem = etree.SubElement(coord_elem, "range")
+                    range_elem.text = f"{segment.q_ranges.min_bound[idx]:.8f} {segment.q_ranges.max_bound[idx]:.8f}"
+                    
+                    clamped = etree.SubElement(coord_elem, "clamped")
+                    clamped.text = "false"
+                
+                locked = etree.SubElement(coord_elem, "locked")
+                locked.text = "false"
+            else:
+                function = etree.SubElement(transform_axis, "function")
+                constant = etree.SubElement(function, "Constant")
+                value = etree.SubElement(constant, "value")
+                value.text = "0"
+        
+        # Translations (last 3 transform axes)
+        for i, axis_name in enumerate(['X', 'Y', 'Z']):
+            transform_axis = etree.SubElement(spatial_transform, "TransformAxis", name=f"translation{i+1}")
+            
+            axis_elem = etree.SubElement(transform_axis, "axis")
+            axis_vector = [0, 0, 0]
+            axis_vector[i] = 1
+            axis_elem.text = f"{axis_vector[0]} {axis_vector[1]} {axis_vector[2]}"
+            
+            if segment.translations != Translations.NONE and axis_name.lower() in segment.translations.value:
+                coord_name = segment.dof_names[dof_counter]
+                dof_counter += 1
+                
+                coordinates = etree.SubElement(transform_axis, "coordinates")
+                coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
+                
+                default_value = etree.SubElement(coord_elem, "default_value")
+                default_value.text = "0"
+                
+                if segment.q_ranges is not None:
+                    idx = segment.dof_names.index(coord_name)
+                    range_elem = etree.SubElement(coord_elem, "range")
+                    range_elem.text = f"{segment.q_ranges.min_bound[idx]:.8f} {segment.q_ranges.max_bound[idx]:.8f}"
+                    
+                    clamped = etree.SubElement(coord_elem, "clamped")
+                    clamped.text = "false"
+                
+                locked = etree.SubElement(coord_elem, "locked")
+                locked.text = "false"
+            else:
+                function = etree.SubElement(transform_axis, "function")
+                constant = etree.SubElement(function, "Constant")
+                value = etree.SubElement(constant, "value")
+                value.text = "0"
+        
+        return joint
+
+    def _write_marker_set(self, model_elem: etree.Element, model: BiomechanicalModelReal):
+        """Write all markers"""
+        marker_set = etree.SubElement(model_elem, "MarkerSet")
+        objects = etree.SubElement(marker_set, "objects")
+        
+        for segment in model.segments:
+            if segment.name == "ground":
+                continue
+            
+            # Skip virtual segments
+            if self._is_virtual_segment(segment):
+                continue
+            
+            for marker in segment.markers:
+                marker_elem = marker.to_osim()
+                objects.append(marker_elem)
+
+    def _write_force_set(self, model_elem: etree.Element, model: BiomechanicalModelReal):
+        """Write all muscles"""
+        force_set = etree.SubElement(model_elem, "ForceSet")
+        objects = etree.SubElement(force_set, "objects")
+        
+        for muscle_group in model.muscle_groups:
+            # Use the muscle group's to_osim method which returns a list of muscle elements
+            muscle_elements = muscle_group.to_osim()
+            for muscle_elem in muscle_elements:
+                objects.append(muscle_elem)
+
+    def _is_virtual_segment(self, segment) -> bool:
+        """Check if a segment is virtual (used for coordinate transformations)"""
+        virtual_suffixes = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        return any(segment.name.endswith(suffix) for suffix in virtual_suffixes)

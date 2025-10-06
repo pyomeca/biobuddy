@@ -121,3 +121,24 @@ class SegmentCoordinateSystemReal:
         )
 
         return out_string
+
+    def to_osim(self):
+        """
+        Generate OpenSim XML representation of segment coordinate system.
+        Note: In OpenSim, the SCS is written as part of the joint's PhysicalOffsetFrame,
+        so this method returns the RT matrix for use by the joint writer.
+        """
+        from ....utils.linear_algebra import rot2eul
+        
+        # OpenSim handles SCS at the joint level via PhysicalOffsetFrame
+        # This method returns the data in a format suitable for the joint writer
+        closest_rt = get_closest_rt_matrix(self.scs.rt_matrix)
+        
+        translation = closest_rt[:3, 3]
+        angles = rot2eul(closest_rt[:3, :3])
+        
+        return {
+            'translation': translation,
+            'orientation': angles,
+            'rt_matrix': closest_rt
+        }

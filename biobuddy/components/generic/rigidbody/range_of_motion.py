@@ -35,3 +35,14 @@ class RangeOfMotion:
         out_string += "\n"
 
         return out_string
+
+    def to_osim(self):
+        """
+        Generate OpenSim XML representation of range of motion.
+        Note: In OpenSim, ranges are specified per coordinate in the joint definition,
+        so this method returns the bounds as a tuple for use by the coordinate writer.
+        """
+        # OpenSim handles ranges at the coordinate level, not as a separate element
+        # This method is here for consistency but the actual range writing happens
+        # in the joint/coordinate creation in opensim_model_writer.py
+        return (self.min_bound, self.max_bound)
