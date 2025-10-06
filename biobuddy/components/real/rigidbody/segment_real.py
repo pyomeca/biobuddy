@@ -332,3 +332,46 @@ class SegmentReal(SegmentUtils):
                 out_string += imu.to_biomod()
 
         return out_string
+
+    def to_osim(self, with_mesh: bool = False):
+        """Generate OpenSim XML representation of the segment (Body element)"""
+        from lxml import etree
+        from ....utils.linear_algebra import rot2eul
+        
+        body_elem = etree.Element("Body", name=self.name)
+        
+        if self.inertia_parameters is not None:
+            mass_elem = etree.SubElement(body_elem, "mass")
+            mass_elem.text = f"{self.inertia_parameters.mass:.8f}"
+            
+            com = np.nanmean(self.inertia_parameters.center_of_mass, axis=1)[:3]
+            mass_center_elem = etree.SubElement(body_elem, "mass_center")
+            mass_center_elem.text = f"{com[0]:.8f} {com[1]:.8f} {com[2]:.8f}"
+            
+            inertia_elem = etree.SubElement(body_elem, "inertia")
+            i = self.inertia_parameters.inertia
+            inertia_elem.text = f"{i[0,0]:.8f} {i[1,1]:.8f} {i[2,2]:.8f} {i[0,1]:.8f} {i[0,2]:.8f} {i[1,2]:.8f}"
+        
+        if with_mesh and self.mesh_file is not None:
+            frame_geometry = etree.SubElement(body_elem, "FrameGeometry")
+            socket_frame = etree.SubElement(frame_geometry, "socket_frame")
+            socket_frame.text = ".."
+            
+            attached_geometry = etree.SubElement(body_elem, "attached_geometry")
+            mesh_elem = etree.SubElement(attached_geometry, "Mesh", name=f"{self.name}_mesh")
+            
+            mesh_file_elem = etree.SubElement(mesh_elem, "mesh_file")
+            mesh_file_elem.text = self.mesh_file.mesh_file_name
+            
+            if self.mesh_file.mesh_scale is not None:
+                scale_factors = etree.SubElement(mesh_elem, "scale_factors")
+                s = self.mesh_file.mesh_scale
+                scale_factors.text = f"{s[0,0]:.8f} {s[1,0]:.8f} {s[2,0]:.8f}"
+            
+            if self.mesh_file.mesh_color is not None:
+                appearance = etree.SubElement(mesh_elem, "Appearance")
+                color_elem = etree.SubElement(appearance, "color")
+                c = self.mesh_file.mesh_color
+                color_elem.text = f"{c[0]:.8f} {c[1]:.8f} {c[2]:.8f}"
+        
+        return body_elem

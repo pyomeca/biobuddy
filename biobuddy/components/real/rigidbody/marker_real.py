@@ -106,6 +106,24 @@ class MarkerReal:
         out_string += "endmarker\n"
         return out_string
 
+    def to_osim(self):
+        """Generate OpenSim XML representation of the marker"""
+        from lxml import etree
+        
+        p = self.mean_position
+        marker_elem = etree.Element("Marker", name=self.name)
+        
+        socket_parent = etree.SubElement(marker_elem, "socket_parent_frame")
+        socket_parent.text = f"../{self.parent_name}"
+        
+        location = etree.SubElement(marker_elem, "location")
+        location.text = f"{p[0]:.8f} {p[1]:.8f} {p[2]:.8f}"
+        
+        fixed = etree.SubElement(marker_elem, "fixed")
+        fixed.text = "false"
+        
+        return marker_elem
+
     def __add__(self, other: np.ndarray | tuple):
         if isinstance(other, tuple):
             other = np.array(other)
