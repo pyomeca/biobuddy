@@ -7,6 +7,7 @@ from biobuddy import (
     BiomechanicalModel,
     SegmentReal,
     MarkerReal,
+    ContactReal,
     InertiaParametersReal,
     SegmentCoordinateSystemReal,
     C3dData,
@@ -228,14 +229,14 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
         )
 
         # Compare muscles
-        for muscle_name in model1.muscle_names:
+        for muscle_name in model1.muscle_groups[muscle_group_name].muscle_names:
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type
-                == model2.muscles[muscle_name].muscle_type
+                == model2.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].state_type
-                == model2.muscles[muscle_name].state_type
+                == model2.muscle_groups[muscle_group_name].muscles[muscle_name].state_type
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_group
@@ -423,8 +424,11 @@ def create_simple_model():
     )
 
     # Add a child segment
-    segment_coordinate_system_child = SegmentCoordinateSystemReal()
-    segment_coordinate_system_child.from_euler_and_translation(np.zeros((3,)), "xyz", np.array([0.0, 0.0, 1.0, 1.0]))
+    segment_coordinate_system_child = SegmentCoordinateSystemReal().from_euler_and_translation(
+        angles=np.zeros((3,)),
+        angle_sequence="xyz",
+        translation=np.array([0.0, 0.0, 1.0, 1.0]),
+    )
     segment_coordinate_system_child.is_in_local = True
     model.add_segment(
         SegmentReal(
@@ -475,6 +479,24 @@ def create_simple_model():
             position=np.array([0.1, 0.3, 0.5, 1.0]),
             is_technical=True,
             is_anatomical=False,
+        )
+    )
+
+    model.segments["parent"].add_contact(
+        ContactReal(
+            name="parent_contact1",
+            parent_name="parent",
+            position=np.array([0.05, 0.2, 0.15, 1.0]),
+            axis=Translations.XYZ,
+        )
+    )
+
+    model.segments["child"].add_contact(
+        ContactReal(
+            name="child_contact1",
+            parent_name="child",
+            position=np.array([-0.05, 0.5, 0.35, 1.0]),
+            axis=Translations.Z,
         )
     )
 

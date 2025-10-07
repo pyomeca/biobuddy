@@ -102,6 +102,10 @@ class MeshFileReal:
         mesh_rt.from_euler_angles_and_translation("xyz", self.mesh_rotation[:3, 0], self.mesh_translation[:3, 0])
         return mesh_rt
 
+    @mesh_rt.setter
+    def mesh_rt(self, value):
+        raise RuntimeError("The mesh_rt cannot be set directly, set the mesh_rotation and mesh_translation instead")
+
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""

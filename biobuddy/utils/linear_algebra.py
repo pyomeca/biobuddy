@@ -572,6 +572,16 @@ class RotoTransMatrix:
         out_inverse.from_rt_matrix(rt_matrix)
         return out_inverse
 
+    @property
+    def is_identity(self) -> bool:
+        """
+        Tests if the RotoTransMatrix is an identity matrix
+        """
+        if np.all(np.abs(self._rt - np.eye(4)) < 1e-6):
+            return True
+        else:
+            return False
+
 
 class RotoTransMatrixTimeSeries:
     """
