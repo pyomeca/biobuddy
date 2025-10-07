@@ -1,4 +1,5 @@
 import numpy as np
+from lxml import etree
 
 from .contact_real import ContactReal
 from .inertial_measurement_unit_real import InertialMeasurementUnitReal
@@ -335,9 +336,7 @@ class SegmentReal(SegmentUtils):
 
     def to_osim(self, with_mesh: bool = False):
         """Generate OpenSim XML representation of the segment (Body element)"""
-        from lxml import etree
-        from ....utils.linear_algebra import rot2eul
-        
+
         body_elem = etree.Element("Body", name=self.name)
         
         if self.inertia_parameters is not None:

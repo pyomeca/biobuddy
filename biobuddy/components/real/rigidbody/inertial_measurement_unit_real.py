@@ -1,7 +1,4 @@
 from copy import deepcopy
-
-# from typing import Self
-
 import numpy as np
 
 from ....utils.linear_algebra import mean_homogenous_matrix, transpose_homogenous_matrix

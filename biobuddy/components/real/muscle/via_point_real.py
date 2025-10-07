@@ -1,9 +1,7 @@
-from typing import Callable
-
 import numpy as np
+from lxml import etree
 
 from ....utils.aliases import Points, points_to_array
-from ....utils.protocols import Data
 from ....utils.checks import check_name
 from ...via_point_utils import PathPointCondition, PathPointMovement
 
@@ -127,11 +125,8 @@ class ViaPointReal:
 
     def to_osim(self):
         """Generate OpenSim XML representation of the via point (PathPoint element)"""
-        from lxml import etree
-        
         if self.condition is not None or self.movement is not None:
-            # Return None for conditional/moving via points - they need special handling
-            return None
+            raise NotImplementedError("Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.")
         
         path_point_elem = etree.Element("PathPoint", name=self.name)
         

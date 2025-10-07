@@ -1,5 +1,3 @@
-# from typing import Self
-
 from lxml import etree
 
 from .utils import find_in_tree

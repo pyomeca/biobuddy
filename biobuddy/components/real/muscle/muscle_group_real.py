@@ -99,21 +99,3 @@ class MuscleGroupReal:
         for muscle in self.muscles:
             out_string += muscle.to_biomod()
         return out_string
-
-    def to_osim(self):
-        """
-        Generate OpenSim XML representation of muscle group.
-        Note: In OpenSim, muscle groups are not a separate entity - muscles are written
-        directly to the ForceSet. This method returns a list of muscle elements.
-        """
-        from lxml import etree
-        
-        # OpenSim doesn't have muscle groups as a separate concept
-        # Muscles are written directly to the ForceSet
-        # This method returns all muscles in this group
-        muscle_elements = []
-        for muscle in self.muscles:
-            muscle_elem = muscle.to_osim()
-            muscle_elements.append(muscle_elem)
-        
-        return muscle_elements

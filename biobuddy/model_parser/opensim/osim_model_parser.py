@@ -110,7 +110,7 @@ class OsimModelParser:
         self.bodyset_elt, self.jointset_elt, self.forceset_elt, self.markerset_elt = None, None, None, None
         self.controllerset_elt, self.constraintset_elt, self.contact_geometryset_elt = None, None, None
         self.componentset_elt, self.probeset_elt = None, None
-        self.length_units, self.force_units = "meters", "newtons"
+        self.length_units, self.force_units = "meters", "N"
 
         self.parse_tags(self.model.getroot())
 

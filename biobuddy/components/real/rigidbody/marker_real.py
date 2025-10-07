@@ -1,13 +1,8 @@
-from typing import Callable
-
 import numpy as np
+from lxml import etree
 
-from .protocols import CoordinateSystemRealProtocol
-from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.aliases import Points, points_to_array, point_to_array
-from ....utils.protocols import Data
 from ....utils.checks import check_name
-from ....utils.linear_algebra import RotoTransMatrix
 
 
 class MarkerReal:
@@ -108,8 +103,7 @@ class MarkerReal:
 
     def to_osim(self):
         """Generate OpenSim XML representation of the marker"""
-        from lxml import etree
-        
+
         p = self.mean_position
         marker_elem = etree.Element("Marker", name=self.name)
         

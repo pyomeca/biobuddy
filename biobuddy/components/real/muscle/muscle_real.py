@@ -1,4 +1,5 @@
 import numpy as np
+from lxml import etree
 
 from .via_point_real import ViaPointReal
 from ....utils.named_list import NamedList
@@ -296,8 +297,8 @@ class MuscleReal(MuscleUtils):
 
     def to_osim(self):
         """Generate OpenSim XML representation of the muscle"""
-        from lxml import etree
-        
+
+        # TODO: handle different muscle types than DeGrooteFregly2016Muscle
         muscle_elem = etree.Element("DeGrooteFregly2016Muscle", name=self.name)
         
         max_iso_force = etree.SubElement(muscle_elem, "max_isometric_force")
