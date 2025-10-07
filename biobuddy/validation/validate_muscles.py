@@ -28,7 +28,7 @@ class MuscleValidator:
 
         # Check that the model is correct
         try:
-            self.model.to_biomod("temporary.bioMod")
+            self.model.to_biomod("temporary.bioMod", with_mesh=False)
         except Exception as e:
             raise NotImplementedError(
                 f"Only biorbd is supported as a backend for now. If you need other dynamics "
@@ -370,7 +370,7 @@ class MuscleValidator:
 
         for dof in range(nb_dof):
             row = 0
-            x = states[dof, :]
+            x = self.states[dof, :]
             for muscle in range(nb_muscles):
                 col = muscle % ceil(nb_muscles / nb_line) + 1
                 if col == 1:
@@ -378,7 +378,7 @@ class MuscleValidator:
                 fig.add_trace(
                     go.Scatter(
                         x=x,
-                        y=muscle_max_torques[dof, muscle, :],
+                        y=self.muscle_max_torque[dof, muscle, :],
                         name=muscle_names[muscle] + "_Max_Torque",
                     ),
                     row=row,
@@ -387,7 +387,7 @@ class MuscleValidator:
                 fig.add_trace(
                     go.Scatter(
                         x=x,
-                        y=muscle_min_torques[dof, :],
+                        y=self.muscle_min_torque[dof, :],
                         name=muscle_names[muscle] + "_Min_Torque",
                     ),
                     row=row,
