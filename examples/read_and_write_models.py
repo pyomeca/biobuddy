@@ -58,6 +58,7 @@ def main():
     # Test that the model created is valid
     try:
         import biorbd
+
         biorbd.Model(biomod_filepath)
     except ImportError:
         _logger.warning("You must install biorbd to load the model with biorbd")
@@ -72,10 +73,10 @@ def main():
     # Test that the model created is valid
     try:
         import opensim as osim
+
         osim.Model(osim_filepath)
     except ImportError:
         _logger.warning("You must install opensim to load the model with opensim")
-
 
     if visualization_flag:
         # Compare the result visually

@@ -126,15 +126,17 @@ class ViaPointReal:
     def to_osim(self):
         """Generate OpenSim XML representation of the via point (PathPoint element)"""
         if self.condition is not None or self.movement is not None:
-            raise NotImplementedError("Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.")
-        
+            raise NotImplementedError(
+                "Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub."
+            )
+
         path_point_elem = etree.Element("PathPoint", name=self.name)
-        
+
         socket_parent = etree.SubElement(path_point_elem, "socket_parent_frame")
         socket_parent.text = f"../{self.parent_name}"
-        
+
         location = etree.SubElement(path_point_elem, "location")
         p = self.position
         location.text = f"{p[0,0]:.8f} {p[1,0]:.8f} {p[2,0]:.8f}"
-        
+
         return path_point_elem

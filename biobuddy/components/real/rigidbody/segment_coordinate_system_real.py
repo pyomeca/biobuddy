@@ -124,8 +124,8 @@ class SegmentCoordinateSystemReal:
         so this method returns the data in a format suitable for the joint writer.
         """
         closest_rt = get_closest_rt_matrix(self.scs.rt_matrix)
-        
+
         translation = closest_rt[:3, 3]
         angles = rot2eul(closest_rt[:3, :3])
-        
+
         return translation, angles

@@ -80,15 +80,15 @@ class InertiaParametersReal:
         # OpenSim handles inertia at the body level, not as a separate element
         # This method returns the data in a format suitable for the body writer
         inertia_dict = {}
-        
+
         if self.mass is not None:
-            inertia_dict['mass'] = self.mass
-        
+            inertia_dict["mass"] = self.mass
+
         if np.any(self.center_of_mass):
             com = np.nanmean(self.center_of_mass, axis=1)[:3]
-            inertia_dict['mass_center'] = com
-        
+            inertia_dict["mass_center"] = com
+
         if np.any(self.inertia):
-            inertia_dict['inertia'] = self.inertia
-        
+            inertia_dict["inertia"] = self.inertia
+
         return inertia_dict

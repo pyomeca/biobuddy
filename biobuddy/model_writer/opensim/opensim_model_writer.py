@@ -33,7 +33,7 @@ class OpensimModelWriter:
         """
         root = etree.Element("OpenSimDocument", Version="40000")
         model_elem = etree.SubElement(root, "Model", name="model")
-        
+
         self._write_credits(model_elem, model)
         self._write_units(model_elem)
         self._write_gravity(model_elem, model)
@@ -42,9 +42,9 @@ class OpensimModelWriter:
         self._write_joint_set(model_elem, model)
         self._write_marker_set(model_elem, model)
         self._write_force_set(model_elem, model)
-        
+
         tree = etree.ElementTree(root)
-        tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding='UTF-8')
+        tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
     def _write_credits(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write credits and publication information"""
@@ -55,7 +55,7 @@ class OpensimModelWriter:
         """Write unit information"""
         length_units = etree.SubElement(model_elem, "length_units")
         length_units.text = "meters"
-        
+
         force_units = etree.SubElement(model_elem, "force_units")
         force_units.text = "N"
 
@@ -70,10 +70,10 @@ class OpensimModelWriter:
     def _write_ground(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write ground body"""
         ground = etree.SubElement(model_elem, "ground")
-        
+
         if "ground" in model.segment_names:
             ground_segment = model.segments["ground"]
-            
+
             if ground_segment.nb_markers > 0:
                 attached_geometry = etree.SubElement(ground, "attached_geometry")
                 for marker in ground_segment.markers:
@@ -84,11 +84,11 @@ class OpensimModelWriter:
         """Write all body segments"""
         body_set = etree.SubElement(model_elem, "BodySet")
         objects = etree.SubElement(body_set, "objects")
-        
+
         for segment in model.segments:
             if segment.name == "ground" or segment.name == "base":
                 continue
-            
+
             body_elem = segment.to_osim(with_mesh=self.with_mesh)
             objects.append(body_elem)
 
@@ -96,128 +96,128 @@ class OpensimModelWriter:
         """Write all joints"""
         joint_set = etree.SubElement(model_elem, "JointSet")
         objects = etree.SubElement(joint_set, "objects")
-        
+
         for segment in model.segments:
             if segment.name == "ground" or segment.name == "base":
                 continue
-            
+
             parent_name = segment.parent_name if segment.parent_name != "base" else "ground"
-            
+
             if segment.nb_q > 0:
                 joint_elem = self._create_custom_joint(segment, parent_name, model)
             else:
                 joint_elem = self._create_weld_joint(segment, parent_name)
-            
+
             objects.append(joint_elem)
 
     def _create_weld_joint(self, segment, parent_name: str):
         """Create a WeldJoint (no DOFs)"""
         joint = etree.Element("WeldJoint", name=f"{segment.name}_joint")
-        
+
         socket_parent = etree.SubElement(joint, "socket_parent_frame")
         socket_parent.text = f"../{parent_name}"
-        
+
         socket_child = etree.SubElement(joint, "socket_child_frame")
         socket_child.text = f"../{segment.name}"
-        
+
         frames = etree.SubElement(joint, "frames")
-        
+
         # Parent offset frame
         parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"../{parent_name}"
-        
+
         # Use the segment coordinate system's to_osim method
         translation_data, angles_data = segment.segment_coordinate_system.to_osim()
-        
+
         translation = etree.SubElement(parent_frame, "translation")
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"
-        
+
         orientation = etree.SubElement(parent_frame, "orientation")
         orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
-        
+
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
         child_socket = etree.SubElement(child_frame, "socket_parent")
         child_socket.text = f"../{segment.name}"
-        
+
         child_translation = etree.SubElement(child_frame, "translation")
         child_translation.text = "0 0 0"
-        
+
         child_orientation = etree.SubElement(child_frame, "orientation")
         child_orientation.text = "0 0 0"
-        
+
         return joint
 
     def _create_custom_joint(self, segment, parent_name: str, model: BiomechanicalModelReal):
         """Create a CustomJoint with DOFs"""
         joint = etree.Element("CustomJoint", name=f"{segment.name}_joint")
-        
+
         socket_parent = etree.SubElement(joint, "socket_parent_frame")
         socket_parent.text = f"../{parent_name}"
-        
+
         socket_child = etree.SubElement(joint, "socket_child_frame")
         socket_child.text = f"../{segment.name}"
-        
+
         frames = etree.SubElement(joint, "frames")
-        
+
         # Parent offset frame
         parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"../{parent_name}"
-        
+
         # Use the segment coordinate system's to_osim method
         translation_data, angles_data = segment.segment_coordinate_system.to_osim()
-        
+
         translation = etree.SubElement(parent_frame, "translation")
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"
-        
+
         orientation = etree.SubElement(parent_frame, "orientation")
         orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
-        
+
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
         child_socket = etree.SubElement(child_frame, "socket_parent")
         child_socket.text = f"../{segment.name}"
-        
+
         child_translation = etree.SubElement(child_frame, "translation")
         child_translation.text = "0 0 0"
-        
+
         child_orientation = etree.SubElement(child_frame, "orientation")
         child_orientation.text = "0 0 0"
-        
+
         # Spatial transform
         spatial_transform = etree.SubElement(joint, "SpatialTransform")
-        
+
         dof_counter = 0
-        
+
         # Rotations (first 3 transform axes)
-        for i, axis_name in enumerate(['X', 'Y', 'Z']):
+        for i, axis_name in enumerate(["X", "Y", "Z"]):
             transform_axis = etree.SubElement(spatial_transform, "TransformAxis", name=f"rotation{i+1}")
-            
+
             axis_elem = etree.SubElement(transform_axis, "axis")
             axis_vector = [0, 0, 0]
             axis_vector[i] = 1
             axis_elem.text = f"{axis_vector[0]} {axis_vector[1]} {axis_vector[2]}"
-            
+
             if segment.rotations != Rotations.NONE and axis_name.lower() in segment.rotations.value:
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
-                
+
                 coordinates = etree.SubElement(transform_axis, "coordinates")
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
-                
+
                 default_value = etree.SubElement(coord_elem, "default_value")
                 default_value.text = "0"
-                
+
                 if segment.q_ranges is not None:
                     idx = segment.dof_names.index(coord_name)
                     range_elem = etree.SubElement(coord_elem, "range")
                     range_elem.text = f"{segment.q_ranges.min_bound[idx]:.8f} {segment.q_ranges.max_bound[idx]:.8f}"
-                    
+
                     clamped = etree.SubElement(coord_elem, "clamped")
                     clamped.text = "false"
-                
+
                 locked = etree.SubElement(coord_elem, "locked")
                 locked.text = "false"
             else:
@@ -225,34 +225,34 @@ class OpensimModelWriter:
                 constant = etree.SubElement(function, "Constant")
                 value = etree.SubElement(constant, "value")
                 value.text = "0"
-        
+
         # Translations (last 3 transform axes)
-        for i, axis_name in enumerate(['X', 'Y', 'Z']):
+        for i, axis_name in enumerate(["X", "Y", "Z"]):
             transform_axis = etree.SubElement(spatial_transform, "TransformAxis", name=f"translation{i+1}")
-            
+
             axis_elem = etree.SubElement(transform_axis, "axis")
             axis_vector = [0, 0, 0]
             axis_vector[i] = 1
             axis_elem.text = f"{axis_vector[0]} {axis_vector[1]} {axis_vector[2]}"
-            
+
             if segment.translations != Translations.NONE and axis_name.lower() in segment.translations.value:
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
-                
+
                 coordinates = etree.SubElement(transform_axis, "coordinates")
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
-                
+
                 default_value = etree.SubElement(coord_elem, "default_value")
                 default_value.text = "0"
-                
+
                 if segment.q_ranges is not None:
                     idx = segment.dof_names.index(coord_name)
                     range_elem = etree.SubElement(coord_elem, "range")
                     range_elem.text = f"{segment.q_ranges.min_bound[idx]:.8f} {segment.q_ranges.max_bound[idx]:.8f}"
-                    
+
                     clamped = etree.SubElement(coord_elem, "clamped")
                     clamped.text = "false"
-                
+
                 locked = etree.SubElement(coord_elem, "locked")
                 locked.text = "false"
             else:
@@ -260,18 +260,18 @@ class OpensimModelWriter:
                 constant = etree.SubElement(function, "Constant")
                 value = etree.SubElement(constant, "value")
                 value.text = "0"
-        
+
         return joint
 
     def _write_marker_set(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write all markers"""
         marker_set = etree.SubElement(model_elem, "MarkerSet")
         objects = etree.SubElement(marker_set, "objects")
-        
+
         for segment in model.segments:
             if segment.name == "ground":
                 continue
-            
+
             for marker in segment.markers:
                 marker_elem = marker.to_osim()
                 objects.append(marker_elem)

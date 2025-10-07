@@ -77,4 +77,6 @@ class ContactReal:
         return out_string
 
     def to_osim(self):
-        raise NotImplementedError("Writing contacts into a .osim fil is not implemented, yet. If you need this feature, please open an issue on GitHub.")
+        raise NotImplementedError(
+            "Writing contacts into a .osim fil is not implemented, yet. If you need this feature, please open an issue on GitHub."
+        )
