@@ -1,4 +1,3 @@
-# from typing import Self
 from lxml import etree
 
 from .utils import find_in_tree, find_sub_elements_in_tree, match_tag

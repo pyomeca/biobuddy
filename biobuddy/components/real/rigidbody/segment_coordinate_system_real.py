@@ -1,13 +1,9 @@
 from copy import deepcopy
-
-# from typing import Self
-
 import numpy as np
 
-from .axis_real import AxisReal
-from .marker_real import MarkerReal
 from ....utils.aliases import Point, Points
-from ....utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, get_closest_rt_matrix
+from ....utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix
+from ....utils.linear_algebra import rot2eul
 
 
 class SegmentCoordinateSystemReal:
@@ -121,3 +117,15 @@ class SegmentCoordinateSystemReal:
         )
 
         return out_string
+
+    def to_osim(self):
+        """
+        Note: In OpenSim, the SCS is written as part of the joint's PhysicalOffsetFrame,
+        so this method returns the data in a format suitable for the joint writer.
+        """
+        closest_rt = get_closest_rt_matrix(self.scs.rt_matrix)
+
+        translation = closest_rt[:3, 3]
+        angles = rot2eul(closest_rt[:3, :3])
+
+        return translation, angles
