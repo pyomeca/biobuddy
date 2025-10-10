@@ -1,6 +1,7 @@
 """
 This example shows how to create a De Leva model, merge left and right segments, and replace the root segment at the foot.
 """
+
 from biobuddy import (
     Rotations,
     DeLevaTable,

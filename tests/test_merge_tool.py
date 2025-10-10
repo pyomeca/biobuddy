@@ -421,7 +421,6 @@ def test_merge_tool_example():
     )
     compare_models(model, model_reference)
 
-
     # --- MALE --- #
     model = create_model(sex=Sex.MALE)
     model.validate_model()
