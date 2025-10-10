@@ -83,7 +83,7 @@ class MeshFileReal:
     def mesh_scale(self, value: np.ndarray[float]):
         if value is None:
             self._mesh_scale = None
-        else :
+        else:
             self._mesh_scale = point_to_array(value, "mesh_scale")
 
     @property
@@ -97,7 +97,7 @@ class MeshFileReal:
     def mesh_rotation(self, value: np.ndarray[float]):
         if value is None:
             self._mesh_rotation = None
-        else :
+        else:
             self._mesh_rotation = point_to_array(value, "mesh_rotation")
 
     @property
