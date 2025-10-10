@@ -1,27 +1,10 @@
 """
 This example shows how to create a De Leva model, merge left and right segments, and replace the root segment at the foot.
 """
-
-import os
-
-import numpy as np
-import itertools
 from biobuddy import (
-    Axis,
-    BiomechanicalModel,
-    C3dData,
-    Marker,
-    Mesh,
-    Segment,
-    SegmentCoordinateSystem,
-    Translations,
     Rotations,
     DeLevaTable,
     Sex,
-    SegmentName,
-    ViewAs,
-    SegmentCoordinateSystemUtils,
-    RotoTransMatrix,
     MergeSegmentsTool,
     SegmentMerge,
     ModifyKinematicChainTool,
@@ -29,12 +12,12 @@ from biobuddy import (
 )
 
 
-def create_model():
+def create_model(sex: Sex):
 
     mass = 70  # Kg
     height = 1.75  # m
     # Create the inertial table for this model
-    inertia_table = DeLevaTable(mass, sex=Sex.FEMALE)
+    inertia_table = DeLevaTable(mass, sex=sex)
     inertia_table.from_height(total_height=height)
     # Please note that as the weight are not provided in De Leva 1996, the hip and shoulder width are set to zero when
     # using `inertia_table.from_height`
@@ -87,10 +70,12 @@ def create_model():
 
 def main():
 
-    feet_root_model = create_model()
+    # Create and exporting the model as a biomod file
+    male_feet_root_model = create_model(sex=Sex.MALE)
+    male_feet_root_model.to_biomod(f"models/male_feet_root_model.bioMod")
 
-    # Exporting the output model as a biomod file
-    feet_root_model.to_biomod(f"models/feet_root_model.bioMod")
+    female_feet_root_model = create_model(sex=Sex.MALE)
+    female_feet_root_model.to_biomod(f"models/female_feet_root_model.bioMod")
 
 
 if __name__ == "__main__":

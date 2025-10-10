@@ -13,6 +13,7 @@ from biobuddy import (
     Translations,
     Rotations,
     RotoTransMatrix,
+    Sex,
 )
 from test_utils import create_simple_model, compare_models
 
@@ -405,17 +406,31 @@ def test_merge_tool_example():
 
     from examples.merge_segments import create_model
 
-    model = create_model()
+    current_path_file = Path(__file__).parent
+
+    # --- FEMALE --- #
+    model = create_model(sex=Sex.FEMALE)
     model.validate_model()
     # we have to change the dof names because this info is not kept in the .bioMod file
     model.segments["SHANKS"].dof_names = ["SHANKS_rotY"]
     model.segments["THIGHS"].dof_names = ["THIGHS_rotY"]
     model.segments["TRUNK"].dof_names = ["TRUNK_rotY"]
 
-    # Paths
-    current_path_file = Path(__file__).parent
     model_reference = BiomechanicalModelReal().from_biomod(
-        f"{current_path_file}/../examples/models/feet_root_model.bioMod"
+        f"{current_path_file}/../examples/models/female_feet_root_model.bioMod"
     )
+    compare_models(model, model_reference)
 
+
+    # --- MALE --- #
+    model = create_model(sex=Sex.MALE)
+    model.validate_model()
+    # we have to change the dof names because this info is not kept in the .bioMod file
+    model.segments["SHANKS"].dof_names = ["SHANKS_rotY"]
+    model.segments["THIGHS"].dof_names = ["THIGHS_rotY"]
+    model.segments["TRUNK"].dof_names = ["TRUNK_rotY"]
+
+    model_reference = BiomechanicalModelReal().from_biomod(
+        f"{current_path_file}/../examples/models/male_feet_root_model.bioMod"
+    )
     compare_models(model, model_reference)
