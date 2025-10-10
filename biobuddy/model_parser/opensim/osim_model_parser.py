@@ -718,6 +718,7 @@ class OsimModelParser:
                 mesh_file=(
                     MeshFileReal(
                         mesh_file_name=mesh_file,
+                        mesh_file_directory=".",  # There is no mesh_file_directory in the mesh_file element
                         mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
                         mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
                     )
@@ -765,6 +766,7 @@ class OsimModelParser:
                 mesh_file=(
                     MeshFileReal(
                         mesh_file_name=mesh_file,
+                        mesh_file_directory=".",  # There is no mesh file directory in the mesh_file element
                         mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
                         mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
                     )
