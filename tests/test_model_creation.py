@@ -617,7 +617,7 @@ def test_complex_model():
 
     current_path_folder = os.path.dirname(os.path.realpath(__file__))
     kinematic_model_filepath = f"{current_path_folder}/../examples/models/temporary_complex.bioMod"
-    mesh_path = f"{current_path_folder}/../examples/models/meshes/pendulum.STL"
+    mesh_path = f"{current_path_folder}/../examples/models/meshes"
 
     # Create the model
     real_model = complex_model_from_scratch(mesh_path=mesh_path, remove_temporary=False)

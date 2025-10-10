@@ -131,8 +131,9 @@ def test_marker_real_arithmetic():
 # ------- MeshFileReal ------- #
 def test_init_mesh_file_real():
     # Test initialization with minimal parameters
-    mesh_file = MeshFileReal(mesh_file_name="test.obj")
+    mesh_file = MeshFileReal(mesh_file_name="test.obj", mesh_file_directory="mesh_file/dir")
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     assert mesh_file.mesh_color is None
     npt.assert_array_equal(mesh_file.mesh_scale, np.ones((4, 1)))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.zeros((4, 1)))
@@ -146,6 +147,7 @@ def test_init_mesh_file_real():
 
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=mesh_color,
         mesh_scale=mesh_scale,
         mesh_rotation=mesh_rotation,
@@ -153,6 +155,7 @@ def test_init_mesh_file_real():
     )
 
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     npt.assert_array_equal(mesh_file.mesh_color, mesh_color)
     npt.assert_array_equal(mesh_file.mesh_scale, np.array([[2.0], [2.0], [2.0], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
@@ -174,6 +177,7 @@ def test_mesh_file_real_to_biomod():
     # Create a mesh file
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 0.0, 0.0]),
         mesh_scale=np.array([2.0, 2.0, 2.0]),
         mesh_rotation=np.array([0.1, 0.2, 0.3]),
@@ -185,7 +189,7 @@ def test_mesh_file_real_to_biomod():
 
     # Check the content
     expected_str = (
-        "\tmeshfile\ttest.obj\n"
+        "\tmeshfile\tmesh_file/dir/test.obj\n"
         "\tmeshcolor\t1.0\t0.0\t0.0\n"
         "\tmeshscale\t2.0\t2.0\t2.0\n"
         "\tmeshrt\t0.1\t0.2\t0.3\txyz\t1.0\t2.0\t3.0\n"
@@ -195,6 +199,7 @@ def test_mesh_file_real_to_biomod():
     # Test with missing rotation or translation
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 0.0, 0.0]),
         mesh_scale=np.array([2.0, 2.0, 2.0]),
         mesh_rotation=np.array([0.1, 0.2, 0.3]),
@@ -202,7 +207,7 @@ def test_mesh_file_real_to_biomod():
     )
 
     expected_str = (
-        "\tmeshfile\ttest.obj\n"
+        "\tmeshfile\tmesh_file/dir/test.obj\n"
         "\tmeshcolor\t1.0\t0.0\t0.0\n"
         "\tmeshscale\t2.0\t2.0\t2.0\n"
         "\tmeshrt\t0.1\t0.2\t0.3\txyz\t0.0\t0.0\t0.0\n"
@@ -526,7 +531,10 @@ def test_segment_real_dof_names_auto_generation():
     assert segment.dof_names == expected_dof_names
 
     # Test mismatch between dof_names length and actual DoFs
-    with pytest.raises(RuntimeError):
+    with pytest.raises(
+        RuntimeError,
+        match=r"The number of DoF names \(1\) does not match the number of DoFs \(6\) in segment test_segment.",
+    ):
         SegmentReal(
             name="test_segment",
             translations=Translations.XYZ,
