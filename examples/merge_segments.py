@@ -61,19 +61,21 @@ def create_model():
 
     # Remove some unused degrees of freedom
     # Please note that the dof names were defined in the model before merge (the first segment dofs names were kept)
-    feet_root_model.remove_dofs([
-        "FEET_transY",
-        "FEET_rotX",
-        "FEET_rotZ",
-        "L_THIGH_rotX",
-        "HEAD_rotX",
-        "HEAD_rotY",
-        "HEAD_rotZ",
-        "L_UPPER_ARM_rotZ",
-        "L_UPPER_ARM_rotX",
-        "L_LOWER_ARM_rotY",
-        "L_HAND_rotY",
-    ])
+    feet_root_model.remove_dofs(
+        [
+            "FEET_transY",
+            "FEET_rotX",
+            "FEET_rotZ",
+            "L_THIGH_rotX",
+            "HEAD_rotX",
+            "HEAD_rotY",
+            "HEAD_rotZ",
+            "L_UPPER_ARM_rotZ",
+            "L_UPPER_ARM_rotX",
+            "L_LOWER_ARM_rotY",
+            "L_HAND_rotY",
+        ]
+    )
     # Add a shoulder dof in the plane
     feet_root_model.segments["UPPER_ARMS"].rotations = Rotations.Y
     feet_root_model.segments["UPPER_ARMS"].dof_names = ["UPPER_ARMS_rotY"]
