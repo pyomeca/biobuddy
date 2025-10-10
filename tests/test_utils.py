@@ -359,15 +359,16 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].movement
                     is not None
                 ):
-                    assert (
-                        set(model1.muscle_groups[muscle_group_name]
+                    assert set(
+                        model1.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
-                        .movement.dof_names)
-                        == set(model2.muscle_groups[muscle_group_name]
+                        .movement.dof_names
+                    ) == set(
+                        model2.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
-                        .movement.dof_names)
+                        .movement.dof_names
                     )
                     for i in range(3):
                         assert (

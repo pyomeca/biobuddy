@@ -400,9 +400,11 @@ def test_merge_tool_errors():
         )
         merge_tool.merge()
 
+
 def test_merge_tool_example():
 
     from examples.merge_segments import create_model
+
     model = create_model()
     model.validate_model()
     # we have to change the dof names because this info is not kept in the .bioMod file
@@ -412,6 +414,8 @@ def test_merge_tool_example():
 
     # Paths
     current_path_file = Path(__file__).parent
-    model_reference = BiomechanicalModelReal().from_biomod(f"{current_path_file}/../examples/models/feet_root_model.bioMod")
+    model_reference = BiomechanicalModelReal().from_biomod(
+        f"{current_path_file}/../examples/models/feet_root_model.bioMod"
+    )
 
     compare_models(model, model_reference)
