@@ -332,7 +332,7 @@ def test_de_leva_table_constructor_from_data():
     npt.assert_almost_equal(male_table.upper_arm_length, 1)
     npt.assert_almost_equal(male_table.shoulder_width, 0)
     npt.assert_almost_equal(male_table.thigh_length, 2)
-    npt.assert_almost_equal(male_table.tibia_length, 2)
+    npt.assert_almost_equal(male_table.shank_length, 2)
     npt.assert_almost_equal(male_table.hip_width, 0)
     npt.assert_almost_equal(male_table.foot_length, 0.31)
 
@@ -444,7 +444,7 @@ def test_de_leva_table_constructor_from_measurements():
     npt.assert_almost_equal(female_table.upper_arm_length, 0.6)
     npt.assert_almost_equal(female_table.shoulder_width, 0)
     npt.assert_almost_equal(female_table.thigh_length, 0.55)
-    npt.assert_almost_equal(female_table.tibia_length, 0.39)
+    npt.assert_almost_equal(female_table.shank_length, 0.39)
     npt.assert_almost_equal(female_table.hip_width, 0)
     npt.assert_almost_equal(female_table.foot_length, 0.35)
 
