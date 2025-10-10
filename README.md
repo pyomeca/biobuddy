@@ -22,12 +22,17 @@ pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d
 ```
 Note: On mac, you might need to add `conda install conda-forge::libcxx`
 
+And if you want to access all features, you will also need to install the following optional dependencies:
+```bash
+conda install -c conda-forge plotly pyorerun rerun-sdk=0.21.0
+```
+
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
 pip install pytest pytest-cov codecov
 conda install -c opensim-org opensim=4.5.1
-conda install -c conda-forge biorbd=1.11.2 deepdiff
+conda install -c conda-forge biorbd=1.11.2=py311h9439bbc_1 deepdiff
 ```
 
 # Model translation
