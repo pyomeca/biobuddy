@@ -165,14 +165,14 @@ class BiomodModelParser:
                         current_component.translations = read_str(next_token=next_token)
                     elif token.lower() == "rotations":
                         current_component.rotations = read_str(next_token=next_token)
-                    elif token.lower() == "rangesq" or token.lower() == "rangesqdot":
+                    elif token.lower() == "rangesq" or token.lower() == "ranges" or token.lower() == "rangesqdot":
                         length = nb_float_tokens_until_next_str()
                         if length % 2 != 0:
                             raise ValueError(f"Length of range_q is not even: {length}")
                         min_max = read_float_vector(next_token=next_token, length=length)
                         min_bound = min_max[0::2]
                         max_bound = min_max[1::2]
-                        if token.lower() == "rangesq":
+                        if token.lower() == "rangesq" or token.lower() == "ranges":
                             current_component.q_ranges = RangeOfMotion(
                                 range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound
                             )
@@ -224,7 +224,7 @@ class BiomodModelParser:
                         current_component.mesh_file.mesh_rotation = angles
                         current_component.mesh_file.mesh_translation = translations
                     else:
-                        raise ValueError(f"Unknown information in segment")
+                        raise ValueError(f"Unknown information in segment: {token.lower()}")
 
                 elif isinstance(current_component, InertialMeasurementUnitReal):
                     if token.lower() == "endimu":
@@ -361,7 +361,7 @@ class BiomodModelParser:
                     elif token.lower() == "position":
                         current_component.position = read_float_vector(next_token=next_token, length=3)
                 else:
-                    raise ValueError(f"Unknown component {type(current_component)}")
+                    raise ValueError(f"Unknown component : {type(current_component)}")
         except EndOfFileReached:
             pass
 

@@ -327,3 +327,16 @@ class ModelUtils:
 
         # Replace the jsc in local reference frames
         self.segments_rt_to_local()
+
+    def get_dof_ranges(self) -> np.ndarray:
+        """
+        Returns the min_bound and max_bound of the degrees of freedom of the model (2 x nb_q).
+        """
+        ranges = np.empty((2, 0))
+        for segment in self.segments:
+            if segment.nb_q > 0:
+                min_bound = segment.q_ranges.min_bound
+                max_bound = segment.q_ranges.max_bound
+                bound = np.vstack((min_bound, max_bound))
+                ranges = np.hstack((ranges, bound))
+        return ranges
