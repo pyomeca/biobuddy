@@ -12,7 +12,7 @@ from ..utils.enums import Translations, Rotations
 
 
 # TODO: Add a figure to the documentation to illustrate the segment definitions
-
+# And create a simple table with all the values at the same place
 
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
@@ -65,7 +65,7 @@ class DeLevaTable:
         self.upper_arm_length = None
         self.shoulder_width = None
         self.thigh_length = None
-        self.tibia_length = None
+        self.shank_length = None
         self.hip_width = None
         self.foot_length = None
 
@@ -362,22 +362,22 @@ class DeLevaTable:
         self.right_hip_position = np.array([0, -self.hip_width / 2, self.pelvis_height, 1])
         self.right_knee_position = np.array([0, -self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
         self.right_ankle_position = np.array(
-            [0, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+            [0, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
         )
         # Toes position is false due to the heel being behind the ankle
         self.right_toe_position = np.array(
-            [self.foot_length, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+            [self.foot_length, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
         )
 
         # Left leg
         self.left_hip_position = np.array([0, self.hip_width / 2, self.pelvis_height, 1])
         self.left_knee_position = np.array([0, self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
         self.left_ankle_position = np.array(
-            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
         )
         # Toes position is false due to the heel being behind the ankle
         self.left_toe_position = np.array(
-            [self.foot_length, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.tibia_length, 1]
+            [self.foot_length, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
         )
 
     def from_data(self, data: Data):
@@ -395,7 +395,7 @@ class DeLevaTable:
         self.upper_arm_length = float(data.values["SHOULDER"][2] - data.values["ELBOW"][2])
         self.shoulder_width = 0  # Not defined
         self.thigh_length = float(data.values["PELVIS"][2] - data.values["KNEE"][2])
-        self.tibia_length = float(data.values["KNEE"][2] - data.values["ANKLE"][2])
+        self.shank_length = float(data.values["KNEE"][2] - data.values["ANKLE"][2])
         self.hip_width = 0  # Not defined
         self.foot_length = float(np.linalg.norm(data.values["HEEL"] - data.values["TOE"]))
 
@@ -429,9 +429,59 @@ class DeLevaTable:
         self.upper_arm_length = (elbow_span - shoulder_span) / 2
         self.shoulder_width = shoulder_span
         self.thigh_length = pelvis_height - knee_height
-        self.tibia_length = knee_height - ankle_height
+        self.shank_length = knee_height - ankle_height
         self.hip_width = hip_width
         self.foot_length = foot_length
+
+        self.get_joint_position_from_measurements()
+        self.define_inertial_table()
+
+    def from_height(
+        self,
+        total_height: float,
+    ):
+        """
+        Create the De Leva table using standard body proportions.
+        """
+
+        length_ratios = {
+            Sex.MALE: {
+                "head_length": 0.2429 / 1.741,
+                "trunk_length": 0.6033 / 1.741,
+                "upper_arm_length": 0.2817 / 1.741,
+                "lower_arm_length": 0.2689 / 1.741,
+                "hand_length": 0.1879 / 1.741,
+                "thigh_length": 0.4222 / 1.741,
+                "shank_length": 0.434 / 1.741,
+                "foot_length": 0.2581 / 1.741,
+            },
+            Sex.FEMALE: {
+                "head_length": 0.2437 / 1.735,
+                "trunk_length": 0.6148 / 1.735,
+                "upper_arm_length": 0.2751 / 1.735,
+                "lower_arm_length": 0.2643 / 1.735,
+                "hand_length": 0.1701 / 1.735,
+                "thigh_length": 0.3685 / 1.735,
+                "shank_length": 0.4323 / 1.735,
+                "foot_length": 0.2283 / 1.735,
+            },
+        }
+
+        # Define some length from measurements
+        self.total_height = total_height
+
+        self.hip_width = 0
+        self.shoulder_width = 0
+        self.foot_length = length_ratios[self.sex]["foot_length"] * total_height
+        self.shank_length = length_ratios[self.sex]["shank_length"] * total_height
+        self.thigh_length = length_ratios[self.sex]["thigh_length"] * total_height
+        self.trunk_length = length_ratios[self.sex]["trunk_length"] * total_height
+        self.upper_arm_length = length_ratios[self.sex]["upper_arm_length"] * total_height
+        self.lower_arm_length = length_ratios[self.sex]["lower_arm_length"] * total_height
+        self.hand_length = length_ratios[self.sex]["hand_length"] * total_height
+
+        # Approximate pelvis height as the sum of shank and thigh lengths
+        self.pelvis_height = self.shank_length + self.thigh_length
 
         self.get_joint_position_from_measurements()
         self.define_inertial_table()

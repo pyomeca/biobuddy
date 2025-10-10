@@ -26,6 +26,7 @@ from ..utils.aliases import points_to_array, Point
 
 _logger = logging.getLogger(__name__)
 
+# TODO: add the possibility to choose the position of the  new root in the segment's coordinate system
 
 class ChangeFirstSegment:
     def __init__(self, first_segment_name: str, new_segment_name: str = "LINK"):
