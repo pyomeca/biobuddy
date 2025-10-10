@@ -32,6 +32,10 @@ from .utils import (
 from ...utils.enums import Translations
 
 
+# TODO: when we update to biorbd=1.12.0, we need to parse the mesh file dir and ubdate the mesh_file_directory
+#  in MeshFileReal
+
+
 TOKENS_TO_IGNORE_NO_COMPONENTS = ["endscalingsegment"]
 TOKENS_TO_IGNORE_ONE_COMPONENTS = ["scalingsegment", "scalingtype", "axis"]
 TOKENS_TO_IGNORE_TWO_COMPONENTS = ["markerpair", "xmarkerpair", "ymarkerpair", "zmarkerpair", "markerweight"]
@@ -201,12 +205,20 @@ class BiomodModelParser:
                         position = read_float_vector(next_token=next_token, length=3).T
                         current_component.mesh.add_positions(position)
                     elif token.lower() == "meshfile":
-                        mesh_file_name = read_str(next_token=next_token)
+                        mesh_file = read_str(next_token=next_token)
                         if current_component.mesh_file is not None:
                             raise RuntimeError(
-                                f"The mesh file {mesh_file_name} is the second mesh defined for this segment."
+                                f"The mesh file {mesh_file} is the second mesh defined for this segment."
                             )
-                        current_component.mesh_file = MeshFileReal(mesh_file_name=mesh_file_name)
+                        split_name = mesh_file.split("/")
+                        mesh_file_name = split_name[-1]
+                        if len(split_name) > 1:
+                            mesh_file_directory = "/".join(split_name[0:-1])
+                        else:
+                            mesh_file_directory = "."
+                        current_component.mesh_file = MeshFileReal(
+                            mesh_file_name=mesh_file_name, mesh_file_directory=mesh_file_directory
+                        )
                     elif token.lower() == "meshcolor":
                         if current_component.mesh_file is None:
                             raise RuntimeError("The mesh file must be defined before the mesh color.")

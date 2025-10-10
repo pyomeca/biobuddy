@@ -8,6 +8,7 @@ class MeshFile:
     def __init__(
         self,
         mesh_file_name: str,
+        mesh_file_directory: str,
         mesh_color: np.ndarray[float] | list[float] | tuple[float] = None,
         scaling_function: Callable = None,
         rotation_function: Callable = None,
@@ -20,6 +21,8 @@ class MeshFile:
         ----------
         mesh_file_name
             The name of the mesh file
+        mesh_file_directory
+            The directory where the mesh file is located
         mesh_color
             The color the mesh should be displayed in (RGB)
         scaling_function
@@ -30,6 +33,7 @@ class MeshFile:
             The function that defines the translation of the mesh
         """
         self.mesh_file_name = mesh_file_name
+        self.mesh_file_directory = mesh_file_directory
         self.mesh_color = mesh_color
         self.scaling_function = scaling_function
         self.rotation_function = rotation_function
@@ -42,6 +46,14 @@ class MeshFile:
     @mesh_file_name.setter
     def mesh_file_name(self, value: str):
         self._mesh_file_name = value
+
+    @property
+    def mesh_file_directory(self) -> str:
+        return self._mesh_file_directory
+
+    @mesh_file_directory.setter
+    def mesh_file_directory(self, value: str):
+        self._mesh_file_directory = value
 
     @property
     def mesh_color(self) -> np.ndarray[float]:
@@ -150,6 +162,7 @@ class MeshFile:
 
         return MeshFileReal(
             mesh_file_name=self.mesh_file_name,
+            mesh_file_directory=self.mesh_file_directory,
             mesh_color=self.mesh_color,
             mesh_scale=mesh_scale,
             mesh_rotation=mesh_rotation,
