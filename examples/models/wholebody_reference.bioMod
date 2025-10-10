@@ -68,7 +68,6 @@ segment	pelvis_translation
 		-10.000000	10.000000
 		-6.000000	6.000000
 		-5.000000	5.000000
-
 endsegment
 
 
@@ -86,7 +85,6 @@ segment	pelvis_rotation_transform
 		-3.141600	3.141600
 		-3.141600	3.141600
 		-3.141600	3.141600
-
 endsegment
 
 
@@ -219,7 +217,6 @@ segment	femur_r_rotation_transform
 		-2.618000	2.094395
 		-2.094395	2.094395
 		-2.094395	2.094395
-
 endsegment
 
 
@@ -312,9 +309,6 @@ segment	tibia_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -423,7 +417,6 @@ segment	talus_r_ankle_angle_r
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -521,7 +514,6 @@ segment	calcn_r_subtalar_angle_r
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -638,9 +630,6 @@ segment	toes_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -723,7 +712,6 @@ segment	femur_l_rotation_transform
 		-2.618000	2.094395
 		-2.094395	2.094395
 		-2.094395	2.094395
-
 endsegment
 
 
@@ -816,9 +804,6 @@ segment	tibia_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -927,7 +912,6 @@ segment	talus_l_ankle_angle_l
 	rotations	x
 	rangesQ 
 		-1.047198	1.047198
-
 endsegment
 
 
@@ -1025,7 +1009,6 @@ segment	calcn_l_subtalar_angle_l
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -1142,9 +1125,6 @@ segment	toes_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.047198	1.047198
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -1227,7 +1207,6 @@ segment	torso_rotation_transform
 		-1.570796	1.570796
 		-1.570796	1.570796
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -1356,7 +1335,6 @@ segment	head_and_neck_rotation_transform
 		-1.745330	1.047198
 		-0.600000	0.600000
 		-1.221700	1.221700
-
 endsegment
 
 
@@ -1479,7 +1457,6 @@ segment	humerus_r_rotation_transform
 		-1.570796	3.141600
 		-3.839700	1.570796
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -1566,7 +1543,6 @@ segment	ulna_r_elbow_flex_r
 	rotations	x
 	rangesQ 
 		0.000000	3.141600
-
 endsegment
 
 
@@ -1664,7 +1640,6 @@ segment	radius_r_pro_sup_r
 	rotations	x
 	rangesQ 
 		-3.141600	3.141600
-
 endsegment
 
 
@@ -1775,9 +1750,6 @@ segment	lunate_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -1850,10 +1822,7 @@ segment	hand_r_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	y
 	rangesQ 
-		-6.283185	6.283185
 		-0.436332	0.610865
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -2148,9 +2117,6 @@ segment	fingers_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -2409,7 +2375,6 @@ segment	humerus_l_rotation_transform
 		-1.570796	3.141600
 		-3.839700	1.570796
 		-1.570796	1.570796
-
 endsegment
 
 
@@ -2496,7 +2461,6 @@ segment	ulna_l_elbow_flex_l
 	rotations	x
 	rangesQ 
 		0.000000	3.141600
-
 endsegment
 
 
@@ -2594,7 +2558,6 @@ segment	radius_l_pro_sup_l
 	rotations	x
 	rangesQ 
 		-3.141600	3.141600
-
 endsegment
 
 
@@ -2705,9 +2668,6 @@ segment	lunate_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -2780,10 +2740,7 @@ segment	hand_l_rotation_transform
 		0.000000	0.000000	0.000000	1.000000
 	rotations	y
 	rangesQ 
-		-6.283185	6.283185
 		-0.436332	0.610865
-		-6.283185	6.283185
-
 endsegment
 
 
@@ -3078,9 +3035,6 @@ segment	fingers_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
-		-6.283185	6.283185
-		-6.283185	6.283185
-
 endsegment
 
 
