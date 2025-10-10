@@ -531,7 +531,10 @@ def test_segment_real_dof_names_auto_generation():
     assert segment.dof_names == expected_dof_names
 
     # Test mismatch between dof_names length and actual DoFs
-    with pytest.raises(RuntimeError, match=r"The number of DoF names \(1\) does not match the number of DoFs \(6\) in segment test_segment."):
+    with pytest.raises(
+        RuntimeError,
+        match=r"The number of DoF names \(1\) does not match the number of DoFs \(6\) in segment test_segment.",
+    ):
         SegmentReal(
             name="test_segment",
             translations=Translations.XYZ,
