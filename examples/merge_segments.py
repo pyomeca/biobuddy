@@ -80,7 +80,7 @@ def create_model():
     feet_root_model.segments["UPPER_ARMS"].rotations = Rotations.Y
     feet_root_model.segments["UPPER_ARMS"].dof_names = ["UPPER_ARMS_rotY"]
 
-    feet_root_model.animate()
+    # feet_root_model.animate()
 
     return feet_root_model
 
@@ -90,7 +90,7 @@ def main():
     feet_root_model = create_model()
 
     # Exporting the output model as a biomod file
-    feet_root_model.to_biomod(f"feet_root_model.bioMod")
+    feet_root_model.to_biomod(f"models/feet_root_model.bioMod")
 
 
 if __name__ == "__main__":

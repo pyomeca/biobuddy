@@ -4,6 +4,7 @@ import numpy.testing as npt
 import biorbd
 from deepdiff import DeepDiff
 from copy import deepcopy
+from pathlib import Path
 
 from biobuddy import (
     MergeSegmentsTool,
@@ -13,7 +14,7 @@ from biobuddy import (
     Rotations,
     RotoTransMatrix,
 )
-from test_utils import create_simple_model
+from test_utils import create_simple_model, compare_models
 
 
 def test_segment_merge_init():
@@ -398,3 +399,19 @@ def test_merge_tool_errors():
             )
         )
         merge_tool.merge()
+
+def test_merge_tool_example():
+
+    from examples.merge_segments import create_model
+    model = create_model()
+    model.validate_model()
+    # we have to change the dof names because this info is not kept in the .bioMod file
+    model.segments["SHANKS"].dof_names = ["SHANKS_rotY"]
+    model.segments["THIGHS"].dof_names = ["THIGHS_rotY"]
+    model.segments["TRUNK"].dof_names = ["TRUNK_rotY"]
+
+    # Paths
+    current_path_file = Path(__file__).parent
+    model_reference = BiomechanicalModelReal().from_biomod(f"{current_path_file}/../examples/models/feet_root_model.bioMod")
+
+    compare_models(model, model_reference)

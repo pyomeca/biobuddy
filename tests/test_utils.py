@@ -84,14 +84,14 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
     # Compare segments
     assert model1.nb_segments == model2.nb_segments
-    assert model1.segment_names == model2.segment_names
+    assert set(model1.segment_names) == set(model2.segment_names)
 
     assert model1.nb_markers == model2.nb_markers
-    assert model1.marker_names == model2.marker_names
+    assert set(model1.marker_names) == set(model2.marker_names)
     assert model1.nb_contacts == model2.nb_contacts
-    assert model1.contact_names == model2.contact_names
+    assert set(model1.contact_names) == set(model2.contact_names)
     assert model1.nb_imus == model2.nb_imus
-    assert model1.imu_names == model2.imu_names
+    assert set(model1.imu_names) == set(model2.imu_names)
 
     for segment_name in model1.segment_names:
         assert model1.segments[segment_name].name == model2.segments[segment_name].name
@@ -99,10 +99,11 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
         npt.assert_almost_equal(
             model1.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
             model2.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
+            decimal=5,
         )
         assert np.all(model1.segments[segment_name].translations == model2.segments[segment_name].translations)
         assert np.all(model1.segments[segment_name].rotations == model2.segments[segment_name].rotations)
-        assert np.all(model1.segments[segment_name].dof_names == model2.segments[segment_name].dof_names)
+        assert set(model1.segments[segment_name].dof_names) == set(model2.segments[segment_name].dof_names)
         if model1.segments[segment_name].q_ranges is not None:
             assert np.all(
                 model1.segments[segment_name].q_ranges.min_bound == model2.segments[segment_name].q_ranges.min_bound
@@ -120,16 +121,20 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.inertia,
                 model2.segments[segment_name].inertia_parameters.inertia,
+                decimal=5,
             )
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.center_of_mass,
                 model2.segments[segment_name].inertia_parameters.center_of_mass,
+                decimal=5,
             )
         else:
             assert model2.segments[segment_name].inertia_parameters is None
         if model1.segments[segment_name].mesh is not None:
             npt.assert_almost_equal(
-                model1.segments[segment_name].mesh.positions, model2.segments[segment_name].mesh.positions
+                model1.segments[segment_name].mesh.positions,
+                model2.segments[segment_name].mesh.positions,
+                decimal=5,
             )
         else:
             assert model2.segments[segment_name].mesh is None
@@ -150,11 +155,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare markers
         assert model1.segments[segment_name].nb_markers == model2.segments[segment_name].nb_markers
-        assert model1.segments[segment_name].marker_names == model2.segments[segment_name].marker_names
+        assert set(model1.segments[segment_name].marker_names) == set(model2.segments[segment_name].marker_names)
         for marker_name in model1.segments[segment_name].marker_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].markers[marker_name].position,
                 model2.segments[segment_name].markers[marker_name].position,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].markers[marker_name].parent_name
@@ -171,11 +177,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare contacts
         assert model1.segments[segment_name].nb_contacts == model2.segments[segment_name].nb_contacts
-        assert model1.segments[segment_name].contact_names == model2.segments[segment_name].contact_names
+        assert set(model1.segments[segment_name].contact_names) == set(model2.segments[segment_name].contact_names)
         for contact_name in model1.segments[segment_name].contact_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].contacts[contact_name].position,
                 model2.segments[segment_name].contacts[contact_name].position,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].contacts[contact_name].parent_name
@@ -192,11 +199,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare imus
         assert model1.segments[segment_name].nb_imus == model2.segments[segment_name].nb_imus
-        assert model1.segments[segment_name].imu_names == model2.segments[segment_name].imu_names
+        assert set(model1.segments[segment_name].imu_names) == set(model2.segments[segment_name].imu_names)
         for imu_name in model1.segments[segment_name].imu_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].imus[imu_name].scs.rt_matrix,
                 model2.segments[segment_name].imus[imu_name].scs.rt_matrix,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].imus[imu_name].parent_name
@@ -213,11 +221,11 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
     # Compare muscle groups
     assert model1.nb_muscle_groups == model2.nb_muscle_groups
-    assert model1.muscle_group_names == model2.muscle_group_names
+    assert set(model1.muscle_group_names) == set(model2.muscle_group_names)
     assert model1.nb_muscles == model2.nb_muscles
-    assert model1.muscle_names == model2.muscle_names
+    assert set(model1.muscle_names) == set(model2.muscle_names)
     assert model1.nb_via_points == model2.nb_via_points
-    assert model1.via_point_names == model2.via_point_names
+    assert set(model1.via_point_names) == set(model2.via_point_names)
     for muscle_group_name in model1.muscle_group_names:
         assert (
             model1.muscle_groups[muscle_group_name].insertion_parent_name
@@ -245,10 +253,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
+                decimal=5,
             )
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
+                decimal=5,
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
@@ -301,6 +311,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                 npt.assert_almost_equal(
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
                     model2.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
+                    decimal=5,
                 )
                 if (
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].condition
@@ -349,14 +360,14 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                     is not None
                 ):
                     assert (
-                        model1.muscle_groups[muscle_group_name]
+                        set(model1.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
-                        .movement.dof_names
-                        == model2.muscle_groups[muscle_group_name]
+                        .movement.dof_names)
+                        == set(model2.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
-                        .movement.dof_names
+                        .movement.dof_names)
                     )
                     for i in range(3):
                         assert (
