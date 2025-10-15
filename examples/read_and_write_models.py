@@ -112,8 +112,10 @@ def urdf_biomod_convertion():
 
     # Paths
     current_path_file = Path(__file__).parent
-    biomod_filepath = f"{current_path_file}/models/kuka_lwr.bioMod"
-    urdf_filepath = f"{current_path_file}/models/kuka_lwr.urdf"
+    # biomod_filepath = f"{current_path_file}/models/kuka_lwr.bioMod"
+    # urdf_filepath = f"{current_path_file}/models/kuka_lwr.urdf"
+    biomod_filepath = f"{current_path_file}/models/flexiv_Rizon10s_kinematics.bioMod"
+    urdf_filepath = f"{current_path_file}/models/flexiv_Rizon10s_kinematics.urdf"
 
     # --- Reading an .urdf model and translating it to a .bioMod model --- #
     # Read an .urdf file

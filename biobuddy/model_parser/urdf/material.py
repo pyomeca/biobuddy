@@ -1,7 +1,7 @@
 import numpy as np
-import xml.etree.ElementTree as ET
+from lxml import etree
 
-from .utils import find_in_tree
+from ..utils import read_float_vector
 
 
 class Material:
@@ -14,11 +14,12 @@ class Material:
         self.color = color
 
     @staticmethod
-    def from_element(element: ET.Element) -> "Self":
-        name = (element.attrib["name"]).split("/")[-1]
-        color_str = find_in_tree(element, "color")
-        color = np.array([float(elt) for elt in color_str.split(' ').strip])
+    def from_element(element: etree.Element) -> "Self":
+        # TODO: implement the transparency with the A from RGBA
 
+        name = element.attrib["name"]
+        color_str = element.find("color").attrib["rgba"]
+        color = read_float_vector(color_str)[:3]
         return Material(
             name=name,
             color=color,
