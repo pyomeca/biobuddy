@@ -98,6 +98,7 @@ class UrdfModelParser(AbstractModelParser):
     def _get_mesh_file(self, link: etree.Element) -> MeshFileReal | None:
         visual = link.find("visual")
         mesh_file_name = None
+        mesh_file_directory = None
         mesh_color = None
         mesh_rotation = None
         mesh_translation = None
@@ -107,7 +108,8 @@ class UrdfModelParser(AbstractModelParser):
             if geometry is not None:
                 mesh_elem = geometry.find("mesh")
                 if mesh_elem is not None and "filename" in mesh_elem.attrib:
-                    mesh_file_name = mesh_elem.attrib["filename"]
+                    mesh_file_name = mesh_elem.attrib["filename"].split("/")[-1]
+                    mesh_file_directory = "/".join(mesh_elem.attrib["filename"].split("/")[:-1])
             # Get the color of the mesh
             material = visual.find("material")
             if material is not None:
@@ -125,6 +127,7 @@ class UrdfModelParser(AbstractModelParser):
         if mesh_file_name is not None:
             return MeshFileReal(
                 mesh_file_name=mesh_file_name,
+                mesh_file_directory=mesh_file_directory,
                 mesh_color=mesh_color,
                 mesh_scale=None,
                 mesh_rotation=mesh_rotation,
