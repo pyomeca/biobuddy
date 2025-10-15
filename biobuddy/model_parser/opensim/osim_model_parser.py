@@ -11,11 +11,11 @@ from time import strftime
 import numpy as np
 from lxml import etree
 
-from .utils import is_element_empty, match_tag
 from .body import Body
 from .joint import Joint
 from .marker import Marker
 from .muscle import get_muscle_from_element
+from ..utils_xml import is_element_empty, match_tag
 from ..abstract_model_parser import AbstractModelParser
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal

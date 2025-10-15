@@ -3,7 +3,7 @@ from time import strftime
 from lxml import etree
 
 from biobuddy import BiomechanicalModelReal
-from .utils import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
+from ..utils_xml import is_element_empty, find_in_tree, match_tag, match_text, str_to_bool
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling
 from ...components.real.rigidbody.marker_weight import MarkerWeight
 from ...model_modifiers.scale_tool import ScaleTool

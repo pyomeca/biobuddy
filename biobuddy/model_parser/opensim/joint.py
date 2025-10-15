@@ -5,7 +5,7 @@ from lxml import etree
 import numpy as np
 
 from .coordinate import Coordinate
-from .utils import find_in_tree
+from ..utils_xml import find_in_tree
 from .spatial_transform import SpatialTransform
 from ...utils.linear_algebra import compute_matrix_rotation, rot2eul
 
