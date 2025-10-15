@@ -4,7 +4,11 @@ import numpy as np
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.segment_real import SegmentReal
+from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
+from ...components.real.rigidbody.mesh_file_real import MeshFileReal
 from ...utils.named_list import NamedList
+from ..abstract_model_parser import AbstractModelParser
+from .material import Material
 
 
 def rpy_to_matrix(roll, pitch, yaw):
@@ -33,9 +37,15 @@ def format_RT_matrix(RT):
     return "\n".join(lines)
 
 
-def inertia_to_matrix(ixx, iyy, izz, ixy=0, ixz=0, iyz=0):
+def inertia_to_matrix(
+        ixx: float = 0,
+        iyy: float = 0,
+        izz: float = 0,
+        ixy: float = 0,
+        ixz: float = 0,
+        iyz: float = 0):
     # Format symmetric inertia matrix (3x3)
-    return f"        {ixx} {ixy} {ixz}\n" f"        {ixy} {iyy} {iyz}\n" f"        {ixz} {iyz} {izz}"
+    return np.array([[ixx, ixy, ixz], [ixy, iyy, iyz], [ixz, iyz, izz]])
 
 
 def parse_float(value, default=0.0):
@@ -56,50 +66,6 @@ def add_markers(segment_name, com, marker_outputs):
     marker_outputs.append("endmarker\n")
 
 
-def add_inertia_mass_com(link, lines):
-    inertia_mat = "        0 0 0\n        0 0 0\n        0 0 0"
-    mass = 0.0
-    com = [0.0, 0.0, 0.0]
-
-    inertial = link.find("inertial")
-    if inertial is not None:
-        mass_elem = inertial.find("mass")
-        if mass_elem is not None and "value" in mass_elem.attrib:
-            mass = parse_float(mass_elem.attrib["value"], 0.0)
-        origin = inertial.find("origin")
-        if origin is not None and "xyz" in origin.attrib:
-            com = [parse_float(x, 0.0) for x in origin.attrib["xyz"].split()]
-        inertia_elem = inertial.find("inertia")
-        if inertia_elem is not None:
-            ixx = parse_float(inertia_elem.attrib.get("ixx", 0))
-            iyy = parse_float(inertia_elem.attrib.get("iyy", 0))
-            izz = parse_float(inertia_elem.attrib.get("izz", 0))
-            ixy = parse_float(inertia_elem.attrib.get("ixy", 0))
-            ixz = parse_float(inertia_elem.attrib.get("ixz", 0))
-            iyz = parse_float(inertia_elem.attrib.get("iyz", 0))
-            inertia_mat = inertia_to_matrix(ixx, iyy, izz, ixy, ixz, iyz)
-
-    lines.append(f"    mass {mass}")
-    lines.append(f"    com    {com[0]} {com[1]} {com[2]}")
-    lines.append("    inertia")
-    lines.append(inertia_mat)
-    return lines, mass, com
-
-
-def add_mesh(link, lines):
-    visual = link.find("visual")
-    mesh = None
-    if visual is not None:
-        geometry = visual.find("geometry")
-        if geometry is not None:
-            mesh_elem = geometry.find("mesh")
-            if mesh_elem is not None and "filename" in mesh_elem.attrib:
-                mesh = mesh_elem.attrib["filename"]
-    if mesh:
-        lines.append(f"    meshfile {mesh}")
-    return lines
-
-
 def add_joint_dynamics(joint, lines):
     # Optional: Add joint dynamics info as comments
     dynamics = joint.find("dynamics")
@@ -113,7 +79,7 @@ def add_joint_dynamics(joint, lines):
     return lines
 
 
-class UrdfModelParser:
+class UrdfModelParser(AbstractModelParser):
     def __init__(self, filepath: str):
         """
         Load the model from the filepath
@@ -123,23 +89,105 @@ class UrdfModelParser:
         filepath
             The path to the model to load
         """
-        self.gravity = None
-        self.segments = NamedList[SegmentReal]()
+        super().__init__(filepath)
 
-        # biomod_lines = []
-        # biomod_lines.append("version 1")
-        # biomod_lines.append("gravity 0 0 -9.81\n")
-        biorbd_version = None
-        gravity = [0, 0, -9.81]
+        # Extended attributes
+        self.model = ET.parse(filepath).getroot()
+        self.gravity = np.array([0.0, 0.0, -9.81])
+        self.links_elt: dict[str, ET.Element] = {link.attrib["name"]: link for link in self.model.findall("link")}
+        self.joints_elt: list[ET.Element] = self.model.findall("joint")
 
-        tree = ET.parse(filepath)
-        root = tree.getroot()
+        # Create the biomechanical model
+        self.biomechanical_model_real = BiomechanicalModelReal()
+        self._read()
 
-        links = {link.attrib["name"]: link for link in root.findall("link")}
-        joints = root.findall("joint")
+    def _check_version(self):
+        version = int(self.model.attrib["Version"])
+        if version != 1.0:
+            raise NotImplementedError(
+                f"The only file version tested yet is 1.0, you have {version}. If you encounter this error, please notify the developers by opening an issue on GitHub.")
 
-        all_links = set(links.keys())
-        child_links = {j.find("child").attrib["link"] for j in joints}
+    def _get_material_elts(self) -> NamedList[Material]:
+        material_elts = NamedList()
+        for mat in self.model.findall("material"):
+            material_elts._append(Material.from_element(mat))
+        return material_elts
+
+    @staticmethod
+    def get_inertia_parameters(link: ET.Element) -> InertiaParametersReal:
+        inertia = inertia_to_matrix()
+        mass = None
+        center_of_mass = np.array([0.0, 0.0, 0.0])
+
+        inertial = link.find("inertial")
+        if inertial is not None:
+            mass_elem = inertial.find("mass")
+            if mass_elem is not None and "value" in mass_elem.attrib:
+                mass = parse_float(mass_elem.attrib["value"], 0.0)
+            origin = inertial.find("origin")
+            if origin is not None and "xyz" in origin.attrib:
+                center_of_mass = np.array([parse_float(x, 0.0) for x in origin.attrib["xyz"].split()])
+            inertia_elem = inertial.find("inertia")
+            if inertia_elem is not None:
+                ixx = parse_float(inertia_elem.attrib.get("ixx", 0))
+                iyy = parse_float(inertia_elem.attrib.get("iyy", 0))
+                izz = parse_float(inertia_elem.attrib.get("izz", 0))
+                ixy = parse_float(inertia_elem.attrib.get("ixy", 0))
+                ixz = parse_float(inertia_elem.attrib.get("ixz", 0))
+                iyz = parse_float(inertia_elem.attrib.get("iyz", 0))
+                inertia = inertia_to_matrix(ixx, iyy, izz, ixy, ixz, iyz)
+
+        return InertiaParametersReal(
+            mass=mass,
+            center_of_mass=center_of_mass,
+            inertia=inertia,
+        )
+
+    def get_mesh_file(self, link: ET.Element) -> MeshFileReal | None:
+        visual = link.find("visual")
+        mesh_file_name = None
+        mesh_color = None
+        mesh_rotation = None
+        mesh_translation = None
+        if visual is not None:
+            # Get the file name
+            geometry = visual.find("geometry")
+            if geometry is not None:
+                mesh_elem = geometry.find("mesh")
+                if mesh_elem is not None and "filename" in mesh_elem.attrib:
+                    mesh_file_name = mesh_elem.attrib["filename"]
+            # Get the color of the mesh
+            material = visual.find("material")
+            if material is not None:
+                color_name = material.attrib["name"]
+                mesh_color = self.material_elts[color_name].color
+            # Get the mesh RT
+            origin = visual.find("origin")
+            mesh_rotation = origin.attrib["rpy"]
+            if mesh_rotation is not None:
+                mesh_rotation = np.array([float(elt) for elt in mesh_rotation.split()])
+            mesh_translation = origin.attrib["xyz"]
+            if mesh_translation is not None:
+                mesh_translation = np.array([float(elt) for elt in mesh_translation.split()])
+
+        if mesh_file_name is not None:
+            return MeshFileReal(
+                mesh_file_name=mesh_file_name,
+                mesh_color=mesh_color,
+                mesh_scale=None,
+                mesh_rotation=mesh_rotation,
+                mesh_translation=mesh_translation,
+            )
+        else:
+            return None
+
+    def _read(self):
+
+        self._check_version()
+        self.material_elts: NamedList[Material] = self._get_material_elts()
+
+        all_links = set(self.links_elt.keys())
+        child_links = {j.find("child").attrib["link"] for j in self.joints_elt}
         root_links = list(all_links - child_links)
         root_link = root_links[0] if root_links else list(all_links)[0]
 
@@ -147,17 +195,20 @@ class UrdfModelParser:
         marker_outputs = []
 
         # Base segment (root link)
-        base_link = links[root_link]
-        base_lines = [f"segment {root_link}"]
-        base_lines, mass, com = add_inertia_mass_com(base_link, base_lines)
-        base_lines = add_mesh(base_link, base_lines)
-        base_lines.append("endsegment\n")
-        segment_outputs.append("\n".join(base_lines))
+        base_link = self.links_elt[root_link]
+        self.biomechanical_model_real.add_segment(
+            SegmentReal(
+                name=root_link,
+                inertia_parameters=self.get_inertia_parameters(base_link),
+                mesh_file=self.get_mesh_file(base_link),
+            ),
+        )
+
         add_markers(root_link, com, marker_outputs)
 
         previous_segment = root_link
 
-        for joint in joints:
+        for joint in self.joints_elt:
             child = joint.find("child").attrib["link"]
 
             origin = joint.find("origin")
@@ -194,7 +245,7 @@ class UrdfModelParser:
             # Rotation segment acting as the child's segment with translation in RT
             rot_segment_name = f"{child}"
 
-            child_link = links[child]
+            child_link = self.links_elt[child]
 
             rot_lines = [f"segment {rot_segment_name}"]
             rot_lines.append(f"    parent {previous_segment}")
@@ -229,6 +280,5 @@ class UrdfModelParser:
         print(f"Exported {biomod_file}")
 
     def to_real(self) -> BiomechanicalModelReal:
-        """
-        Convert the model to a BiomechanicalModelReal
-        """
+        return self.biomechanical_model_real
+
