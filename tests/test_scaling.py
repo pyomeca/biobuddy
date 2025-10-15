@@ -36,10 +36,10 @@ from biobuddy.utils.named_list import NamedList
 
 class MockC3dData:
     def __init__(self):
-        self.marker_names = ["root_marker", "root_marker2", "child_marker", "child_marker2"]
+        self.marker_names = ["parent_marker", "parent_marker2", "child_marker", "child_marker2"]
         # Create marker positions for 10 frames
         self.all_marker_positions = np.zeros((3, 4, 10))
-        # root_marker positions
+        # parent_marker positions
         self.all_marker_positions[:, 0, :] = np.array(
             [
                 [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11],  # x
@@ -47,7 +47,7 @@ class MockC3dData:
                 [0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33, 0.33],  # z
             ]
         )
-        # root_marker1 positions are all zeros
+        # parent_marker1 positions are all zeros
         # child_marker positions
         self.all_marker_positions[:, 2, :] = np.array(
             [
@@ -186,8 +186,22 @@ def test_scaling_wholebody():
         muscle_state_type=MuscleStateType.DEGROOTE,
         mesh_dir=cleaned_relative_path,
     )
-    original_model.fix_via_points()
 
+    # Test errors from moving muscle origin or insertion
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The muscle vas_med_r has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points\(\) before scaling the model.",
+    ):
+        scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
+        scaled_model = scale_tool.scale(
+            static_c3d=c3d_data,
+            mass=69.2,
+            q_regularization_weight=0.1,
+            make_static_pose_the_models_zero=False,
+            visualize_optimal_static_pose=False,
+        )
+
+    original_model.fix_via_points()
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
         static_c3d=c3d_data,
@@ -310,6 +324,10 @@ def test_scaling_wholebody():
 
     # Via point positions
     for muscle_group in original_model.muscle_groups:
+        if muscle_group.name in ["femur_r_to_tibia_r", "femur_l_to_tibia_l"]:
+            # These muscle groups have a moving insertion (vas_med_r and vas_med_l), which is not supported yet
+            continue
+
         for muscle in muscle_group.muscles:
             for via_point in muscle.via_points:
                 biobuddy_scaled_via_point = (
@@ -542,13 +560,13 @@ def test_add_and_remove_marker_weight():
     assert scale_tool.marker_weights == []
 
     # Add a marker weight
-    marker_weight1 = MarkerWeight(name="root_marker", weight=1.5)
+    marker_weight1 = MarkerWeight(name="parent_marker", weight=1.5)
     marker_weight2 = MarkerWeight(name="child_marker", weight=2.0)
     scale_tool.add_marker_weight(marker_weight1)
     scale_tool.add_marker_weight(marker_weight2)
 
     assert len(scale_tool.marker_weights) == 2
-    assert scale_tool.marker_weights["root_marker"].weight == 1.5
+    assert scale_tool.marker_weights["parent_marker"].weight == 1.5
     assert scale_tool.marker_weights["child_marker"].weight == 2.0
 
     # Test that printing the marker weights works
@@ -556,14 +574,14 @@ def test_add_and_remove_marker_weight():
     # Redirect stdout into the buffer
     with redirect_stdout(buffer):
         scale_tool.print_marker_weights()
-    assert buffer.getvalue() == "root_marker : 1.50\nchild_marker : 2.00\n"
+    assert buffer.getvalue() == "parent_marker : 1.50\nchild_marker : 2.00\n"
 
     # Remove the marker weight
-    scale_tool.remove_marker_weight("root_marker")
+    scale_tool.remove_marker_weight("parent_marker")
 
     assert len(scale_tool.marker_weights) == 1
     assert "child_marker" in scale_tool.marker_weights.keys()
-    assert "root_marker" not in scale_tool.marker_weights.keys()
+    assert "parent_marker" not in scale_tool.marker_weights.keys()
 
 
 def test_add_and_remove_scaling_segment():
@@ -576,8 +594,8 @@ def test_add_and_remove_scaling_segment():
     # Add segment scaling
     scale_tool.add_scaling_segment(
         SegmentScaling(
-            name="root",
-            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
+            name="parent",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["parent_marker", "parent_marker2"]]),
         )
     )
     scale_tool.add_scaling_segment(
@@ -587,13 +605,13 @@ def test_add_and_remove_scaling_segment():
         )
     )
     assert len(scale_tool.scaling_segments) == 2
-    assert scale_tool.scaling_segments.keys() == ["root", "child"]
+    assert scale_tool.scaling_segments.keys() == ["parent", "child"]
 
     # Remove the scaling segment
-    scale_tool.remove_scaling_segment("root")
+    scale_tool.remove_scaling_segment("parent")
     assert len(scale_tool.scaling_segments) == 1
     assert "child" in scale_tool.scaling_segments.keys()
-    assert "root" not in scale_tool.scaling_segments.keys()
+    assert "parent" not in scale_tool.scaling_segments.keys()
 
 
 def test_check_that_makers_do_not_move():
@@ -602,7 +620,7 @@ def test_check_that_makers_do_not_move():
     scale_tool = ScaleTool(original_model=create_simple_model(), max_marker_movement=0.1)
 
     # Add marker weights
-    marker_weight1 = MarkerWeight(name="root_marker", weight=1.0)
+    marker_weight1 = MarkerWeight(name="parent_marker", weight=1.0)
     marker_weight2 = MarkerWeight(name="child_marker", weight=1.0)
     scale_tool.add_marker_weight(marker_weight1)
     scale_tool.add_marker_weight(marker_weight2)
@@ -612,12 +630,12 @@ def test_check_that_makers_do_not_move():
 
     # Now make a marker move too much
     moving_data = deepcopy(mock_c3d_data)
-    moving_data.all_marker_positions[0, 0, -1] += 0.2  # Move x-coordinate of root_marker in last frame
+    moving_data.all_marker_positions[0, 0, -1] += 0.2  # Move x-coordinate of parent_marker in last frame
 
     # This should raise an error
     with pytest.raises(
         RuntimeError,
-        match="The marker root_marker moves of approximately 0.2 m during the static trial, which is above the maximal limit of 0.1 m.",
+        match="The marker parent_marker moves of approximately 0.2 m during the static trial, which is above the maximal limit of 0.1 m.",
     ):
         scale_tool.check_that_makers_do_not_move(moving_data.all_marker_positions, moving_data.marker_names)
 
@@ -633,9 +651,9 @@ def test_define_mean_experimental_markers():
     assert scale_tool.mean_experimental_markers.shape == (4, 4)  # 4D coordinates for 4 markers
 
     # Check mean values
-    assert np.isclose(scale_tool.mean_experimental_markers[0, 0], 0.11)  # root_marker x
-    assert np.isclose(scale_tool.mean_experimental_markers[1, 0], 0.22)  # root_marker y
-    assert np.isclose(scale_tool.mean_experimental_markers[2, 0], 0.33)  # root_marker z
+    assert np.isclose(scale_tool.mean_experimental_markers[0, 0], 0.11)  # parent_marker x
+    assert np.isclose(scale_tool.mean_experimental_markers[1, 0], 0.22)  # parent_marker y
+    assert np.isclose(scale_tool.mean_experimental_markers[2, 0], 0.33)  # parent_marker z
 
     assert np.isclose(scale_tool.mean_experimental_markers[0, 2], 0.44)  # child_marker x
     assert np.isclose(scale_tool.mean_experimental_markers[1, 2], 0.55)  # child_marker y
@@ -651,8 +669,8 @@ def test_scaling_factors_and_masses_segmentwise():
     # Add scaling segments
     scale_tool.add_scaling_segment(
         SegmentScaling(
-            name="root",
-            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["root_marker", "root_marker2"]]),
+            name="parent",
+            scaling_type=SegmentWiseScaling(axis=Translations.XYZ, marker_pairs=[["parent_marker", "parent_marker2"]]),
         )
     )
     scale_tool.add_scaling_segment(
@@ -673,10 +691,10 @@ def test_scaling_factors_and_masses_segmentwise():
         mass=20,
         original_mass=15.0,  # 10 + 5
     )
-    npt.assert_almost_equal(segment_masses["root"], 11.759414918809005)
+    npt.assert_almost_equal(segment_masses["parent"], 11.759414918809005)
     npt.assert_almost_equal(segment_masses["child"], 8.240585081190993)
     npt.assert_almost_equal(
-        scaling_factors["root"]
+        scaling_factors["parent"]
         .to_vector()
         .reshape(
             4,
@@ -706,11 +724,11 @@ def test_scaling_factors_and_masses_axiswise():
     # Add scaling segments
     scale_tool.add_scaling_segment(
         SegmentScaling(
-            name="root",
+            name="parent",
             scaling_type=AxisWiseScaling(
                 marker_pairs={
-                    Translations.X: [["root_marker", "root_marker2"]],
-                    Translations.Y: [["root_marker", "root_marker2"]],
+                    Translations.X: [["parent_marker", "parent_marker2"]],
+                    Translations.Y: [["parent_marker", "parent_marker2"]],
                 }
             ),
         )
@@ -738,10 +756,10 @@ def test_scaling_factors_and_masses_axiswise():
         mass=20,
         original_mass=15.0,  # 10 + 5
     )
-    npt.assert_almost_equal(segment_masses["root"], 12.298699379214955)
+    npt.assert_almost_equal(segment_masses["parent"], 12.298699379214955)
     npt.assert_almost_equal(segment_masses["child"], 7.701300620785044)
     npt.assert_almost_equal(
-        scaling_factors["root"]
+        scaling_factors["parent"]
         .to_vector()
         .reshape(
             4,
@@ -767,7 +785,7 @@ def test_scaling_factors_and_masses_bodywise():
     # Add scaling segments
     scale_tool.add_scaling_segment(
         SegmentScaling(
-            name="root",
+            name="parent",
             scaling_type=BodyWiseScaling(subject_height=1.01),
         )
     )
@@ -783,7 +801,7 @@ def test_scaling_factors_and_masses_bodywise():
         RuntimeError,
         match="The original model height must be set to use BodyWiseScaling. you can set it using `original_model.height = height`.",
     ):
-        scale_tool.scaling_segments["root"].compute_scaling_factors(
+        scale_tool.scaling_segments["parent"].compute_scaling_factors(
             simple_model, mock_c3d_data.all_marker_positions, mock_c3d_data.marker_names
         )
 
@@ -801,10 +819,10 @@ def test_scaling_factors_and_masses_bodywise():
         mass=20,
         original_mass=15.0,  # 10 + 5
     )
-    npt.assert_almost_equal(segment_masses["root"], 13.333333333333336)
+    npt.assert_almost_equal(segment_masses["parent"], 13.333333333333336)
     npt.assert_almost_equal(segment_masses["child"], 6.666666666666668)
     npt.assert_almost_equal(
-        scaling_factors["root"]
+        scaling_factors["parent"]
         .to_vector()
         .reshape(
             4,
@@ -849,7 +867,7 @@ def test_scale_imu():
     )
     original_imu = InertialMeasurementUnitReal(
         name="original_contact",
-        parent_name="root",
+        parent_name="parent",
         scs=imu_matrix,
     )
     scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
@@ -872,7 +890,7 @@ def test_scale_imu():
 def test_scale_marker():
     """Test scaling of markers"""
     simple_model = create_simple_model()
-    original_marker = simple_model.segments["root"].markers[0]
+    original_marker = simple_model.segments["parent"].markers[0]
     scale_factor = np.array([2.0, 3.0, 4.0, 1.0])
 
     result = ScaleTool(simple_model).scale_marker(original_marker, scale_factor)
@@ -899,7 +917,7 @@ def test_scale_contact():
     simple_model = create_simple_model()
     original_contact = ContactReal(
         name="original_contact",
-        parent_name="root",
+        parent_name="parent",
         position=np.array([0.1, 0.2, 0.3, 1.0]),
         axis=Translations.XYZ,
     )
@@ -925,7 +943,7 @@ def test_scale_contact():
 def test_scale_via_point():
     """Test scaling of via points"""
     simple_model = create_simple_model()
-    original_via_point = simple_model.muscle_groups["root_to_child"].muscles["muscle1"].via_points[0]
+    original_via_point = simple_model.muscle_groups["parent_to_child"].muscles["muscle1"].via_points[0]
     scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 
     result = ScaleTool(simple_model).scale_via_point(original_via_point, scale_factor)
@@ -949,7 +967,7 @@ def test_scale_via_point():
 def test_scale_muscle():
     """Test scaling of muscles"""
     simple_model = create_simple_model()
-    original_muscle = simple_model.muscle_groups["root_to_child"].muscles[0]
+    original_muscle = simple_model.muscle_groups["parent_to_child"].muscles[0]
     origin_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
     insertion_scale_factor = point_to_array(np.array([2.0, 3.0, 4.0, 1.0]))
 

@@ -1,16 +1,11 @@
-from typing import Callable, Any
-
 import numpy as np
 
-from ....utils.aliases import Points, points_to_array
-from ....utils.protocols import Data
-from ....utils.named_list import NamedList
 from .via_point_real import ViaPointReal
-from ...generic.muscle.via_point import ViaPoint
-from ...muscle_utils import MuscleType, MuscleStateType
+from ....utils.named_list import NamedList
+from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 
 
-class MuscleReal:
+class MuscleReal(MuscleUtils):
     def __init__(
         self,
         name: str,
@@ -54,6 +49,8 @@ class MuscleReal:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        super().__init__()
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -83,8 +80,13 @@ class MuscleReal:
             raise ValueError(
                 f"The via points's muscle {via_point.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
             )
+        if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
+            raise ValueError(
+                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+            )
 
         via_point.muscle_name = self.name
+        via_point.muscle_group = self.muscle_group
         self.via_points._append(via_point)
 
     def remove_via_point(self, via_point_name: str) -> None:

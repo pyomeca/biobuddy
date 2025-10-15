@@ -533,7 +533,9 @@ class RotoTransMatrix:
 
     @translation.setter
     def translation(self, trans: np.ndarray):
-        self._rt[:3, 3] = trans
+        self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(
+            3,
+        )
 
     @property
     def rotation_matrix(self) -> np.ndarray:
@@ -569,6 +571,16 @@ class RotoTransMatrix:
         out_inverse = RotoTransMatrix()
         out_inverse.from_rt_matrix(rt_matrix)
         return out_inverse
+
+    @property
+    def is_identity(self) -> bool:
+        """
+        Tests if the RotoTransMatrix is an identity matrix
+        """
+        if np.all(np.abs(self._rt - np.eye(4)) < 1e-6):
+            return True
+        else:
+            return False
 
 
 class RotoTransMatrixTimeSeries:
@@ -656,3 +668,16 @@ def point_from_global_to_local(point_in_global: Point, jcs_in_global: RotoTransM
 
 def point_from_local_to_global(point_in_local: Point, jcs_in_global: RotoTransMatrix) -> Point:
     return jcs_in_global @ point_to_array(point=point_in_local)
+
+
+def local_rt_between_global_rts(
+    parent_rt_in_global: RotoTransMatrix, child_rt_in_global: RotoTransMatrix
+) -> RotoTransMatrix:
+    """
+    Computes the local RotoTransMatrix between two global RotoTransMatrices.
+    """
+    if not isinstance(parent_rt_in_global, RotoTransMatrix) or not isinstance(child_rt_in_global, RotoTransMatrix):
+        raise TypeError("Both parent and child RTs must be instances of RotoTransMatrix.")
+
+    local_rt = parent_rt_in_global.inverse @ child_rt_in_global
+    return local_rt

@@ -6,6 +6,7 @@ import xml.etree.cElementTree as ET
 from xml.dom import minidom
 import numpy as np
 
+from .modifiers_utils import modify_muscle_parameters
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.segment_scaling import SegmentScaling
 from ..components.real.rigidbody.marker_weight import MarkerWeight
@@ -158,13 +159,14 @@ class ScaleTool:
                 "No scaling configuration was set. Please set a scaling configuration using ScaleTool().from_xml(filepath=filepath) or ScaleTool().from_biomod(filepath=filepath)."
             )
 
+        self.check_that_via_points_are_fixed()
         self.check_that_makers_do_not_move(marker_positions, marker_names)
         self.check_segments()
         self.define_mean_experimental_markers(marker_positions, marker_names)
 
         self.scale_model_geometrically(marker_positions, marker_names, mass)
 
-        self.modify_muscle_parameters()
+        modify_muscle_parameters(self.original_model, self.scaled_model)
         self.place_model_in_static_pose(
             marker_positions,
             marker_names,
@@ -176,6 +178,27 @@ class ScaleTool:
         )
 
         return self.scaled_model
+
+    def check_that_via_points_are_fixed(self):
+        """
+        It is not possible yet to scale a model that has moving via points.
+        """
+        for muscle_group in self.original_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+                if muscle.origin_position.movement is not None:
+                    raise NotImplementedError(
+                        f"The muscle {muscle.name} has a moving origin. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                    )
+                if muscle.insertion_position.movement is not None:
+                    raise NotImplementedError(
+                        f"The muscle {muscle.name} has a moving insertion. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                    )
+                for via_point in muscle.via_points:
+                    if via_point.movement is not None:
+                        if muscle.insertion_position.movement is not None:
+                            raise NotImplementedError(
+                                f"The muscle {muscle.name} has a moving via point. Scaling models with moving via points is not implemented yet. Please run model.fix_via_points() before scaling the model."
+                            )
 
     def check_that_makers_do_not_move(self, marker_positions, marker_names):
         """
@@ -568,7 +591,7 @@ class ScaleTool:
         method: str,
     ) -> tuple[np.ndarray, BiomechanicalModelReal]:
 
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.dofs[:2] == [
             Translations.XYZ,
             Rotations.XYZ,
         ]:
@@ -630,7 +653,7 @@ class ScaleTool:
             raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
 
         # Remove the fake root degrees of freedom if needed
-        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.degrees_of_freedom()[:2] == [
+        if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.dofs[:2] == [
             Translations.XYZ,
             Rotations.XYZ,
         ]:
@@ -641,15 +664,7 @@ class ScaleTool:
             raise NotImplementedError(
                 "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
             )
-
-        jcs_in_global = self.scaled_model.forward_kinematics(q_original)
-        for i_segment, segment_name in enumerate(self.scaled_model.segments.keys()):
-            self.scaled_model.segments[segment_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=jcs_in_global[segment_name][0],  # We can that the 0th since there is just one frame in q_original
-                is_scs_local=(
-                    segment_name == "base"
-                ),  # joint coordinate system is now expressed in the global except for the base because it does not have a parent
-            )
+        self.scaled_model.modify_model_static_pose(q_original)
 
     def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
         if q.shape != (self.scaled_model.nb_q,):
@@ -689,41 +704,11 @@ class ScaleTool:
 
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static)
-            self.scaled_model.segments_rt_to_local()
             self.replace_markers_on_segments_local_scs(
                 q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
             )
         else:
             self.replace_markers_on_segments_local_scs(q_static, model_to_use)
-
-    def modify_muscle_parameters(self):
-        """
-        Modify the optimal length, tendon slack length and pennation angle of the muscles.
-        """
-        for muscle_group in self.original_model.muscle_groups:
-            for muscle_name in muscle_group.muscle_names:
-                if muscle_group.muscles[muscle_name].optimal_length is None:
-                    raise RuntimeError(
-                        f"The muscle {muscle_name} does not have an optimal length. Please set the optimal length of the muscle in the original model."
-                    )
-                elif muscle_group.muscles[muscle_name].tendon_slack_length is None:
-                    raise RuntimeError(
-                        f"The muscle {muscle_name} does not have a tendon slack length. Please set the tendon slack length of the muscle in the original model."
-                    )
-
-                original_muscle_tendon_length = self.original_model.muscle_tendon_length(muscle_name)
-                scaled_muscle_tendon_length = self.scaled_model.muscle_tendon_length(muscle_name)
-
-                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].optimal_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].optimal_length)
-                    * scaled_muscle_tendon_length
-                    / original_muscle_tendon_length
-                )
-                self.scaled_model.muscle_groups[muscle_group.name].muscles[muscle_name].tendon_slack_length = (
-                    deepcopy(muscle_group.muscles[muscle_name].tendon_slack_length)
-                    * scaled_muscle_tendon_length
-                    / original_muscle_tendon_length
-                )
 
     def from_biomod(
         self,

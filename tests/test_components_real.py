@@ -131,8 +131,9 @@ def test_marker_real_arithmetic():
 # ------- MeshFileReal ------- #
 def test_init_mesh_file_real():
     # Test initialization with minimal parameters
-    mesh_file = MeshFileReal(mesh_file_name="test.obj")
+    mesh_file = MeshFileReal(mesh_file_name="test.obj", mesh_file_directory="mesh_file/dir")
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     assert mesh_file.mesh_color is None
     npt.assert_array_equal(mesh_file.mesh_scale, np.ones((4, 1)))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.zeros((4, 1)))
@@ -146,6 +147,7 @@ def test_init_mesh_file_real():
 
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=mesh_color,
         mesh_scale=mesh_scale,
         mesh_rotation=mesh_rotation,
@@ -153,16 +155,29 @@ def test_init_mesh_file_real():
     )
 
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     npt.assert_array_equal(mesh_file.mesh_color, mesh_color)
     npt.assert_array_equal(mesh_file.mesh_scale, np.array([[2.0], [2.0], [2.0], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_rotation, np.array([[0.1], [0.2], [0.3], [1.0]]))
     npt.assert_array_equal(mesh_file.mesh_translation, np.array([[1.0], [2.0], [3.0], [1.0]]))
+    npt.assert_almost_equal(
+        mesh_file.mesh_rt.rt_matrix,
+        np.array(
+            [
+                [0.93629336, -0.28962948, 0.19866933, 1.0],
+                [0.31299183, 0.94470249, -0.0978434, 2.0],
+                [-0.15934508, 0.153792, 0.97517033, 3.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+    )
 
 
 def test_mesh_file_real_to_biomod():
     # Create a mesh file
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 0.0, 0.0]),
         mesh_scale=np.array([2.0, 2.0, 2.0]),
         mesh_rotation=np.array([0.1, 0.2, 0.3]),
@@ -174,7 +189,7 @@ def test_mesh_file_real_to_biomod():
 
     # Check the content
     expected_str = (
-        "\tmeshfile\ttest.obj\n"
+        "\tmeshfile\tmesh_file/dir/test.obj\n"
         "\tmeshcolor\t1.0\t0.0\t0.0\n"
         "\tmeshscale\t2.0\t2.0\t2.0\n"
         "\tmeshrt\t0.1\t0.2\t0.3\txyz\t1.0\t2.0\t3.0\n"
@@ -184,6 +199,7 @@ def test_mesh_file_real_to_biomod():
     # Test with missing rotation or translation
     mesh_file = MeshFileReal(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 0.0, 0.0]),
         mesh_scale=np.array([2.0, 2.0, 2.0]),
         mesh_rotation=np.array([0.1, 0.2, 0.3]),
@@ -191,7 +207,7 @@ def test_mesh_file_real_to_biomod():
     )
 
     expected_str = (
-        "\tmeshfile\ttest.obj\n"
+        "\tmeshfile\tmesh_file/dir/test.obj\n"
         "\tmeshcolor\t1.0\t0.0\t0.0\n"
         "\tmeshscale\t2.0\t2.0\t2.0\n"
         "\tmeshrt\t0.1\t0.2\t0.3\txyz\t0.0\t0.0\t0.0\n"
@@ -515,7 +531,10 @@ def test_segment_real_dof_names_auto_generation():
     assert segment.dof_names == expected_dof_names
 
     # Test mismatch between dof_names length and actual DoFs
-    with pytest.raises(RuntimeError):
+    with pytest.raises(
+        RuntimeError,
+        match=r"The number of DoF names \(1\) does not match the number of DoFs \(6\) in segment test_segment.",
+    ):
         SegmentReal(
             name="test_segment",
             translations=Translations.XYZ,
@@ -570,8 +589,8 @@ def test_segment_real_add_remove_contact():
 
     # Create a contact with no parent_name
     contact2 = ContactReal(name="test_contact2", parent_name=None)
-    with pytest.raises(ValueError):
-        segment.add_contact(contact2)
+    segment.add_contact(contact2)
+    assert segment.name == segment.contacts["test_contact2"].parent_name
 
     # Create a contact with non-matching parent_name
     contact3 = ContactReal(name="test_contact3", parent_name="other_segment")
@@ -580,6 +599,7 @@ def test_segment_real_add_remove_contact():
 
     # Remove a contact
     segment.remove_contact(contact.name)
+    segment.remove_contact("test_contact2")
     assert len(segment.contacts) == 0
 
 
@@ -599,12 +619,103 @@ def test_segment_real_add_remove_imu():
 
     # Create an IMU with no parent_name
     imu2 = InertialMeasurementUnitReal(name="test_imu2", parent_name=None)
-    with pytest.raises(RuntimeError):
-        segment.add_imu(imu2)
+    segment.add_imu(imu2)
+    assert segment.name == segment.imus["test_imu2"].parent_name
 
     # Remove an IMU
     segment.remove_imu(imu.name)
+    segment.remove_imu("test_imu2")
     assert len(segment.imus) == 0
+
+
+def test_segment_real_remove_dof():
+    # Create a segment with translations and rotations
+    q_ranges = RangeOfMotion(Ranges.Q, [-1, -1, -1, -0.5, -0.5, -0.5], [1, 1, 1, 0.5, 0.5, 0.5])
+    qdot_ranges = RangeOfMotion(Ranges.Qdot, [-10, -10, -10, -5, -5, -5], [10, 10, 10, 5, 5, 5])
+
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ,
+        q_ranges=q_ranges,
+        qdot_ranges=qdot_ranges,
+    )
+
+    # Verify initial state
+    assert segment.nb_q == 6
+    assert segment.translations == Translations.XYZ
+    assert segment.rotations == Rotations.XYZ
+    assert len(segment.dof_names) == 6
+    assert len(segment.q_ranges.min_bound) == 6
+    assert len(segment.qdot_ranges.min_bound) == 6
+
+    # Remove a translation DoF (first one: X)
+    segment.remove_dof("test_segment_transX")
+
+    assert segment.nb_q == 5
+    assert segment.translations == Translations.YZ
+    assert segment.rotations == Rotations.XYZ
+    assert len(segment.dof_names) == 5
+    assert segment.dof_names == [
+        "test_segment_transY",
+        "test_segment_transZ",
+        "test_segment_rotX",
+        "test_segment_rotY",
+        "test_segment_rotZ",
+    ]
+    assert len(segment.q_ranges.min_bound) == 5
+    assert segment.q_ranges.min_bound == [-1, -1, -0.5, -0.5, -0.5]
+    assert len(segment.qdot_ranges.min_bound) == 5
+    assert segment.qdot_ranges.min_bound == [-10, -10, -5, -5, -5]
+
+    # Remove a rotation DoF (middle one: Y)
+    segment.remove_dof("test_segment_rotY")
+
+    assert segment.nb_q == 4
+    assert segment.translations == Translations.YZ
+    assert segment.rotations == Rotations.XZ
+    assert len(segment.dof_names) == 4
+    assert segment.dof_names == ["test_segment_transY", "test_segment_transZ", "test_segment_rotX", "test_segment_rotZ"]
+    assert len(segment.q_ranges.min_bound) == 4
+    assert segment.q_ranges.min_bound == [-1, -1, -0.5, -0.5]
+
+    # Remove all remaining DoFs one by one
+    segment.remove_dof("test_segment_transY")
+    segment.remove_dof("test_segment_transZ")
+    segment.remove_dof("test_segment_rotX")
+    segment.remove_dof("test_segment_rotZ")
+
+    assert segment.nb_q == 0
+    assert segment.translations == Translations.NONE
+    assert segment.rotations == Rotations.NONE
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+
+    # Test error when trying to remove non-existent DoF
+    with pytest.raises(RuntimeError, match="The dof .* is not part of the segment"):
+        segment.remove_dof("non_existent_dof")
+
+
+def test_segment_real_remove_dof_without_ranges():
+    # Create a segment without ranges
+    segment = SegmentReal(
+        name="test_segment",
+        translations=Translations.XY,
+        rotations=Rotations.Z,
+    )
+
+    assert segment.nb_q == 3
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
+
+    # Remove a DoF
+    segment.remove_dof("test_segment_transX")
+
+    assert segment.nb_q == 2
+    assert segment.translations == Translations.Y
+    assert segment.rotations == Rotations.Z
+    assert segment.q_ranges is None
+    assert segment.qdot_ranges is None
 
 
 def test_segment_real_rt_from_local_q():
@@ -769,7 +880,7 @@ def test_init_muscle_real():
     assert muscle.pennation_angle is None
     assert muscle.maximal_velocity is None
     assert muscle.maximal_excitation is None
-    assert len(muscle.via_points) == 0
+    assert muscle.nb_via_points == 0
 
     # Test initialization with all parameters
     muscle = MuscleReal(
@@ -847,7 +958,7 @@ def test_muscle_real_add_remove_via_point():
     muscle.add_via_point(via_point)
 
     # Verify via point was added and muscle_name was set
-    assert len(muscle.via_points) == 1
+    assert muscle.nb_via_points == 1
     assert via_point.muscle_name == "test_muscle"
 
     # Create a via point with matching muscle_name
@@ -858,7 +969,7 @@ def test_muscle_real_add_remove_via_point():
         position=np.array([[0.7], [0.0], [0.0], [1.0]]),
     )
     muscle.add_via_point(via_point2)
-    assert len(muscle.via_points) == 2
+    assert muscle.nb_via_points == 2
 
     # Create a via point with non-matching muscle_name
     via_point3 = ViaPointReal(
@@ -872,7 +983,7 @@ def test_muscle_real_add_remove_via_point():
 
     # Remove a via point
     muscle.remove_via_point("via_point")
-    assert len(muscle.via_points) == 1
+    assert muscle.nb_via_points == 1
     assert muscle.via_points[0].name == "via_point2"
 
 

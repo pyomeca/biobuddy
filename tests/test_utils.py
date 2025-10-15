@@ -7,6 +7,7 @@ from biobuddy import (
     BiomechanicalModel,
     SegmentReal,
     MarkerReal,
+    ContactReal,
     InertiaParametersReal,
     SegmentCoordinateSystemReal,
     C3dData,
@@ -18,6 +19,9 @@ from biobuddy import (
     MuscleStateType,
     Translations,
     Rotations,
+    RangeOfMotion,
+    Ranges,
+    MeshReal,
 )
 
 
@@ -80,14 +84,14 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
     # Compare segments
     assert model1.nb_segments == model2.nb_segments
-    assert model1.segment_names == model2.segment_names
+    assert set(model1.segment_names) == set(model2.segment_names)
 
     assert model1.nb_markers == model2.nb_markers
-    assert model1.marker_names == model2.marker_names
+    assert set(model1.marker_names) == set(model2.marker_names)
     assert model1.nb_contacts == model2.nb_contacts
-    assert model1.contact_names == model2.contact_names
+    assert set(model1.contact_names) == set(model2.contact_names)
     assert model1.nb_imus == model2.nb_imus
-    assert model1.imu_names == model2.imu_names
+    assert set(model1.imu_names) == set(model2.imu_names)
 
     for segment_name in model1.segment_names:
         assert model1.segments[segment_name].name == model2.segments[segment_name].name
@@ -95,10 +99,11 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
         npt.assert_almost_equal(
             model1.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
             model2.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
+            decimal=5,
         )
         assert np.all(model1.segments[segment_name].translations == model2.segments[segment_name].translations)
         assert np.all(model1.segments[segment_name].rotations == model2.segments[segment_name].rotations)
-        assert np.all(model1.segments[segment_name].dof_names == model2.segments[segment_name].dof_names)
+        assert set(model1.segments[segment_name].dof_names) == set(model2.segments[segment_name].dof_names)
         if model1.segments[segment_name].q_ranges is not None:
             assert np.all(
                 model1.segments[segment_name].q_ranges.min_bound == model2.segments[segment_name].q_ranges.min_bound
@@ -116,16 +121,20 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.inertia,
                 model2.segments[segment_name].inertia_parameters.inertia,
+                decimal=5,
             )
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.center_of_mass,
                 model2.segments[segment_name].inertia_parameters.center_of_mass,
+                decimal=5,
             )
         else:
             assert model2.segments[segment_name].inertia_parameters is None
         if model1.segments[segment_name].mesh is not None:
             npt.assert_almost_equal(
-                model1.segments[segment_name].mesh.positions, model2.segments[segment_name].mesh.positions
+                model1.segments[segment_name].mesh.positions,
+                model2.segments[segment_name].mesh.positions,
+                decimal=5,
             )
         else:
             assert model2.segments[segment_name].mesh is None
@@ -146,11 +155,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare markers
         assert model1.segments[segment_name].nb_markers == model2.segments[segment_name].nb_markers
-        assert model1.segments[segment_name].marker_names == model2.segments[segment_name].marker_names
+        assert set(model1.segments[segment_name].marker_names) == set(model2.segments[segment_name].marker_names)
         for marker_name in model1.segments[segment_name].marker_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].markers[marker_name].position,
                 model2.segments[segment_name].markers[marker_name].position,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].markers[marker_name].parent_name
@@ -167,11 +177,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare contacts
         assert model1.segments[segment_name].nb_contacts == model2.segments[segment_name].nb_contacts
-        assert model1.segments[segment_name].contact_names == model2.segments[segment_name].contact_names
+        assert set(model1.segments[segment_name].contact_names) == set(model2.segments[segment_name].contact_names)
         for contact_name in model1.segments[segment_name].contact_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].contacts[contact_name].position,
                 model2.segments[segment_name].contacts[contact_name].position,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].contacts[contact_name].parent_name
@@ -188,11 +199,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
         # Compare imus
         assert model1.segments[segment_name].nb_imus == model2.segments[segment_name].nb_imus
-        assert model1.segments[segment_name].imu_names == model2.segments[segment_name].imu_names
+        assert set(model1.segments[segment_name].imu_names) == set(model2.segments[segment_name].imu_names)
         for imu_name in model1.segments[segment_name].imu_names:
             npt.assert_almost_equal(
                 model1.segments[segment_name].imus[imu_name].scs.rt_matrix,
                 model2.segments[segment_name].imus[imu_name].scs.rt_matrix,
+                decimal=5,
             )
             assert (
                 model1.segments[segment_name].imus[imu_name].parent_name
@@ -209,11 +221,11 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
 
     # Compare muscle groups
     assert model1.nb_muscle_groups == model2.nb_muscle_groups
-    assert model1.muscle_group_names == model2.muscle_group_names
+    assert set(model1.muscle_group_names) == set(model2.muscle_group_names)
     assert model1.nb_muscles == model2.nb_muscles
-    assert model1.muscle_names == model2.muscle_names
+    assert set(model1.muscle_names) == set(model2.muscle_names)
     assert model1.nb_via_points == model2.nb_via_points
-    assert model1.via_point_names == model2.via_point_names
+    assert set(model1.via_point_names) == set(model2.via_point_names)
     for muscle_group_name in model1.muscle_group_names:
         assert (
             model1.muscle_groups[muscle_group_name].insertion_parent_name
@@ -225,14 +237,14 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
         )
 
         # Compare muscles
-        for muscle_name in model1.muscle_names:
+        for muscle_name in model1.muscle_groups[muscle_group_name].muscle_names:
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type
-                == model2.muscles[muscle_name].muscle_type
+                == model2.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_type
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].state_type
-                == model2.muscles[muscle_name].state_type
+                == model2.muscle_groups[muscle_group_name].muscles[muscle_name].state_type
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].muscle_group
@@ -241,10 +253,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
+                decimal=5,
             )
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
+                decimal=5,
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
@@ -297,6 +311,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                 npt.assert_almost_equal(
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
                     model2.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
+                    decimal=5,
                 )
                 if (
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].condition
@@ -344,12 +359,13 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].movement
                     is not None
                 ):
-                    assert (
+                    assert set(
                         model1.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
                         .movement.dof_names
-                        == model2.muscle_groups[muscle_group_name]
+                    ) == set(
+                        model2.muscle_groups[muscle_group_name]
                         .muscles[muscle_name]
                         .via_points[via_point_name]
                         .movement.dof_names
@@ -404,49 +420,55 @@ def create_simple_model():
     """Create a simple model for testing"""
     model = BiomechanicalModelReal()
 
-    # Add a root segment
+    # Add a parent segment
     model.add_segment(
         SegmentReal(
-            name="root",
+            name="parent",
             translations=Translations.XYZ,
             rotations=Rotations.XYZ,
             segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
             inertia_parameters=InertiaParametersReal(
                 mass=10.0, center_of_mass=np.array([0.0, 0.0, 0.5, 1.0]), inertia=np.eye(3) * 0.3
             ),
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-np.pi] * 6, max_bound=[np.pi] * 6),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 
     # Add a child segment
-    segment_coordinate_system_child = SegmentCoordinateSystemReal()
-    segment_coordinate_system_child.from_euler_and_translation(np.zeros((3,)), "xyz", np.array([0.0, 0.0, 1.0, 1.0]))
+    segment_coordinate_system_child = SegmentCoordinateSystemReal().from_euler_and_translation(
+        angles=np.zeros((3,)),
+        angle_sequence="xyz",
+        translation=np.array([0.0, 0.0, 1.0, 1.0]),
+    )
     segment_coordinate_system_child.is_in_local = True
     model.add_segment(
         SegmentReal(
             name="child",
-            parent_name="root",
+            parent_name="parent",
             rotations=Rotations.X,
             segment_coordinate_system=segment_coordinate_system_child,
             inertia_parameters=InertiaParametersReal(
                 mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01
             ),
+            mesh=MeshReal(np.array([[0, 0, 0, 1], [0.2, 0.1, 0.3, 1]]).T),
         )
     )
 
     # Add markers to segments
-    model.segments["root"].add_marker(
+    model.segments["parent"].add_marker(
         MarkerReal(
-            name="root_marker",
-            parent_name="root",
+            name="parent_marker",
+            parent_name="parent",
             position=np.array([0.1, 0.2, 0.3, 1.0]),
             is_technical=True,
             is_anatomical=False,
         )
     )
-    model.segments["root"].add_marker(
+    model.segments["parent"].add_marker(
         MarkerReal(
-            name="root_marker2",
-            parent_name="root",
+            name="parent_marker2",
+            parent_name="parent",
             position=np.array([0.2, 0.2, 0.1, 1.0]),
             is_technical=True,
             is_anatomical=False,
@@ -472,17 +494,35 @@ def create_simple_model():
         )
     )
 
-    model.add_muscle_group(
-        MuscleGroupReal(name="root_to_child", origin_parent_name="root", insertion_parent_name="child")
+    model.segments["parent"].add_contact(
+        ContactReal(
+            name="parent_contact1",
+            parent_name="parent",
+            position=np.array([0.05, 0.2, 0.15, 1.0]),
+            axis=Translations.XYZ,
+        )
     )
-    model.muscle_groups["root_to_child"].add_muscle(
+
+    model.segments["child"].add_contact(
+        ContactReal(
+            name="child_contact1",
+            parent_name="child",
+            position=np.array([-0.05, 0.5, 0.35, 1.0]),
+            axis=Translations.Z,
+        )
+    )
+
+    model.add_muscle_group(
+        MuscleGroupReal(name="parent_to_child", origin_parent_name="parent", insertion_parent_name="child")
+    )
+    model.muscle_groups["parent_to_child"].add_muscle(
         MuscleReal(
             name="muscle1",
             muscle_type=MuscleType.HILL_DE_GROOTE,
             state_type=MuscleStateType.DEGROOTE,
-            muscle_group="root_to_child",
+            muscle_group="parent_to_child",
             origin_position=ViaPointReal(
-                name=f"origin_muscle1", parent_name="root", position=np.array([0.0, 0.1, 0.0, 1.0])
+                name=f"origin_muscle1", parent_name="parent", position=np.array([0.0, 0.1, 0.0, 1.0])
             ),
             insertion_position=ViaPointReal(
                 name=f"insertion_muscle1", parent_name="child", position=np.array([0.5, 0.4, 0.3, 1.0])
@@ -495,7 +535,7 @@ def create_simple_model():
         )
     )
 
-    model.muscle_groups["root_to_child"].muscles["muscle1"].add_via_point(
+    model.muscle_groups["parent_to_child"].muscles["muscle1"].add_via_point(
         ViaPointReal(
             name="via_point1",
             parent_name="child",

@@ -76,16 +76,17 @@ class Joint:
             raise RuntimeError(
                 f"Joint type {tag} is not implemented yet. " f"Allowed joint type are: {joint_types_str}"
             )
+
         name = (element.attrib["name"]).split("/")[-1]
-        parent = find_in_tree(element, "socket_parent_frame").split("/")[-1]
-        child = find_in_tree(element, "socket_child_frame").split("/")[-1]
+        parent_name = find_in_tree(element, "socket_parent_frame").split("/")[-1]
+        child_name = find_in_tree(element, "socket_child_frame").split("/")[-1]
 
         coordinates = []
         spatial_transform = []
         function = False
         if element.find("coordinates") is not None:
             for coordinate in element.find("coordinates").findall("Coordinate"):
-                coordinates.append(Coordinate.from_element(coordinate, ignore_fixed, ignore_clamped))
+                coordinates.append(Coordinate.from_element(coordinate, parent_name, ignore_fixed, ignore_clamped))
 
         if element.find("SpatialTransform") is not None:
             for i, transform in enumerate(element.find("SpatialTransform").findall("TransformAxis")):
@@ -96,6 +97,9 @@ class Joint:
                     spat_transform.type = "translation"
                 for coordinate in coordinates:
                     if coordinate.name == spat_transform.coordinate_name:
+                        # We extract the dof name and add the parent name as a prefix to ensure uniqueness
+                        dof_name = f"{parent_name}_{coordinate.name}"
+                        coordinate.name = dof_name
                         spat_transform.coordinate = coordinate
                 function = spat_transform.function
                 spatial_transform.append(spat_transform)
@@ -107,13 +111,13 @@ class Joint:
         child_body = (None,)
         parent_body = (None,)
         for frame in element.find("frames").findall("PhysicalOffsetFrame"):
-            if parent == frame.attrib["name"]:
+            if parent_name == frame.attrib["name"]:
                 parent_body = frame.find("socket_parent").text.split("/")[-1]
                 offset_rot = frame.find("orientation").text
                 offset_trans = frame.find("translation").text
                 parent_offset_rot = [float(i) for i in offset_rot.split(" ")]
                 parent_offset_trans = [float(i) for i in offset_trans.split(" ")]
-            elif child == frame.attrib["name"]:
+            elif child_name == frame.attrib["name"]:
                 child_body = frame.find("socket_parent").text.split("/")[-1]
                 offset_rot = frame.find("orientation").text
                 offset_trans = frame.find("translation").text
@@ -122,8 +126,8 @@ class Joint:
                 child_offset_trans, child_offset_rot = _convert_offset_child(offset_rot, offset_trans)
 
         return Joint(
-            parent=parent,
-            child=child,
+            parent=parent_name,
+            child=child_name,
             name=name,
             type=tag,
             coordinates=coordinates,

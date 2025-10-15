@@ -49,7 +49,8 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
                 range_type=Ranges.Qdot, min_bound=[-10, -10, -10, -np.pi * 10], max_bound=[10, 10, 10, np.pi * 10]
             ),
             mesh_file=MeshFile(
-                mesh_file_name=mesh_path,
+                mesh_file_name="pendulum.STL",
+                mesh_file_directory=mesh_path,
                 mesh_color=np.array([0, 0, 1]),
                 scaling_function=lambda m, model: np.array([1, 1, 10]),
                 rotation_function=lambda m, model: np.array([np.pi / 2, 0, 0]),
@@ -133,7 +134,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
 
 def main():
     current_path_file = Path(__file__).parent
-    complex_model_from_scratch(mesh_path=f"{current_path_file}/meshFiles/pendulum.STL")
+    complex_model_from_scratch(mesh_path=f"{current_path_file}/meshFiles")
 
 
 if __name__ == "__main__":

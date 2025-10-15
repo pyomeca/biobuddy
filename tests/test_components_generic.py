@@ -1082,8 +1082,9 @@ def test_mesh_to_mesh_local():
 # ------- Mesh File ------- #
 def test_init_mesh_file():
     # Test initialization with minimal parameters
-    mesh_file = MeshFile(mesh_file_name="test.obj")
+    mesh_file = MeshFile(mesh_file_name="test.obj", mesh_file_directory="mesh_file/dir")
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     assert mesh_file.mesh_color is None
     assert mesh_file.scaling_function is None
     assert mesh_file.rotation_function is None
@@ -1096,6 +1097,7 @@ def test_init_mesh_file():
 
     mesh_file = MeshFile(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 0.0, 0.0]),
         scaling_function=scaling_func,
         rotation_function=rotation_func,
@@ -1103,6 +1105,7 @@ def test_init_mesh_file():
     )
 
     assert mesh_file.mesh_file_name == "test.obj"
+    assert mesh_file.mesh_file_directory == "mesh_file/dir"
     npt.assert_array_equal(mesh_file.mesh_color, np.array([1.0, 0.0, 0.0]))
     assert mesh_file.scaling_function == scaling_func
     assert mesh_file.rotation_function == rotation_func
@@ -1118,6 +1121,7 @@ def test_mesh_file_to_mesh_file_real():
 
     mesh_file = MeshFile(
         mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
         mesh_color=np.array([1.0, 1.0, 1.0]),
         scaling_function=scaling_func,
         rotation_function=rotation_func,
@@ -1444,8 +1448,8 @@ def test_segment_add_remove_contact():
 
     # Create a contact with no parent_name
     contact2 = Contact(name="test_contact2", parent_name=None)
-    with pytest.raises(ValueError, match="Contacts must have parents"):
-        segment.add_contact(contact2)
+    segment.add_contact(contact2)
+    assert segment.name == segment.contacts["test_contact2"].parent_name
 
     # Create a contact with non-matching parent_name
     contact3 = Contact(name="test_contact3", parent_name="other_segment")
@@ -1454,6 +1458,7 @@ def test_segment_add_remove_contact():
 
     # Remove a contact
     segment.remove_contact(contact.name)
+    segment.remove_contact("test_contact2")
     assert len(segment.contacts) == 0
 
     # Remove a contact that does not exist

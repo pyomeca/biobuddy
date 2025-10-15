@@ -182,10 +182,10 @@ class SegmentReal(SegmentUtils):
         contact
             The contact to add
         """
-        if contact.parent_name is None:
-            raise ValueError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
-        elif contact.parent_name != self.name:
-            raise ValueError("The contact name should be the same as the 'key'.")
+        if contact.parent_name is not None and contact.parent_name != self.name:
+            raise ValueError(
+                "The contact name should be the same as the 'key'. Alternatively, contact.name can be left undefined"
+            )
         contact.parent_name = self.name
         self.contacts._append(contact)
 
@@ -193,12 +193,72 @@ class SegmentReal(SegmentUtils):
         self.contacts._remove(contact)
 
     def add_imu(self, imu: InertialMeasurementUnitReal):
-        if imu.parent_name is None:
-            raise RuntimeError(f"IMUs must have parents, but {imu.name} does not.")
+        if imu.parent_name is not None and imu.parent_name != self.name:
+            raise ValueError(
+                "The imu name should be the same as the 'key'. Alternatively, imu.name can be left undefined"
+            )
+        imu.parent_name = self.name
         self.imus._append(imu)
 
     def remove_imu(self, imu: str):
         self.imus._remove(imu)
+
+    def remove_dof(self, dof_name: str) -> None:
+        """
+        Remove a degree of freedom from the segment
+
+        Parameters
+        ----------
+        dof_name
+            The name of the degree of freedom to remove
+        """
+        if dof_name not in self.dof_names:
+            raise RuntimeError(f"The dof {dof_name} is not part of the segment {self.name}.")
+        dof_index = self.dof_names.index(dof_name)
+        nb_translations = 0 if self.translations == Translations.NONE else len(self.translations.value)
+        nb_rotations = 0 if self.rotations == Rotations.NONE else len(self.rotations.value)
+
+        # Remove the dof type
+        if nb_translations == 1:
+            self.translations = Translations.NONE
+        elif dof_index < nb_translations:
+            new_dof_str = self.translations.value[:dof_index] + self.translations.value[dof_index + 1 :]
+            self.translations = Translations(new_dof_str)
+        elif nb_rotations == 1:
+            self.rotations = Rotations.NONE
+        else:
+            new_dof_str = (
+                self.rotations.value[: dof_index - nb_translations]
+                + self.rotations.value[dof_index - nb_translations + 1 :]
+            )
+            self.rotations = Rotations(new_dof_str)
+
+        # Remove the dof ranges
+        if self.q_ranges is not None:
+            if len(self.q_ranges.min_bound) == 1:
+                self.q_ranges = None
+            else:
+                self.q_ranges = RangeOfMotion(
+                    range_type=self.q_ranges.range_type,
+                    min_bound=[m for i, m in enumerate(self.q_ranges.min_bound) if i != dof_index],
+                    max_bound=[m for i, m in enumerate(self.q_ranges.max_bound) if i != dof_index],
+                )
+        if self.qdot_ranges is not None:
+            if len(self.qdot_ranges.min_bound) == 1:
+                self.qdot_ranges = None
+            else:
+                self.qdot_ranges = RangeOfMotion(
+                    range_type=self.qdot_ranges.range_type,
+                    min_bound=[m for i, m in enumerate(self.qdot_ranges.min_bound) if i != dof_index],
+                    max_bound=[m for i, m in enumerate(self.qdot_ranges.max_bound) if i != dof_index],
+                )
+
+        # Remove dof names (must be done last to avoid messing up with nb_q)
+        if self.dof_names is not None:
+            if len(self.dof_names) == 1:
+                self.dof_names = None
+            else:
+                self.dof_names = [m for m in self.dof_names if m != dof_name]
 
     def rt_from_local_q(self, local_q: np.ndarray) -> RotoTransMatrix:
 

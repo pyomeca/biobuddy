@@ -4,7 +4,11 @@ from .functions import Functions
 
 
 class PathPointMovement:
-    def __init__(self, dof_names: list[str], locations: list[Functions]):
+    def __init__(
+        self,
+        dof_names: list[str],
+        locations: list[Functions],
+    ):
         if len(dof_names) != 3:
             raise RuntimeError("dof_names must be a list of 3 dof_names (x, y, x).")
         if len(locations) != 3:
@@ -24,10 +28,16 @@ class PathPointMovement:
 
 
 class PathPointCondition:
-    def __init__(self, dof_name: str, range_min: float, range_max: float):
+    def __init__(
+        self,
+        dof_name: str,
+        range_min: float,
+        range_max: float,
+    ):
+
         self.dof_name = dof_name
-        self.range_min = range_min
-        self.range_max = range_max
+        self.range_min = float(range_min)
+        self.range_max = float(range_max)
 
     def evaluate(self, angle: float) -> bool:
         """Evaluate the condition based on the current joint angles."""

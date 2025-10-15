@@ -1,13 +1,13 @@
 from typing import Callable, Any
 
 from ..muscle.via_point import ViaPoint
-from ...muscle_utils import MuscleType, MuscleStateType
+from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 from ....utils.protocols import Data
 from ....utils.named_list import NamedList
 from ....utils.linear_algebra import RotoTransMatrix
 
 
-class Muscle:
+class Muscle(MuscleUtils):
     def __init__(
         self,
         name: str,
@@ -51,6 +51,8 @@ class Muscle:
         maximal_excitation
             The maximal excitation of the muscle (usually 1.0, since it is normalized)
         """
+        super().__init__()
+
         self.name = name
         self.muscle_type = muscle_type
         self.state_type = state_type
@@ -79,8 +81,13 @@ class Muscle:
             raise ValueError(
                 "The via points's muscle should be the same as the 'key'. Alternatively, via_point.muscle_name can be left undefined"
             )
+        if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
+            raise ValueError(
+                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+            )
 
         via_point.muscle_name = self.name
+        via_point.muscle_group = self.muscle_group
         self.via_points._append(via_point)
 
     def remove_via_point(self, via_point_name: str) -> None:

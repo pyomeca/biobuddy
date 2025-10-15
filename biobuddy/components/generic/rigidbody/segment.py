@@ -165,10 +165,10 @@ class Segment(SegmentUtils):
         contact
             The contact to add
         """
-        if contact.parent_name is None:
-            raise ValueError(f"Contacts must have parents. Contact {contact.name} does not have a parent.")
-        elif contact.parent_name != self.name:
-            raise ValueError("The contact name should be the same as the 'key'.")
+        if contact.parent_name is not None and contact.parent_name != self.name:
+            raise ValueError(
+                "The contact name should be the same as the 'key'. Alternatively, contact.name can be left undefined"
+            )
         contact.parent_name = self.name
         self.contacts._append(contact)
 

@@ -5,12 +5,14 @@ import numpy as np
 from ..biomechanical_model_real import BiomechanicalModelReal
 from ....utils.protocols import Data
 from ....utils.aliases import point_to_array
+from ....utils.linear_algebra import RotoTransMatrix
 
 
 class MeshFileReal:
     def __init__(
         self,
         mesh_file_name: str,
+        mesh_file_directory: str,
         mesh_color: np.ndarray[float] = None,
         mesh_scale: np.ndarray[float] = None,
         mesh_rotation: np.ndarray[float] = None,
@@ -20,7 +22,9 @@ class MeshFileReal:
         Parameters
         ----------
         mesh_file_name
-            The name of the mesh file
+            The name of the mesh file (no path)
+        mesh_file_directory
+            The directory where the mesh file is located
         mesh_color
             The color the mesh should be displayed in (RGB)
         mesh_scale
@@ -30,14 +34,12 @@ class MeshFileReal:
         mesh_translation
             The translation that must be applied to the mesh (XYZ)
         """
-        # TODO: create the def initialize_point(), to skip the if is None
         self.mesh_file_name = mesh_file_name
+        self.mesh_file_directory = mesh_file_directory
         self.mesh_color = mesh_color
-        self.mesh_scale = None if mesh_scale is None else point_to_array(mesh_scale, "mesh_scale")
-        self.mesh_rotation = None if mesh_rotation is None else point_to_array(mesh_rotation, "mesh_rotation")
-        self.mesh_translation = (
-            None if mesh_translation is None else point_to_array(mesh_translation, "mesh_translation")
-        )
+        self.mesh_scale = mesh_scale
+        self.mesh_rotation = mesh_rotation
+        self.mesh_translation = mesh_translation
 
     @property
     def mesh_file_name(self) -> str:
@@ -46,6 +48,14 @@ class MeshFileReal:
     @mesh_file_name.setter
     def mesh_file_name(self, value: str):
         self._mesh_file_name = value
+
+    @property
+    def mesh_file_directory(self) -> str:
+        return self._mesh_file_directory
+
+    @mesh_file_directory.setter
+    def mesh_file_directory(self, value: str):
+        self._mesh_file_directory = value
 
     @property
     def mesh_color(self) -> np.ndarray[float]:
@@ -71,7 +81,10 @@ class MeshFileReal:
 
     @mesh_scale.setter
     def mesh_scale(self, value: np.ndarray[float]):
-        self._mesh_scale = None if value is None else point_to_array(value, "mesh_scale")
+        if value is None:
+            self._mesh_scale = None
+        else:
+            self._mesh_scale = point_to_array(value, "mesh_scale")
 
     @property
     def mesh_rotation(self) -> np.ndarray:
@@ -82,7 +95,10 @@ class MeshFileReal:
 
     @mesh_rotation.setter
     def mesh_rotation(self, value: np.ndarray[float]):
-        self._mesh_rotation = None if value is None else point_to_array(value, "mesh_rotation")
+        if value is None:
+            self._mesh_rotation = None
+        else:
+            self._mesh_rotation = point_to_array(value, "mesh_rotation")
 
     @property
     def mesh_translation(self) -> np.ndarray:
@@ -93,12 +109,25 @@ class MeshFileReal:
 
     @mesh_translation.setter
     def mesh_translation(self, value: np.ndarray[float]):
-        self._mesh_translation = None if value is None else point_to_array(value, "mesh_translation")
+        if value is None:
+            self._mesh_translation = None
+        else:
+            self._mesh_translation = point_to_array(value, "mesh_translation")
+
+    @property
+    def mesh_rt(self):
+        mesh_rt = RotoTransMatrix()
+        mesh_rt.from_euler_angles_and_translation("xyz", self.mesh_rotation[:3, 0], self.mesh_translation[:3, 0])
+        return mesh_rt
+
+    @mesh_rt.setter
+    def mesh_rt(self, value):
+        raise RuntimeError("The mesh_rt cannot be set directly, set the mesh_rotation and mesh_translation instead")
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
-        out_string += f"\tmeshfile\t{self.mesh_file_name}\n"
+        out_string += f"\tmeshfile\t{self.mesh_file_directory}/{self.mesh_file_name}\n"
         if self.mesh_color is not None:
             out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
         if self.mesh_scale is not None:
