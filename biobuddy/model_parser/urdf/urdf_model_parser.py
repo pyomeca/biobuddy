@@ -1,19 +1,9 @@
 import math
 import xml.etree.ElementTree as ET
-from typing import Protocol
-
 import numpy as np
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.rigidbody.segment_real import (
-    ContactReal,
-    InertialMeasurementUnitReal,
-    InertiaParametersReal,
-    MarkerReal,
-    MeshReal,
-    SegmentCoordinateSystemReal,
-    SegmentReal,
-)
+from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.named_list import NamedList
 
 
@@ -123,7 +113,7 @@ def add_joint_dynamics(joint, lines):
     return lines
 
 
-class URDFModelParser(Protocol):
+class UrdfModelParser:
     def __init__(self, filepath: str):
         """
         Load the model from the filepath

@@ -1,5 +1,5 @@
-from .urdf_model_parser import URDFModelParser
+from .urdf_model_parser import UrdfModelParser
 
 __all__ = [
-    URDFModelParser.__name__,
+    UrdfModelParser.__name__,
 ]

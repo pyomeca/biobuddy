@@ -2,6 +2,9 @@ from typing import Protocol
 import numpy as np
 
 
+# TODO: change all protocols for abstract classes
+
+
 class Data(Protocol):
     values: dict[str, np.ndarray]  # The data in the format [marker_names, 4xT] where 3xT is the XYZ1 x time matrix
 

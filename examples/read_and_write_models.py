@@ -12,21 +12,13 @@ from biobuddy import (
     MeshParser,
     MeshFormat,
     BiomechanicalModelReal,
+    ViewAs,
 )
 
 _logger = logging.getLogger(__name__)
 
 
-def main():
-    # Configure logging
-    logging.basicConfig(
-        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            # logging.FileHandler("app.log"),  # Log to a file
-            logging.StreamHandler()  # Log to the console
-        ],
-    )
+def osim_biomod_convertion():
     visualization_flag = True
 
     # Paths
@@ -114,5 +106,46 @@ def main():
     #     _logger.warning("You must install opensim to load the model with opensim")
 
 
+def urdf_biomod_convertion():
+
+    visualization_flag = True
+
+    # Paths
+    current_path_file = Path(__file__).parent
+    biomod_filepath = f"{current_path_file}/models/kuka_lwr.bioMod"
+    urdf_filepath = f"{current_path_file}/models/kuka_lwr.urdf"
+
+    # --- Reading an .urdf model and translating it to a .bioMod model --- #
+    # Read an .urdf file
+    model = BiomechanicalModelReal().from_urdf(
+        filepath=urdf_filepath,
+    )
+
+    # And convert it to a .bioMod file
+    model.to_biomod(biomod_filepath, with_mesh=visualization_flag)
+
+    # Test that the model created is valid
+    try:
+        import biorbd
+    except ImportError:
+        _logger.warning("You must install biorbd to load the model with biorbd")
+    biorbd.Model(biomod_filepath)
+
+    if visualization_flag:
+        model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
+
+
 if __name__ == "__main__":
-    main()
+
+    # Configure logging
+    logging.basicConfig(
+        level=logging.DEBUG,  # Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            # logging.FileHandler("app.log"),  # Log to a file
+            logging.StreamHandler()  # Log to the console
+        ],
+    )
+
+    osim_biomod_convertion()
+    urdf_biomod_convertion()
