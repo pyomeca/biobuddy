@@ -16,6 +16,7 @@ from .body import Body
 from .joint import Joint
 from .marker import Marker
 from .muscle import get_muscle_from_element
+from ..abstract_model_parser import AbstractModelParser
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
@@ -50,7 +51,7 @@ def _get_file_version(model: etree.ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
 
 
-class OsimModelParser:
+class OsimModelParser(AbstractModelParser):
     def __init__(
         self,
         filepath: str,
@@ -83,8 +84,9 @@ class OsimModelParser:
         RuntimeError
             If file version is too old or units are not meters/newtons
         """
+        super().__init__(filepath)
+
         # Initial attributes
-        self.filepath = filepath
         self.muscle_type = muscle_type
         self.muscle_state_type = muscle_state_type
         self.mesh_dir = mesh_dir

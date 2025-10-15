@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from ..components.real.biomechanical_model_real import BiomechanicalModelReal
+
 
 class AbstractModelParser(ABC):
     def __init__(self, filepath: str):
