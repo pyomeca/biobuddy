@@ -1,12 +1,14 @@
 from .biorbd import *
 from .opensim import *
-from .protocol import ModelParser
+from .urdf import *
+from .abstract_model_parser import AbstractModelParser
 
 
 __all__ = (
     [
-        ModelParser.__name__,
+        AbstractModelParser.__name__,
     ]
     + biorbd.__all__
     + opensim.__all__
+    + urdf.__all__
 )

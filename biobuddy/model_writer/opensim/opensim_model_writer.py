@@ -1,17 +1,7 @@
-class OpensimModelWriter:
-    def __init__(self, filepath: str, with_mesh: bool = False):
-        """
-        The path where the model should be printed
+from ..abstract_model_writer import AbstractModelWriter
 
-        Parameters
-        ----------
-        filepath
-            The path to the model to write
-        with_mesh
-            If the mesh files should be added to the model to write
-        """
-        self.filepath = filepath
-        self.with_mesh = with_mesh
+
+class OpensimModelWriter(AbstractModelWriter):
 
     def write(self, model: "BiomechanicalModelReal") -> None:
         """

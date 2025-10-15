@@ -2,7 +2,7 @@
 
 from lxml import etree
 
-from .utils import find_in_tree
+from ..utils_xml import find_in_tree
 
 
 class Coordinate:

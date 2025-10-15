@@ -363,6 +363,17 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
+    def from_urdf(self, filepath: str) -> "Self":
+        """
+        Create a biomechanical model from a urdf file
+        """
+        from ...model_parser.urdf import UrdfModelParser
+
+        self.filepath = filepath
+        model = UrdfModelParser(filepath=filepath).to_real()
+        model.validate_model()
+        return model
+
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
         Write the bioMod file.
@@ -387,5 +398,15 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.opensim.opensim_model_writer import OpensimModelWriter
 
         writer = OpensimModelWriter(filepath=filepath, with_mesh=with_mesh)
+        self.validate_model()
+        writer.write(self)
+
+    def to_urdf(self, filepath: str, with_mesh: bool = False) -> None:
+        """
+        Write the .urdf file
+        """
+        from ...model_writer.urdf.urdf_model_writer import UrdfModelWriter
+
+        writer = UrdfModelWriter(filepath=filepath, with_mesh=with_mesh)
         self.validate_model()
         writer.write(self)

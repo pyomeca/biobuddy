@@ -3,7 +3,7 @@
 from lxml import etree
 import numpy as np
 
-from .utils import find_in_tree
+from ..utils_xml import find_in_tree
 from ...utils.linear_algebra import RotoTransMatrix
 
 
