@@ -1,12 +1,14 @@
 from .biorbd import *
 from .opensim import *
-from .protocol import ModelWriter
+from .urdf import *
+from .abstract_model_writer import AbstractModelWriter
 
 
 __all__ = (
     [
-        ModelWriter.__name__,
+        AbstractModelWriter.__name__,
     ]
     + biorbd.__all__
     + opensim.__all__
+    + urdf.__all__
 )
