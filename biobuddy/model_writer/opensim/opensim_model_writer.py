@@ -1,5 +1,6 @@
 from ..abstract_model_writer import AbstractModelWriter
 
+
 class OpensimModelWriter(AbstractModelWriter):
 
     def write(self, model: "BiomechanicalModelReal") -> None:

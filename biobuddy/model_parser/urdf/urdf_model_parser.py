@@ -57,7 +57,8 @@ class UrdfModelParser(AbstractModelParser):
         version = float(parsed_file.docinfo.xml_version)
         if version != 1.0:
             raise NotImplementedError(
-                f"The only file version tested yet is 1.0, you have {version}. If you encounter this error, please notify the developers by opening an issue on GitHub.")
+                f"The only file version tested yet is 1.0, you have {version}. If you encounter this error, please notify the developers by opening an issue on GitHub."
+            )
 
     def _get_material_elts(self) -> NamedList[Material]:
         material_elts = NamedList()
@@ -148,19 +149,18 @@ class UrdfModelParser(AbstractModelParser):
                 origin_rotation_angles = read_float_vector(origin.attrib["rpy"])
         scs = RotoTransMatrix()
         scs.from_euler_angles_and_translation(
-            angle_sequence="xyz",
-            angles=origin_rotation_angles,
-            translation=origin_translation
+            angle_sequence="xyz", angles=origin_rotation_angles, translation=origin_translation
         )
         return SegmentCoordinateSystemReal(scs=scs, is_scs_local=True)
 
     @staticmethod
-    def _get_rotations_and_ranges(joint) -> tuple[Rotations|None, RangeOfMotion|None]:
+    def _get_rotations_and_ranges(joint) -> tuple[Rotations | None, RangeOfMotion | None]:
         if joint.attrib["type"] == "fixed":
             return Rotations.NONE, None
         elif joint.attrib["type"] != "revolute":
             raise NotImplementedError(
-                f"Only revolute joints are supported for now, you have a joint of type {joint.attrib['type']}. If you encounter this error, please notify the developers by opening an issue on GitHub.")
+                f"Only revolute joints are supported for now, you have a joint of type {joint.attrib['type']}. If you encounter this error, please notify the developers by opening an issue on GitHub."
+            )
 
         # get the axis of rotation
         axis_elem = joint.find("axis")
@@ -191,15 +191,15 @@ class UrdfModelParser(AbstractModelParser):
 
         if axis_is_inverted:
             ranges = RangeOfMotion(
-                        range_type=Ranges.Q,
-                        min_bound=[-upper],
-                        max_bound=[-lower],
+                range_type=Ranges.Q,
+                min_bound=[-upper],
+                max_bound=[-lower],
             )
         else:
             ranges = RangeOfMotion(
-                        range_type=Ranges.Q,
-                        min_bound=[lower],
-                        max_bound=[upper],
+                range_type=Ranges.Q,
+                min_bound=[lower],
+                max_bound=[upper],
             )
 
         return rotations, ranges
@@ -248,4 +248,3 @@ class UrdfModelParser(AbstractModelParser):
 
     def to_real(self) -> BiomechanicalModelReal:
         return self.biomechanical_model_real
-

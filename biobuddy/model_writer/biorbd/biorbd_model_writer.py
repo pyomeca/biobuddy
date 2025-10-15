@@ -1,5 +1,6 @@
 from ..abstract_model_writer import AbstractModelWriter
 
+
 class BiorbdModelWriter(AbstractModelWriter):
 
     def write(self, model: "BiomechanicalModelReal") -> None:
