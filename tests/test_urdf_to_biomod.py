@@ -47,14 +47,11 @@ def test_translation_urdf_to_biomod():
         model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
             filepath=biomod_filepath,
         )
-        model_from_biomod_2.to_urdf(
-            filepath=urdf_filepath.replace(".urdf", "_translated.urdf")
-        )
+        model_from_biomod_2.to_urdf(filepath=urdf_filepath.replace(".urdf", "_translated.urdf"))
         model_from_urdf_2 = BiomechanicalModelReal().from_urdf(
             filepath=urdf_filepath.replace(".urdf", "_translated.urdf")
         )
         compare_models(model_from_urdf, model_from_urdf_2, decimal=5)
-
 
         if os.path.exists(biomod_filepath):
             os.remove(biomod_filepath)

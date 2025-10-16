@@ -337,7 +337,9 @@ class SegmentReal(SegmentUtils):
 
         return out_string
 
-    def to_urdf(self, material_elts: etree.Element, links_elts: etree.Element, joints_elts: etree.Element, with_mesh: bool):
+    def to_urdf(
+        self, material_elts: etree.Element, links_elts: etree.Element, joints_elts: etree.Element, with_mesh: bool
+    ):
         """
         Define the print function, so it automatically formats things in the file properly
         """
@@ -362,7 +364,9 @@ class SegmentReal(SegmentUtils):
         parent = etree.SubElement(joint, "parent", link=self.parent_name)
         child = etree.SubElement(joint, "child", link=self.name)
         if self.nb_q == 1:
-            limit = etree.SubElement(joint, "limit", lower=str(self.q_ranges.min_bound[0]), upper=str(self.q_ranges.max_bound[0]))
+            limit = etree.SubElement(
+                joint, "limit", lower=str(self.q_ranges.min_bound[0]), upper=str(self.q_ranges.max_bound[0])
+            )
             rotation_array = get_vector_from_sequence(self.rotations.value)
             origin = etree.SubElement(joint, "origin")
             self.segment_coordinate_system.to_urdf(origin)

@@ -136,7 +136,6 @@ def urdf_biomod_convertion():
     if visualization_flag:
         model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
 
-
     # --- Reading an .bioMod model and translating it to an .urdf model --- #
     # Read a .bioMod file
     model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)

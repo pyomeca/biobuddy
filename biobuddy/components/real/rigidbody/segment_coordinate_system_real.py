@@ -125,7 +125,8 @@ class SegmentCoordinateSystemReal:
 
     def to_urdf(self, origin: etree.Element):
 
-        origin.set("xyz", f"{self.scs.translation[0]:0.6f} {self.scs.translation[1]:0.6f} {self.scs.translation[2]:0.6f}")
+        origin.set(
+            "xyz", f"{self.scs.translation[0]:0.6f} {self.scs.translation[1]:0.6f} {self.scs.translation[2]:0.6f}"
+        )
         rpy = self.scs.euler_angles("xyz")
         origin.set("rpy", f"{rpy[0]:0.6f} {rpy[1]:0.6f} {rpy[2]:0.6f}")
-
