@@ -94,7 +94,7 @@ class OpensimModelWriter:
 
     def _write_joint_set(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write all joints"""
-        joint_set = etree.SubElement(model_elem, "JointSet")
+        joint_set = etree.SubElement(model_elem, "JointSet", name="jointset")
         objects = etree.SubElement(joint_set, "objects")
 
         for segment in model.segments:
@@ -186,7 +186,10 @@ class OpensimModelWriter:
         child_orientation = etree.SubElement(child_frame, "orientation")
         child_orientation.text = "0 0 0"
 
-        # Spatial transform
+        # Initialize coordinates
+        coordinates = etree.SubElement(joint, "coordinates")
+
+        # Initialize spatial transform
         spatial_transform = etree.SubElement(joint, "SpatialTransform")
 
         dof_counter = 0
@@ -204,11 +207,19 @@ class OpensimModelWriter:
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
 
-                coordinates = etree.SubElement(transform_axis, "coordinates")
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
 
                 default_value = etree.SubElement(coord_elem, "default_value")
                 default_value.text = "0"
+
+                default_speed_value = etree.SubElement(coord_elem, "default_speed_value")
+                default_speed_value.text = "0"
+
+                locked = etree.SubElement(coord_elem, "locked")
+                locked.text = "false"
+
+                prescribed = etree.SubElement(coord_elem, "prescribed")
+                prescribed.text = "false"
 
                 if segment.q_ranges is not None:
                     idx = segment.dof_names.index(coord_name)
@@ -239,7 +250,6 @@ class OpensimModelWriter:
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
 
-                coordinates = etree.SubElement(transform_axis, "coordinates")
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
 
                 default_value = etree.SubElement(coord_elem, "default_value")

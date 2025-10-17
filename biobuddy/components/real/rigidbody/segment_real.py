@@ -350,6 +350,15 @@ class SegmentReal(SegmentUtils):
             inertia_elem = etree.SubElement(body_elem, "inertia")
             i = self.inertia_parameters.inertia
             inertia_elem.text = f"{i[0,0]:.8f} {i[1,1]:.8f} {i[2,2]:.8f} {i[0,1]:.8f} {i[0,2]:.8f} {i[1,2]:.8f}"
+        else:
+            mass_elem = etree.SubElement(body_elem, "mass")
+            mass_elem.text = f"0.00000000"
+
+            mass_center_elem = etree.SubElement(body_elem, "mass_center")
+            mass_center_elem.text = f"0.00000000 0.00000000 0.00000000"
+
+            inertia_elem = etree.SubElement(body_elem, "inertia")
+            inertia_elem.text = f"0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000"
 
         if with_mesh and self.mesh_file is not None:
             frame_geometry = etree.SubElement(body_elem, "FrameGeometry")

@@ -58,10 +58,9 @@ def main():
     # Test that the model created is valid
     try:
         import biorbd
-
-        biorbd.Model(biomod_filepath)
-    except ImportError:
-        _logger.warning("You must install biorbd to load the model with biorbd")
+    except:
+        raise ImportError("You must install biorbd to load the model with biorbd")
+    biorbd.Model(biomod_filepath)
 
     # --- Reading the .osim model and translate it to a .bioMod model --- #
     # Read a .biomod file
@@ -73,17 +72,15 @@ def main():
     # Test that the model created is valid
     try:
         import opensim as osim
-
-        osim.Model(osim_filepath)
-    except ImportError:
-        _logger.warning("You must install opensim to load the model with opensim")
+    except:
+        raise ImportError("You must install opensim to load the model with opensim")
+    osim.Model(osim_filepath)
 
     if visualization_flag:
         # Compare the result visually
         try:
             import pyorerun
-        except ImportError:
-
+        except:
             raise ImportError("You must install pyorerun to visualize the model (visualization_flag=True)")
 
         # Visualization
@@ -110,7 +107,9 @@ def main():
         viz.add_animated_model(reference_model, q_ref)
 
         # Osim model reference
-        model = pyorerun.OsimModel(osim_filepath)
+        display_options = pyorerun.DisplayModelOptions()
+        display_options.mesh_path = f"{current_path_file}/models/Geometry_cleaned"
+        model = pyorerun.OsimModel(osim_filepath, options=display_options)
         model.options.transparent_mesh = False
         model.options.show_gravity = True
         model.options.show_marker_labels = False
@@ -119,7 +118,10 @@ def main():
         viz.add_animated_model(model, q)
 
         # Osim model output
-        reference_model = pyorerun.OsimModel(biomod_filepath.replace(".bioMod", "_from_biomod.bioMod"))
+        reference_model = pyorerun.OsimModel(
+            osim_filepath.replace(".osim", "_from_biomod.osim"),
+            options=display_options,
+        )
         reference_model.options.transparent_mesh = False
         reference_model.options.show_gravity = True
         reference_model.options.show_marker_labels = False
