@@ -55,3 +55,6 @@ def test_translation_urdf_to_biomod():
 
         if os.path.exists(biomod_filepath):
             os.remove(biomod_filepath)
+
+        if os.path.exists(urdf_filepath.replace(".urdf", "_translated.urdf")):
+            os.remove(urdf_filepath.replace(".urdf", "_translated.urdf"))
