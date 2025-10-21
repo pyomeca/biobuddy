@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import numpy.testing as npt
+from lxml import etree
 
 from biobuddy import (
     BiomechanicalModelReal,
@@ -583,3 +584,18 @@ class MockC3dData(C3dData):
 
         # Create marker positions for 10 frames
         self.all_marker_positions = np.random.rand(4, 73, 10)
+
+
+def get_urdf_str(fake_urdf_model: etree.Element) -> str:
+    # Write to a temporary file
+    tree = etree.ElementTree(fake_urdf_model)
+    tree.write("temporary.urdf", pretty_print=True, xml_declaration=True, encoding="utf-8")
+
+    # Read the content
+    with open("temporary.urdf", "r") as file:
+        urdf_content = file.read()
+
+    # Remove the temporary file
+    os.remove("temporary.urdf")
+
+    return urdf_content

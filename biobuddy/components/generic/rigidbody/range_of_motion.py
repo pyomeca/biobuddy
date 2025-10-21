@@ -35,3 +35,7 @@ class RangeOfMotion:
         out_string += "\n"
 
         return out_string
+
+    def to_urdf(self, limit_elt):
+        limit_elt.set("lower", str(self.min_bound[0]))
+        limit_elt.set("upper", str(self.max_bound[0]))

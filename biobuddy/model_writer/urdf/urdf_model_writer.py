@@ -21,6 +21,10 @@ class UrdfModelWriter(AbstractModelWriter):
             if segment.name != "root":
                 segment.to_urdf(urdf_model, with_mesh=self.with_mesh)
 
+        # No muscles yet
+        if len(model.muscle_groups) != 0:
+            raise NotImplementedError("Muscles are not implemented yet for URDF export")
+
         # Write it to the .urdf file
         tree = etree.ElementTree(urdf_model)
         tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding="utf-8")

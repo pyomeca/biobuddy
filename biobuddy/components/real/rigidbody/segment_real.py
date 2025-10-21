@@ -350,7 +350,6 @@ class SegmentReal(SegmentUtils):
             raise NotImplementedError("Mesh points are not yet implemented in URDF export")
 
         # Get the joint type
-        joint = None
         if self.nb_q == 0:
             joint_type = "fixed"
             joint = etree.SubElement(urdf_model, "joint", name=f"{self.name}_fixed")
@@ -371,17 +370,17 @@ class SegmentReal(SegmentUtils):
 
         # Add dof specifications
         if self.nb_q == 1:
-            limit = etree.SubElement(
-                joint, "limit", lower=str(self.q_ranges.min_bound[0]), upper=str(self.q_ranges.max_bound[0])
-            )
+            if self.q_ranges is not None:
+                limit = etree.SubElement(joint, "limit")
+                self.q_ranges.to_urdf(limit)
             rotation_array = get_vector_from_sequence(self.rotations.value)
             axis = etree.SubElement(joint, "axis", xyz=f"{rotation_array[0]} {rotation_array[1]} {rotation_array[2]}")
 
         if self.nb_markers > 0:
-            raise NotImplementedError("Markers are not yet implemented in URDF export")
+            raise NotImplementedError("Markers are not implemented yet for URDF export")
         if self.nb_contacts > 0:
-            raise NotImplementedError("Contacts are not yet implemented in URDF export")
+            raise NotImplementedError("Contacts are not implemented yet for URDF export")
         if self.nb_imus > 0:
-            raise NotImplementedError("IMUs are not yet implemented in URDF export")
+            raise NotImplementedError("IMUs are not implemented yet for URDF export")
 
         return

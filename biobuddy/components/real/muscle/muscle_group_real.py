@@ -99,3 +99,6 @@ class MuscleGroupReal:
         for muscle in self.muscles:
             out_string += muscle.to_biomod()
         return out_string
+
+    def to_urdf(self):
+        raise NotImplementedError("Muscle groups are not implemented yet for URDF export")
