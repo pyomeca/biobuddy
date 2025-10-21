@@ -545,7 +545,9 @@ class RigidSegmentIdentification:
         output.from_rt_matrix(rt_optimal)
         return output
 
-    def rt_from_trial(self, parent_rt_init, child_rt_init) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+    def rt_from_trial(
+        self, parent_rt_init, child_rt_init
+    ) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
         """
@@ -568,10 +570,7 @@ class RigidSegmentIdentification:
 class Score(RigidSegmentIdentification):
 
     def _score_algorithm(
-            self,
-            rt_parent: np.ndarray,
-            rt_child: np.ndarray,
-            recursive_outlier_removal: bool = True
+        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).

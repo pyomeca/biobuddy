@@ -168,12 +168,22 @@ class ModelDynamics:
         # Minimize posture difference to target
         if np.sum(q_regularization_weight) > 0:
             # TODO: setup the IKTask from osim to set the "q_ref" to something else than zero.
-            q_error = q_regularization_weight * (q - q_target.reshape(-1,))
+            q_error = q_regularization_weight * (
+                q
+                - q_target.reshape(
+                    -1,
+                )
+            )
             out = np.hstack((out, q_error))
 
         # Minimize posture difference to last frame (smoothness)
         if np.sum(qdot_regularization_weight) > 0:
-            qdot_error = qdot_regularization_weight * (q - last_q.reshape(-1,))
+            qdot_error = qdot_regularization_weight * (
+                q
+                - last_q.reshape(
+                    -1,
+                )
+            )
             out = np.hstack((out, qdot_error))
 
         # Replace NaN with 0.0
@@ -385,7 +395,7 @@ class ModelDynamics:
                 qdot_regulation = qdot_regularization_weight
             else:
                 last_q = init[:]
-                qdot_regulation = np.zeros((self.nb_q, ))
+                qdot_regulation = np.zeros((self.nb_q,))
 
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
