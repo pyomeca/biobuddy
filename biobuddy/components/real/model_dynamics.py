@@ -136,8 +136,10 @@ class ModelDynamics:
     @staticmethod
     def _marker_residual(
         model: "BiomechanicalModelReal" or "biorbd.Model",
-        q_regularization_weight: float,
+        q_regularization_weight: np.ndarray[float],
+        qdot_regularization_weight: np.ndarray[float],
         q_target: np.ndarray,
+        last_q: np.ndarray,
         q: np.ndarray,
         marker_names: list[str],
         experimental_markers: np.ndarray,
@@ -146,7 +148,6 @@ class ModelDynamics:
     ) -> np.ndarray:
 
         nb_markers = experimental_markers.shape[1]
-        vect_pos_markers = np.zeros(3 * nb_markers)
 
         if with_biorbd:
             markers_model = np.zeros((3, nb_markers, 1))
@@ -156,23 +157,25 @@ class ModelDynamics:
         else:
             markers_model = np.array(model.markers_in_global(q))
 
+        # Minimize marker error
+        marker_error = np.zeros(3 * nb_markers)
         for i_marker in range(nb_markers):
-            vect_pos_markers[i_marker * 3 : (i_marker + 1) * 3] = (
+            marker_error[i_marker * 3 : (i_marker + 1) * 3] = (
                 markers_model[:3, i_marker, 0] - experimental_markers[:3, i_marker]
             ) * marker_weights_reordered[i_marker]
-        # TODO: setup the IKTask from osim to set the "q_ref" to something else than zero.
-        out = np.hstack(
-            (
-                vect_pos_markers,
-                q_regularization_weight
-                * (
-                    q
-                    - q_target.reshape(
-                        -1,
-                    )
-                ),
-            )
-        )
+        out = marker_error[:]
+
+        # Minimize posture difference to target
+        if np.sum(q_regularization_weight) > 0:
+            # TODO: setup the IKTask from osim to set the "q_ref" to something else than zero.
+            q_error = q_regularization_weight * (q - q_target.reshape(-1,))
+            out = np.hstack((out, q_error))
+
+        # Minimize posture difference to last frame (smoothness)
+        if np.sum(qdot_regularization_weight) > 0:
+            qdot_error = qdot_regularization_weight * (q - last_q.reshape(-1,))
+            out = np.hstack((out, qdot_error))
+
         # Replace NaN with 0.0
         out[np.where(np.isnan(out))] = 0.0
         return out
@@ -208,6 +211,7 @@ class ModelDynamics:
     def _marker_jacobian(
         model: "BiomechanicalModelReal" or "biorbd.Model",
         q_regularization_weight: np.ndarray[float],
+        qdot_regularization_weight: np.ndarray[float],
         q: np.ndarray,
         marker_names: list[str],
         marker_weights_reordered: np.ndarray,
@@ -215,7 +219,12 @@ class ModelDynamics:
     ) -> np.ndarray:
         nb_q = q.shape[0]
         nb_markers = marker_weights_reordered.shape[0]
-        vec_jacobian = np.zeros((3 * nb_markers + nb_q, nb_q))
+        num_components = 3 * nb_markers
+        if np.sum(q_regularization_weight) > 0:
+            num_components += nb_q
+        if np.sum(qdot_regularization_weight) > 0:
+            num_components += nb_q
+        vec_jacobian = np.zeros((num_components, nb_q))
 
         if with_biorbd:
             jacobian_matrix = np.zeros((3, nb_markers, nb_q))
@@ -232,8 +241,13 @@ class ModelDynamics:
             if marker_name in marker_names:
                 vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
-        for i_q in range(nb_q):
-            vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight[i_q]
+        if np.sum(q_regularization_weight) > 0:
+            for i_q in range(nb_q):
+                vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight[i_q]
+
+        if np.sum(qdot_regularization_weight) > 0:
+            for i_q in range(nb_q):
+                vec_jacobian[nb_markers * 3 + nb_q + i_q, i_q] = q_regularization_weight[i_q]
 
         return vec_jacobian
 
@@ -243,6 +257,7 @@ class ModelDynamics:
         marker_positions: np.ndarray,
         marker_names: list[str],
         q_regularization_weight: float | np.ndarray[float] = None,
+        qdot_regularization_weight: float | np.ndarray[float] = None,
         q_target: np.ndarray = None,
         marker_weights: "NamedList[MarkerWeight]" = None,
         method: str = "lm",
@@ -264,6 +279,8 @@ class ModelDynamics:
             The names of the experimental markers (the names must match the marker names in the model).
         q_regularization_weight
             The weight of the regularization term. If None, no regularization is applied.
+        qdot_regularization_weight
+            The weight of the regularization term on the joint velocities.
         q_target
             The target posture to match. If None, the target posture is set to zero.
         marker_weights
@@ -344,6 +361,16 @@ class ModelDynamics:
                     f"The q_regularization_weight must be of shape (nb_q, ). Here the shape provided is {q_regularization_weight.shape}"
                 )
 
+        if qdot_regularization_weight is None:
+            qdot_regularization_weight = np.zeros((self.nb_q,))  # No regularization by default
+        elif isinstance(qdot_regularization_weight, (int, float)):
+            qdot_regularization_weight = np.ones((self.nb_q,)) * qdot_regularization_weight
+        else:
+            if len(qdot_regularization_weight) != self.nb_q:
+                raise RuntimeError(
+                    f"The qdot_regularization_weight must be of shape (nb_q, ). Here the shape provided is {qdot_regularization_weight.shape}"
+                )
+
         optimal_q = np.zeros((self.nb_q, nb_frames))
         residuals = None
         if compute_residual_distance:
@@ -353,11 +380,20 @@ class ModelDynamics:
             if i_frame % 100 == 0 and i_frame != 0:
                 print(f"{i_frame}/{nb_frames} frames")
 
+            if i_frame > 0:
+                last_q = optimal_q[:, i_frame - 1]
+                qdot_regulation = qdot_regularization_weight
+            else:
+                last_q = init[:]
+                qdot_regulation = np.zeros((self.nb_q, ))
+
             sol = optimize.least_squares(
                 fun=lambda q: self._marker_residual(
                     model_to_use,
                     q_regularization_weight,
+                    qdot_regulation,
                     q_target,
+                    last_q,
                     q,
                     marker_names_reordered,
                     markers_real[:, :, i_frame],
@@ -367,6 +403,7 @@ class ModelDynamics:
                 jac=lambda q: self._marker_jacobian(
                     model_to_use,
                     q_regularization_weight,
+                    qdot_regulation,
                     q,
                     marker_names_reordered,
                     marker_weights_reordered,

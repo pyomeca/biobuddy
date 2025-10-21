@@ -80,10 +80,9 @@ def main(visualization):
 
     # Scale the model
     scale_tool = ScaleTool(original_model=original_osim_model).from_xml(filepath=xml_filepath)
+    static_c3d = C3dData(static_filepath, first_frame=500, last_frame=600)
     scaled_model = scale_tool.scale(
-        filepath=static_filepath,
-        first_frame=500,
-        last_frame=600,
+        static_c3d=static_c3d,
         mass=mass,
         q_regularization_weight=0.01,
         make_static_pose_the_models_zero=True,
@@ -107,9 +106,7 @@ def main(visualization):
     for segment_name in technical_marker_to_add.keys():
         for marker in technical_marker_to_add[segment_name]:
             position_in_global = c3d_data.mean_marker_position(marker)
-            rt = RotoTransMatrix()
-            rt.from_rt_matrix(jcs_in_global[segment_name])
-            position_in_local = rt.inverse @ position_in_global
+            position_in_local = jcs_in_global[segment_name][0].inverse @ position_in_global
             scaled_model.segments[segment_name].add_marker(
                 MarkerReal(
                     name=marker,
