@@ -54,6 +54,9 @@ class UrdfModelParser(AbstractModelParser):
         self._read()
 
     def _check_version(self, parsed_file):
+        """
+        Check that the version of the URDF file is supported
+        """
         version = float(parsed_file.docinfo.xml_version)
         if version != 1.0:
             raise NotImplementedError(
@@ -61,6 +64,9 @@ class UrdfModelParser(AbstractModelParser):
             )
 
     def _get_material_elts(self) -> NamedList[Material]:
+        """
+        Get all the material elements from the URDF file. This will be used later when referencing a material (color name).
+        """
         material_elts = NamedList()
         for mat in self.model.findall("material"):
             material_elts._append(Material.from_element(mat))
@@ -68,6 +74,9 @@ class UrdfModelParser(AbstractModelParser):
 
     @staticmethod
     def _get_inertia_parameters(link: etree.Element) -> InertiaParametersReal:
+        """
+        Read the inertia parameters from a link element
+        """
         inertia = inertia_to_matrix()
         mass = None
         center_of_mass = np.array([0.0, 0.0, 0.0])
@@ -78,8 +87,15 @@ class UrdfModelParser(AbstractModelParser):
             if mass_elem is not None and "value" in mass_elem.attrib:
                 mass = float(mass_elem.attrib["value"])
             origin = inertial.find("origin")
-            if origin is not None and "xyz" in origin.attrib:
-                center_of_mass = read_float_vector(origin.attrib["xyz"])
+            if origin is not None:
+                if "xyz" in origin.attrib:
+                    center_of_mass = read_float_vector(origin.attrib["xyz"])
+                if "rpy" in origin.attrib:
+                    rpy = read_float_vector(origin.attrib["rpy"])
+                    if np.any(rpy != [0.0, 0.0, 0.0]):
+                        raise NotImplementedError(
+                            "Inertial origin with non-zero rpy is not supported yet. If you encounter this error, please notify the developers by opening an issue on GitHub."
+                        )
             inertia_elem = inertial.find("inertia")
             if inertia_elem is not None:
                 ixx = float(inertia_elem.attrib.get("ixx", 0))
@@ -97,6 +113,9 @@ class UrdfModelParser(AbstractModelParser):
         )
 
     def _get_mesh_file(self, link: etree.Element) -> MeshFileReal | None:
+        """
+        Read the mesh file from a link element
+        """
         visual = link.find("visual")
         mesh_file_name = None
         mesh_file_directory = None
@@ -139,6 +158,9 @@ class UrdfModelParser(AbstractModelParser):
 
     @staticmethod
     def _get_scs(joint) -> SegmentCoordinateSystemReal:
+        """
+        Read the segment coordinate system from a joint element and convert it into a RT matrix
+        """
         origin = joint.find("origin")
         origin_translation = np.array([0, 0, 0])
         origin_rotation_angles = np.array([0, 0, 0])
@@ -154,7 +176,10 @@ class UrdfModelParser(AbstractModelParser):
         return SegmentCoordinateSystemReal(scs=scs, is_scs_local=True)
 
     @staticmethod
-    def _get_rotations_and_ranges(joint) -> tuple[Rotations | None, RangeOfMotion | None]:
+    def _get_rotations_and_ranges(joint) -> tuple[Rotations, RangeOfMotion | None]:
+        """
+        Read the axis of rotations and ranges of motion from a joint element (fixed joints do not have DoFs)
+        """
         if joint.attrib["type"] == "fixed":
             return Rotations.NONE, None
         elif joint.attrib["type"] != "revolute":
@@ -204,37 +229,63 @@ class UrdfModelParser(AbstractModelParser):
 
         return rotations, ranges
 
-    def _read(self):
+    @staticmethod
+    def get_parent(link_name: str, all_joints: dict[str, list[str]]) -> str | None:
+        """
+        Get the parent of this link (link_name)
+        """
+        parent_name = None
+        for joint_keys, joint_links in all_joints.items():
+            if link_name == joint_links[1]:
+                parent_name = joint_links[0]
+                break
+        return parent_name
 
+    @staticmethod
+    def get_joint_idx(link_name: str, all_joints: dict[str, list[str]]) -> int | None:
+        """
+        Get the index of the joint associated with this link (link_name)
+        """
+        joint_idx = 0
+        found_dof = False
+        for joint_keys, joint_links in all_joints.items():
+            if link_name == joint_links[1]:
+                found_dof = True
+                break
+            joint_idx += 1
+        return joint_idx if found_dof else None
+
+    def _read(self):
+        """
+        Read the URDF file and fill the BiomechanicalModelReal
+        """
         self.material_elts: NamedList[Material] = self._get_material_elts()
 
-        all_links = set(self.links_elt.keys())
-        child_links = {j.find("child").attrib["link"] for j in self.joints_elt}
-        root_links = list(all_links - child_links)
-        root_link = root_links[0] if root_links else list(all_links)[0]
-
-        # Base segment (root link)
-        base_link = self.links_elt[root_link]
-        self.biomechanical_model_real.add_segment(
-            SegmentReal(
-                name=root_link,
-                inertia_parameters=self._get_inertia_parameters(base_link),
-                mesh_file=self._get_mesh_file(base_link),
-            ),
-        )
-
-        # Other segments
+        # Store the joints info (parent/child)
+        all_joints = {}
         for joint in self.joints_elt:
-            parent_name = joint.find("parent").attrib["link"]
-            child_name = joint.find("child").attrib["link"]
-            child_link = self.links_elt[child_name]
-            rotations, ranges = self._get_rotations_and_ranges(joint)
-            dof_names = [joint.attrib["name"]] if rotations != Rotations.NONE else None
+            all_joints[joint.attrib["name"]] = [joint.find("parent").attrib["link"], joint.find("child").attrib["link"]]
+
+        # Read the links and get the appropriate joint
+        for link_name in self.links_elt:
+            parent_name = self.get_parent(link_name, all_joints)
+            child_link = self.links_elt[link_name]
+
+            rotations = Rotations.NONE
+            ranges = None
+            dof_names = None
+            scs = SegmentCoordinateSystemReal()
+            joint_idx = self.get_joint_idx(link_name, all_joints)
+            if joint_idx is not None:
+                joint = self.joints_elt[joint_idx]
+                rotations, ranges = self._get_rotations_and_ranges(joint)
+                dof_names = [joint.attrib["name"]] if rotations != Rotations.NONE else None
+                scs = self._get_scs(joint)
             self.biomechanical_model_real.add_segment(
                 SegmentReal(
-                    name=child_name,
-                    parent_name=parent_name,
-                    segment_coordinate_system=self._get_scs(joint),
+                    name=link_name,
+                    parent_name=parent_name if parent_name is not None else "root",
+                    segment_coordinate_system=scs,
                     translations=Translations.NONE,
                     rotations=rotations,
                     dof_names=dof_names,

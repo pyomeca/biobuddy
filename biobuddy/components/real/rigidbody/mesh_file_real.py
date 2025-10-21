@@ -1,4 +1,4 @@
-from typing import Callable
+from lxml import etree
 
 import numpy as np
 
@@ -130,10 +130,45 @@ class MeshFileReal:
         out_string += f"\tmeshfile\t{self.mesh_file_directory}/{self.mesh_file_name}\n"
         if self.mesh_color is not None:
             out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
-        if self.mesh_scale is not None:
-            out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"
+        out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"
         if self.mesh_rotation is not None and self.mesh_translation is not None:
             out_string += f"\tmeshrt\t{self.mesh_rotation[0, 0]}\t{self.mesh_rotation[1, 0]}\t{self.mesh_rotation[2, 0]}\txyz\t{self.mesh_translation[0, 0]}\t{self.mesh_translation[1, 0]}\t{self.mesh_translation[2, 0]}\n"
         elif self.mesh_rotation is not None or self.mesh_translation is not None:
             raise RuntimeError("The mesh_rotation and mesh_translation must be both defined or both undefined")
         return out_string
+
+    def to_urdf(self, urdf_model: etree.Element, link: etree.Element):
+
+        # Add the materials from this segment
+        color_name = None
+        if self.mesh_color is not None:
+            material_idx = len(urdf_model.findall("material"))
+            color_name = f"material_{material_idx}"
+            material = etree.SubElement(
+                urdf_model,
+                "material",
+                name=color_name,
+            )
+            color = etree.SubElement(material, "color")
+            color.set("rgba", f"{self.mesh_color[0]} {self.mesh_color[1]} {self.mesh_color[2]} 1")
+
+        # Add the visual element to the link
+        visual = etree.SubElement(link, "visual")
+        geometry = etree.SubElement(visual, "geometry")
+        mesh = etree.SubElement(geometry, "mesh")
+        mesh.set("filename", f"{self.mesh_file_directory}/{self.mesh_file_name}")
+        if np.any(self.mesh_scale != np.ones((4, 1))):
+            raise NotImplementedError("Mesh scaling is not implemented yet for URDF export")
+        origin = etree.SubElement(visual, "origin")
+        origin.set(
+            "xyz",
+            f"{self.mesh_translation[0,0]} {self.mesh_translation[1,0]} {self.mesh_translation[2,0]}",
+        )
+        origin.set(
+            "rpy",
+            f"{self.mesh_rotation[0,0]} {self.mesh_rotation[1,0]} {self.mesh_rotation[2,0]}",
+        )
+
+        if color_name is not None:
+            material_color = etree.SubElement(visual, "material")
+            material_color.set("name", color_name)

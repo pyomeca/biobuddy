@@ -1,4 +1,5 @@
 import numpy as np
+from lxml import etree
 
 from .contact_real import ContactReal
 from .inertial_measurement_unit_real import InertialMeasurementUnitReal
@@ -14,6 +15,7 @@ from ....utils.enums import Translations
 from ....utils.named_list import NamedList
 from ...segment_utils import SegmentUtils
 from ....utils.checks import check_name
+from ....utils.linear_algebra import get_vector_from_sequence
 
 
 class SegmentReal(SegmentUtils):
@@ -289,8 +291,10 @@ class SegmentReal(SegmentUtils):
 
         return rt
 
-    def to_biomod(self, with_mesh):
-        # Define the print function, so it automatically formats things in the file properly
+    def to_biomod(self, with_mesh: bool) -> str:
+        """
+        Define the print function, so it automatically formats things in the file properly
+        """
         out_string = f"segment\t{self.name}\n"
         if self.parent_name:
             out_string += f"\tparent\t{self.parent_name}\n"
@@ -332,3 +336,51 @@ class SegmentReal(SegmentUtils):
                 out_string += imu.to_biomod()
 
         return out_string
+
+    def to_urdf(self, urdf_model: etree.Element, with_mesh: bool):
+        """
+        Define the print function, so it automatically formats things in the file properly
+        """
+        link = etree.SubElement(urdf_model, "link", name=self.name)
+        if self.inertia_parameters is not None:
+            self.inertia_parameters.to_urdf(link)
+        if self.mesh_file is not None and with_mesh:
+            self.mesh_file.to_urdf(urdf_model, link)
+        if self.mesh is not None and with_mesh:
+            raise NotImplementedError("Mesh points are not yet implemented in URDF export")
+
+        # Get the joint type
+        if self.nb_q == 0:
+            joint_type = "fixed"
+            joint = etree.SubElement(urdf_model, "joint", name=f"{self.name}_fixed")
+        elif self.nb_q == 1:
+            joint_type = "revolute"
+            joint = etree.SubElement(urdf_model, "joint", name=f"{self.dof_names[0]}")
+        else:
+            joint_type = "continuous"
+            raise NotImplementedError("Joints with more than one DoF are not yet implemented in URDF export")
+
+        # Write the parent/child
+        if joint is not None:
+            joint.set("type", joint_type)
+            parent = etree.SubElement(joint, "parent", link=self.parent_name)
+            child = etree.SubElement(joint, "child", link=self.name)
+            origin = etree.SubElement(joint, "origin")
+            self.segment_coordinate_system.to_urdf(origin)
+
+        # Add dof specifications
+        if self.nb_q == 1:
+            if self.q_ranges is not None:
+                limit = etree.SubElement(joint, "limit")
+                self.q_ranges.to_urdf(limit)
+            rotation_array = get_vector_from_sequence(self.rotations.value)
+            axis = etree.SubElement(joint, "axis", xyz=f"{rotation_array[0]} {rotation_array[1]} {rotation_array[2]}")
+
+        if self.nb_markers > 0:
+            raise NotImplementedError("Markers are not implemented yet for URDF export")
+        if self.nb_contacts > 0:
+            raise NotImplementedError("Contacts are not implemented yet for URDF export")
+        if self.nb_imus > 0:
+            raise NotImplementedError("IMUs are not implemented yet for URDF export")
+
+        return

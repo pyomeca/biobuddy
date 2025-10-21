@@ -1,3 +1,5 @@
+from lxml import etree
+
 from ..abstract_model_writer import AbstractModelWriter
 
 
@@ -7,11 +9,22 @@ class UrdfModelWriter(AbstractModelWriter):
         """
         Writes the BiomechanicalModelReal into a text file of format .urdf
         """
-        raise NotImplementedError("TODO ;P")
 
-        # removing any character that is not ascii readable from the out_string before writing the model
-        cleaned_string = out_string.encode("ascii", "ignore").decode()
+        urdf_model = etree.Element("robot", name="model")
 
-        # Write it to the .osim file
-        with open(filepath, "w") as file:
-            file.write(cleaned_string)
+        # Write each segment
+        for segment in model.segments:
+            if segment.segment_coordinate_system.is_in_global:
+                raise RuntimeError(
+                    f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
+                )
+            if segment.name != "root":
+                segment.to_urdf(urdf_model, with_mesh=self.with_mesh)
+
+        # No muscles yet
+        if len(model.muscle_groups) != 0:
+            raise NotImplementedError("Muscles are not implemented yet for URDF export")
+
+        # Write it to the .urdf file
+        tree = etree.ElementTree(urdf_model)
+        tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding="utf-8")
