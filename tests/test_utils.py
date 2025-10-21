@@ -154,8 +154,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                 == model2.segments[segment_name].mesh_file.mesh_translation
             )
             assert np.all(
-                model1.segments[segment_name].mesh_file.mesh_color
-                == model2.segments[segment_name].mesh_file.mesh_color
+                model1.segments[segment_name].mesh_file.mesh_color == model2.segments[segment_name].mesh_file.mesh_color
             )
         else:
             assert model2.segments[segment_name].mesh_file is None

@@ -337,9 +337,7 @@ class SegmentReal(SegmentUtils):
 
         return out_string
 
-    def to_urdf(
-        self, urdf_model: etree.Element, with_mesh: bool
-    ):
+    def to_urdf(self, urdf_model: etree.Element, with_mesh: bool):
         """
         Define the print function, so it automatically formats things in the file properly
         """
