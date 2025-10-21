@@ -328,7 +328,9 @@ def test_marker_residual_static_method():
     residual = ModelDynamics._marker_residual(
         model=leg_model,
         q_regularization_weight=q_regularization_weight,
+        qdot_regularization_weight=0,
         q_target=q_target,
+        last_q=q_target,
         q=q,
         marker_names=marker_names,
         experimental_markers=experimental_markers,
