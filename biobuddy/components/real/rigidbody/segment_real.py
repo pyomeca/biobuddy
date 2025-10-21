@@ -338,38 +338,45 @@ class SegmentReal(SegmentUtils):
         return out_string
 
     def to_urdf(
-        self, material_elts: etree.Element, links_elts: etree.Element, joints_elts: etree.Element, with_mesh: bool
+        self, urdf_model: etree.Element, with_mesh: bool
     ):
         """
         Define the print function, so it automatically formats things in the file properly
         """
-        link = etree.SubElement(links_elts, "link", name=self.name)
+        link = etree.SubElement(urdf_model, "link", name=self.name)
         if self.inertia_parameters is not None:
             self.inertia_parameters.to_urdf(link)
         if self.mesh_file is not None and with_mesh:
-            self.mesh_file.to_urdf(material_elts, link)
+            self.mesh_file.to_urdf(urdf_model, link)
         if self.mesh is not None and with_mesh:
             raise NotImplementedError("Mesh points are not yet implemented in URDF export")
 
-        joint = etree.SubElement(joints_elts, "link", name=self.name)
+        # Get the joint type
+        joint = None
         if self.nb_q == 0:
             joint_type = "fixed"
+            joint = etree.SubElement(urdf_model, "joint", name=f"{self.name}_fixed")
         elif self.nb_q == 1:
             joint_type = "revolute"
-            joint = etree.SubElement(joints_elts, "joint", name=f"{self.dof_names[0]}")
+            joint = etree.SubElement(urdf_model, "joint", name=f"{self.dof_names[0]}")
         else:
             joint_type = "continuous"
             raise NotImplementedError("Joints with more than one DoF are not yet implemented in URDF export")
-        joint.set("type", joint_type)
-        parent = etree.SubElement(joint, "parent", link=self.parent_name)
-        child = etree.SubElement(joint, "child", link=self.name)
+
+        # Write the parent/child
+        if joint is not None:
+            joint.set("type", joint_type)
+            parent = etree.SubElement(joint, "parent", link=self.parent_name)
+            child = etree.SubElement(joint, "child", link=self.name)
+            origin = etree.SubElement(joint, "origin")
+            self.segment_coordinate_system.to_urdf(origin)
+
+        # Add dof specifications
         if self.nb_q == 1:
             limit = etree.SubElement(
                 joint, "limit", lower=str(self.q_ranges.min_bound[0]), upper=str(self.q_ranges.max_bound[0])
             )
             rotation_array = get_vector_from_sequence(self.rotations.value)
-            origin = etree.SubElement(joint, "origin")
-            self.segment_coordinate_system.to_urdf(origin)
             axis = etree.SubElement(joint, "axis", xyz=f"{rotation_array[0]} {rotation_array[1]} {rotation_array[2]}")
 
         if self.nb_markers > 0:

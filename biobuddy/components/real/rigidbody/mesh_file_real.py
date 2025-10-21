@@ -137,15 +137,15 @@ class MeshFileReal:
             raise RuntimeError("The mesh_rotation and mesh_translation must be both defined or both undefined")
         return out_string
 
-    def to_urdf(self, material_elts: etree.Element, link: etree.Element):
-
-        color_name = None
+    def to_urdf(self, urdf_model: etree.Element, link: etree.Element):
 
         # Add the materials from this segment
+        color_name = None
         if self.mesh_color is not None:
-            color_name = f"material_{len(material_elts)}"
+            material_idx = len(urdf_model.findall("material"))
+            color_name = f"material_{material_idx}"
             material = etree.SubElement(
-                material_elts,
+                urdf_model,
                 "material",
                 name=color_name,
             )
@@ -168,5 +168,7 @@ class MeshFileReal:
             "rpy",
             f"{self.mesh_rotation[0,0]} {self.mesh_rotation[1,0]} {self.mesh_rotation[2,0]}",
         )
+
         if color_name is not None:
-            visual.set("material", color_name)
+            material_color = etree.SubElement(visual, "material")
+            material_color.set("name", color_name)

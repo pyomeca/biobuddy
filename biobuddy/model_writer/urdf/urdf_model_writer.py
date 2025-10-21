@@ -5,23 +5,12 @@ from ..abstract_model_writer import AbstractModelWriter
 
 class UrdfModelWriter(AbstractModelWriter):
 
-    def _collect_segments(self) -> str:
-        out_string = ""
-        for segment in self.model.segments:
-            out_string += segment.to_urdf(with_mesh=self.with_mesh)
-            out_string += "\n\n\n"  # Give some space between segments
-        return out_string
-
     def write(self, model: "BiomechanicalModelReal") -> None:
         """
         Writes the BiomechanicalModelReal into a text file of format .urdf
         """
 
-        # Initialize the model
-        model_elts = etree.Element("robot", name="model")
-        material_elts = etree.SubElement(model_elts, "material", name="default")
-        links_elts = etree.SubElement(model_elts, "links", name="default")
-        joints_elts = etree.SubElement(model_elts, "joints", name="default")
+        urdf_model = etree.Element("robot", name="model")
 
         # Write each segment
         for segment in model.segments:
@@ -29,8 +18,9 @@ class UrdfModelWriter(AbstractModelWriter):
                 raise RuntimeError(
                     f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
                 )
-            segment.to_urdf(material_elts, links_elts, joints_elts, with_mesh=self.with_mesh)
+            if segment.name != "root":
+                segment.to_urdf(urdf_model, with_mesh=self.with_mesh)
 
         # Write it to the .urdf file
-        tree = etree.ElementTree(model_elts)
+        tree = etree.ElementTree(urdf_model)
         tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding="utf-8")

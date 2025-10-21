@@ -7,7 +7,7 @@ import os
 import numpy as np
 
 from biobuddy import BiomechanicalModelReal
-from tests.test_utils import compare_models
+from test_utils import compare_models
 
 
 def test_translation_urdf_to_biomod():
@@ -47,7 +47,7 @@ def test_translation_urdf_to_biomod():
         model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
             filepath=biomod_filepath,
         )
-        model_from_biomod_2.to_urdf(filepath=urdf_filepath.replace(".urdf", "_translated.urdf"))
+        model_from_biomod_2.to_urdf(filepath=urdf_filepath.replace(".urdf", "_translated.urdf"), with_mesh=True)
         model_from_urdf_2 = BiomechanicalModelReal().from_urdf(
             filepath=urdf_filepath.replace(".urdf", "_translated.urdf")
         )

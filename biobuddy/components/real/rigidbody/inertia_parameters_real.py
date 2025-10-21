@@ -82,8 +82,9 @@ class InertiaParametersReal:
 
         if np.any(self.center_of_mass):
             com = np.nanmean(self.center_of_mass, axis=1)[:3]
-            com_elt = etree.SubElement(inertial, "com")
-            com_elt.set("value", f"{com[0]:0.6f} {com[1]:0.6f} {com[2]:0.6f}")
+            com_elt = etree.SubElement(inertial, "origin")
+            com_elt.set("rpy", f"0 0 0")
+            com_elt.set("xyz", f"{com[0]:0.6f} {com[1]:0.6f} {com[2]:0.6f}")
 
         if np.any(self.inertia):
             inertia_elt = etree.SubElement(inertial, "inertia")
