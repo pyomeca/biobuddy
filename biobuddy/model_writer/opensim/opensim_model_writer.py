@@ -55,7 +55,10 @@ class OpensimModelWriter(AbstractModelWriter):
             gravity_elem.text = "0 -9.80665 0"
 
     def _write_ground(self, model_elem: etree.Element, model: BiomechanicalModelReal):
-        """Write ground body"""
+        """
+        Write ground body.
+        Note that we assume that the ground segment is named "ground" in the model.
+        """
         ground_elem = etree.SubElement(model_elem, "Ground", name="ground")
         ground_geometry = etree.SubElement(ground_elem, "FrameGeometry", name="frame_geometry")
         if "ground" in model.segment_names:
@@ -79,7 +82,7 @@ class OpensimModelWriter(AbstractModelWriter):
         objects = etree.SubElement(body_set, "objects")
 
         for segment in model.segments:
-            if segment.name == "ground" or segment.name == "base":
+            if segment.name == "ground" or segment.name == "base" or segment.name == "root":
                 continue
 
             body_elem = segment.to_osim(with_mesh=self.with_mesh)
@@ -91,13 +94,13 @@ class OpensimModelWriter(AbstractModelWriter):
         objects = etree.SubElement(joint_set, "objects")
 
         for segment in model.segments:
-            if segment.name == "ground" or segment.name == "base":
+            if segment.name == "ground" or segment.name == "base" or segment.name == "root":
                 continue
 
             parent_name = segment.parent_name if segment.parent_name != "base" else "ground"
 
             if segment.nb_q > 0:
-                joint_elem = self._create_custom_joint(segment, parent_name, model)
+                joint_elem = self._create_custom_joint(segment, parent_name)
             else:
                 joint_elem = self._create_weld_joint(segment, parent_name)
 
@@ -108,17 +111,19 @@ class OpensimModelWriter(AbstractModelWriter):
         joint = etree.Element("WeldJoint", name=f"{segment.name}_joint")
 
         socket_parent = etree.SubElement(joint, "socket_parent_frame")
-        socket_parent.text = f"../{parent_name}"
+        if parent_name == "ground":
+            socket_parent.text = "../ground"
+        socket_parent.text = f"bodyset/{parent_name}"
 
         socket_child = etree.SubElement(joint, "socket_child_frame")
-        socket_child.text = f"../{segment.name}"
+        socket_child.text = f"bodyset/{segment.name}"
 
         frames = etree.SubElement(joint, "frames")
 
         # Parent offset frame
         parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
-        parent_socket.text = f"../{parent_name}"
+        parent_socket.text = f"bodyset/{parent_name}"
 
         # Use the segment coordinate system's to_osim method
         translation_data, angles_data = segment.segment_coordinate_system.to_osim()
@@ -132,7 +137,7 @@ class OpensimModelWriter(AbstractModelWriter):
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
         child_socket = etree.SubElement(child_frame, "socket_parent")
-        child_socket.text = f"../{segment.name}"
+        child_socket.text = f"bodyset/{segment.name}"
 
         child_translation = etree.SubElement(child_frame, "translation")
         child_translation.text = "0 0 0"
@@ -142,24 +147,27 @@ class OpensimModelWriter(AbstractModelWriter):
 
         return joint
 
-    def _create_custom_joint(self, segment, parent_name: str, model: BiomechanicalModelReal):
+    def _create_custom_joint(self, segment, parent_name: str):
         """Create a CustomJoint with DOFs"""
         joint = etree.Element("CustomJoint", name=f"{segment.name}_joint")
 
         socket_parent = etree.SubElement(joint, "socket_parent_frame")
-        socket_parent.text = f"../{parent_name}"
+        if parent_name == "ground":
+            socket_parent.text = "../ground"
+        else:
+            socket_parent.text = f"bodyset/{parent_name}"
 
         socket_child = etree.SubElement(joint, "socket_child_frame")
-        socket_child.text = f"../{segment.name}"
+        socket_child.text = f"bodyset/{segment.name}"
 
         frames = etree.SubElement(joint, "frames")
 
         # Parent offset frame
         parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
-        parent_socket.text = f"../{parent_name}"
+        parent_socket.text = f"bodyset/{parent_name}"
 
-        # Use the segment coordinate system's to_osim method
+        # Segment coordinate system
         translation_data, angles_data = segment.segment_coordinate_system.to_osim()
 
         translation = etree.SubElement(parent_frame, "translation")
@@ -171,7 +179,7 @@ class OpensimModelWriter(AbstractModelWriter):
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
         child_socket = etree.SubElement(child_frame, "socket_parent")
-        child_socket.text = f"../{segment.name}"
+        child_socket.text = f"bodyset/{segment.name}"
 
         child_translation = etree.SubElement(child_frame, "translation")
         child_translation.text = "0 0 0"
@@ -281,7 +289,7 @@ class OpensimModelWriter(AbstractModelWriter):
 
     def _write_force_set(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write all muscles"""
-        force_set = etree.SubElement(model_elem, "ForceSet")
+        force_set = etree.SubElement(model_elem, "ForceSet", name="forceset")
         objects = etree.SubElement(force_set, "objects")
 
         for muscle_group in model.muscle_groups:

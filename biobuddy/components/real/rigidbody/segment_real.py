@@ -390,6 +390,8 @@ class SegmentReal(SegmentUtils):
 
         body_elem = etree.Element("Body", name=self.name)
 
+        # frame_geometry = etree.SubElement(body_elem, "FrameGeometry")
+
         if self.inertia_parameters is not None:
             mass_elem = etree.SubElement(body_elem, "mass")
             mass_elem.text = f"{self.inertia_parameters.mass:.8f}"
@@ -413,10 +415,12 @@ class SegmentReal(SegmentUtils):
 
         if with_mesh and self.mesh_file is not None:
             frame_geometry = etree.SubElement(body_elem, "FrameGeometry")
-            socket_frame = etree.SubElement(frame_geometry, "socket_frame")
-            socket_frame.text = ".."
+            etree.SubElement(frame_geometry, "socket_frame").text = ".."
 
             attached_geometry = etree.SubElement(body_elem, "attached_geometry")
+            socket_frame = etree.SubElement(attached_geometry, "socket_frame")
+            socket_frame.text = ".."
+
             mesh_elem = etree.SubElement(attached_geometry, "Mesh", name=f"{self.name}_mesh")
 
             mesh_file_elem = etree.SubElement(mesh_elem, "mesh_file")
@@ -428,6 +432,7 @@ class SegmentReal(SegmentUtils):
                 scale_factors.text = f"{s[0,0]:.8f} {s[1,0]:.8f} {s[2,0]:.8f}"
 
             if self.mesh_file.mesh_color is not None:
+                # TODO: add opacity
                 appearance = etree.SubElement(mesh_elem, "Appearance")
                 color_elem = etree.SubElement(appearance, "color")
                 c = self.mesh_file.mesh_color

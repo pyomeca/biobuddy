@@ -317,7 +317,7 @@ class MuscleReal(MuscleUtils):
         max_velocity.text = f"{self.maximal_velocity:.8f}" if self.maximal_velocity else "10"
 
         # Geometry path
-        geometry_path = etree.SubElement(muscle_elem, "GeometryPath")
+        geometry_path = etree.SubElement(muscle_elem, "GeometryPath", name="path")
         path_point_set = etree.SubElement(geometry_path, "PathPointSet")
         path_objects = etree.SubElement(path_point_set, "objects")
 

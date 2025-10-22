@@ -108,7 +108,7 @@ class MarkerReal:
         marker_elem = etree.Element("Marker", name=self.name)
 
         socket_parent = etree.SubElement(marker_elem, "socket_parent_frame")
-        socket_parent.text = f"../{self.parent_name}"
+        socket_parent.text = f"bodyset/{self.parent_name}"
 
         location = etree.SubElement(marker_elem, "location")
         location.text = f"{p[0]:.8f} {p[1]:.8f} {p[2]:.8f}"

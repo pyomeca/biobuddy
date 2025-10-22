@@ -133,7 +133,7 @@ class ViaPointReal:
         path_point_elem = etree.Element("PathPoint", name=self.name)
 
         socket_parent = etree.SubElement(path_point_elem, "socket_parent_frame")
-        socket_parent.text = f"../{self.parent_name}"
+        socket_parent.text = f"bodyset/{self.parent_name}"
 
         location = etree.SubElement(path_point_elem, "location")
         p = self.position

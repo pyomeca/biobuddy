@@ -10,6 +10,7 @@ import numpy.testing as npt
 import lxml
 
 from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
+from test_utils import compare_models
 
 
 class MotionType(Enum):
@@ -552,8 +553,26 @@ def test_translation_osim_to_biomod():
                             np.testing.assert_array_less(np.max(muscle_error), 0.015)
                             np.testing.assert_array_less(np.median(muscle_error), 0.003)
 
+
+                    # Test that the .biomod can be reconverted into .osim
+                    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
+                        filepath=biomod_filepath,
+                    )
+                    model_from_biomod_2.to_osim(filepath=biomod_filepath.replace(".biorbd", "_translated.osim"),
+                                                with_mesh=True)
+                    model_from_osim_2 = BiomechanicalModelReal().from_osim(
+                        filepath=biomod_filepath.replace(".biorbd", "_translated.osim"),
+                        muscle_type=MuscleType.HILL_DE_GROOTE,
+                        muscle_state_type=MuscleStateType.DEGROOTE,
+                        mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
+                    )
+                    compare_models(model, model_from_osim_2, decimal=5)
+
                     if os.path.exists(biomod_filepath):
                         os.remove(biomod_filepath)
+
+                    if os.path.exists(biomod_filepath.replace(".biorbd", "_translated.osim")):
+                        os.remove(biomod_filepath.replace(".biorbd", "_translated.osim"))
 
                 elif os.path.join(folder, name) in pin_joint_error_models:
                     with pytest.raises(
