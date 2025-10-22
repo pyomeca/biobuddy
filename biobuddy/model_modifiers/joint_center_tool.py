@@ -109,8 +109,8 @@ class RigidSegmentIdentification:
     def animate_the_segment_reconstruction(
         self,
         original_model: BiomechanicalModelReal,
-        rt_parent: np.ndarray,
-        rt_child: np.ndarray,
+        rt_parent: RotoTransMatrixTimeSeries,
+        rt_child: RotoTransMatrixTimeSeries,
         without_exp_markers: bool = False,
     ):
 
@@ -144,22 +144,17 @@ class RigidSegmentIdentification:
         setup_segments_for_animation(self.parent_name)
         setup_segments_for_animation(self.child_name)
 
-        nb_frames = rt_parent.shape[2]
+        nb_frames = len(rt_parent)
         parent_trans = np.zeros((3, nb_frames))
         parent_rot = np.zeros((3, nb_frames))
         child_trans = np.zeros((3, nb_frames))
         child_rot = np.zeros((3, nb_frames))
 
-        rt_parent_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
-        rt_parent_instance.from_rt_matrix(rt_parent)
-        rt_child_instance = RotoTransMatrixTimeSeries(nb_frames=nb_frames)
-        rt_child_instance.from_rt_matrix(rt_child)
-
         for i_frame in range(nb_frames):
-            parent_trans[:, i_frame] = rt_parent_instance[i_frame].translation
-            parent_rot[:, i_frame] = rt_parent_instance[i_frame].euler_angles("xyz")
-            child_trans[:, i_frame] = rt_child_instance[i_frame].translation
-            child_rot[:, i_frame] = rt_child_instance[i_frame].euler_angles("xyz")
+            parent_trans[:, i_frame] = rt_parent[i_frame].translation
+            parent_rot[:, i_frame] = rt_parent[i_frame].euler_angles("xyz")
+            child_trans[:, i_frame] = rt_child[i_frame].translation
+            child_rot[:, i_frame] = rt_child[i_frame].euler_angles("xyz")
 
         q = np.vstack((parent_trans, parent_rot, child_trans, child_rot))
 
@@ -492,7 +487,7 @@ class RigidSegmentIdentification:
         static_markers_in_local: np.ndarray,
         rt_init: RotoTransMatrixTimeSeries,
         marker_names: list[str],
-    ):
+    ) -> RotoTransMatrixTimeSeries:
 
         rt_matrix_init = rt_init.get_rt_matrix()
         initialize_whole_trial_reconstruction = False if rt_matrix_init.shape[2] == 1 else True
@@ -546,9 +541,13 @@ class RigidSegmentIdentification:
                 # Use the optimal rt of the previous frame
                 init = rt_optimal[:, :, i_frame]
 
-        return rt_optimal
+        output = RotoTransMatrixTimeSeries(rt_optimal.shape[2])
+        output.from_rt_matrix(rt_optimal)
+        return output
 
-    def rt_from_trial(self, parent_rt_init, child_rt_init) -> tuple[np.ndarray, np.ndarray]:
+    def rt_from_trial(
+        self, parent_rt_init, child_rt_init
+    ) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
         """
@@ -572,7 +571,7 @@ class Score(RigidSegmentIdentification):
 
     def _score_algorithm(
         self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
@@ -589,6 +588,12 @@ class Score(RigidSegmentIdentification):
         -------
         cor_global : np.ndarray, shape (3,)
             Estimated global position of the center of rotation.
+        cor_parent_local : np.ndarray, shape (3,)
+            Estimated position of the center of rotation in the parent segment's local frame.
+        cor_child_local : np.ndarray, shape (3,)
+            Estimated position of the center of rotation in the child segment's local frame.
+        rt_parent : np.ndarray, shape (4, 4, N)
+            Homogeneous transformations of the parent segment after outlier removal.
         """
         nb_frames = rt_parent.shape[2]
 
@@ -664,7 +669,7 @@ class Score(RigidSegmentIdentification):
 
         # Identify center of rotation
         cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(
-            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+            rt_parent_functional.get_rt_matrix(), rt_child_functional.get_rt_matrix(), recursive_outlier_removal=True
         )
 
         scs_child_static = new_model.segments[self.child_name].segment_coordinate_system
@@ -961,7 +966,7 @@ class Sara(RigidSegmentIdentification):
 
         # Identify axis of rotation
         aor_global, rt_parent_valid_frames, rt_child_valid_frames = self._sara_algorithm(
-            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+            rt_parent_functional.get_rt_matrix(), rt_child_functional.get_rt_matrix(), recursive_outlier_removal=True
         )
         aor_global = self._check_aor(original_model, aor_global)
         aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)

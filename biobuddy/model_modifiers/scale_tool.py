@@ -111,6 +111,7 @@ class ScaleTool:
         static_c3d: C3dData,
         mass: float,
         q_regularization_weight: float = None,
+        qdot_regularization_weight: float = None,
         initial_static_pose: np.ndarray = None,
         make_static_pose_the_models_zero: bool = True,
         visualize_optimal_static_pose: bool = False,
@@ -127,6 +128,8 @@ class ScaleTool:
             The mass of the subject
         q_regularization_weight
             The weight of the regularization term in the inverse kinematics. If None, no regularization is applied.
+        qdot_regularization_weight
+            The weight of the regularization term on the joint velocities in the inverse kinematics. If None, no regularization is applied.
         initial_static_pose
             The approximate posture (q) in which the subject will be during the static trial.
             Ideally, this should be zero so that the posture of the original model would be in the same posture as the subject during the static trial.
@@ -171,6 +174,7 @@ class ScaleTool:
             marker_positions,
             marker_names,
             q_regularization_weight,
+            qdot_regularization_weight,
             initial_static_pose,
             make_static_pose_the_models_zero,
             visualize_optimal_static_pose,
@@ -586,6 +590,7 @@ class ScaleTool:
         marker_positions: np.ndarray,
         experimental_marker_names: list[str],
         q_regularization_weight: float | None,
+        qdot_regularization_weight: float | None,
         initial_static_pose: np.ndarray | None,
         visualize_optimal_static_pose: bool,
         method: str,
@@ -604,6 +609,7 @@ class ScaleTool:
             marker_positions=marker_positions,
             marker_names=experimental_marker_names,
             q_regularization_weight=q_regularization_weight,
+            qdot_regularization_weight=qdot_regularization_weight,
             q_target=initial_static_pose,
             marker_weights=self.marker_weights,
             method=method,
@@ -688,6 +694,7 @@ class ScaleTool:
         marker_positions: np.ndarray,
         marker_names: list[str],
         q_regularization_weight: float | None,
+        qdot_regularization_weight: float | None,
         initial_static_pose: np.ndarray | None,
         make_static_pose_the_models_zero: bool,
         visualize_optimal_static_pose: bool,
@@ -697,6 +704,7 @@ class ScaleTool:
             marker_positions,
             marker_names,
             q_regularization_weight,
+            qdot_regularization_weight,
             initial_static_pose,
             visualize_optimal_static_pose,
             method,
