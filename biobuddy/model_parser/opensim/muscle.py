@@ -1,7 +1,7 @@
 import numpy as np
 from lxml import etree
 
-from .utils import find_in_tree, find_sub_elements_in_tree
+from ..utils_xml import find_in_tree, find_sub_elements_in_tree
 from .path_point import PathPoint, PathPointMovement, PathPointCondition
 from ...components.real.muscle.muscle_real import MuscleReal
 from ...components.real.muscle.via_point_real import ViaPointReal

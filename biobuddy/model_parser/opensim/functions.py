@@ -2,7 +2,7 @@ from lxml import etree
 import numpy as np
 
 from ...components.functions import SimmSpline, PiecewiseLinearFunction
-from .utils import find_in_tree
+from ..utils_xml import find_in_tree
 
 
 def spline_from_element(element: etree.ElementTree) -> SimmSpline:

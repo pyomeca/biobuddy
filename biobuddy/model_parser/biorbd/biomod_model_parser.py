@@ -3,6 +3,7 @@ from typing import Callable
 
 import numpy as np
 
+from ..abstract_model_parser import AbstractModelParser
 from ... import MeshFileReal
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.segment_real import (
@@ -45,8 +46,11 @@ class EndOfFileReached(Exception):
     pass
 
 
-class BiomodModelParser:
+class BiomodModelParser(AbstractModelParser):
     def __init__(self, filepath: str):
+
+        super().__init__(filepath)
+
         tokens = tokenize_biomod(filepath=filepath)
 
         # Prepare the internal structure to hold the model

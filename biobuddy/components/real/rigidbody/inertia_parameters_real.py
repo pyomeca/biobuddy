@@ -1,5 +1,6 @@
 from typing import Callable
 
+from lxml import etree
 import numpy as np
 
 from .protocols import CoordinateSystemRealProtocol
@@ -70,6 +71,29 @@ class InertiaParametersReal:
             out_string += f"\t\t{self.inertia[2, 0]:0.6f}\t{self.inertia[2, 1]:0.6f}\t{self.inertia[2, 2]:0.6f}\n"
 
         return out_string
+
+    def to_urdf(self, link: etree.Element):
+
+        inertial = etree.SubElement(link, "inertial")
+
+        if self.mass is not None:
+            mass_elt = etree.SubElement(inertial, "mass")
+            mass_elt.set("value", str(self.mass))
+
+        if np.any(self.center_of_mass):
+            com = np.nanmean(self.center_of_mass, axis=1)[:3]
+            com_elt = etree.SubElement(inertial, "origin")
+            com_elt.set("rpy", f"0 0 0")
+            com_elt.set("xyz", f"{com[0]:0.6f} {com[1]:0.6f} {com[2]:0.6f}")
+
+        if np.any(self.inertia):
+            inertia_elt = etree.SubElement(inertial, "inertia")
+            inertia_elt.set("ixx", str(self.inertia[0, 0]))
+            inertia_elt.set("ixy", str(self.inertia[0, 1]))
+            inertia_elt.set("ixz", str(self.inertia[0, 2]))
+            inertia_elt.set("iyy", str(self.inertia[1, 1]))
+            inertia_elt.set("iyz", str(self.inertia[1, 2]))
+            inertia_elt.set("izz", str(self.inertia[2, 2]))
 
     def to_osim(self):
         """

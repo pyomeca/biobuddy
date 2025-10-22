@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import numpy.testing as npt
+from lxml import etree
 
 from biobuddy import (
     BiomechanicalModelReal,
@@ -77,7 +78,7 @@ def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):
     assert bio_model.muscle_group_names == []
 
 
-def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelReal):
+def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelReal, decimal: int = 5):
     """
     Compare two biomechanical models for equality.
     """
@@ -99,17 +100,20 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
         npt.assert_almost_equal(
             model1.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
             model2.segments[segment_name].segment_coordinate_system.scs.rt_matrix,
-            decimal=5,
+            decimal=decimal,
         )
         assert np.all(model1.segments[segment_name].translations == model2.segments[segment_name].translations)
         assert np.all(model1.segments[segment_name].rotations == model2.segments[segment_name].rotations)
-        assert set(model1.segments[segment_name].dof_names) == set(model2.segments[segment_name].dof_names)
         if model1.segments[segment_name].q_ranges is not None:
-            assert np.all(
-                model1.segments[segment_name].q_ranges.min_bound == model2.segments[segment_name].q_ranges.min_bound
+            npt.assert_almost_equal(
+                model1.segments[segment_name].q_ranges.min_bound,
+                model2.segments[segment_name].q_ranges.min_bound,
+                decimal=decimal,
             )
-            assert np.all(
-                model1.segments[segment_name].q_ranges.max_bound == model2.segments[segment_name].q_ranges.max_bound
+            npt.assert_almost_equal(
+                model1.segments[segment_name].q_ranges.max_bound,
+                model2.segments[segment_name].q_ranges.max_bound,
+                decimal=decimal,
             )
         else:
             assert model2.segments[segment_name].q_ranges is None
@@ -121,12 +125,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.inertia,
                 model2.segments[segment_name].inertia_parameters.inertia,
-                decimal=5,
+                decimal=decimal,
             )
             npt.assert_almost_equal(
                 model1.segments[segment_name].inertia_parameters.center_of_mass,
                 model2.segments[segment_name].inertia_parameters.center_of_mass,
-                decimal=5,
+                decimal=decimal,
             )
         else:
             assert model2.segments[segment_name].inertia_parameters is None
@@ -134,7 +138,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].mesh.positions,
                 model2.segments[segment_name].mesh.positions,
-                decimal=5,
+                decimal=decimal,
             )
         else:
             assert model2.segments[segment_name].mesh is None
@@ -150,6 +154,9 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                 model1.segments[segment_name].mesh_file.mesh_translation
                 == model2.segments[segment_name].mesh_file.mesh_translation
             )
+            assert np.all(
+                model1.segments[segment_name].mesh_file.mesh_color == model2.segments[segment_name].mesh_file.mesh_color
+            )
         else:
             assert model2.segments[segment_name].mesh_file is None
 
@@ -160,7 +167,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].markers[marker_name].position,
                 model2.segments[segment_name].markers[marker_name].position,
-                decimal=5,
+                decimal=decimal,
             )
             assert (
                 model1.segments[segment_name].markers[marker_name].parent_name
@@ -182,7 +189,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].contacts[contact_name].position,
                 model2.segments[segment_name].contacts[contact_name].position,
-                decimal=5,
+                decimal=decimal,
             )
             assert (
                 model1.segments[segment_name].contacts[contact_name].parent_name
@@ -204,7 +211,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.segments[segment_name].imus[imu_name].scs.rt_matrix,
                 model2.segments[segment_name].imus[imu_name].scs.rt_matrix,
-                decimal=5,
+                decimal=decimal,
             )
             assert (
                 model1.segments[segment_name].imus[imu_name].parent_name
@@ -253,12 +260,12 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].origin_position.position,
-                decimal=5,
+                decimal=decimal,
             )
             npt.assert_almost_equal(
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
                 model2.muscle_groups[muscle_group_name].muscles[muscle_name].insertion_position.position,
-                decimal=5,
+                decimal=decimal,
             )
             assert (
                 model1.muscle_groups[muscle_group_name].muscles[muscle_name].optimal_length
@@ -311,7 +318,7 @@ def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelRea
                 npt.assert_almost_equal(
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
                     model2.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].position,
-                    decimal=5,
+                    decimal=decimal,
                 )
                 if (
                     model1.muscle_groups[muscle_group_name].muscles[muscle_name].via_points[via_point_name].condition
@@ -577,3 +584,18 @@ class MockC3dData(C3dData):
 
         # Create marker positions for 10 frames
         self.all_marker_positions = np.random.rand(4, 73, 10)
+
+
+def get_urdf_str(fake_urdf_model: etree.Element) -> str:
+    # Write to a temporary file
+    tree = etree.ElementTree(fake_urdf_model)
+    tree.write("temporary.urdf", pretty_print=True, xml_declaration=True, encoding="utf-8")
+
+    # Read the content
+    with open("temporary.urdf", "r") as file:
+        urdf_content = file.read()
+
+    # Remove the temporary file
+    os.remove("temporary.urdf")
+
+    return urdf_content

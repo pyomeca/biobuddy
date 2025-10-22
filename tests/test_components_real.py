@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+from lxml import etree
 
 from biobuddy import (
     MarkerReal,
@@ -23,7 +24,7 @@ from biobuddy import (
     Ranges,
     ViaPoint,
 )
-from test_utils import MockC3dData
+from test_utils import MockC3dData, get_urdf_str
 
 
 # ------- MarkerReal ------- #
@@ -216,6 +217,49 @@ def test_mesh_file_real_to_biomod():
     assert biomod_str == expected_str
 
 
+def test_mesh_file_real_to_urdf():
+    # Create a mesh file
+    mesh_file = MeshFileReal(
+        mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
+        mesh_color=np.array([1.0, 0.0, 0.0]),
+        mesh_rotation=np.array([0.1, 0.2, 0.3]),
+        mesh_translation=np.array([1.0, 2.0, 3.0]),
+    )
+
+    # Generate xml
+    fake_urdf_model = etree.Element("robot", name="fake_model")
+    fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+    mesh_file.to_urdf(fake_urdf_model, fake_link)
+    urdf_content = get_urdf_str(fake_urdf_model)
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <visual>\n      <geometry>\n        <mesh filename="mesh_file/dir/test.obj"/>\n      </geometry>\n      <origin xyz="1.0 2.0 3.0" rpy="0.1 0.2 0.3"/>\n      <material name="material_0"/>\n    </visual>\n  </link>\n  <material name="material_0">\n    <color rgba="1.0 0.0 0.0 1"/>\n  </material>\n</robot>\n'
+    assert urdf_content == expected_str
+
+    # Test that the mesh scaling throws an error
+    with pytest.raises(NotImplementedError, match="Mesh scaling is not implemented yet for URDF export"):
+        mesh_file.mesh_scale = np.array([2.0, 2.0, 2.0])
+        fake_urdf_model = etree.Element("robot", name="fake_model")
+        fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+        mesh_file.to_urdf(fake_urdf_model, fake_link)
+
+    # Test with missing rotation and translation
+    mesh_file = MeshFileReal(
+        mesh_file_name="test.obj",
+        mesh_file_directory="mesh_file/dir",
+        mesh_color=np.array([1.0, 0.0, 0.0]),
+        mesh_rotation=None,
+        mesh_translation=None,
+    )
+
+    # Generate xml
+    fake_urdf_model = etree.Element("robot", name="fake_model")
+    fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+    mesh_file.to_urdf(fake_urdf_model, fake_link)
+    urdf_content = get_urdf_str(fake_urdf_model)
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <visual>\n      <geometry>\n        <mesh filename="mesh_file/dir/test.obj"/>\n      </geometry>\n      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>\n      <material name="material_0"/>\n    </visual>\n  </link>\n  <material name="material_0">\n    <color rgba="1.0 0.0 0.0 1"/>\n  </material>\n</robot>\n'
+    assert urdf_content == expected_str
+
+
 # ------- AxisReal ------- #
 def test_init_axis_real():
     # Create markers for the axis
@@ -346,6 +390,26 @@ def test_segment_coordinate_system_real_to_biomod():
         "\t\t0.000000\t0.000000\t0.000000\t1.000000\n"
     )
     assert biomod_str == expected_str
+
+
+def test_segment_coordinate_system_real_to_urdf():
+    # Create an RT matrix
+    rt_matrix = np.eye(4)
+    rt_matrix[:3, 3] = [1.0, 2.0, 3.0]
+
+    # Create SCS from RT matrix
+    scs = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix)
+
+    # Generate xml
+    fake_urdf_model = etree.Element("robot", name="fake_model")
+    fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+    fake_origin = etree.SubElement(fake_link, "origin", name="fake_origin")
+    scs.to_urdf(fake_origin)
+    urdf_content = get_urdf_str(fake_urdf_model)
+
+    # Check the content
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <origin name="fake_origin" xyz="1.000000 2.000000 3.000000" rpy="-0.000000 0.000000 -0.000000"/>\n  </link>\n</robot>\n'
+    assert urdf_content == expected_str
 
 
 # ------- ContactReal ------- #
@@ -769,6 +833,62 @@ def test_segment_real_to_biomod():
     assert "contact\ttest_contact" in biomod_str
 
 
+def test_segment_real_to_urdf():
+
+    # Create a simple segment (since contacts and markers are not implemented for urdf models)
+    segment = SegmentReal(
+        name="test_segment", parent_name="parent_segment", translations=Translations.NONE, rotations=Rotations.X
+    )
+
+    # Generate xml
+    fake_urdf_model = etree.Element("robot", name="fake_model")
+    fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+    segment.to_urdf(fake_urdf_model, fake_link)
+    urdf_content = get_urdf_str(fake_urdf_model)
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link"/>\n  <link name="test_segment"/>\n  <joint name="test_segment_rotX" type="revolute">\n    <parent link="parent_segment"/>\n    <child link="test_segment"/>\n    <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000"/>\n    <axis xyz="1 0 0"/>\n  </joint>\n</robot>\n'
+    assert urdf_content == expected_str
+
+    # Test that multiple rotations throws an error
+    with pytest.raises(
+        NotImplementedError, match="Joints with more than one DoF are not yet implemented in URDF export"
+    ):
+        segment.rotations = Rotations.XYZ
+        fake_urdf_model = etree.Element("robot", name="fake_model")
+        fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+        segment.to_urdf(fake_urdf_model, fake_link)
+
+    # Check that markers throw an error
+    with pytest.raises(NotImplementedError, match="Markers are not implemented yet for URDF export"):
+        segment.rotations = Rotations.X
+        marker = MarkerReal(
+            name="test_marker", parent_name="test_segment", position=np.array([[1.0], [2.0], [3.0], [1.0]])
+        )
+        segment.add_marker(marker)
+        fake_urdf_model = etree.Element("robot", name="fake_model")
+        fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+        segment.to_urdf(fake_urdf_model, fake_link)
+
+    # Check that contacts throw an error
+    with pytest.raises(NotImplementedError, match="Contacts are not implemented yet for URDF export"):
+        segment.remove_marker("test_marker")
+        contact = ContactReal(
+            name="test_contact", parent_name="test_segment", position=np.array([[1.0], [2.0], [3.0], [1.0]])
+        )
+        segment.add_contact(contact)
+        fake_urdf_model = etree.Element("robot", name="fake_model")
+        fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+        segment.to_urdf(fake_urdf_model, fake_link)
+
+    # Check that imus throw an error
+    with pytest.raises(NotImplementedError, match="IMUs are not implemented yet for URDF export"):
+        segment.remove_contact("test_contact")
+        imu = InertialMeasurementUnitReal(name="test_imu", parent_name="test_segment")
+        segment.add_imu(imu)
+        fake_urdf_model = etree.Element("robot", name="fake_model")
+        fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
+        segment.to_urdf(fake_urdf_model, fake_link)
+
+
 # ------- ViaPointReal ------- #
 def test_init_via_point_real():
     # Test initialization with minimal parameters
@@ -1179,3 +1299,12 @@ def test_muscle_group_real_to_biomod():
     assert "\tInsertionParent\tsegment2" in biomod_str
     assert "endmusclegroup" in biomod_str
     assert "muscle\ttest_muscle" in biomod_str
+
+
+def test_muscle_group_real_to_urdf():
+    # Create a muscle group
+    muscle_group = MuscleGroupReal(name="test_group", origin_parent_name="segment1", insertion_parent_name="segment2")
+
+    # Check that muscle group throws an error for URDF export
+    with pytest.raises(NotImplementedError, match="Muscle groups are not implemented yet for URDF export"):
+        muscle_group.to_urdf()

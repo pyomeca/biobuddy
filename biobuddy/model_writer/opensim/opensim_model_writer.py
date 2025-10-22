@@ -1,28 +1,15 @@
 from time import strftime
 from lxml import etree
 import numpy as np
-
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.enums import Translations, Rotations
 from ...utils.linear_algebra import rot2eul
+from ..abstract_model_writer import AbstractModelWriter
 
 
-class OpensimModelWriter:
-    def __init__(self, filepath: str, with_mesh: bool = False):
-        """
-        The path where the model should be printed
+class OpensimModelWriter(AbstractModelWriter):
 
-        Parameters
-        ----------
-        filepath
-            The path to the model to write
-        with_mesh
-            If the mesh files should be added to the model to write
-        """
-        self.filepath = filepath
-        self.with_mesh = with_mesh
-
-    def write(self, model: BiomechanicalModelReal) -> None:
+    def write(self, model: "BiomechanicalModelReal") -> None:
         """
         Write the OpenSim model to file
 

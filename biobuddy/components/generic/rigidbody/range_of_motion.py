@@ -36,6 +36,10 @@ class RangeOfMotion:
 
         return out_string
 
+    def to_urdf(self, limit_elt):
+        limit_elt.set("lower", str(self.min_bound[0]))
+        limit_elt.set("upper", str(self.max_bound[0]))
+
     def to_osim(self):
         """
         Generate OpenSim XML representation of range of motion.
