@@ -61,6 +61,8 @@ class OpensimModelWriter(AbstractModelWriter):
         """
         ground_elem = etree.SubElement(model_elem, "Ground", name="ground")
         ground_geometry = etree.SubElement(ground_elem, "FrameGeometry", name="frame_geometry")
+        socket_frame = etree.SubElement(ground_geometry, "socket_frame")
+        socket_frame.text = ".."
         if "ground" in model.segment_names:
             ground_segment = model.segments["ground"]
             attached_geometry = etree.SubElement(ground_geometry, "attached_geometry")
@@ -82,7 +84,7 @@ class OpensimModelWriter(AbstractModelWriter):
         objects = etree.SubElement(body_set, "objects")
 
         for segment in model.segments:
-            if segment.name == "ground" or segment.name == "base" or segment.name == "root":
+            if segment.name == "ground" or segment.name == "root":
                 continue
 
             body_elem = segment.to_osim(with_mesh=self.with_mesh)
@@ -94,11 +96,10 @@ class OpensimModelWriter(AbstractModelWriter):
         objects = etree.SubElement(joint_set, "objects")
 
         for segment in model.segments:
-            if segment.name == "ground" or segment.name == "base" or segment.name == "root":
+            if segment.name == "ground" or segment.name == "root":
                 continue
 
-            parent_name = segment.parent_name if segment.parent_name != "base" else "ground"
-
+            parent_name = segment.parent_name # if segment.parent_name != "base" else "ground"
             if segment.nb_q > 0:
                 joint_elem = self._create_custom_joint(segment, parent_name)
             else:
