@@ -251,13 +251,15 @@ class ModelDynamics:
             if marker_name in marker_names:
                 vec_jacobian[i_marker * 3 : (i_marker + 1) * 3, :] = jacobian_matrix[:, i_marker, :]
 
+        offset = nb_markers * 3
         if np.sum(q_regularization_weight) > 0:
             for i_q in range(nb_q):
-                vec_jacobian[nb_markers * 3 + i_q, i_q] = q_regularization_weight[i_q]
+                vec_jacobian[offset + i_q, i_q] = q_regularization_weight[i_q]
+            offset += nb_q
 
         if np.sum(qdot_regularization_weight) > 0:
             for i_q in range(nb_q):
-                vec_jacobian[nb_markers * 3 + nb_q + i_q, i_q] = q_regularization_weight[i_q]
+                vec_jacobian[offset + i_q, i_q] = qdot_regularization_weight[i_q]
 
         return vec_jacobian
 
