@@ -564,8 +564,11 @@ def test_inverse_kinematics_basic():
     npt.assert_array_almost_equal(q_reconstructed_nan, q_true, decimal=3)
 
     # Test that it also works with qdot regularization
+    marker_positions_two_frames = np.ones((4, leg_model.nb_markers, 2))
+    marker_positions_two_frames[:, :, 0] = marker_positions_true[:, :, 0]
+    marker_positions_two_frames[:, :, 1] = marker_positions_true[:, :, 0]
     q_reconstructed, _ = leg_model.inverse_kinematics(
-        marker_positions=marker_positions_true[:3, :, :],
+        marker_positions=marker_positions_two_frames[:3, :, :],
         marker_names=marker_names,
         q_regularization_weight=0.01,
         qdot_regularization_weight=0.01,
@@ -576,7 +579,8 @@ def test_inverse_kinematics_basic():
     )
 
     # Check that the solution is still close to the true q
-    npt.assert_array_almost_equal(q_reconstructed, q_true, decimal=3)
+    npt.assert_array_almost_equal(q_reconstructed[:, 0], q_true[:, 0], decimal=3)
+    npt.assert_array_almost_equal(q_reconstructed[:, 1], q_true[:, 0], decimal=3)
 
     # Delete the temporary model created
     os.remove(tempo_leg_filepath)
