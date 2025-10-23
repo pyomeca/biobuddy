@@ -100,7 +100,7 @@ def osim_biomod_convertion():
 
         # TODO: see with aceglia why I get the error:
         # "RuntimeError: std::exception in 'OpenSim::Model::Model(std::string const &)': Joint::getMotionType() given an invalid CoordinateIndex
-	    # Thrown at Joint.cpp:224 in getMotionType()." although `osim.Model(osim_filepath)` works fine
+        # Thrown at Joint.cpp:224 in getMotionType()." although `osim.Model(osim_filepath)` works fine
         # Osim model reference
         # display_options = pyorerun.DisplayModelOptions()
         # display_options.mesh_path = f"{current_path_file}/models/Geometry_cleaned"

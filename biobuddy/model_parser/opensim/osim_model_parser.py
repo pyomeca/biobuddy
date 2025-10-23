@@ -451,7 +451,9 @@ class OsimModelParser(AbstractModelParser):
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
     @staticmethod
-    def get_dof_and_names_and_ranges(dof_names: list[str], ranges: list[str | None]) -> tuple[str, list[str], list[str]]:
+    def get_dof_and_names_and_ranges(
+        dof_names: list[str], ranges: list[str | None]
+    ) -> tuple[str, list[str], list[str]]:
         axis = ""
         effective_dof_names = []
         effective_ranges = []
@@ -484,8 +486,12 @@ class OsimModelParser(AbstractModelParser):
             rot_dof_names,
             default_value_rot,
         ) = self._get_transformation_parameters(dof.spatial_transform)
-        trans_dof, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(trans_dof_names, q_ranges_trans)
-        rot_dof, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(rot_dof_names, q_ranges_rot)
+        trans_dof, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(
+            trans_dof_names, q_ranges_trans
+        )
+        rot_dof, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(
+            rot_dof_names, q_ranges_rot
+        )
 
         body.mesh = body.mesh if len(body.mesh) != 0 else [None]
         body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
@@ -503,7 +509,9 @@ class OsimModelParser(AbstractModelParser):
             if len(translations) != 0:
                 body_name = body.name + "_translation"
                 if is_ortho_basis(translations):
-                    trans_axis, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(trans_dof_names, q_ranges_trans)
+                    trans_axis, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(
+                        trans_dof_names, q_ranges_trans
+                    )
 
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(translations).T)
@@ -527,7 +535,9 @@ class OsimModelParser(AbstractModelParser):
             # Rotations
             if len(rotations) != 0:
                 if is_ortho_basis(rotations):
-                    rot_axis, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(rot_dof_names, q_ranges_rot)
+                    rot_axis, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(
+                        rot_dof_names, q_ranges_rot
+                    )
                     body_name = body.name + "_rotation_transform"
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(rotations).T)

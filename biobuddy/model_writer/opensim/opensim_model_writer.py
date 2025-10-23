@@ -71,7 +71,9 @@ class OpensimModelWriter(AbstractModelWriter):
             if ground_segment.mesh_file is not None:
                 scale_factors = etree.SubElement(attached_geometry, "scale_factors")
                 ground_scale_factors = ground_segment.mesh_file.mesh_scale
-                scale_factors.text = f"{ground_scale_factors[0]:.8f} {ground_scale_factors[1]:.8f} {ground_scale_factors[2]:.8f}"
+                scale_factors.text = (
+                    f"{ground_scale_factors[0]:.8f} {ground_scale_factors[1]:.8f} {ground_scale_factors[2]:.8f}"
+                )
 
             if ground_segment.nb_markers > 0:
                 for marker in ground_segment.markers:
@@ -99,7 +101,7 @@ class OpensimModelWriter(AbstractModelWriter):
             if segment.name == "ground" or segment.name == "root":
                 continue
 
-            parent_name = segment.parent_name # if segment.parent_name != "base" else "ground"
+            parent_name = segment.parent_name  # if segment.parent_name != "base" else "ground"
             if segment.nb_q > 0:
                 joint_elem = self._create_custom_joint(segment, parent_name)
             else:

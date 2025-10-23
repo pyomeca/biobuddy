@@ -553,14 +553,12 @@ def test_translation_osim_to_biomod():
                             np.testing.assert_array_less(np.max(muscle_error), 0.015)
                             np.testing.assert_array_less(np.median(muscle_error), 0.003)
 
-
                     # Test that the .biomod can be reconverted into .osim
                     model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
                         filepath=biomod_filepath,
                     )
                     translated_osim_filepath = biomod_filepath.replace(".bioMod", "_translated.osim")
-                    model_from_biomod_2.to_osim(filepath=translated_osim_filepath,
-                                                with_mesh=True)
+                    model_from_biomod_2.to_osim(filepath=translated_osim_filepath, with_mesh=True)
                     model_from_osim_2 = BiomechanicalModelReal().from_osim(
                         filepath=translated_osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,

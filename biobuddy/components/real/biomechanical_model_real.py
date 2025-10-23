@@ -359,7 +359,11 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         self.filepath = filepath
         model = OsimModelParser(
-            filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir, skip_virtual=skip_virtual,
+            filepath=filepath,
+            muscle_type=muscle_type,
+            muscle_state_type=muscle_state_type,
+            mesh_dir=mesh_dir,
+            skip_virtual=skip_virtual,
         ).to_real()
         model.validate_model()
         return model
