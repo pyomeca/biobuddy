@@ -37,8 +37,8 @@ from ...utils.linear_algebra import (
     ortho_norm_basis,
     get_closest_rt_matrix,
 )
-from ...utils.enums import Rotations
-from ...utils.enums import Translations
+from ...utils.enums import Rotations, Translations
+from ...utils.named_list import NamedList
 
 
 class ForceType(Enum):
@@ -116,11 +116,11 @@ class OsimModelParser(AbstractModelParser):
 
         self.parse_tags(self.model.getroot())
 
-        self.bodies: list[Body] = []
-        self.muscle_groups: list[MuscleGroupReal] = []
-        self.muscles: list[MuscleReal] = []
-        self.joints: list[Joint] = []
-        self.markers: list[Marker] = []
+        self.bodies: NamedList[Body] = NamedList()
+        self.muscle_groups: NamedList[MuscleGroupReal] = NamedList()
+        self.muscles: NamedList[MuscleReal] = NamedList()
+        self.joints: NamedList[Joint] = NamedList()
+        self.markers: NamedList[Marker] = NamedList()
         self.constraint_set = []  # Not implemented
         self.controller_set = []  # Not implemented
         self.prob_set = []  # Not implemented
@@ -198,8 +198,7 @@ class OsimModelParser(AbstractModelParser):
                 body_mesh_list.append(mesh)
             return body_mesh_list
 
-    def _get_marker_set(self) -> list[Marker]:
-        markers = []
+    def _get_marker_set(self):
         if is_element_empty(self.markerset_elt):
             return []
         else:
@@ -207,11 +206,9 @@ class OsimModelParser(AbstractModelParser):
             for element in self.markerset_elt[0]:
                 marker = Marker.from_element(element)
                 original_marker_names += [marker.name]
-                markers.append(marker)
-            return markers
+                self.markers.append(marker)
 
     def _get_joint_set(self):
-        joints = []
         if is_element_empty(self.jointset_elt):
             return []
         else:
@@ -219,11 +216,10 @@ class OsimModelParser(AbstractModelParser):
                 joint = Joint.from_element(element, self.ignore_fixed_dof_tag, self.ignore_clamped_dof_tag)
                 if joint.function:
                     self.warnings.append(
-                        f"Some functions were present for the {joints[-1].name} joint. "
+                        f"Some functions were present for the {self.joints[-1].name} joint. "
                         "This feature is not implemented in biorbd yet so it will be ignored."
                     )
-                joints.append(joint)
-            return joints
+                self.joints.append(joint)
 
     def get_controller_set(self):
         if is_element_empty(self.controllerset_elt):
@@ -844,10 +840,10 @@ class OsimModelParser(AbstractModelParser):
         """
 
         # Read the .osim file
-        self.muscle_groups, self.muscles = self._get_force_set()
-        self.joints = self._get_joint_set()
-        self.bodies = self._get_body_set()
-        self.markers = self._get_marker_set()
+        self._get_force_set()
+        self._get_joint_set()
+        self._get_body_set()
+        self._get_marker_set()
         self.geometry_set = self._get_body_mesh_list()
 
         # Validation
@@ -865,19 +861,15 @@ class OsimModelParser(AbstractModelParser):
         # Warnings
         self._set_warnings()
 
-    def _get_body_set(self, body_set: etree.ElementTree = None) -> list[Body]:
-        bodies = []
+    def _get_body_set(self, body_set: etree.ElementTree = None):
         body_set = body_set if body_set else self.bodyset_elt[0]
         if is_element_empty(body_set):
             return None
         else:
             for element in body_set:
-                bodies.append(Body.from_element(element))
-            return bodies
+                self.bodies.append(Body.from_element(element))
 
-    def _get_force_set(self) -> tuple[list[MuscleGroupReal], list[MuscleReal]]:
-        muscle_groups = []
-        muscles = []
+    def _get_force_set(self):
         if is_element_empty(self.forceset_elt):
             return None, None
         else:
@@ -886,8 +878,10 @@ class OsimModelParser(AbstractModelParser):
                     muscle_group, muscle, warnings = get_muscle_from_element(
                         element, self.ignore_muscle_applied_tag, self.muscle_type
                     )
-                    muscle_groups += [muscle_group] if muscle_group is not None else []
-                    muscles += [muscle] if muscle is not None else []
+                    if muscle_group is not None:
+                        self.muscle_groups.append(muscle_group)
+                    if muscle is not None:
+                        self.muscles.append(muscle)
                     if len(warnings) > 0:
                         self.warnings.append(warnings)
 
@@ -897,7 +891,7 @@ class OsimModelParser(AbstractModelParser):
                         "Only muscles are supported so they will be ignored."
                     )
 
-            return muscle_groups, muscles
+            return
 
     def _get_transformation_parameters(self, spatial_transform):
         translations = []
