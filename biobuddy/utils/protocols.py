@@ -8,6 +8,11 @@ import numpy as np
 class Data(Protocol):
     values: dict[str, np.ndarray]  # The data in the format [marker_names, 4xT] where 3xT is the XYZ1 x time matrix
 
+    def mean_values(self) -> np.ndarray:
+        """
+        Get the mean value of the marker position
+        """
+
 
 class GenericDynamicModel(Protocol):
     @property
