@@ -50,5 +50,18 @@ class NamedList(list[T]):
         else:
             raise TypeError("key must be int or str")
 
+    def __repr__(self):
+        if not self:
+            return "{}"
+
+        items = []
+        for element in self:
+            # Get the name and the default repr
+            name = element.name() if callable(element.name) else element.name
+            default_repr = object.__repr__(element)
+            items.append(f"{name} : {default_repr}")
+
+        return "{\n " + ",\n ".join(items) + "\n}"
+
     def keys(self) -> list[str]:
         return [item.name for item in self]

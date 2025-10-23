@@ -42,3 +42,6 @@ class MeshReal:
         for p in self.positions.T:
             out_string += f"\tmesh\t{p[0]:0.6f}\t{p[1]:0.6f}\t{p[2]:0.6f}\n"
         return out_string
+
+    def to_osim(self):
+        raise NotImplementedError("Writing .osim files with meshes is not possible yet.")

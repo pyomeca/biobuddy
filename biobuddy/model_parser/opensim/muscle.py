@@ -1,5 +1,3 @@
-# from typing import Self
-
 import numpy as np
 from lxml import etree
 

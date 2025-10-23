@@ -75,3 +75,8 @@ class ContactReal:
         out_string += f"\taxis\t{self.axis.value}\n"
         out_string += "endcontact\n"
         return out_string
+
+    def to_osim(self):
+        raise NotImplementedError(
+            "Writing contacts into a .osim fil is not implemented, yet. If you need this feature, please open an issue on GitHub."
+        )

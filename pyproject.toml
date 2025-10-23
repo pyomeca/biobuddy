@@ -7,6 +7,7 @@ requires = [
     "ezc3d",
     "lxml",
     "scipy",
+    "plotly",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -28,7 +29,8 @@ dependencies = [
     "numpy",
     "ezc3d",
     "lxml",
-    "scipy"
+    "scipy",
+    "plotly",
 ]
 
 [project.optional-dependencies]
