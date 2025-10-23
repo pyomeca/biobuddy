@@ -451,13 +451,15 @@ class OsimModelParser(AbstractModelParser):
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
     @staticmethod
-    def get_dof_and_names(dof_names: list[str]) -> tuple[str, list[str]]:
+    def get_dof_and_names_and_ranges(dof_names: list[str], ranges: list[str | None]) -> tuple[str, list[str], list[str]]:
         axis = ""
         effective_dof_names = []
+        effective_ranges = []
         for idx in np.where(np.array(dof_names) != None)[0]:
             axis += DOF_AXIS[idx]
             effective_dof_names += [dof_names[idx]]
-        return axis, effective_dof_names
+            effective_ranges += [ranges[idx]]
+        return axis, effective_dof_names, effective_ranges
 
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
@@ -482,8 +484,8 @@ class OsimModelParser(AbstractModelParser):
             rot_dof_names,
             default_value_rot,
         ) = self._get_transformation_parameters(dof.spatial_transform)
-        trans_dof, effective_trans_dof_names = self.get_dof_and_names(trans_dof_names)
-        rot_dof, effective_rot_dof_names = self.get_dof_and_names(rot_dof_names)
+        trans_dof, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(trans_dof_names, q_ranges_trans)
+        rot_dof, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(rot_dof_names, q_ranges_rot)
 
         body.mesh = body.mesh if len(body.mesh) != 0 else [None]
         body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
@@ -501,7 +503,7 @@ class OsimModelParser(AbstractModelParser):
             if len(translations) != 0:
                 body_name = body.name + "_translation"
                 if is_ortho_basis(translations):
-                    trans_axis, effective_trans_dof_names = self.get_dof_and_names(trans_dof_names)
+                    trans_axis, effective_trans_dof_names, effective_trans_ranges = self.get_dof_and_names_and_ranges(trans_dof_names, q_ranges_trans)
 
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(translations).T)
@@ -514,7 +516,7 @@ class OsimModelParser(AbstractModelParser):
                         parent=parent,
                         rt_in_matrix=True,
                         frame_offset=rt_matrix,
-                        q_range=q_ranges_trans,
+                        q_range=effective_trans_ranges,
                         trans_dof=trans_axis,
                         dof_names=effective_trans_dof_names,
                     )
@@ -525,7 +527,7 @@ class OsimModelParser(AbstractModelParser):
             # Rotations
             if len(rotations) != 0:
                 if is_ortho_basis(rotations):
-                    rot_axis, effective_rot_dof_names = self.get_dof_and_names(rot_dof_names)
+                    rot_axis, effective_rot_dof_names, effective_rot_ranges = self.get_dof_and_names_and_ranges(rot_dof_names, q_ranges_rot)
                     body_name = body.name + "_rotation_transform"
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(rotations).T)
@@ -538,7 +540,7 @@ class OsimModelParser(AbstractModelParser):
                         parent=parent,
                         rt_in_matrix=True,
                         frame_offset=rt_matrix,
-                        q_range=q_ranges_rot,
+                        q_range=effective_rot_ranges,
                         rot_dof=rot_axis,
                         dof_names=effective_rot_dof_names,
                     )
@@ -553,7 +555,7 @@ class OsimModelParser(AbstractModelParser):
                         frame_offset=rt_matrix,
                         rt_in_matrix=True,
                         spatial_transform=dof.spatial_transform,
-                        q_ranges=q_ranges_rot,
+                        q_ranges=effective_rot_ranges,
                         default_values=default_value_rot,
                     )
 
@@ -574,8 +576,8 @@ class OsimModelParser(AbstractModelParser):
             offset = [dof.child_offset_trans, dof.child_offset_rot]
             trans_dof = ""
             rot_dof = ""
-            q_ranges_trans = []
-            q_ranges_rot = []
+            effective_trans_ranges = []
+            effective_rot_ranges = []
             effective_trans_dof_names = []
             effective_rot_dof_names = []
 
@@ -590,8 +592,8 @@ class OsimModelParser(AbstractModelParser):
             inertia=body.inertia,
             trans_dof=trans_dof,
             rot_dof=rot_dof,
-            q_ranges_trans=q_ranges_trans,
-            q_ranges_rot=q_ranges_rot,
+            q_ranges_trans=effective_trans_ranges,
+            q_ranges_rot=effective_rot_ranges,
             trans_dof_names=effective_trans_dof_names,
             rot_dof_names=effective_rot_dof_names,
             mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
@@ -703,18 +705,18 @@ class OsimModelParser(AbstractModelParser):
 
     def write_true_segment(
         self,
-        name,
-        parent_name,
-        frame_offset,
-        com,
-        mass,
-        inertia,
-        trans_dof=None,
-        rot_dof=None,
-        q_ranges_trans=None,
-        q_ranges_rot=None,
-        trans_dof_names=None,
-        rot_dof_names=None,
+        name: str,
+        parent_name: str,
+        frame_offset: list[list[float]],
+        com: str,
+        mass: str,
+        inertia: str,
+        trans_dof: str = None,
+        rot_dof: str = None,
+        q_ranges_trans: list[str] = None,
+        q_ranges_rot: list[str] = None,
+        trans_dof_names: list[str] = None,
+        rot_dof_names: list[str] = None,
         mesh_file=None,
         mesh_scale=None,
         mesh_color=None,
@@ -744,9 +746,9 @@ class OsimModelParser(AbstractModelParser):
 
         dof_names = []
         if rot_dof != "":
-            dof_names += [rot_dof_names]
+            dof_names += rot_dof_names
         if trans_dof != "":
-            dof_names += [trans_dof_names]
+            dof_names += trans_dof_names
 
         q_ranges = []
         if q_ranges_trans is not None:
@@ -968,19 +970,26 @@ class OsimModelParser(AbstractModelParser):
                     q_range = None
                 value = transform.coordinate.default_value
                 default_value = value if value else 0
-                is_dof_tmp = None if transform.coordinate.locked else transform.coordinate.name
+                if transform.coordinate.locked:
+                    dof_name = None
+                elif transform.coordinate.name is not None:
+                    dof_name = transform.coordinate.name
+                elif transform.coordinate.coordinate_name is not None:
+                    dof_name = transform.coordinate.coordinate_name
+                else:
+                    dof_name = None
             else:
-                is_dof_tmp = None
+                dof_name = None
                 default_value = 0
             if transform.type == "translation":
                 translations.append(axis)
                 q_ranges_trans.append(q_range)
-                trans_dof_names.append(is_dof_tmp)
+                trans_dof_names.append(dof_name)
                 default_value_trans.append(default_value)
             elif transform.type == "rotation":
                 rotations.append(axis)
                 q_ranges_rot.append(q_range)
-                rot_dof_names.append(is_dof_tmp)
+                rot_dof_names.append(dof_name)
                 default_value_rot.append(default_value)
             else:
                 raise RuntimeError("Transform must be 'rotation' or 'translation'")

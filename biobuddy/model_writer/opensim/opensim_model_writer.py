@@ -210,6 +210,8 @@ class OpensimModelWriter(AbstractModelWriter):
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
 
+                coord_transform_axis = etree.SubElement(transform_axis, "coordinates")
+                coord_transform_axis.text = coord_name
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
 
                 default_value = etree.SubElement(coord_elem, "default_value")
@@ -230,7 +232,7 @@ class OpensimModelWriter(AbstractModelWriter):
                     range_elem.text = f"{segment.q_ranges.min_bound[idx]:.8f} {segment.q_ranges.max_bound[idx]:.8f}"
 
                     clamped = etree.SubElement(coord_elem, "clamped")
-                    clamped.text = "false"
+                    clamped.text = "true"
 
                 locked = etree.SubElement(coord_elem, "locked")
                 locked.text = "false"
