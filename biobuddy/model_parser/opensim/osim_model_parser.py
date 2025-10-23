@@ -49,6 +49,9 @@ class Controller(Enum):
     NONE = None
 
 
+DOF_AXIS = np.array(["x", "y", "z"])
+
+
 def _get_file_version(model: etree.ElementTree) -> int:
     return int(model.getroot().attrib["Version"])
 
@@ -64,6 +67,7 @@ class OsimModelParser(AbstractModelParser):
         ignore_fixed_dof_tag: bool = False,
         ignore_clamped_dof_tag: bool = False,
         ignore_muscle_applied_tag: bool = False,
+        skip_virtual: bool = False,
     ):
         """
         Reads and converts OpenSim model files (.osim) to a biomechanical model representation.
@@ -80,6 +84,8 @@ class OsimModelParser(AbstractModelParser):
             Whether to print conversion warnings, default True
         mesh_dir : str, optional
             Directory containing mesh files
+        skip_virtual: bool, optional
+            Whether to skip virtual segment definitions
 
         Raises
         ------
@@ -96,6 +102,7 @@ class OsimModelParser(AbstractModelParser):
         self.ignore_fixed_dof_tag = ignore_fixed_dof_tag
         self.ignore_clamped_dof_tag = ignore_clamped_dof_tag
         self.ignore_muscle_applied_tag = ignore_muscle_applied_tag
+        self.skip_virtual = skip_virtual
 
         # Extended attributes
         self.model = etree.parse(filepath)
@@ -375,6 +382,8 @@ class OsimModelParser(AbstractModelParser):
         if not is_element_empty(ground_set):
             dof = Joint
             dof.child_offset_trans, dof.child_offset_rot = [0] * 3, [0] * 3
+            dof.parent_offset_trans, dof.parent_offset_rot = [0] * 3, [0] * 3
+            dof.spatial_transform = []
             self.write_dof(
                 Body.from_element(ground_set),
                 dof,
@@ -441,42 +450,59 @@ class OsimModelParser(AbstractModelParser):
             muscle_group_name = muscle.muscle_group
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
+    @staticmethod
+    def get_dof_and_names(dof_names: list[str]) -> tuple[str, list[str]]:
+        axis = ""
+        effective_dof_names = []
+        for idx in np.where(np.array(dof_names) != None)[0]:
+            axis += DOF_AXIS[idx]
+            effective_dof_names += [dof_names[idx]]
+        return axis, effective_dof_names
+
     def write_dof(self, body, dof, mesh_dir=None, skip_virtual=False, parent=None):
 
+        if parent is None:
+            if dof.parent_body is None:
+                raise RuntimeError(
+                    f"You did not provide a parent name for the body {body.name} and the dof {dof.name} has no parent body."
+                )
+            else:
+                parent = dof.parent_body.split("/")[-1]
+
+        offset = [dof.parent_offset_trans, dof.parent_offset_rot]
+
+        # Coordinates
+        (
+            translations,
+            q_ranges_trans,
+            trans_dof_names,
+            default_value_trans,
+            rotations,
+            q_ranges_rot,
+            rot_dof_names,
+            default_value_rot,
+        ) = self._get_transformation_parameters(dof.spatial_transform)
+        trans_dof, effective_trans_dof_names = self.get_dof_and_names(trans_dof_names)
+        rot_dof, effective_rot_dof_names = self.get_dof_and_names(rot_dof_names)
+
+        body.mesh = body.mesh if len(body.mesh) != 0 else [None]
+        body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
+        body.mesh_scale_factor = body.mesh_scale_factor if len(body.mesh_scale_factor) != 0 else [None]
+
         rt_matrix = RotoTransMatrix()
-        if not skip_virtual:
-            parent = dof.parent_body.split("/")[-1]
+        if not skip_virtual and not self.skip_virtual:
             axis_offset = np.identity(3)
             # Parent offset
             body_name = body.name + "_parent_offset"
-            offset = [dof.parent_offset_trans, dof.parent_offset_rot]
             self.write_virtual_segment(name=body_name, parent_name=parent, frame_offset=offset, rt_in_matrix=False)
             parent = body_name
-
-            # Coordinates
-            (
-                translations,
-                q_ranges_trans,
-                trans_dof_names,
-                default_value_trans,
-                rotations,
-                q_ranges_rot,
-                rot_dof_names,
-                default_value_rot,
-            ) = self._get_transformation_parameters(dof.spatial_transform)
-
-            trans_dof_names, rot_dof_names = np.array(trans_dof_names), np.array(rot_dof_names)
-            dof_axis = np.array(["x", "y", "z"])
 
             # Translations
             if len(translations) != 0:
                 body_name = body.name + "_translation"
                 if is_ortho_basis(translations):
-                    trans_axis = ""
-                    effective_trans_dof_names = []
-                    for idx in np.where(trans_dof_names != None)[0]:
-                        trans_axis += dof_axis[idx]
-                        effective_trans_dof_names += [trans_dof_names[idx]]
+                    trans_axis, effective_trans_dof_names = self.get_dof_and_names(trans_dof_names)
+
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(translations).T)
                     axis_offset_rot_mat = RotationMatrix()
@@ -499,11 +525,7 @@ class OsimModelParser(AbstractModelParser):
             # Rotations
             if len(rotations) != 0:
                 if is_ortho_basis(rotations):
-                    rot_axis = ""
-                    effective_rot_dof_names = []
-                    for idx in np.where(rot_dof_names != None)[0]:
-                        rot_axis += dof_axis[idx]
-                        effective_rot_dof_names += [rot_dof_names[idx]]
+                    rot_axis, effective_rot_dof_names = self.get_dof_and_names(rot_dof_names)
                     body_name = body.name + "_rotation_transform"
                     axis = RotationMatrix()
                     axis.from_rotation_matrix(np.array(rotations).T)
@@ -548,27 +570,30 @@ class OsimModelParser(AbstractModelParser):
                 )
                 parent = body_name
 
-        if parent is None:
-            raise RuntimeError(
-                f"You skipped virtual segment definition without define a parent." f" Please provide a parent name."
-            )
+            # Reset the values to keep only the true segment
+            offset = [dof.child_offset_trans, dof.child_offset_rot]
+            trans_dof = ""
+            rot_dof = ""
+            q_ranges_trans = []
+            q_ranges_rot = []
+            effective_trans_dof_names = []
+            effective_rot_dof_names = []
 
-        # True segment
-        frame_offset = [dof.child_offset_trans, dof.child_offset_rot]
-
-        body.mesh = body.mesh if len(body.mesh) != 0 else [None]
-        body.mesh_color = body.mesh_color if len(body.mesh_color) != 0 else [None]
-        body.mesh_scale_factor = body.mesh_scale_factor if len(body.mesh_scale_factor) != 0 else [None]
-
-        axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir)
+            axis_offset, parent = self.write_segments_with_a_geometry_only(body, parent, mesh_dir)
 
         self.write_true_segment(
             name=body.name,
             parent_name=parent,
-            frame_offset=frame_offset,
+            frame_offset=offset,
             com=body.mass_center,
             mass=body.mass,
             inertia=body.inertia,
+            trans_dof=trans_dof,
+            rot_dof=rot_dof,
+            q_ranges_trans=q_ranges_trans,
+            q_ranges_rot=q_ranges_rot,
+            trans_dof_names=effective_trans_dof_names,
+            rot_dof_names=effective_rot_dof_names,
             mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
             mesh_color=body.mesh_color[0] if body.mesh[0] and mesh_dir is not None else None,
             mesh_scale=body.mesh_scale_factor[0] if body.mesh[0] and mesh_dir is not None else None,
@@ -684,6 +709,12 @@ class OsimModelParser(AbstractModelParser):
         com,
         mass,
         inertia,
+        trans_dof=None,
+        rot_dof=None,
+        q_ranges_trans=None,
+        q_ranges_rot=None,
+        trans_dof_names=None,
+        rot_dof_names=None,
         mesh_file=None,
         mesh_scale=None,
         mesh_color=None,
@@ -707,10 +738,31 @@ class OsimModelParser(AbstractModelParser):
                     ]
                 ),
             )
+
+        translations = getattr(Translations, trans_dof.upper(), Translations.NONE)
+        rotations = getattr(Rotations, rot_dof.upper(), Rotations.NONE)
+
+        dof_names = []
+        if rot_dof != "":
+            dof_names += [rot_dof_names]
+        if trans_dof != "":
+            dof_names += [trans_dof_names]
+
+        q_ranges = []
+        if q_ranges_trans is not None:
+            q_ranges += q_ranges_trans
+        if q_ranges_rot is not None:
+            q_ranges += q_ranges_rot
+
         self.biomechanical_model_real.add_segment(
             SegmentReal(
                 name=name,
                 parent_name=parent_name,
+                translations=translations,
+                rotations=rotations,
+                dof_names=dof_names,
+                q_ranges=self.get_q_range(q_ranges, dof_names),
+                qdot_ranges=None,  # OpenSim does not handle qdot ranges
                 inertia_parameters=inertia_parameters,
                 segment_coordinate_system=self.get_scs_from_offset(rt_in_matrix, frame_offset),
                 mesh_file=(
@@ -815,8 +867,10 @@ class OsimModelParser(AbstractModelParser):
                         r = dof_range.split(" ")
                         min_bound += [float(r[0])]
                         max_bound += [float(r[1])]
-            q_range = RangeOfMotion(range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound)
-            return q_range
+            if min_bound == [] and max_bound == []:
+                return None
+            else:
+                return RangeOfMotion(range_type=Ranges.Q, min_bound=min_bound, max_bound=max_bound)
         else:
             raise NotImplementedError(f"You have provided {q_range}, q_range type {type(q_range)} not implemented.")
 
@@ -898,10 +952,10 @@ class OsimModelParser(AbstractModelParser):
         rotations = []
         q_ranges_trans = []
         q_ranges_rot = []
-        trans_dof_names = []
         default_value_trans = []
         default_value_rot = []
         rot_dof_names = []
+        trans_dof_names = []
         for transform in spatial_transform:
             q_range = None
             axis = [float(i.replace(",", ".")) for i in transform.axis.split(" ")]

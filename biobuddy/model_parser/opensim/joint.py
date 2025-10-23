@@ -115,7 +115,7 @@ class Joint:
                 offset_trans = frame.find("translation").text
                 parent_offset_rot = [float(i) for i in offset_rot.split(" ")]
                 parent_offset_trans = [float(i) for i in offset_trans.split(" ")]
-            elif child_name == frame.attrib["name"]:
+            if child_name == frame.attrib["name"]:
                 child_body = frame.find("socket_parent").text.split("/")[-1]
                 offset_rot = frame.find("orientation").text
                 offset_trans = frame.find("translation").text

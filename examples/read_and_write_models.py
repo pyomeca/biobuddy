@@ -98,10 +98,25 @@ def osim_biomod_convertion():
         q_ref[0, :] = 0.5
         viz.add_animated_model(reference_model, q_ref)
 
+        # TODO: see with aceglia why I get the error:
+        # "RuntimeError: std::exception in 'OpenSim::Model::Model(std::string const &)': Joint::getMotionType() given an invalid CoordinateIndex
+	    # Thrown at Joint.cpp:224 in getMotionType()." although `osim.Model(osim_filepath)` works fine
         # Osim model reference
-        display_options = pyorerun.DisplayModelOptions()
-        display_options.mesh_path = f"{current_path_file}/models/Geometry_cleaned"
-        model = pyorerun.OsimModel(osim_filepath, options=display_options)
+        # display_options = pyorerun.DisplayModelOptions()
+        # display_options.mesh_path = f"{current_path_file}/models/Geometry_cleaned"
+        # model = pyorerun.OsimModel(osim_filepath, options=display_options)
+        model_translated = BiomechanicalModelReal().from_osim(
+            filepath=osim_filepath.replace(".osim", "_from_biomod.osim"),
+            muscle_type=MuscleType.HILL_DE_GROOTE,
+            muscle_state_type=MuscleStateType.DEGROOTE,
+            mesh_dir="Geometry_cleaned",
+            skip_virtual=True,
+        )
+        model_translated.to_biomod(
+            biomod_filepath.replace(".bioMod", "_from_osim_translated.bioMod"),
+            with_mesh=True,
+        )
+        model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_from_osim_translated.bioMod"))
         model.options.transparent_mesh = False
         model.options.show_gravity = True
         model.options.show_marker_labels = False
@@ -109,18 +124,18 @@ def osim_biomod_convertion():
         q = np.zeros((model.nb_q, 10))
         viz.add_animated_model(model, q)
 
-        # Osim model output
-        reference_model = pyorerun.OsimModel(
-            osim_filepath.replace(".osim", "_from_biomod.osim"),
-            options=display_options,
-        )
-        reference_model.options.transparent_mesh = False
-        reference_model.options.show_gravity = True
-        reference_model.options.show_marker_labels = False
-        reference_model.options.show_center_of_mass_labels = False
-        q_ref = np.zeros((reference_model.nb_q, 10))
-        q_ref[0, :] = 0.5
-        viz.add_animated_model(reference_model, q_ref)
+        # # Osim model output
+        # reference_model = pyorerun.OsimModel(
+        #     osim_filepath.replace(".osim", "_from_biomod.osim"),
+        #     options=display_options,
+        # )
+        # reference_model.options.transparent_mesh = False
+        # reference_model.options.show_gravity = True
+        # reference_model.options.show_marker_labels = False
+        # reference_model.options.show_center_of_mass_labels = False
+        # q_ref = np.zeros((reference_model.nb_q, 10))
+        # q_ref[0, :] = 0.5
+        # viz.add_animated_model(reference_model, q_ref)
 
         # Animate
         viz.rerun_by_frame("Translated models")

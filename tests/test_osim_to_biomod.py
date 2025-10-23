@@ -558,10 +558,11 @@ def test_translation_osim_to_biomod():
                     model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
                         filepath=biomod_filepath,
                     )
-                    model_from_biomod_2.to_osim(filepath=biomod_filepath.replace(".biorbd", "_translated.osim"),
+                    translated_osim_filepath = biomod_filepath.replace(".bioMod", "_translated.osim")
+                    model_from_biomod_2.to_osim(filepath=translated_osim_filepath,
                                                 with_mesh=True)
                     model_from_osim_2 = BiomechanicalModelReal().from_osim(
-                        filepath=biomod_filepath.replace(".biorbd", "_translated.osim"),
+                        filepath=translated_osim_filepath,
                         muscle_type=MuscleType.HILL_DE_GROOTE,
                         muscle_state_type=MuscleStateType.DEGROOTE,
                         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
@@ -571,8 +572,8 @@ def test_translation_osim_to_biomod():
                     if os.path.exists(biomod_filepath):
                         os.remove(biomod_filepath)
 
-                    if os.path.exists(biomod_filepath.replace(".biorbd", "_translated.osim")):
-                        os.remove(biomod_filepath.replace(".biorbd", "_translated.osim"))
+                    if os.path.exists(translated_osim_filepath):
+                        os.remove(translated_osim_filepath)
 
                 elif os.path.join(folder, name) in pin_joint_error_models:
                     with pytest.raises(

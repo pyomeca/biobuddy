@@ -114,7 +114,8 @@ class OpensimModelWriter(AbstractModelWriter):
         socket_parent = etree.SubElement(joint, "socket_parent_frame")
         if parent_name == "ground":
             socket_parent.text = "../ground"
-        socket_parent.text = f"bodyset/{parent_name}"
+        else:
+            socket_parent.text = f"bodyset/{parent_name}"
 
         socket_child = etree.SubElement(joint, "socket_child_frame")
         socket_child.text = f"bodyset/{segment.name}"
@@ -122,7 +123,7 @@ class OpensimModelWriter(AbstractModelWriter):
         frames = etree.SubElement(joint, "frames")
 
         # Parent offset frame
-        parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
+        parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"bodyset/{parent_name}"
 
@@ -136,7 +137,7 @@ class OpensimModelWriter(AbstractModelWriter):
         orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
 
         # Child offset frame
-        child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
+        child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}")
         child_socket = etree.SubElement(child_frame, "socket_parent")
         child_socket.text = f"bodyset/{segment.name}"
 
@@ -164,7 +165,7 @@ class OpensimModelWriter(AbstractModelWriter):
         frames = etree.SubElement(joint, "frames")
 
         # Parent offset frame
-        parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}_offset")
+        parent_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{parent_name}")
         parent_socket = etree.SubElement(parent_frame, "socket_parent")
         parent_socket.text = f"bodyset/{parent_name}"
 
@@ -178,7 +179,7 @@ class OpensimModelWriter(AbstractModelWriter):
         orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
 
         # Child offset frame
-        child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}_offset")
+        child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}")
         child_socket = etree.SubElement(child_frame, "socket_parent")
         child_socket.text = f"bodyset/{segment.name}"
 

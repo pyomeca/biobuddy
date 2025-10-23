@@ -87,7 +87,7 @@ class SegmentReal(SegmentUtils):
 
     @dof_names.setter
     def dof_names(self, value: list[str]):
-        if value is None:
+        if value is None or value == []:
             value = []
             if self.translations != Translations.NONE:
                 for trans in self.translations.value:
@@ -413,9 +413,10 @@ class SegmentReal(SegmentUtils):
             inertia_elem = etree.SubElement(body_elem, "inertia")
             inertia_elem.text = f"0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000"
 
+        frame_geometry = etree.SubElement(body_elem, "FrameGeometry")
+        etree.SubElement(frame_geometry, "socket_frame").text = ".."
+
         if with_mesh and self.mesh_file is not None:
-            frame_geometry = etree.SubElement(body_elem, "FrameGeometry")
-            etree.SubElement(frame_geometry, "socket_frame").text = ".."
 
             attached_geometry = etree.SubElement(body_elem, "attached_geometry")
             socket_frame = etree.SubElement(attached_geometry, "socket_frame")
