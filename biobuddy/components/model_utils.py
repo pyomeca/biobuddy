@@ -320,7 +320,7 @@ class ModelUtils:
         """
         ranges = np.empty((2, 0))
         for segment in self.segments:
-            if segment.nb_q > 0:
+            if segment.nb_q > 0 and segment.q_ranges is not None:
                 min_bound = segment.q_ranges.min_bound
                 max_bound = segment.q_ranges.max_bound
                 bound = np.vstack((min_bound, max_bound))

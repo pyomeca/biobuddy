@@ -2,7 +2,16 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from biobuddy import ViaPointReal, PathPointCondition, PathPointMovement, SimmSpline, SegmentReal
+from biobuddy import (
+    ViaPointReal,
+    PathPointCondition,
+    PathPointMovement,
+    SimmSpline,
+    SegmentReal,
+    MeshFileReal,
+    RangeOfMotion,
+    Ranges,
+)
 from test_utils import create_simple_model
 
 
@@ -281,3 +290,52 @@ def test_check_kinematic_chain_loop():
         match="The segment child was caught up in a kinematic chain loop, which is not permitted. Please verify the parent-child relationships in yor model.",
     ):
         model.validate_model()
+
+
+def test_dof_ranges():
+    # create a simple model
+    model = create_simple_model()
+
+    # Add some DoF ranges
+    model.segments["parent"].q_ranges = RangeOfMotion(
+        range_type=Ranges.Q, min_bound=[-np.pi / 4] * 6, max_bound=[np.pi / 4] * 6
+    )
+    model.segments["child"].q_ranges = RangeOfMotion(range_type=Ranges.Q, min_bound=[-np.pi / 2], max_bound=[np.pi / 2])
+    assert model.segments["parent"].q_ranges.min_bound == [-np.pi / 4] * 6
+    assert model.segments["parent"].q_ranges.max_bound == [np.pi / 4] * 6
+    assert model.segments["child"].q_ranges.min_bound == [-np.pi / 2]
+    assert model.segments["child"].q_ranges.max_bound == [np.pi / 2]
+
+    ranges = model.get_dof_ranges()
+    assert ranges.shape == (2, 7)
+    npt.assert_almost_equal(
+        ranges,
+        np.array(
+            [
+                [-0.78539816, -0.78539816, -0.78539816, -0.78539816, -0.78539816, -0.78539816, -1.57079633],
+                [0.78539816, 0.78539816, 0.78539816, 0.78539816, 0.78539816, 0.78539816, 1.57079633],
+            ]
+        ),
+    )
+
+
+def test_change_mesh_directories():
+    # create a simple model
+    model = create_simple_model()
+
+    # Add some mesh files
+    model.segments["parent"].mesh_file = MeshFileReal(
+        mesh_file_name="parent_mesh.obj", mesh_file_directory="old_geometry"
+    )
+    model.segments["child"].mesh_file = MeshFileReal(
+        mesh_file_name="child_mesh.obj", mesh_file_directory="old_geometry"
+    )
+    assert model.segments["parent"].mesh_file.mesh_file_directory == "old_geometry"
+    assert model.segments["child"].mesh_file.mesh_file_directory == "old_geometry"
+
+    # Change mesh directories
+    model.change_mesh_directories(new_directory="new_geometry")
+
+    # Check that the mesh directories have been changed
+    assert model.segments["parent"].mesh_file.mesh_file_directory == "new_geometry"
+    assert model.segments["child"].mesh_file.mesh_file_directory == "new_geometry"
