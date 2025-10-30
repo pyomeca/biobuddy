@@ -326,3 +326,16 @@ class ModelUtils:
                 bound = np.vstack((min_bound, max_bound))
                 ranges = np.hstack((ranges, bound))
         return ranges
+
+    def change_mesh_directories(self, new_directory: str):
+        """
+        Change the mesh file directory for all segments in the model.
+
+        Parameters
+        ----------
+        new_directory
+            The new directory to set for the mesh files.
+        """
+        for segment in self.segments:
+            if segment.mesh_file is not None:
+                segment.mesh_file.mesh_file_directory = new_directory
