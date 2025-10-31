@@ -9,17 +9,17 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-22.04]  # windows-latest, macos-latest, macos-13
+        os: [ubuntu-22.04, macos-latest, macos-13]  # windows-latest
         include:
           - os: ubuntu-latest
             label: linux-64
             prefix: /usr/share/miniconda3/envs/biobuddy
-          # - os: macos-latest
-          #   label: osx-arm64
-          #   prefix: /Users/runner/miniconda3/envs/biobuddy
-          # - os: macos-13
-          #   label: osx-intel
-          #   prefix: /Users/runner/miniconda3/envs/biobuddy
+          - os: macos-latest
+            label: osx-arm64
+            prefix: /Users/runner/miniconda3/envs/biobuddy
+          - os: macos-13
+            label: osx-intel
+            prefix: /Users/runner/miniconda3/envs/biobuddy
           # - os: windows-latest
           #   label: win-64
           #   prefix: C:\Miniconda3\envs\biobuddy
