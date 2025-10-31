@@ -565,7 +565,7 @@ class OsimModelParser(AbstractModelParser):
                         frame_offset=rt_matrix,
                         rt_in_matrix=True,
                         spatial_transform=dof.spatial_transform,
-                        q_ranges=effective_rot_ranges,
+                        q_ranges=q_ranges_rot,
                         default_values=default_value_rot,
                     )
 
