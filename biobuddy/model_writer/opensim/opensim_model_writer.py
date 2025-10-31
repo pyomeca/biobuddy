@@ -1,9 +1,7 @@
 from time import strftime
 from lxml import etree
-import numpy as np
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.enums import Translations, Rotations
-from ...utils.linear_algebra import rot2eul
 from ..abstract_model_writer import AbstractModelWriter
 
 
