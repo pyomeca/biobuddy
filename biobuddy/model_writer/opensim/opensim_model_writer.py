@@ -134,7 +134,7 @@ class OpensimModelWriter(AbstractModelWriter):
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"
 
         orientation = etree.SubElement(parent_frame, "orientation")
-        orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
+        orientation.text = f"0 0 0"
 
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}")
@@ -176,7 +176,7 @@ class OpensimModelWriter(AbstractModelWriter):
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"
 
         orientation = etree.SubElement(parent_frame, "orientation")
-        orientation.text = f"{angles_data[0]:.8f} {angles_data[1]:.8f} {angles_data[2]:.8f}"
+        orientation.text = f"0 0 0"
 
         # Child offset frame
         child_frame = etree.SubElement(frames, "PhysicalOffsetFrame", name=f"{segment.name}")

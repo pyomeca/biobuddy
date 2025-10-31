@@ -158,7 +158,7 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
-        self._rt = get_closest_rt_matrix(rt).rt_matrix
+        self._rt = get_closest_rt_matrix(rt)
 
     def from_rotation_axes_and_translation(
         self,
