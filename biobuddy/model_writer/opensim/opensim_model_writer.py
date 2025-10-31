@@ -255,6 +255,8 @@ class OpensimModelWriter(AbstractModelWriter):
                 coord_name = segment.dof_names[dof_counter]
                 dof_counter += 1
 
+                coord_transform_axis = etree.SubElement(transform_axis, "coordinates")
+                coord_transform_axis.text = coord_name
                 coord_elem = etree.SubElement(coordinates, "Coordinate", name=coord_name)
 
                 default_value = etree.SubElement(coord_elem, "default_value")
