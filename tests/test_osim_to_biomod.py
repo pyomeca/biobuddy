@@ -451,6 +451,7 @@ def test_moment_arm():
     np.testing.assert_array_less(np.max(muscle_error), 0.025)
     np.testing.assert_array_less(np.median(muscle_error), 0.0025)
 
+
 def compare_osim_translated_model(model1: BiomechanicalModelReal, model2: BiomechanicalModelReal, decimal: int = 5):
 
     # Number of components
@@ -642,4 +643,6 @@ def test_translation_osim_to_biomod():
 
                 else:
                     if os.path.join(folder, name) not in skipped:
-                        raise RuntimeError(f"OpenSim added a new model to their repository: {os.path.join(folder, name)}. Please check the model.")
+                        raise RuntimeError(
+                            f"OpenSim added a new model to their repository: {os.path.join(folder, name)}. Please check the model."
+                        )
