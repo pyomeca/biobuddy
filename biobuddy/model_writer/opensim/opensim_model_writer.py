@@ -16,6 +16,8 @@ class OpensimModelWriter(AbstractModelWriter):
         model
             The biomechanical model to write
         """
+        self.check_that_model_is_osimable(model)
+
         root = etree.Element("OpenSimDocument", Version="40000")
         model_elem = etree.SubElement(root, "Model", name="model")
 
@@ -30,6 +32,21 @@ class OpensimModelWriter(AbstractModelWriter):
 
         tree = etree.ElementTree(root)
         tree.write(self.filepath, pretty_print=True, xml_declaration=True, encoding="UTF-8")
+
+    def check_that_model_is_osimable(self, model: BiomechanicalModelReal) -> None:
+        """Check that the model can be written to OpenSim format"""
+
+        if model.nb_contacts > 0:
+            raise NotImplementedError("Writing models with contacts to OpenSim format is not yet implemented.")
+
+        if model.nb_imus > 0:
+            raise NotImplementedError("Writing models with IMUs to OpenSim format is not yet implemented.")
+
+        for segment in model.segments:
+            if segment.mesh is not None and not self.with_mesh:
+                raise NotImplementedError(
+                    f"Writing models with segment meshes to OpenSim format is not yet implemented (segment: {segment.name})."
+                )
 
     def _write_credits(self, model_elem: etree.Element, model: BiomechanicalModelReal):
         """Write credits and publication information"""
@@ -128,7 +145,7 @@ class OpensimModelWriter(AbstractModelWriter):
         parent_socket.text = f"bodyset/{parent_name}"
 
         # Use the segment coordinate system's to_osim method
-        translation_data, angles_data = segment.segment_coordinate_system.to_osim()
+        translation_data, _ = segment.segment_coordinate_system.to_osim()
 
         translation = etree.SubElement(parent_frame, "translation")
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"
@@ -170,7 +187,7 @@ class OpensimModelWriter(AbstractModelWriter):
         parent_socket.text = f"bodyset/{parent_name}"
 
         # Segment coordinate system
-        translation_data, angles_data = segment.segment_coordinate_system.to_osim()
+        translation_data, _ = segment.segment_coordinate_system.to_osim()
 
         translation = etree.SubElement(parent_frame, "translation")
         translation.text = f"{translation_data[0]:.8f} {translation_data[1]:.8f} {translation_data[2]:.8f}"

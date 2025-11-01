@@ -14,7 +14,6 @@ from biobuddy import (
     Marker,
     Axis,
     SegmentCoordinateSystem,
-    SegmentCoordinateSystemReal,
     Mesh,
     MeshFile,
     InertiaParameters,
@@ -25,7 +24,7 @@ from biobuddy import (
     RotoTransMatrix,
 )
 from biobuddy.utils.named_list import NamedList
-from test_utils import MockC3dData, get_urdf_str
+from test_utils import MockC3dData, get_xml_str
 
 
 MOCK_RT = RotoTransMatrix()
@@ -778,7 +777,7 @@ def test_range_of_motion_to_urdf():
     fake_urdf_model = etree.Element("robot", name="fake_model")
     fake_limit = etree.SubElement(fake_urdf_model, "limit", name="fake_limit")
     q_range.to_urdf(fake_limit)
-    urdf_content = get_urdf_str(fake_urdf_model)
+    urdf_content = get_xml_str(fake_urdf_model)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <limit name="fake_limit" lower="0.0" upper="1.0"/>\n</robot>\n'
     assert urdf_content == expected_str
 

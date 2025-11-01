@@ -139,4 +139,11 @@ class ViaPointReal:
         p = self.position
         location.text = f"{p[0,0]:.8f} {p[1,0]:.8f} {p[2,0]:.8f}"
 
+        if self.condition is not None:
+            # To avoid this warning, it is possible to fix the via points using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
+            raise NotImplementedError(f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented.")
+        if self.movement is not None:
+            # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
+            raise NotImplementedError(f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented.")
+
         return path_point_elem
