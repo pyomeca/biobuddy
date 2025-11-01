@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 from biobuddy.utils.named_list import NamedList
 
 
@@ -210,7 +209,8 @@ def test_repr_with_items():
     assert "item2" in repr_str
     assert repr_str.startswith("{\n")
     assert repr_str.endswith("\n}")
-
+    assert repr_str[:56] == '{\n item1 : <test_named_list.SimpleNamedObject object at '
+    assert repr_str[67:124] == '>,\n item2 : <test_named_list.SimpleNamedObject object at '
 
 def test_keys():
     """Test getting the keys of a NamedList."""
