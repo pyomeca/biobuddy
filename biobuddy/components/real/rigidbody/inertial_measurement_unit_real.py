@@ -1,7 +1,4 @@
 from copy import deepcopy
-
-# from typing import Self
-
 import numpy as np
 
 from ....utils.linear_algebra import mean_homogenous_matrix, transpose_homogenous_matrix
@@ -98,3 +95,6 @@ class InertialMeasurementUnitReal:
         out_string += f"\tanatomical\t{1 if self.is_anatomical else 0}\n"
         out_string += "endimu\n"
         return out_string
+
+    def to_osim(self):
+        raise NotImplementedError("Writing .osim files with IMU is not possible yet.")
