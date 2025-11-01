@@ -322,6 +322,12 @@ def test_get_closest_rt_matrix():
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
     npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
+    
+    # Test with NaN values
+    nan_rt = np.eye(4)
+    nan_rt[0, 0] = np.nan
+    result = get_closest_rt_matrix(nan_rt)
+    assert np.all(np.isnan(result))
 
     # Test error conditions
     with pytest.raises(RuntimeError, match="far from SO\\(3\\)"):
@@ -669,6 +675,21 @@ def test_rt():
                     angles_biobuddy = rt_biobuddy.euler_angles(angle_sequence=angle_sequence.value)
 
 
+def test_negative_determinant_matrices():
+    """Test handling of matrices with negative determinants."""
+    # Test with negative determinant matrix for get_closest_rotation_matrix
+    neg_det_rot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    result = get_closest_rotation_matrix(neg_det_rot)
+    
+    # Check that result has positive determinant
+    npt.assert_almost_equal(np.linalg.det(result), 1.0)
+    
+    # Test with NaN values for get_closest_rotation_matrix
+    nan_rot = np.array([[np.nan, 0, 0], [0, 1, 0], [0, 0, 1]])
+    result = get_closest_rotation_matrix(nan_rot)
+    assert np.all(np.isnan(result))
+
+
 def test_rotation_matrix_class():
     """Test RotationMatrix class."""
     # Test initialization from rotation matrix
@@ -815,6 +836,11 @@ def test_point_transformations():
     # Check that we get back the original point
     npt.assert_almost_equal(point_global_back[:3, 0], point_global)
     assert point_global_back[3, 0] == 1.0
+    
+    # Test with 4D point
+    point_global_4d = np.array([5, 6, 7, 1])
+    point_local_4d = point_from_global_to_local(point_global_4d, rt_matrix)
+    npt.assert_almost_equal(point_local_4d, point_local)
 
 
 def test_local_rt_between_global_rts():
@@ -937,6 +963,15 @@ def test_roto_trans_matrix():
         ),
         rt_expected @ point_4D,
     )
+    
+    # Test is_identity method
+    identity_rt = RotoTransMatrix()
+    identity_rt.from_rt_matrix(np.eye(4))
+    assert identity_rt.is_identity == True
+    
+    non_identity_rt = RotoTransMatrix()
+    non_identity_rt.from_rt_matrix(rt_expected)
+    assert non_identity_rt.is_identity == False
     
     # Test is_identity method
     identity_rt = RotoTransMatrix()
