@@ -688,6 +688,14 @@ def test_negative_determinant_matrices():
     nan_rot = np.array([[np.nan, 0, 0], [0, 1, 0], [0, 0, 1]])
     result = get_closest_rotation_matrix(nan_rot)
     assert np.all(np.isnan(result))
+    
+    # Test with negative determinant matrix for get_closest_rt_matrix
+    neg_det_rt = np.eye(4)
+    neg_det_rt[:3, :3] = neg_det_rot
+    result_rt = get_closest_rt_matrix(neg_det_rt)
+    
+    # Check that result has positive determinant
+    npt.assert_almost_equal(np.linalg.det(result_rt[:3, :3]), 1.0)
 
 
 def test_rotation_matrix_class():
