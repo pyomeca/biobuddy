@@ -57,18 +57,6 @@ class RotationMatrix:
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
         self._rotation_matrix = rotation_matrix
 
-    def from_rotation_axes(
-        self,
-        first_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-        second_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-        third_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-    ):
-        rot_1 = np.transpose(np.array(coord_sys(first_rotation_axis)[0]))  # rotation matrix for theta_1
-        rot_2 = np.transpose(np.array(coord_sys(second_rotation_axis)[0]))  # rotation matrix for theta_2
-        rot_3 = np.transpose(np.array(coord_sys(third_rotation_axis)[0]))  # rotation matrix for theta_3
-        rotation_matrix = rot_3.dot(rot_2.dot(rot_1))  # rotation matrix for
-        self._rotation_matrix = rotation_matrix
-
     @property
     def rotation_matrix(self) -> np.ndarray:
         return self._rotation_matrix
@@ -159,23 +147,6 @@ class RotoTransMatrix:
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
         self._rt = get_closest_rt_matrix(rt)
-
-    def from_rotation_axes_and_translation(
-        self,
-        first_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-        second_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-        third_rotation_axis: np.ndarray = np.array([0, 0, 0]),
-        translation: np.ndarray = np.array([0, 0, 0]),
-    ):
-        rotation_matrix = RotationMatrix()
-        rotation_matrix = rotation_matrix.from_rotation_axes(
-            first_rotation_axis=first_rotation_axis,
-            second_rotation_axis=second_rotation_axis,
-            third_rotation_axis=third_rotation_axis,
-        )
-        self._rt = np.append(
-            np.append(rotation_matrix.rotation_matrix, translation, axis=1), np.array([[0, 0, 0, 1]]), axis=0
-        )
 
     @property
     def rt_matrix(self) -> np.ndarray:
