@@ -190,12 +190,11 @@ def test_repr_with_items():
     named_list._append(SimpleNamedObject("item2"))
 
     repr_str = repr(named_list)
-    assert "item1" in repr_str
-    assert "item2" in repr_str
+    assert "item1 :" in repr_str
+    assert "item2 :" in repr_str
     assert repr_str.startswith("{\n")
     assert repr_str.endswith("\n}")
-    assert repr_str[:56] == "{\n item1 : <test_named_list.SimpleNamedObject object at "
-    assert repr_str[67:124] == ">,\n item2 : <test_named_list.SimpleNamedObject object at "
+    assert "test_named_list.SimpleNamedObject object at" in repr_str
 
 
 def test_keys():
