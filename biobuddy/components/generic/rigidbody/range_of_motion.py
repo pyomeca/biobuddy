@@ -70,4 +70,3 @@ class RangeOfMotion:
             return (self.min_bound, self.max_bound)
         else:
             raise NotImplementedError("OpenSim only supports Ranges.Q limits.")
-

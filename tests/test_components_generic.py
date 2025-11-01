@@ -738,15 +738,11 @@ def test_init_range_of_motion():
         q_range = RangeOfMotion(Ranges.Q, max_bound, min_bound)
 
     # Test that min and max must be of the same length
-    with pytest.raises(
-        ValueError, match="The min_bound and max_bound must have the same length, got 2 and 3."
-    ):
+    with pytest.raises(ValueError, match="The min_bound and max_bound must have the same length, got 2 and 3."):
         q_range = RangeOfMotion(Ranges.Q, [0.0, -1.0], [1.0, 2.0, 3.0])
 
     # Test that range_type must be valid
-    with pytest.raises(
-        TypeError, match=r"range_type must be an instance of Ranges Enum, got \<class 'str'\>"
-    ):
+    with pytest.raises(TypeError, match=r"range_type must be an instance of Ranges Enum, got \<class 'str'\>"):
         q_range = RangeOfMotion("invalid_type", min_bound, max_bound)
 
 
@@ -767,6 +763,7 @@ def test_range_of_motion_to_biomod():
     expected_qdot_output = "\trangesQdot \n\t\t-10.000000\t10.000000\n\t\t-20.000000\t20.000000\n\n"
     assert qdot_range.to_biomod() == expected_qdot_output
 
+
 def test_range_of_motion_to_urdf():
     # Test Q range to_urdf
     min_bound = [0.0, -1.0, -2.0]
@@ -782,10 +779,12 @@ def test_range_of_motion_to_urdf():
     assert urdf_content == expected_str
 
     with pytest.raises(
-        NotImplementedError, match="URDF only supports Ranges.Q limits.",
+        NotImplementedError,
+        match="URDF only supports Ranges.Q limits.",
     ):
         qdot_range = RangeOfMotion(Ranges.Qdot, min_bound, max_bound)
         qdot_range.to_urdf(fake_limit)
+
 
 def test_range_of_motion_to_osim():
     # Test Q range to_osim
@@ -796,10 +795,12 @@ def test_range_of_motion_to_osim():
     assert q_range.to_osim() == (q_range.min_bound, q_range.max_bound)
 
     with pytest.raises(
-        NotImplementedError, match="OpenSim only supports Ranges.Q limits.",
+        NotImplementedError,
+        match="OpenSim only supports Ranges.Q limits.",
     ):
         qdot_range = RangeOfMotion(Ranges.Qdot, min_bound, max_bound)
         qdot_range.to_osim()
+
 
 # ------- Marker ------- #
 def test_init_marker():

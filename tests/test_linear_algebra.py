@@ -325,7 +325,7 @@ def test_get_closest_rt_matrix():
     npt.assert_almost_equal(result[3, :], np.array([0, 0, 0, 1]))
     npt.assert_almost_equal(result[:3, :3], np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]), decimal=6)
     npt.assert_almost_equal(np.linalg.det(result[:3, :3]), 1.0)
-    
+
     # Test with NaN values
     nan_rt = np.eye(4)
     nan_rt[0, 0] = np.nan
@@ -618,18 +618,18 @@ def test_rototrans_matrix_time_series():
     rt_series3.from_rt_matrix(rt_matrices)
     npt.assert_equal(rt_series3[2].rt_matrix, np.eye(4) * np.nan)
     npt.assert_equal(rt_series3[3].rt_matrix, rt_matrices[:, :, 3])
-    
+
     # Test mean_homogenous_matrix method
     mean_rt = rt_series.mean_homogenous_matrix()
     assert isinstance(mean_rt, RotoTransMatrix)
-    
+
     # Test get_rt_matrix method
     rt_matrices_result = rt_series.get_rt_matrix()
     assert rt_matrices_result.shape == (4, 4, n_frames)
     for i in range(n_frames):
         if i != 2:  # Skip the NaN frame
             npt.assert_almost_equal(rt_matrices_result[:, :, i], rt_series[i].rt_matrix)
-    
+
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape"):
         rt_series.from_rotation_matrix_and_translation(np.eye(3), np.array([1, 2, 3]))
@@ -683,20 +683,20 @@ def test_negative_determinant_matrices():
     # Test with negative determinant matrix for get_closest_rotation_matrix
     neg_det_rot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
     result = get_closest_rotation_matrix(neg_det_rot)
-    
+
     # Check that result has positive determinant
     npt.assert_almost_equal(np.linalg.det(result), 1.0)
-    
+
     # Test with NaN values for get_closest_rotation_matrix
     nan_rot = np.array([[np.nan, 0, 0], [0, 1, 0], [0, 0, 1]])
     result = get_closest_rotation_matrix(nan_rot)
     assert np.all(np.isnan(result))
-    
+
     # Test with negative determinant matrix for get_closest_rt_matrix
     neg_det_rt = np.eye(4)
     neg_det_rt[:3, :3] = neg_det_rot
     result_rt = get_closest_rt_matrix(neg_det_rt)
-    
+
     # Check that result has positive determinant
     npt.assert_almost_equal(np.linalg.det(result_rt[:3, :3]), 1.0)
 
@@ -707,19 +707,26 @@ def test_rotation_matrix_class():
     rotation = rot_x_matrix(np.pi / 4)
     rot_obj = RotationMatrix()
     rot_obj.from_rotation_matrix(rotation)
-    
+
     # Check properties
     npt.assert_almost_equal(rot_obj.rotation_matrix, rotation)
-    
+
     # Test initialization from Euler angles
     angles = np.array([np.pi / 6, np.pi / 4, np.pi / 3])
     angle_sequence = "xyz"
-    
+
     rot_obj2 = RotationMatrix()
     rot_obj2.from_euler_angles(angle_sequence, angles)
-    npt.assert_almost_equal(rot_obj2.rotation_matrix, np.array([[ 0.35355339, -0.61237244,  0.70710678],
-                                                               [ 0.9267767 ,  0.12682648, -0.35355339],
-                                                               [ 0.12682648,  0.78033009,  0.61237244]]))
+    npt.assert_almost_equal(
+        rot_obj2.rotation_matrix,
+        np.array(
+            [
+                [0.35355339, -0.61237244, 0.70710678],
+                [0.9267767, 0.12682648, -0.35355339],
+                [0.12682648, 0.78033009, 0.61237244],
+            ]
+        ),
+    )
     revert_to_euler_angles = rot_obj2.euler_angles(angle_sequence)
     npt.assert_almost_equal(revert_to_euler_angles, angles, decimal=5)
 
@@ -727,36 +734,36 @@ def test_rotation_matrix_class():
     new_rotation = rot_y_matrix(np.pi / 3)
     rot_obj.rotation_matrix = new_rotation
     npt.assert_almost_equal(rot_obj.rotation_matrix, new_rotation)
-    
+
     # Test inverse
     inverse_rot = rot_obj.inverse
-    
+
     # Check that inverse is correct
     npt.assert_almost_equal(rot_obj.rotation_matrix @ inverse_rot.rotation_matrix, np.eye(3))
-    
+
     # Test matrix multiplication
     mult_result = rot_obj @ rot_obj2
     assert isinstance(mult_result, RotationMatrix)
     npt.assert_almost_equal(mult_result.rotation_matrix, rot_obj.rotation_matrix @ rot_obj2.rotation_matrix)
-    
+
     # Test vector multiplication
     vector = np.array([1, 2, 3])
     vector_result = rot_obj @ vector
     npt.assert_almost_equal(vector_result[:, 0], rot_obj.rotation_matrix @ vector)
-    
+
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape \\(3, 3\\)"):
         rot_obj.from_rotation_matrix(np.eye(2))
-    
+
     with pytest.raises(ValueError, match="should be of shape \\(nb_angles, \\)"):
         rot_obj.from_euler_angles("xyz", np.array([[1, 2, 3]]))
-    
+
     with pytest.raises(ValueError, match="must match"):
         rot_obj.from_euler_angles("xyz", np.array([1, 2]))
-    
+
     with pytest.raises(NotImplementedError):
         rot_obj @ "invalid_type"
-    
+
     with pytest.raises(ValueError):
         rot_obj @ np.eye(3)
 
@@ -849,7 +856,7 @@ def test_point_transformations():
     # Check that we get back the original point
     npt.assert_almost_equal(point_global_back[:3, 0], point_global)
     assert point_global_back[3, 0] == 1.0
-    
+
     # Test with 4D point
     point_global_4d = np.array([5, 6, 7, 1])
     point_local_4d = point_from_global_to_local(point_global_4d, rt_matrix)
@@ -863,36 +870,36 @@ def test_local_rt_between_global_rts():
     parent_translation = np.array([1, 2, 3])
     parent_rt = RotoTransMatrix()
     parent_rt.from_rotation_matrix_and_translation(parent_rotation, parent_translation)
-    
+
     # Create child RT in global
     child_rotation = rot_z_matrix(np.pi / 4)
     child_translation = np.array([4, 5, 6])
     child_rt = RotoTransMatrix()
     child_rt.from_rotation_matrix_and_translation(child_rotation, child_translation)
-    
+
     # Compute local RT
     local_rt = local_rt_between_global_rts(parent_rt, child_rt)
-    
+
     # Check that local_rt transforms parent to child correctly
     computed_child_rt = parent_rt @ local_rt
     npt.assert_almost_equal(computed_child_rt.rt_matrix, child_rt.rt_matrix)
-    
+
     # Test with identity matrices
     identity_rt = RotoTransMatrix()
     identity_rt.from_rt_matrix(np.eye(4))
-    
+
     # Identity parent, arbitrary child
     local_rt1 = local_rt_between_global_rts(identity_rt, child_rt)
     npt.assert_almost_equal(local_rt1.rt_matrix, child_rt.rt_matrix)
-    
+
     # Arbitrary parent, identity child
     local_rt2 = local_rt_between_global_rts(parent_rt, identity_rt)
     npt.assert_almost_equal(local_rt2.rt_matrix, parent_rt.inverse.rt_matrix)
-    
+
     # Test error case with invalid input types
     with pytest.raises(TypeError, match="must be instances of RotoTransMatrix"):
         local_rt_between_global_rts(np.eye(4), child_rt)
-    
+
     # Test with 4D point
     point_global_4d = np.array([5, 6, 7, 1])
     point_local_4d = point_from_global_to_local(point_global_4d, child_rt)
@@ -976,12 +983,12 @@ def test_roto_trans_matrix():
         ),
         rt_expected @ point_4D,
     )
-    
+
     # Test is_identity method
     identity_rt = RotoTransMatrix()
     identity_rt.from_rt_matrix(np.eye(4))
     assert identity_rt.is_identity == True
-    
+
     non_identity_rt = RotoTransMatrix()
     non_identity_rt.from_rt_matrix(rt_expected)
     assert non_identity_rt.is_identity == False

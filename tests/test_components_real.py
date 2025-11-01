@@ -91,6 +91,7 @@ def test_marker_real_to_biomod():
     )
     assert biomod_str == expected_str
 
+
 def test_marker_real_to_osim():
     # Create a marker
     position = np.array([[1.0], [2.0], [3.0], [1.0]])
@@ -101,8 +102,9 @@ def test_marker_real_to_osim():
     # Generate xml
     marker_elem = marker.to_osim()
     osim_content = get_xml_str(marker_elem)
-    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<Marker name="test_marker">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n  <fixed>false</fixed>\n</Marker>\n'
+    expected_str = "<?xml version='1.0' encoding='UTF-8'?>\n<Marker name=\"test_marker\">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n  <fixed>false</fixed>\n</Marker>\n"
     assert osim_content == expected_str
+
 
 def test_marker_real_arithmetic():
     # Create markers
@@ -424,6 +426,7 @@ def test_segment_coordinate_system_real_to_urdf():
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <origin name="fake_origin" xyz="1.000000 2.000000 3.000000" rpy="-0.000000 0.000000 -0.000000"/>\n  </link>\n</robot>\n'
     assert urdf_content == expected_str
 
+
 def test_segment_coordinate_system_real_to_osim():
     # Create an RT matrix
     rt_matrix = np.eye(4)
@@ -437,6 +440,7 @@ def test_segment_coordinate_system_real_to_osim():
     npt.assert_almost_equal(translation, scs.scs.translation)
     npt.assert_almost_equal(translation, np.array([1.0, 2.0, 3.0]))
     npt.assert_almost_equal(rotation, np.array([0.0, 0.0, 0.0]))
+
 
 # ------- ContactReal ------- #
 def test_init_contact_real():
@@ -914,15 +918,16 @@ def test_segment_real_to_urdf():
         fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
         segment.to_urdf(fake_urdf_model, fake_link)
 
+
 def test_segment_real_to_osim():
 
     # Create a simple segment (since contacts and markers are not implemented for urdf models)
     fake_model = BiomechanicalModelReal()
     fake_model.add_segment(
         SegmentReal(
-            name="test_segment", 
-            parent_name="parent_segment", 
-            translations=Translations.NONE, 
+            name="test_segment",
+            parent_name="parent_segment",
+            translations=Translations.NONE,
             rotations=Rotations.X,
         ),
     )
@@ -934,18 +939,16 @@ def test_segment_real_to_osim():
     assert osim_content[174:] == expected_str[174:]
 
     # Check that contacts throw an error
-    with pytest.raises(NotImplementedError, match="Writing models with contacts to OpenSim format is not yet implemented."):
-        fake_model.segments["test_segment"].add_contact(
-            ContactReal(name="fake_contact")
-        )
+    with pytest.raises(
+        NotImplementedError, match="Writing models with contacts to OpenSim format is not yet implemented."
+    ):
+        fake_model.segments["test_segment"].add_contact(ContactReal(name="fake_contact"))
         fake_model.to_osim("fake_model.osim")
 
     # Check that imus throw an error
     with pytest.raises(NotImplementedError, match="Writing models with IMUs to OpenSim format is not yet implemented."):
         fake_model.segments["test_segment"].remove_contact("fake_contact")
-        fake_model.segments["test_segment"].add_imu(
-            InertialMeasurementUnitReal(name="fake_imu")
-        )
+        fake_model.segments["test_segment"].add_imu(InertialMeasurementUnitReal(name="fake_imu"))
         fake_model.to_osim("fake_model.osim")
 
 
@@ -1030,6 +1033,7 @@ def test_via_point_real_to_biomod():
     biomod_str = via_point.to_biomod()
     assert "WARNING: biorbd doe not support moving via points" in biomod_str
 
+
 def test_via_point_real_to_osim():
     # Create a via point
     position = np.array([[1.0], [2.0], [3.0], [1.0]])
@@ -1040,18 +1044,25 @@ def test_via_point_real_to_osim():
     # Generate xml
     path_point_elem = via_point.to_osim()
     osim_content = get_xml_str(path_point_elem)
-    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<PathPoint name="test_via_point">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n</PathPoint>\n'
+    expected_str = "<?xml version='1.0' encoding='UTF-8'?>\n<PathPoint name=\"test_via_point\">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n</PathPoint>\n"
     assert osim_content == expected_str
 
     # Test that with condition raises
-    with pytest.raises(NotImplementedError, match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub."):
+    with pytest.raises(
+        NotImplementedError,
+        match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.",
+    ):
         via_point.condition = object()  # Mock condition object
         via_point.to_osim()
 
     # Test that with movement raises
-    with pytest.raises(NotImplementedError, match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub."):
+    with pytest.raises(
+        NotImplementedError,
+        match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.",
+    ):
         via_point.movement = object()  # Mock condition object
         via_point.to_osim()
+
 
 # ------- MuscleReal ------- #
 def test_init_muscle_real():
@@ -1233,6 +1244,7 @@ def test_muscle_real_to_biomod():
     assert "\tmaxexcitation\t1.0000" in biomod_str
     assert "endmuscle" in biomod_str
     assert "viapoint\tvia_point" in biomod_str
+
 
 def test_muscle_real_to_osim():
     # Create origin and insertion via points

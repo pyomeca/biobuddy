@@ -585,6 +585,7 @@ class MockC3dData(C3dData):
         # Create marker positions for 10 frames
         self.all_marker_positions = np.random.rand(4, 73, 10)
 
+
 def read_xml_str():
     # Read the content
     with open("temporary.xml", "r") as file:
@@ -593,6 +594,7 @@ def read_xml_str():
     # Remove the temporary file
     os.remove("temporary.xml")
     return xml_content
+
 
 def get_xml_str(fake_xml_model: etree.Element) -> str:
     # Write to a temporary file
