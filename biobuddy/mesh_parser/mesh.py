@@ -1,7 +1,4 @@
 from dataclasses import dataclass
-
-# from typing import Self
-
 import numpy as np
 
 

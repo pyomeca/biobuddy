@@ -5,12 +5,14 @@ class MuscleType(Enum):
     HILL = "hill"
     HILL_THELEN = "hillthelen"
     HILL_DE_GROOTE = "hilldegroote"
+    # TODO: add Osim muscle types
 
 
 class MuscleStateType(Enum):
     DEGROOTE = "degroote"
     DEFAULT = "default"
     BUCHANAN = "buchanan"
+    # TODO: add Osim muscle state types
 
 
 class MuscleUtils:

@@ -172,3 +172,27 @@ class MeshFileReal:
         if color_name is not None:
             material_color = etree.SubElement(visual, "material")
             material_color.set("name", color_name)
+
+    def to_osim(self):
+        """
+        Generate OpenSim XML representation of mesh file.
+        Note: In OpenSim, mesh information is written as part of the Body's attached_geometry,
+        so this method returns a dictionary for use by the body writer.
+        """
+        # OpenSim handles mesh at the body level as part of attached_geometry
+        # This method returns the data in a format suitable for the body writer
+        mesh_dict = {"mesh_file": self.mesh_file_name}
+
+        if self.mesh_scale is not None:
+            mesh_dict["scale_factors"] = self.mesh_scale[:3, 0]
+
+        if self.mesh_color is not None:
+            mesh_dict["color"] = self.mesh_color
+
+        # Note: OpenSim doesn't directly support mesh rotation/translation in the same way
+        # These would typically be handled through the body's transform or mesh preprocessing
+        if self.mesh_rotation is not None or self.mesh_translation is not None:
+            # Store the RT matrix for potential use
+            mesh_dict["mesh_rt"] = self.mesh_rt.rt_matrix
+
+        return mesh_dict

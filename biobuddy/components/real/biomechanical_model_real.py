@@ -1,8 +1,6 @@
 from copy import deepcopy
 import numpy as np
 
-# from typing import Self
-
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
@@ -75,12 +73,12 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_group
             The muscle group to add
         """
-        if muscle_group.origin_parent_name not in self.segment_names:
+        if muscle_group.origin_parent_name not in self.segment_names and muscle_group.origin_parent_name != "base":
             raise ValueError(
                 f"The origin segment of a muscle group must be declared before the muscle group."
                 f"Please declare the segment {muscle_group.origin_parent_name} before declaring the muscle group {muscle_group.name}."
             )
-        if muscle_group.insertion_parent_name not in self.segment_names:
+        if muscle_group.insertion_parent_name not in self.segment_names and muscle_group.origin_parent_name != "base":
             raise ValueError(
                 f"The insertion segment of a muscle group must be declared before the muscle group."
                 f"Please declare the segment {muscle_group.insertion_parent_name} before declaring the muscle group {muscle_group.name}."
@@ -339,6 +337,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
+        skip_virtual: bool = False,
     ) -> "Self":
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
@@ -353,12 +352,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             The muscle state type to assume when interpreting the osim model
         mesh_dir: str
             The directory where the meshes are located
+        skip_virtual: bool
+            Whether to skip virtual bodies when parsing the model
         """
         from ...model_parser.opensim import OsimModelParser
 
         self.filepath = filepath
         model = OsimModelParser(
-            filepath=filepath, muscle_type=muscle_type, muscle_state_type=muscle_state_type, mesh_dir=mesh_dir
+            filepath=filepath,
+            muscle_type=muscle_type,
+            muscle_state_type=muscle_state_type,
+            mesh_dir=mesh_dir,
+            skip_virtual=skip_virtual,
         ).to_real()
         model.validate_model()
         return model

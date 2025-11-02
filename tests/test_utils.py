@@ -586,16 +586,21 @@ class MockC3dData(C3dData):
         self.all_marker_positions = np.random.rand(4, 73, 10)
 
 
-def get_urdf_str(fake_urdf_model: etree.Element) -> str:
-    # Write to a temporary file
-    tree = etree.ElementTree(fake_urdf_model)
-    tree.write("temporary.urdf", pretty_print=True, xml_declaration=True, encoding="utf-8")
-
+def read_xml_str():
     # Read the content
-    with open("temporary.urdf", "r") as file:
-        urdf_content = file.read()
+    with open("temporary.xml", "r") as file:
+        xml_content = file.read()
 
     # Remove the temporary file
-    os.remove("temporary.urdf")
+    os.remove("temporary.xml")
+    return xml_content
 
-    return urdf_content
+
+def get_xml_str(fake_xml_model: etree.Element) -> str:
+    # Write to a temporary file
+    tree = etree.ElementTree(fake_xml_model)
+    tree.write("temporary.xml", pretty_print=True, xml_declaration=True, encoding="utf-8")
+
+    xml_content = read_xml_str()
+
+    return xml_content

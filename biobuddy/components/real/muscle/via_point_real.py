@@ -1,9 +1,7 @@
-from typing import Callable
-
 import numpy as np
+from lxml import etree
 
 from ....utils.aliases import Points, points_to_array
-from ....utils.protocols import Data
 from ....utils.checks import check_name
 from ...via_point_utils import PathPointCondition, PathPointMovement
 
@@ -124,3 +122,32 @@ class ViaPointReal:
         out_string += "endviapoint\n"
         out_string += "\n\n"
         return out_string
+
+    def to_osim(self):
+        """Generate OpenSim XML representation of the via point (PathPoint element)"""
+        if self.condition is not None or self.movement is not None:
+            raise NotImplementedError(
+                "Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub."
+            )
+
+        path_point_elem = etree.Element("PathPoint", name=self.name)
+
+        socket_parent = etree.SubElement(path_point_elem, "socket_parent_frame")
+        socket_parent.text = f"bodyset/{self.parent_name}"
+
+        location = etree.SubElement(path_point_elem, "location")
+        p = self.position
+        location.text = f"{p[0,0]:.8f} {p[1,0]:.8f} {p[2,0]:.8f}"
+
+        if self.condition is not None:
+            # To avoid this warning, it is possible to fix the via points using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
+            raise NotImplementedError(
+                f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented."
+            )
+        if self.movement is not None:
+            # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
+            raise NotImplementedError(
+                f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented."
+            )
+
+        return path_point_elem

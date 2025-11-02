@@ -23,8 +23,9 @@ from biobuddy import (
     RangeOfMotion,
     Ranges,
     ViaPoint,
+    BiomechanicalModelReal,
 )
-from test_utils import MockC3dData, get_urdf_str
+from test_utils import MockC3dData, get_xml_str, read_xml_str
 
 
 # ------- MarkerReal ------- #
@@ -89,6 +90,20 @@ def test_marker_real_to_biomod():
         "endmarker\n"
     )
     assert biomod_str == expected_str
+
+
+def test_marker_real_to_osim():
+    # Create a marker
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    marker = MarkerReal(
+        name="test_marker", parent_name="segment1", position=position, is_technical=True, is_anatomical=False
+    )
+
+    # Generate xml
+    marker_elem = marker.to_osim()
+    osim_content = get_xml_str(marker_elem)
+    expected_str = "<?xml version='1.0' encoding='UTF-8'?>\n<Marker name=\"test_marker\">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n  <fixed>false</fixed>\n</Marker>\n"
+    assert osim_content == expected_str
 
 
 def test_marker_real_arithmetic():
@@ -231,7 +246,7 @@ def test_mesh_file_real_to_urdf():
     fake_urdf_model = etree.Element("robot", name="fake_model")
     fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
     mesh_file.to_urdf(fake_urdf_model, fake_link)
-    urdf_content = get_urdf_str(fake_urdf_model)
+    urdf_content = get_xml_str(fake_urdf_model)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <visual>\n      <geometry>\n        <mesh filename="mesh_file/dir/test.obj"/>\n      </geometry>\n      <origin xyz="1.0 2.0 3.0" rpy="0.1 0.2 0.3"/>\n      <material name="material_0"/>\n    </visual>\n  </link>\n  <material name="material_0">\n    <color rgba="1.0 0.0 0.0 1"/>\n  </material>\n</robot>\n'
     assert urdf_content == expected_str
 
@@ -255,7 +270,7 @@ def test_mesh_file_real_to_urdf():
     fake_urdf_model = etree.Element("robot", name="fake_model")
     fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
     mesh_file.to_urdf(fake_urdf_model, fake_link)
-    urdf_content = get_urdf_str(fake_urdf_model)
+    urdf_content = get_xml_str(fake_urdf_model)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <visual>\n      <geometry>\n        <mesh filename="mesh_file/dir/test.obj"/>\n      </geometry>\n      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>\n      <material name="material_0"/>\n    </visual>\n  </link>\n  <material name="material_0">\n    <color rgba="1.0 0.0 0.0 1"/>\n  </material>\n</robot>\n'
     assert urdf_content == expected_str
 
@@ -405,11 +420,26 @@ def test_segment_coordinate_system_real_to_urdf():
     fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
     fake_origin = etree.SubElement(fake_link, "origin", name="fake_origin")
     scs.to_urdf(fake_origin)
-    urdf_content = get_urdf_str(fake_urdf_model)
+    urdf_content = get_xml_str(fake_urdf_model)
 
     # Check the content
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link">\n    <origin name="fake_origin" xyz="1.000000 2.000000 3.000000" rpy="-0.000000 0.000000 -0.000000"/>\n  </link>\n</robot>\n'
     assert urdf_content == expected_str
+
+
+def test_segment_coordinate_system_real_to_osim():
+    # Create an RT matrix
+    rt_matrix = np.eye(4)
+    rt_matrix[:3, 3] = [1.0, 2.0, 3.0]
+
+    # Create SCS from RT matrix
+    scs = SegmentCoordinateSystemReal.from_rt_matrix(rt_matrix=rt_matrix)
+
+    # Generate xml
+    translation, rotation = scs.to_osim()
+    npt.assert_almost_equal(translation, scs.scs.translation)
+    npt.assert_almost_equal(translation, np.array([1.0, 2.0, 3.0]))
+    npt.assert_almost_equal(rotation, np.array([0.0, 0.0, 0.0]))
 
 
 # ------- ContactReal ------- #
@@ -844,7 +874,7 @@ def test_segment_real_to_urdf():
     fake_urdf_model = etree.Element("robot", name="fake_model")
     fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
     segment.to_urdf(fake_urdf_model, fake_link)
-    urdf_content = get_urdf_str(fake_urdf_model)
+    urdf_content = get_xml_str(fake_urdf_model)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link"/>\n  <link name="test_segment"/>\n  <joint name="test_segment_rotX" type="revolute">\n    <parent link="parent_segment"/>\n    <child link="test_segment"/>\n    <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000"/>\n    <axis xyz="1 0 0"/>\n  </joint>\n</robot>\n'
     assert urdf_content == expected_str
 
@@ -887,6 +917,39 @@ def test_segment_real_to_urdf():
         fake_urdf_model = etree.Element("robot", name="fake_model")
         fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
         segment.to_urdf(fake_urdf_model, fake_link)
+
+
+def test_segment_real_to_osim():
+
+    # Create a simple segment (since contacts and markers are not implemented for urdf models)
+    fake_model = BiomechanicalModelReal()
+    fake_model.add_segment(
+        SegmentReal(
+            name="test_segment",
+            parent_name="parent_segment",
+            translations=Translations.NONE,
+            rotations=Rotations.X,
+        ),
+    )
+
+    # Generate xml
+    fake_model.to_osim("temporary.xml")
+    osim_content = read_xml_str()
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<OpenSimDocument Version="40000">\n  <Model name="model">\n    <credits>Model generated by BioBuddy on 2025-11-01 14:19:26</credits>\n    <length_units>meters</length_units>\n    <force_units>N</force_units>\n    <gravity>0 -9.80665 0</gravity>\n    <Ground name="ground">\n      <FrameGeometry name="frame_geometry">\n        <socket_frame>..</socket_frame>\n      </FrameGeometry>\n    </Ground>\n    <BodySet name="bodyset">\n      <objects>\n        <Body name="test_segment">\n          <mass>0.00000000</mass>\n          <mass_center>0.00000000 0.00000000 0.00000000</mass_center>\n          <inertia>0.00000000 0.00000000 0.00000000 0.00000000 0.00000000 0.00000000</inertia>\n          <FrameGeometry>\n            <socket_frame>..</socket_frame>\n          </FrameGeometry>\n        </Body>\n      </objects>\n    </BodySet>\n    <JointSet name="jointset">\n      <objects>\n        <CustomJoint name="test_segment_joint">\n          <socket_parent_frame>bodyset/root</socket_parent_frame>\n          <socket_child_frame>bodyset/test_segment</socket_child_frame>\n          <frames>\n            <PhysicalOffsetFrame name="root">\n              <socket_parent>bodyset/root</socket_parent>\n              <translation>0.00000000 0.00000000 0.00000000</translation>\n              <orientation>0 0 0</orientation>\n            </PhysicalOffsetFrame>\n            <PhysicalOffsetFrame name="test_segment">\n              <socket_parent>bodyset/test_segment</socket_parent>\n              <translation>0 0 0</translation>\n              <orientation>0 0 0</orientation>\n            </PhysicalOffsetFrame>\n          </frames>\n          <coordinates>\n            <Coordinate name="test_segment_rotX">\n              <default_value>0</default_value>\n              <default_speed_value>0</default_speed_value>\n              <locked>false</locked>\n              <prescribed>false</prescribed>\n              <locked>false</locked>\n            </Coordinate>\n          </coordinates>\n          <SpatialTransform>\n            <TransformAxis name="rotation1">\n              <axis>1 0 0</axis>\n              <coordinates>test_segment_rotX</coordinates>\n            </TransformAxis>\n            <TransformAxis name="rotation2">\n              <axis>0 1 0</axis>\n              <function>\n                <Constant>\n                  <value>0</value>\n                </Constant>\n              </function>\n            </TransformAxis>\n            <TransformAxis name="rotation3">\n              <axis>0 0 1</axis>\n              <function>\n                <Constant>\n                  <value>0</value>\n                </Constant>\n              </function>\n            </TransformAxis>\n            <TransformAxis name="translation1">\n              <axis>1 0 0</axis>\n              <function>\n                <Constant>\n                  <value>0</value>\n                </Constant>\n              </function>\n            </TransformAxis>\n            <TransformAxis name="translation2">\n              <axis>0 1 0</axis>\n              <function>\n                <Constant>\n                  <value>0</value>\n                </Constant>\n              </function>\n            </TransformAxis>\n            <TransformAxis name="translation3">\n              <axis>0 0 1</axis>\n              <function>\n                <Constant>\n                  <value>0</value>\n                </Constant>\n              </function>\n            </TransformAxis>\n          </SpatialTransform>\n        </CustomJoint>\n      </objects>\n    </JointSet>\n    <MarkerSet>\n      <objects/>\n    </MarkerSet>\n    <ForceSet name="forceset">\n      <objects/>\n    </ForceSet>\n  </Model>\n</OpenSimDocument>\n'
+    assert osim_content[174:] == expected_str[174:]
+
+    # Check that contacts throw an error
+    with pytest.raises(
+        NotImplementedError, match="Writing models with contacts to OpenSim format is not yet implemented."
+    ):
+        fake_model.segments["test_segment"].add_contact(ContactReal(name="fake_contact"))
+        fake_model.to_osim("fake_model.osim")
+
+    # Check that imus throw an error
+    with pytest.raises(NotImplementedError, match="Writing models with IMUs to OpenSim format is not yet implemented."):
+        fake_model.segments["test_segment"].remove_contact("fake_contact")
+        fake_model.segments["test_segment"].add_imu(InertialMeasurementUnitReal(name="fake_imu"))
+        fake_model.to_osim("fake_model.osim")
 
 
 # ------- ViaPointReal ------- #
@@ -969,6 +1032,36 @@ def test_via_point_real_to_biomod():
     via_point.movement = object()  # Mock movement object
     biomod_str = via_point.to_biomod()
     assert "WARNING: biorbd doe not support moving via points" in biomod_str
+
+
+def test_via_point_real_to_osim():
+    # Create a via point
+    position = np.array([[1.0], [2.0], [3.0], [1.0]])
+    via_point = ViaPointReal(
+        name="test_via_point", parent_name="segment1", muscle_name="muscle1", muscle_group="group1", position=position
+    )
+
+    # Generate xml
+    path_point_elem = via_point.to_osim()
+    osim_content = get_xml_str(path_point_elem)
+    expected_str = "<?xml version='1.0' encoding='UTF-8'?>\n<PathPoint name=\"test_via_point\">\n  <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n  <location>1.00000000 2.00000000 3.00000000</location>\n</PathPoint>\n"
+    assert osim_content == expected_str
+
+    # Test that with condition raises
+    with pytest.raises(
+        NotImplementedError,
+        match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.",
+    ):
+        via_point.condition = object()  # Mock condition object
+        via_point.to_osim()
+
+    # Test that with movement raises
+    with pytest.raises(
+        NotImplementedError,
+        match="Conditional and moving via points are not implemented yet. If you need this, please open an issue on GitHub.",
+    ):
+        via_point.movement = object()  # Mock condition object
+        via_point.to_osim()
 
 
 # ------- MuscleReal ------- #
@@ -1151,6 +1244,39 @@ def test_muscle_real_to_biomod():
     assert "\tmaxexcitation\t1.0000" in biomod_str
     assert "endmuscle" in biomod_str
     assert "viapoint\tvia_point" in biomod_str
+
+
+def test_muscle_real_to_osim():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+        optimal_length=0.1,
+        maximal_force=100.0,
+        tendon_slack_length=0.2,
+        pennation_angle=0.1,
+        maximal_velocity=10.0,
+        maximal_excitation=1.0,
+    )
+
+    # Add a via point
+    via_point = ViaPointReal(name="via_point", parent_name="segment1", position=np.array([[0.5], [0.0], [0.0], [1.0]]))
+    muscle.add_via_point(via_point)
+
+    # Generate xml
+    muscle_elem = muscle.to_osim()
+    osim_content = get_xml_str(muscle_elem)
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<DeGrooteFregly2016Muscle name="test_muscle">\n  <max_isometric_force>100.00000000</max_isometric_force>\n  <optimal_fiber_length>0.10000000</optimal_fiber_length>\n  <tendon_slack_length>0.20000000</tendon_slack_length>\n  <pennation_angle_at_optimal>0.10000000</pennation_angle_at_optimal>\n  <max_contraction_velocity>10.00000000</max_contraction_velocity>\n  <GeometryPath name="path">\n    <PathPointSet>\n      <objects>\n        <PathPoint name="test_muscle_origin">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="via_point">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.50000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="test_muscle_insertion">\n          <socket_parent_frame>bodyset/segment2</socket_parent_frame>\n          <location>1.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n      </objects>\n    </PathPointSet>\n  </GeometryPath>\n</DeGrooteFregly2016Muscle>\n'
+    assert osim_content == expected_str
 
 
 # ------- MuscleGroupReal ------- #
