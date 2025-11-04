@@ -262,7 +262,7 @@ available for each format:
   title        = {Bringing the musculoskeletal modeling community together with BioBuddy},
   month        = april,
   year         = 2025,
-  publisher    = {submitted to Congrès de la Société de biomécanique},
+  publisher    = {Congrès de la Société de biomécanique},
   url          = {https://github.com/pyomeca/biobuddy}
 }
 ```
