@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="biobuddy",
-    version="0.1.0",
+    version="0.2.0",
     author="Eve Charbonneau",
     author_email="eve.charbie@gmail.com",
     description="A generic interface to generate a virtual buddy",
@@ -21,7 +21,7 @@ setuptools.setup(
 )
 
 # Publish on pip manually
-# 1) change version in version.py, setup.py, and pyproject.toml
+# 1) change version in version.py and setup.py
 # 2) Remove old wheel build from dist folder
 # 3) python setup.py sdist bdist_wheel
 # 4) python -m twine upload dist/*
