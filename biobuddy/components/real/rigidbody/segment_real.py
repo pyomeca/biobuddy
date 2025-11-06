@@ -370,9 +370,17 @@ class SegmentReal(SegmentUtils):
 
         # Add dof specifications
         if self.nb_q == 1:
+            # URDF requires limits for revolute joints
+            limit = etree.SubElement(joint, "limit")
             if self.q_ranges is not None:
                 limit = etree.SubElement(joint, "limit")
                 self.q_ranges.to_urdf(limit)
+            else:
+                # Use default limits if not specified (required by URDF spec)
+                limit.set("lower", "-3.14159")  # -pi
+                limit.set("upper", "3.14159")   # pi
+                limit.set("effort", "0")
+                limit.set("velocity", "0")
             rotation_array = get_vector_from_sequence(self.rotations.value)
             axis = etree.SubElement(joint, "axis", xyz=f"{rotation_array[0]} {rotation_array[1]} {rotation_array[2]}")
 
