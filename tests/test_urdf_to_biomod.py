@@ -5,6 +5,8 @@ see https://github.com/MyoHub/myo_sim/blob/main/elbow/assets/myoelbow_2dof6muscl
 
 import os
 import numpy as np
+import pytest
+import pinocchio as pin
 
 from biobuddy import BiomechanicalModelReal
 from test_utils import compare_models
@@ -21,6 +23,7 @@ def test_translation_urdf_to_biomod():
         parent_path + f"/examples/models/flexiv_Rizon10s_kinematics.urdf",
         parent_path + f"/examples/models/kuka_lwr.urdf",
     ]
+    mesh_filepath = parent_path + "/examples/models/meshes/"
 
     for urdf_filepath in urdf_filepaths:
         biomod_filepath = urdf_filepath.replace(".urdf", ".bioMod")
@@ -52,6 +55,12 @@ def test_translation_urdf_to_biomod():
             filepath=urdf_filepath.replace(".urdf", "_translated.urdf")
         )
         compare_models(model_from_urdf, model_from_urdf_2, decimal=5)
+
+        # Test that the urdf model is valid
+        with pytest.raises(ValueError, match="Mesh meshes/"):
+            # The model is valiv, but the mesh files are not placed at the right place
+            # TODO: understand how to tell pinocchio where the files are
+            pin.buildModelsFromUrdf(urdf_filepath.replace(".urdf", "_translated.urdf"), mesh_filepath)
 
         if os.path.exists(biomod_filepath):
             os.remove(biomod_filepath)

@@ -18,8 +18,15 @@ class UrdfModelWriter(AbstractModelWriter):
                 raise RuntimeError(
                     f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
                 )
-            if segment.name != "root":
-                segment.to_urdf(urdf_model, with_mesh=self.with_mesh)
+            if segment.name != "base":
+                if segment.name == "root":
+                    # First segment, written as a simple link without a joint
+                    link = etree.SubElement(urdf_model, "link", name=segment.name)
+                    if segment.inertia_parameters is not None:
+                        segment.inertia_parameters.to_urdf(link)
+                else:
+                    # Regular segment with joint
+                    segment.to_urdf(urdf_model, with_mesh=self.with_mesh)
 
         # No muscles yet
         if len(model.muscle_groups) != 0:

@@ -875,7 +875,7 @@ def test_segment_real_to_urdf():
     fake_link = etree.SubElement(fake_urdf_model, "link", name="fake_link")
     segment.to_urdf(fake_urdf_model, fake_link)
     urdf_content = get_xml_str(fake_urdf_model)
-    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link"/>\n  <link name="test_segment"/>\n  <joint name="test_segment_rotX" type="revolute">\n    <parent link="parent_segment"/>\n    <child link="test_segment"/>\n    <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000"/>\n    <axis xyz="1 0 0"/>\n  </joint>\n</robot>\n'
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<robot name="fake_model">\n  <link name="fake_link"/>\n  <link name="test_segment"/>\n  <joint name="test_segment_rotX" type="revolute">\n    <parent link="parent_segment"/>\n    <child link="test_segment"/>\n    <origin xyz="0.000000 0.000000 0.000000" rpy="-0.000000 0.000000 -0.000000"/>\n    <limit lower="-3.14159" upper="3.14159" effort="0" velocity="0"/>\n    <axis xyz="1 0 0"/>\n  </joint>\n</robot>\n'
     assert urdf_content == expected_str
 
     # Test that multiple rotations throws an error

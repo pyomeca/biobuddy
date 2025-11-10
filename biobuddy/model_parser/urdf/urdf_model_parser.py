@@ -73,7 +73,7 @@ class UrdfModelParser(AbstractModelParser):
         return material_elts
 
     @staticmethod
-    def _get_inertia_parameters(link: etree.Element) -> InertiaParametersReal:
+    def _get_inertia_parameters(link: etree.Element) -> InertiaParametersReal | None:
         """
         Read the inertia parameters from a link element
         """
@@ -106,11 +106,14 @@ class UrdfModelParser(AbstractModelParser):
                 iyz = float(inertia_elem.attrib.get("iyz", 0))
                 inertia = inertia_to_matrix(ixx, iyy, izz, ixy, ixz, iyz)
 
-        return InertiaParametersReal(
-            mass=mass,
-            center_of_mass=center_of_mass,
-            inertia=inertia,
-        )
+        if mass is None:
+            return None
+        else:
+            return InertiaParametersReal(
+                mass=mass,
+                center_of_mass=center_of_mass,
+                inertia=inertia,
+            )
 
     def _get_mesh_file(self, link: etree.Element) -> MeshFileReal | None:
         """
@@ -284,7 +287,7 @@ class UrdfModelParser(AbstractModelParser):
             self.biomechanical_model_real.add_segment(
                 SegmentReal(
                     name=link_name,
-                    parent_name=parent_name if parent_name is not None else "root",
+                    parent_name=parent_name if parent_name is not None else "base",
                     segment_coordinate_system=scs,
                     translations=Translations.NONE,
                     rotations=rotations,
