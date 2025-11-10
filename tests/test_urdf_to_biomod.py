@@ -2,6 +2,7 @@
 TODO: add MuJoCo muscle implementation
 see https://github.com/MyoHub/myo_sim/blob/main/elbow/assets/myoelbow_2dof6muscles_body.xml
 """
+
 import os
 import numpy as np
 import pytest
