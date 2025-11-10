@@ -18,8 +18,8 @@ class UrdfModelWriter(AbstractModelWriter):
                 raise RuntimeError(
                     f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
                 )
-            if segment.name != "root":
-                if segment.parent_name == "base":
+            if segment.name != "base":
+                if segment.name == "root":
                     # First segment, written as a simple link without a joint
                     link = etree.SubElement(urdf_model, "link", name=segment.name)
                     if segment.inertia_parameters is not None:
