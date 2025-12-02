@@ -381,16 +381,16 @@ class ScaleTool:
             else:
                 self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
 
-        # Scale the meshes from all intermediary ghost segments
-        if segment_name in scaling_factors.keys():
-            segment_name_list = self.original_model.get_full_segment_chain(segment_name)
-            scale_factor = scaling_factors[segment_name].to_vector()
-            for this_segment_name in segment_name_list:
-                mesh_file = deepcopy(self.original_model.segments[this_segment_name].mesh_file)
-                if mesh_file is not None:
-                    mesh_file.mesh_scale *= scale_factor
-                    mesh_file.mesh_translation *= scale_factor
-                self.scaled_model.segments[this_segment_name].mesh_file = mesh_file
+            # Scale the meshes from all intermediary ghost segments
+            if segment_name in scaling_factors.keys():
+                segment_name_list = self.original_model.get_full_segment_chain(segment_name)
+                scale_factor = scaling_factors[segment_name].to_vector()
+                for this_segment_name in segment_name_list:
+                    mesh_file = deepcopy(self.original_model.segments[this_segment_name].mesh_file)
+                    if mesh_file is not None:
+                        mesh_file.mesh_scale *= scale_factor
+                        mesh_file.mesh_translation *= scale_factor
+                    self.scaled_model.segments[this_segment_name].mesh_file = mesh_file
 
         # Scale muscles
         for muscle_group in self.original_model.muscle_groups:
@@ -496,11 +496,6 @@ class ScaleTool:
         if mesh_scaled is not None:
             mesh_scaled.positions *= scale_factor
 
-        mesh_file_scaled = deepcopy(original_segment.mesh_file)
-        if mesh_file_scaled is not None:
-            mesh_file_scaled.mesh_scale *= scale_factor
-            mesh_file_scaled.mesh_translation *= scale_factor
-
         return SegmentReal(
             name=deepcopy(original_segment.name),
             parent_name=deepcopy(original_segment.parent_name),
@@ -511,7 +506,7 @@ class ScaleTool:
             qdot_ranges=deepcopy(original_segment.qdot_ranges),
             inertia_parameters=inertia_parameters_scaled,
             mesh=mesh_scaled,
-            mesh_file=mesh_file_scaled,
+            mesh_file=deepcopy(original_segment.mesh_file),  # Mesh file scaling is handled later to scale all meshes from ghost segments
         )
 
     def scale_marker(self, original_marker: MarkerReal, scale_factor: Point) -> MarkerReal:
