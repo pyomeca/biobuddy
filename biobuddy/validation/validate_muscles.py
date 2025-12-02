@@ -59,6 +59,13 @@ class MuscleValidator:
         """
         if self.custom_ranges is None:
             ranges = self.model.get_dof_ranges()
+            if ranges.size == 0:
+                ranges = np.array([[-np.pi] * self.model.nb_q, [np.pi] * self.model.nb_q])
+            elif ranges.shape[0] != self.model.nb_q:
+                raise NotImplementedError(
+                    f"Either all ranges or no ranges could be provided for now. "
+                    f"If you fall on this error please contact the developers."
+                )
         else:
             ranges = self.custom_ranges
         states = []
