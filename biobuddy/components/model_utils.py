@@ -123,7 +123,7 @@ class ModelUtils:
             if this_segment_name == first_segment_name:
                 break
             if self.segments[this_segment_name].parent_name not in segment_list:
-                raise RuntimeError(
+                raise NotImplementedError(
                     f"The segments in the model are not in the correct order to get the full segment chain for {segment_name}."
                 )
         return segment_list
