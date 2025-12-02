@@ -116,7 +116,7 @@ class ModelUtils:
         last_segment_name = segment_name
         first_segment_index = self.segment_index(first_segment_name)
         last_segment_index = self.segment_index(last_segment_name)
-        segment_list = self.segment_names[first_segment_index: last_segment_index + 1]
+        segment_list = self.segment_names[first_segment_index : last_segment_index + 1]
 
         # Check that the segments were in "order" (meaning that only parent-child relationships were used)
         for this_segment_name in segment_list.copy()[::-1]:

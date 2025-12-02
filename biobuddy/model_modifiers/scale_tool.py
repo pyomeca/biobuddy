@@ -506,7 +506,9 @@ class ScaleTool:
             qdot_ranges=deepcopy(original_segment.qdot_ranges),
             inertia_parameters=inertia_parameters_scaled,
             mesh=mesh_scaled,
-            mesh_file=deepcopy(original_segment.mesh_file),  # Mesh file scaling is handled later to scale all meshes from ghost segments
+            mesh_file=deepcopy(
+                original_segment.mesh_file
+            ),  # Mesh file scaling is handled later to scale all meshes from ghost segments
         )
 
     def scale_marker(self, original_marker: MarkerReal, scale_factor: Point) -> MarkerReal:

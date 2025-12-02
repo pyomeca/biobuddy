@@ -15,7 +15,7 @@ from biobuddy import (
     MeshFormat,
     ScaleTool,
     C3dData,
-    )
+)
 
 
 def main(visualization):
