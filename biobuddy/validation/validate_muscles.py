@@ -59,19 +59,24 @@ class MuscleValidator:
         """
         if self.custom_ranges is None:
             ranges = self.model.get_dof_ranges()
-            if ranges.size == 0:
-                ranges = np.array([[-np.pi] * self.model.nb_q, [np.pi] * self.model.nb_q])
-            elif ranges.shape[0] != self.model.nb_q:
-                raise NotImplementedError(
-                    f"Either all ranges or no ranges could be provided for now. "
-                    f"If you fall on this error please contact the developers."
-                )
         else:
             ranges = self.custom_ranges
+
+        # Check the shape of ranges
+        if ranges.size == 0:
+            ranges = np.array([[-np.pi] * self.model.nb_q, [np.pi] * self.model.nb_q])
+        elif ranges.shape != (2, self.model.nb_q):
+            raise NotImplementedError(
+                f"Either all ranges or no ranges could be provided for now. Expected shape 2 x {self.model.nb_q}."
+                f"If you fall on this error please contact the developers."
+            )
+
+        # Set the states as a linear interpolation between the min and max ranges
         states = []
         for joint_idx in range(len(ranges[0])):
             joint_array = np.linspace(ranges[0][joint_idx], ranges[1][joint_idx], self.nb_states)
             states.append(joint_array)
+
         return np.array(states)
 
     def compute_muscle_forces(self) -> tuple[np.ndarray, np.ndarray]:
@@ -202,7 +207,6 @@ class MuscleValidator:
                     biorbd_model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
                 )
 
-            # @vmagion: Could you confirm that there was an indentation missing here please ?
             # Compute min torques for each joint with only one activated muscle
             for state in muscle_states:
                 state.setActivation(0)
@@ -292,6 +296,7 @@ class MuscleValidator:
         )
 
         fig.show()
+        return fig
 
     def plot_moment_arm(self) -> None:
         """
@@ -352,6 +357,7 @@ class MuscleValidator:
         )
 
         fig.show()
+        return fig
 
     def plot_torques(
         self,
@@ -423,3 +429,4 @@ class MuscleValidator:
         )
 
         fig.show()
+        return fig

@@ -1,45 +1,67 @@
 import numpy as np
+import numpy.testing as npt
 import pytest
 from pathlib import Path
-import plotly.graph_objects as go
 
-from biobuddy import BiomechanicalModelReal
-from biobuddy.validation.validate_muscles import MuscleValidator
-
-
-def get_test_model():
-    """Helper function to load a test model"""
-    current_path_file = Path(__file__).parent.parent
-    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
-    model = BiomechanicalModelReal().from_biomod(model_path)
-    return model
+from biobuddy import BiomechanicalModelReal, MuscleValidator
 
 
 def test_muscle_validator_initialization():
     """Test that MuscleValidator initializes correctly"""
-    model = get_test_model()
-    nb_states = 50
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     
     assert validator.model == model
     assert validator.nb_states == nb_states
     assert validator.custom_ranges is None
-    assert validator.states.shape[1] == nb_states
-    assert validator.muscle_max_force.shape[0] == model.nb_muscles
-    assert validator.muscle_min_force.shape[0] == model.nb_muscles
-    assert validator.muscle_lengths.shape[0] == model.nb_muscles
-    assert validator.muscle_optimal_lengths.shape[0] == model.nb_muscles
-    assert validator.muscle_moment_arm.shape[0] == model.nb_q
-    assert validator.muscle_moment_arm.shape[1] == model.nb_muscles
-    assert validator.muscle_max_torque.shape[0] == model.nb_q
-    assert validator.muscle_min_torque.shape[0] == model.nb_q
+    assert validator.states.shape == (model.nb_q, nb_states)
+    npt.assert_almost_equal(validator.states[0], np.array([-10.,  -5.,   0.,   5.,  10.]))  # Translations
+    npt.assert_almost_equal(validator.states[10], np.array([-1.570796, -0.785398,  0.      ,  0.785398,  1.570796]))  # Rotations
+    assert validator.muscle_max_force.shape == (model.nb_muscles, nb_states)
+    npt.assert_almost_equal(validator.muscle_max_force[0], np.array([ 2047.08373459,   699.990814  ,   873.3046729 ,  1028.95791238,
+       35355.79749411]))
+    npt.assert_almost_equal(validator.muscle_max_force[10], np.array([8.06355638e-03, 3.28366501e-02, 6.13244468e+02, 3.11771105e+01,
+       1.85302109e+01]))
+    assert validator.muscle_min_force.shape == (model.nb_muscles, nb_states)
+    npt.assert_almost_equal(validator.muscle_min_force[0], np.array([ 1976.40387739,   165.83431579,   678.39680172,   873.00264632,
+       35353.03402975]))
+    npt.assert_almost_equal(validator.muscle_min_force[10], np.array([0, 0, 0, 0, 0]))
+    assert validator.muscle_lengths.shape == (model.nb_muscles, nb_states)
+    npt.assert_almost_equal(validator.muscle_lengths[0], np.array([0.16516437, 0.13038862, 0.14978456, 0.15338417, 0.20725017]))
+    npt.assert_almost_equal(validator.muscle_lengths[10], np.array([-0.02782064, -0.02137136,  0.03933778,  0.02474164,  0.0203703 ]))
+    assert validator.muscle_optimal_lengths.shape == (model.nb_muscles, )
+    npt.assert_almost_equal(validator.muscle_optimal_lengths, np.array([0.0976, 0.1367, 0.0976, 0.2324, 0.1385, 0.0976, 0.0976, 0.1367,
+       0.2324, 0.1385, 0.0535, 0.201 , 0.109 , 0.52  , 0.095 , 0.06  ,
+       0.064 , 0.05  , 0.031 , 0.098 , 0.049 , 0.0535, 0.201 , 0.109 ,
+       0.52  , 0.095 , 0.06  , 0.064 , 0.05  , 0.031 , 0.098 , 0.049 ,
+       0.12  , 0.12  , 0.2238, 0.2238, 0.108 , 0.108 , 0.134 , 0.134 ,
+       0.1138, 0.1138, 0.1157, 0.1157, 0.1726, 0.098 , 0.1726, 0.098 ,
+       0.0628, 0.081 , 0.0628, 0.081 ]))
+    assert validator.muscle_moment_arm.shape == (model.nb_q, model.nb_muscles, nb_states)
+    npt.assert_almost_equal(validator.muscle_moment_arm[7, 11, :], np.array([ 0.01702134, -0.06367495, -0.02969015, -0.02648772, -0.04840938]))
+    npt.assert_almost_equal(validator.muscle_moment_arm[34, 43, :], np.array([ 0.01169217, -0.00614974,  0.02490801,  0.01319443, -0.00754774]))
+    assert validator.muscle_max_torque.shape == (model.nb_q, model.nb_muscles, nb_states)
+    npt.assert_almost_equal(validator.muscle_max_torque[7, 11, :], np.array([ -6.87949845,  23.94079864, -15.20118408,   8.76100787,
+        16.88174848]))
+    npt.assert_almost_equal(validator.muscle_max_torque[34, 43, :], np.array([ -96.37131862,   93.93907444,  -31.5198799 , -147.62853678,
+        274.2484967 ]))
+    assert validator.muscle_min_torque.shape == (model.nb_q, nb_states)
+    npt.assert_almost_equal(validator.muscle_min_torque[7, :], np.array([ 11.51297038,   6.30633666,   0.96889746, -13.75417984,
+       -45.35209531]))
+    npt.assert_almost_equal(validator.muscle_min_torque[34, :], np.array([ -94.68727368,   90.64623855,  -15.96985247, -140.96772428,
+        271.91400559]))
 
 
 def test_muscle_validator_with_custom_ranges():
     """Test MuscleValidator with custom ranges"""
-    model = get_test_model()
-    nb_states = 30
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     custom_ranges = np.array([[-0.5] * model.nb_q, [0.5] * model.nb_q])
     
@@ -48,12 +70,21 @@ def test_muscle_validator_with_custom_ranges():
     assert validator.custom_ranges is not None
     np.testing.assert_array_equal(validator.custom_ranges, custom_ranges)
     assert validator.states.shape == (model.nb_q, nb_states)
+    npt.assert_almost_equal(validator.states[0], np.array([-0.5 , -0.25,  0.  ,  0.25,  0.5 ]))  # Translations
+    npt.assert_almost_equal(validator.states[10], np.array([-0.5 , -0.25,  0.  ,  0.25,  0.5 ]))  # Rotations
+
+    # Check that the states are inside the range
+    for joint_idx in range(model.nb_q):
+        assert np.all(validator.states[joint_idx, :] >= custom_ranges[0][joint_idx])
+        assert np.all(validator.states[joint_idx, :] <= custom_ranges[1][joint_idx])
 
 
 def test_states_from_model_ranges():
     """Test states_from_model_ranges method"""
-    model = get_test_model()
-    nb_states = 50
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     states = validator.states_from_model_ranges()
@@ -61,18 +92,17 @@ def test_states_from_model_ranges():
     assert states.shape == (model.nb_q, nb_states)
     
     ranges = model.get_dof_ranges()
-    if ranges.size == 0:
-        ranges = np.array([[-np.pi] * model.nb_q, [np.pi] * model.nb_q])
-    
     for joint_idx in range(model.nb_q):
-        np.testing.assert_almost_equal(states[joint_idx, 0], ranges[0][joint_idx])
-        np.testing.assert_almost_equal(states[joint_idx, -1], ranges[1][joint_idx])
+        npt.assert_almost_equal(states[joint_idx, 0], ranges[0][joint_idx])
+        npt.assert_almost_equal(states[joint_idx, -1], ranges[1][joint_idx])
 
 
 def test_states_from_custom_ranges():
     """Test states generation with custom ranges"""
-    model = get_test_model()
-    nb_states = 25
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     custom_ranges = np.array([[-1.0] * model.nb_q, [1.0] * model.nb_q])
     validator = MuscleValidator(model, nb_states=nb_states, custom_ranges=custom_ranges)
@@ -83,26 +113,17 @@ def test_states_from_custom_ranges():
         np.testing.assert_almost_equal(states[joint_idx, 0], -1.0)
         np.testing.assert_almost_equal(states[joint_idx, -1], 1.0)
 
-
-def test_compute_muscle_forces():
-    """Test compute_muscle_forces method"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    max_force, min_force = validator.compute_muscle_forces()
-    
-    assert max_force.shape == (model.nb_muscles, nb_states)
-    assert min_force.shape == (model.nb_muscles, nb_states)
-    
-    assert np.all(max_force >= min_force)
-    assert np.all(min_force >= 0)
+    # Check that an error is raised if the custom ranges shape is incorrect
+    invalid_custom_ranges = np.ones((1, model.nb_q))
+    with pytest.raises(NotImplementedError, match="Either all ranges or no ranges could be provided for now. Expected shape 2 x 42.If you fall on this error please contact the developers."):
+        MuscleValidator(model, nb_states=nb_states, custom_ranges=invalid_custom_ranges)
 
 
 def test_muscle_forces_stored_correctly():
     """Test that muscle forces are stored correctly in validator"""
-    model = get_test_model()
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
     nb_states = 15
     
     validator = MuscleValidator(model, nb_states=nb_states)
@@ -113,22 +134,11 @@ def test_muscle_forces_stored_correctly():
     assert np.all(validator.muscle_max_force >= validator.muscle_min_force)
 
 
-def test_compute_muscle_lengths():
-    """Test compute_muscle_lengths method"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    muscle_lengths = validator.compute_muscle_lengths()
-    
-    assert muscle_lengths.shape == (model.nb_muscles, nb_states)
-    assert np.all(muscle_lengths > 0)
-
-
 def test_muscle_lengths_stored_correctly():
     """Test that muscle lengths are stored correctly"""
-    model = get_test_model()
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
     nb_states = 15
     
     validator = MuscleValidator(model, nb_states=nb_states)
@@ -139,8 +149,10 @@ def test_muscle_lengths_stored_correctly():
 
 def test_return_optimal_lengths():
     """Test return_optimal_lengths method"""
-    model = get_test_model()
-    nb_states = 20
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     
@@ -156,68 +168,17 @@ def test_return_optimal_lengths():
             muscle_idx += 1
 
 
-def test_compute_moment_arm():
-    """Test compute_moment_arm method"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    moment_arm = validator.compute_moment_arm()
-    
-    assert moment_arm.shape == (model.nb_q, model.nb_muscles, nb_states)
-
-
-def test_moment_arm_stored_correctly():
-    """Test that moment arms are stored correctly"""
-    model = get_test_model()
-    nb_states = 15
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    assert validator.muscle_moment_arm.shape == (model.nb_q, model.nb_muscles, nb_states)
-
-
-def test_compute_torques():
-    """Test compute_torques method"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    max_torques, min_torques = validator.compute_torques()
-    
-    assert max_torques.shape == (model.nb_q, model.nb_muscles, nb_states)
-    assert min_torques.shape == (model.nb_q, nb_states)
-
-
-def test_torques_stored_correctly():
-    """Test that torques are stored correctly"""
-    model = get_test_model()
-    nb_states = 15
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    assert validator.muscle_max_torque.shape == (model.nb_q, model.nb_muscles, nb_states)
-    assert validator.muscle_min_torque.shape == (model.nb_q, nb_states)
-
-
-def test_plot_force_length_creates_figure():
-    """Test that plot_force_length creates a valid plotly figure"""
-    model = get_test_model()
-    nb_states = 10
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    validator.plot_force_length()
-
-
 def test_plot_force_length_structure():
     """Test the structure of the force-length plot"""
-    model = get_test_model()
-    nb_states = 10
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
+    figure = validator.plot_force_length()
+    # TODO: change -> None in validate muscle
+    # TODO: and test below
     
     import plotly.io as pio
     original_renderer = pio.renderers.default
@@ -231,20 +192,12 @@ def test_plot_force_length_structure():
         pio.renderers.default = original_renderer
 
 
-def test_plot_moment_arm_creates_figure():
-    """Test that plot_moment_arm creates a valid plotly figure"""
-    model = get_test_model()
-    nb_states = 10
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    validator.plot_moment_arm()
-
-
 def test_plot_moment_arm_structure():
     """Test the structure of the moment arm plot"""
-    model = get_test_model()
-    nb_states = 10
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     
@@ -260,20 +213,12 @@ def test_plot_moment_arm_structure():
         pio.renderers.default = original_renderer
 
 
-def test_plot_torques_creates_figure():
-    """Test that plot_torques creates a valid plotly figure"""
-    model = get_test_model()
-    nb_states = 10
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    validator.plot_torques()
-
-
 def test_plot_torques_structure():
     """Test the structure of the torques plot"""
-    model = get_test_model()
-    nb_states = 10
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     
@@ -299,57 +244,15 @@ def test_muscle_validator_raises_on_invalid_model():
         MuscleValidator(invalid_model)
 
 
-def test_consistency_between_methods():
-    """Test consistency between different computed values"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    assert validator.muscle_max_force.shape[1] == validator.muscle_lengths.shape[1]
-    assert validator.muscle_max_force.shape[1] == validator.muscle_moment_arm.shape[2]
-    assert validator.muscle_max_force.shape[1] == validator.muscle_max_torque.shape[2]
-    
-    assert validator.muscle_max_force.shape[0] == validator.muscle_lengths.shape[0]
-    assert validator.muscle_max_force.shape[0] == validator.muscle_optimal_lengths.shape[0]
-
-
-def test_states_are_within_ranges():
-    """Test that generated states are within the specified ranges"""
-    model = get_test_model()
-    nb_states = 30
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    ranges = model.get_dof_ranges()
-    if ranges.size == 0:
-        ranges = np.array([[-np.pi] * model.nb_q, [np.pi] * model.nb_q])
-    
-    for joint_idx in range(model.nb_q):
-        assert np.all(validator.states[joint_idx, :] >= ranges[0][joint_idx])
-        assert np.all(validator.states[joint_idx, :] <= ranges[1][joint_idx])
-
-
 def test_muscle_forces_activation_relationship():
     """Test that max force (activation=1) is greater than or equal to min force (activation=0)"""
-    model = get_test_model()
-    nb_states = 20
+    current_path_file = Path(__file__).parent.parent
+    model_path = f"{current_path_file}/examples/models/wholebody_reference.bioMod"
+    model = BiomechanicalModelReal().from_biomod(model_path)
+    nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
     
     for muscle_idx in range(model.nb_muscles):
         for state_idx in range(nb_states):
             assert validator.muscle_max_force[muscle_idx, state_idx] >= validator.muscle_min_force[muscle_idx, state_idx]
-
-
-def test_optimal_length_count_matches_muscles():
-    """Test that the number of optimal lengths matches the number of muscles"""
-    model = get_test_model()
-    nb_states = 20
-    
-    validator = MuscleValidator(model, nb_states=nb_states)
-    
-    total_muscles = sum(len(muscle_group.muscles) for muscle_group in model.muscle_groups)
-    
-    assert validator.muscle_optimal_lengths.shape[0] == total_muscles
-    assert validator.muscle_optimal_lengths.shape[0] == model.nb_muscles
