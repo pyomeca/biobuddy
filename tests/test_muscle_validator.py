@@ -179,6 +179,7 @@ def test_plot_force_length_structure():
     figure = validator.plot_force_length()
     # TODO: change -> None in validate muscle
     # TODO: and test below
+    # TODO: add a validate method that raises warnings if problems detected
     
     import plotly.io as pio
     original_renderer = pio.renderers.default
