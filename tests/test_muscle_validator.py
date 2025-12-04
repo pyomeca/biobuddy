@@ -269,7 +269,51 @@ def test_plot_moment_arm_structure():
     validator = MuscleValidator(model, nb_states=nb_states)
     figure = validator.plot_moment_arm()
 
-    # TODO
+    # Check annotations (subplot titles should be muscle names)
+    annotations = [a.text for a in figure.layout.annotations]
+    for muscle_name in model.muscle_names:
+        assert muscle_name in annotations
+
+    # Check traces - one trace per DOF per muscle
+    for i, muscle_name in enumerate(model.muscle_names):
+        for j, dof_name in enumerate(model.dof_names):
+            trace_idx = j * model.nb_muscles + i
+            assert figure.data[trace_idx].name == f"{muscle_name}_Moment_Arm"
+
+    # Check some moment arm traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[0].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[11].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[22].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+
+    # Check the length of the data traces (nb_dof * nb_muscles)
+    assert len(figure.data) == model.nb_q * model.nb_muscles
+
+    # Check the text
+    assert figure.layout.title.text == "Moment arm"
+
+    # Check axis labels
+    assert figure.layout.yaxis.title.text == "Moment arm (m)"
+
+    # Check the menu
+    assert figure.layout.updatemenus is not None
+    assert len(figure.layout.updatemenus) == 1
+    buttons = figure.layout.updatemenus[0].buttons
+    assert len(buttons) == model.nb_q
+
+    # Check the buttons labels
+    button_labels = [b.label for b in buttons]
+    for dof_name in model.dof_names:
+        assert dof_name in button_labels
+
 
 def test_plot_torques_structure():
     """Test the structure of the torques plot"""
@@ -281,7 +325,66 @@ def test_plot_torques_structure():
     validator = MuscleValidator(model, nb_states=nb_states)
     figure = validator.plot_torques()
 
-    # TODO
+    # Check annotations (subplot titles should be muscle names)
+    annotations = [a.text for a in figure.layout.annotations]
+    for muscle_name in model.muscle_names:
+        assert muscle_name in annotations
+
+    # Check traces - two traces (max and min) per DOF per muscle
+    for i, muscle_name in enumerate(model.muscle_names):
+        for j, dof_name in enumerate(model.dof_names):
+            trace_idx_max = j * model.nb_muscles * 2 + i * 2
+            trace_idx_min = j * model.nb_muscles * 2 + i * 2 + 1
+            assert figure.data[trace_idx_max].name == f"{muscle_name}_Max_Torque"
+            assert figure.data[trace_idx_min].name == f"{muscle_name}_Min_Torque"
+
+    # Check some max torque traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[0].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[22].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[44].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+
+    # Check some min torque traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[1].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[23].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[45].y,
+        np.array([0., 0., 0., 0., 0.])
+    )
+
+    # Check the length of the data traces (nb_dof * nb_muscles * 2)
+    assert len(figure.data) == model.nb_q * model.nb_muscles * 2
+
+    # Check the text
+    assert figure.layout.title.text == "Torque"
+
+    # Check axis labels
+    assert figure.layout.yaxis.title.text == "Torque (N.m)"
+
+    # Check the menu
+    assert figure.layout.updatemenus is not None
+    assert len(figure.layout.updatemenus) == 1
+    buttons = figure.layout.updatemenus[0].buttons
+    assert len(buttons) == model.nb_q
+
+    # Check the buttons labels
+    button_labels = [b.label for b in buttons]
+    for dof_name in model.dof_names:
+        assert dof_name in button_labels
 
 
 def test_muscle_validator_raises_on_invalid_model():
