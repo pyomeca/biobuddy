@@ -57,8 +57,9 @@ class InertiaParametersReal:
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
+        out_string = ""
         if self.mass is not None:
-            out_string = f"\tmass\t{self.mass}\n"
+            out_string += f"\tmass\t{self.mass}\n"
 
         if np.any(self.center_of_mass):
             com = np.nanmean(self.center_of_mass, axis=1)[:3]

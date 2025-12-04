@@ -40,6 +40,12 @@ class MuscleValidator:
                 f"engines, please contact the developers. "
                 f"The model provided is not biomodable: {e}."
             )
+        if model.nb_q == 0:
+            raise ValueError(
+                "Your model has no degrees of freedom. Please provide a model with at least one degree of freedom."
+            )
+        if model.nb_muscles == 0:
+            raise ValueError("Your model has no muscles. Please provide a model with at least one muscle.")
 
         # Initialize the quantities that will be needed for the plots
         self.states: np.ndarray = self.states_from_model_ranges()
@@ -66,10 +72,22 @@ class MuscleValidator:
             ranges = self.model.get_dof_ranges()
         else:
             ranges = self.custom_ranges
+
+        # Check the shape of ranges
+        if ranges.size == 0:
+            ranges = np.array([[-np.pi] * self.model.nb_q, [np.pi] * self.model.nb_q])
+        elif ranges.shape != (2, self.model.nb_q):
+            raise NotImplementedError(
+                f"Either all ranges or no ranges could be provided for now. Expected shape 2 x {self.model.nb_q}."
+                f"If you fall on this error please contact the developers."
+            )
+
+        # Set the states as a linear interpolation between the min and max ranges
         states = []
         for joint_idx in range(len(ranges[0])):
             joint_array = np.linspace(ranges[0][joint_idx], ranges[1][joint_idx], self.nb_states)
             states.append(joint_array)
+
         return np.array(states)
 
     def compute_muscle_forces(self) -> tuple[np.ndarray, np.ndarray]:
@@ -200,7 +218,6 @@ class MuscleValidator:
                     biorbd_model.muscularJointTorque(muscle_states, q, qdot).to_array().copy()
                 )
 
-            # @vmagion: Could you confirm that there was an indentation missing here please ?
             # Compute min torques for each joint with only one activated muscle
             for state in muscle_states:
                 state.setActivation(0)
@@ -211,7 +228,7 @@ class MuscleValidator:
 
     def plot_force_length(
         self,
-    ) -> None:
+    ) -> go.Figure:
         """
         Plot force lengths graphs for the model using plotly
         """
@@ -298,8 +315,9 @@ class MuscleValidator:
         fig.update_yaxes(title_text="Length (m)", row=1, col=2)
 
         fig.show()
+        return fig
 
-    def plot_moment_arm(self) -> None:
+    def plot_moment_arm(self) -> go.Figure:
         """
         Plot moment arm for each muscle of the model over each joint using plotly
         """
@@ -377,10 +395,11 @@ class MuscleValidator:
                 fig.update_xaxes(title_text="Range (rad)", row=nb_row - 1, col=idx_col + 1)
 
         fig.show()
+        return fig
 
     def plot_torques(
         self,
-    ) -> None:
+    ) -> go.Figure:
         """
         Plot the min and max torques at each joint of the model for each muscle activation using plotly
         """
@@ -467,3 +486,4 @@ class MuscleValidator:
                 fig.update_xaxes(title_text="Range (rad)", row=nb_row - 1, col=idx_col + 1)
 
         fig.show()
+        return fig
