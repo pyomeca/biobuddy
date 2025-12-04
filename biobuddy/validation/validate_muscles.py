@@ -40,6 +40,10 @@ class MuscleValidator:
                 f"engines, please contact the developers. "
                 f"The model provided is not biomodable: {e}."
             )
+        if model.nb_q == 0:
+            raise ValueError("Your model has no degrees of freedom. Please provide a model with at least one degree of freedom.")
+        if model.nb_muscles == 0:
+            raise ValueError("Your model has no muscles. Please provide a model with at least one muscle.")
 
         # Initialize the quantities that will be needed for the plots
         self.states: np.ndarray = self.states_from_model_ranges()
