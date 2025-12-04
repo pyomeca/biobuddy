@@ -90,7 +90,10 @@ class ModelUtils:
 
     def get_chain_between_segments(self, first_segment_name: str, last_segment_name: str) -> list[str]:
         """
-        Get the name of the segments in the kinematic chain between first_segment_name and last_segment_name
+        Get the name of the segments in the kinematic chain between first_segment_name and last_segment_name.
+        WARNING: This list does not include brother/sister segments.
+        So for example, if s_geom_1 and s_geom_2 both have s_offset_parent as parent, and only s_geom_1 has a child,
+        only s_geom_1 will  be included in the chain.
         """
         chain = []
         this_segment = last_segment_name
@@ -100,6 +103,30 @@ class ModelUtils:
         chain.append(first_segment_name)
         chain.reverse()
         return chain
+
+    def get_full_segment_chain(self, segment_name: str) -> list[str]:
+        """
+        Get the name of the segments in the complete fake kinematic chain derived from this segment.
+        This includes all ghost segments if they exist, including brother/sister segments.
+        """
+        if segment_name + "_parent_offset" in self.segment_names:
+            first_segment_name = segment_name + "_parent_offset"
+        else:
+            first_segment_name = segment_name
+        last_segment_name = segment_name
+        first_segment_index = self.segment_index(first_segment_name)
+        last_segment_index = self.segment_index(last_segment_name)
+        segment_list = self.segment_names[first_segment_index : last_segment_index + 1]
+
+        # Check that the segments were in "order" (meaning that only parent-child relationships were used)
+        for this_segment_name in segment_list.copy()[::-1]:
+            if this_segment_name == first_segment_name:
+                break
+            if self.segments[this_segment_name].parent_name not in segment_list:
+                raise NotImplementedError(
+                    f"The segments in the model are not in the correct order to get the full segment chain for {segment_name}."
+                )
+        return segment_list
 
     @property
     def nb_segments(self) -> int:

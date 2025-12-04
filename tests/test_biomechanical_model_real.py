@@ -339,3 +339,97 @@ def test_change_mesh_directories():
     # Check that the mesh directories have been changed
     assert model.segments["parent"].mesh_file.mesh_file_directory == "new_geometry"
     assert model.segments["child"].mesh_file.mesh_file_directory == "new_geometry"
+
+
+def test_get_full_segment_chain():
+    # Make sure one segment works
+    model = create_simple_model()
+    segment_chain = model.get_full_segment_chain(segment_name="child")
+    assert segment_chain == ["child"]
+
+    # Test for a logical chain of segments
+    model = create_simple_model()
+    model.add_segment(
+        SegmentReal(
+            name="new_parent_offset",
+            parent_name="child",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_translation",
+            parent_name="new_parent_offset",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_rotation",
+            parent_name="new_translation",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_geom1",
+            parent_name="new_rotation",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_geom2",
+            parent_name="new_rotation",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_reset_axis",
+            parent_name="new_geom1",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new",
+            parent_name="new_reset_axis",
+        )
+    )
+    segment_chain = model.get_full_segment_chain(segment_name="new")
+    assert segment_chain == [
+        "new_parent_offset",
+        "new_translation",
+        "new_rotation",
+        "new_geom1",
+        "new_geom2",
+        "new_reset_axis",
+        "new",
+    ]
+
+    # Test for a not supported chain of segments
+    model = create_simple_model()
+    model.add_segment(
+        SegmentReal(
+            name="new_parent_offset",
+            parent_name="child",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="bad_segment",
+            parent_name="parent",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new_rotation",
+            parent_name="new_parent_offset",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="new",
+            parent_name="new_rotation",
+        )
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="The segments in the model are not in the correct order to get the full segment chain for new.",
+    ):
+        model.get_full_segment_chain(segment_name="new")

@@ -7,7 +7,15 @@ from pathlib import Path
 import numpy as np
 import biorbd
 
-from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType, MeshParser, MeshFormat, ScaleTool
+from biobuddy import (
+    BiomechanicalModelReal,
+    MuscleType,
+    MuscleStateType,
+    MeshParser,
+    MeshFormat,
+    ScaleTool,
+    C3dData,
+)
 
 
 def main(visualization):
@@ -94,10 +102,9 @@ def main(visualization):
     # )
 
     # Scale the model
+    static_c3d = C3dData(static_filepath, first_frame=100, last_frame=200)
     scaled_model = scale_tool.scale(
-        filepath=static_filepath,
-        first_frame=100,
-        last_frame=200,
+        static_c3d=static_c3d,
         mass=80,
         q_regularization_weight=0.01,
         make_static_pose_the_models_zero=True,
