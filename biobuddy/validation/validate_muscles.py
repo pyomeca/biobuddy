@@ -222,7 +222,7 @@ class MuscleValidator:
 
     def plot_force_length(
         self,
-    ) -> None:
+    ) -> go.Figure:
         """
         Plot force lengths graphs for the model using plotly
         """
@@ -311,7 +311,7 @@ class MuscleValidator:
         fig.show()
         return fig
 
-    def plot_moment_arm(self) -> None:
+    def plot_moment_arm(self) -> go.Figure:
         """
         Plot moment arm for each muscle of the model over each joint using plotly
         """
@@ -393,7 +393,7 @@ class MuscleValidator:
 
     def plot_torques(
         self,
-    ) -> None:
+    ) -> go.Figure:
         """
         Plot the min and max torques at each joint of the model for each muscle activation using plotly
         """

@@ -177,20 +177,86 @@ def test_plot_force_length_structure():
     
     validator = MuscleValidator(model, nb_states=nb_states)
     figure = validator.plot_force_length()
-    # TODO: change -> None in validate muscle
-    # TODO: and test below
-    # TODO: add a validate method that raises warnings if problems detected
-    
-    import plotly.io as pio
-    original_renderer = pio.renderers.default
-    pio.renderers.default = None
-    
-    try:
-        from unittest.mock import patch
-        with patch('plotly.graph_objects.Figure.show'):
-            validator.plot_force_length()
-    finally:
-        pio.renderers.default = original_renderer
+
+    # Check annotations
+    annotations = [a.text for a in figure.layout.annotations]
+    assert "muscle_Forces" in annotations
+    assert "muscle_Lengths" in annotations
+
+    # Check traces
+    for i, muscle_name in enumerate(model.muscle_names):
+        base_idx = i * 4
+        assert figure.data[base_idx].name == f"{muscle_name}_Max_Force"
+        assert figure.data[base_idx + 1].name == f"{muscle_name}_Min_Force"
+        assert figure.data[base_idx + 2].name == f"{muscle_name}_Length"
+        assert figure.data[base_idx + 3].name == f"{muscle_name}_Optimal_Length"
+
+    # Check some max force traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[0].y,
+        np.array([ 2047.08373459,   699.990814,   873.3046729,  1028.95791238, 35355.79749411])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[4].y,
+        np.array([1924.07686538, 3783.97697508,  374.19781426, 5317.08515414, 228.65087896])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[8].y,
+        np.array([ 800.2374742 , 1052.59894657, 1064.27015197,  667.60001786, 1329.10366036])
+    )
+
+    # Check some min force traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[1].y,
+        np.array([ 1976.40387739,   165.83431579,   678.39680172,   873.00264632,
+       35353.03402975])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[5].y,
+        np.array([1920.63777166, 3782.41123082,  352.58587874, 5316.02843144,
+        189.89998032])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[9].y,
+        np.array([  91.81895011,   11.69461538,    5.44299064,  244.05075529,
+       1214.47280551])
+    )
+
+    # Check some muscle length traces data
+    np.testing.assert_array_almost_equal(
+        figure.data[2].y,
+        np.array([0.16516437, 0.13038862, 0.14978456, 0.15338417, 0.20725017])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[6].y,
+        np.array([0.26043333, 0.27430547, 0.22589219, 0.28127744, 0.2134293 ])
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[10].y,
+        np.array([0.12293962, 0.10440445, 0.10116109, 0.13553692, 0.15812581])
+    )
+
+    # Check the length of the data traces
+    assert len(figure.data) == model.nb_muscles * 4
+
+    # Check the text
+    assert figure.layout.title.text == "Muscular Force–Length"
+    assert figure.layout.xaxis.title.text == "Range (rad)"
+    assert figure.layout.xaxis2.title.text == "Range (rad)"
+    assert figure.layout.yaxis.title.text == "Force (N)"
+    assert figure.layout.yaxis2.title.text == "Length (m)"
+
+    # Check the menu
+    assert figure.layout.updatemenus is not None
+    assert len(figure.layout.updatemenus) == 1
+    buttons = figure.layout.updatemenus[0].buttons
+    assert len(buttons) == model.nb_muscles
+
+    # check the buttons labels
+    buttons = figure.layout.updatemenus[0].buttons
+    button_labels = [b.label for b in buttons]
+    for muscle_name in model.muscle_names:
+        assert muscle_name in button_labels
 
 
 def test_plot_moment_arm_structure():
@@ -201,18 +267,9 @@ def test_plot_moment_arm_structure():
     nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
-    
-    import plotly.io as pio
-    original_renderer = pio.renderers.default
-    pio.renderers.default = None
-    
-    try:
-        from unittest.mock import patch
-        with patch('plotly.graph_objects.Figure.show'):
-            validator.plot_moment_arm()
-    finally:
-        pio.renderers.default = original_renderer
+    figure = validator.plot_moment_arms()
 
+    # TODO
 
 def test_plot_torques_structure():
     """Test the structure of the torques plot"""
@@ -222,17 +279,9 @@ def test_plot_torques_structure():
     nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
-    
-    import plotly.io as pio
-    original_renderer = pio.renderers.default
-    pio.renderers.default = None
-    
-    try:
-        from unittest.mock import patch
-        with patch('plotly.graph_objects.Figure.show'):
-            validator.plot_torques()
-    finally:
-        pio.renderers.default = original_renderer
+    figure = validator.plot_torques()
+
+    # TODO
 
 
 def test_muscle_validator_raises_on_invalid_model():
