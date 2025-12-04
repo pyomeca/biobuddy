@@ -3,7 +3,7 @@ import numpy.testing as npt
 import pytest
 from pathlib import Path
 
-from biobuddy import BiomechanicalModelReal, MuscleValidator
+from biobuddy import BiomechanicalModelReal, MuscleValidator, PathPointCondition
 from test_utils import create_simple_model
 
 
@@ -188,6 +188,17 @@ def test_states_from_model_ranges():
         npt.assert_almost_equal(states[joint_idx, 0], ranges[0][joint_idx])
         npt.assert_almost_equal(states[joint_idx, -1], ranges[1][joint_idx])
 
+    # With a model that does not have ranges defined
+    simple_model = create_simple_model()
+    for segment in simple_model.segments:
+        if segment.q_ranges is not None:
+            segment.q_ranges = None
+    simple_validator = MuscleValidator(simple_model, nb_states=nb_states)
+    states = simple_validator.states_from_model_ranges()
+    for joint_idx in range(simple_model.nb_q):
+        npt.assert_almost_equal(states[joint_idx, 0], -np.pi)
+        npt.assert_almost_equal(states[joint_idx, -1], np.pi)
+
 
 def test_states_from_custom_ranges():
     """Test states generation with custom ranges"""
@@ -260,6 +271,19 @@ def test_return_optimal_lengths():
         for muscle in muscle_group.muscles:
             np.testing.assert_almost_equal(optimal_lengths[muscle_idx], muscle.optimal_length)
             muscle_idx += 1
+
+
+def test_with_a_non_biomodable_model():
+    """Test that MuscleValidator raises error with non-biomodable model"""
+    simple_model = create_simple_model()
+    simple_model.muscle_groups["parent_to_child"].muscles["muscle1"].origin_position.condition = PathPointCondition(
+        dof_name="parent_transX", range_min=-2, range_max=2
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="Only biorbd is supported as a backend for now. If you need other dynamics engines, please contact the developers. The model provided is not biomodable: Muscle origin cannot be conditional..",
+    ):
+        MuscleValidator(simple_model)
 
 
 def test_plot_force_length_structure():
