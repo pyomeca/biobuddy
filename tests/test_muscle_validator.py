@@ -267,7 +267,7 @@ def test_plot_moment_arm_structure():
     nb_states = 5
     
     validator = MuscleValidator(model, nb_states=nb_states)
-    figure = validator.plot_moment_arms()
+    figure = validator.plot_moment_arm()
 
     # TODO
 
