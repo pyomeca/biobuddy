@@ -8,7 +8,12 @@ from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 
 
 class MuscleValidator:
-    def __init__(self, model: BiomechanicalModelReal, nb_states: int = 50, custom_ranges: np.ndarray = None):
+    def __init__(
+        self,
+        model: BiomechanicalModelReal,
+        nb_states: int = 50,
+        custom_ranges: np.ndarray = None,
+    ):
         """
         For now only biomodable models are supported, but this class should be extended to support other model types.
 
@@ -216,10 +221,10 @@ class MuscleValidator:
         fig = make_subplots(rows=nb_lines, cols=2, subplot_titles=["muscle_Forces", "muscle_Lengths"])
         row = 1
         visible_arg = [False] * nb_muscles * 4
+        x = np.linspace(min(self.states[:, 0]), max(self.states[:, -1]), self.nb_states)
 
         for muscle in range(nb_muscles):
             col = 1
-            x = np.linspace(1, self.nb_states, self.nb_states)
             fig.add_trace(
                 go.Scatter(
                     x=x,
@@ -271,6 +276,8 @@ class MuscleValidator:
             return button
 
         fig.update_layout(
+            title="Muscular Force–Length",
+            title_x=0.5,
             updatemenus=[
                 go.layout.Updatemenu(
                     active=0,
@@ -281,8 +288,14 @@ class MuscleValidator:
                         )
                     ),
                 )
-            ]
+            ],
         )
+
+        fig.update_xaxes(title_text="Range (rad)", row=1, col=1)
+        fig.update_yaxes(title_text="Force (N)", row=1, col=1)
+
+        fig.update_xaxes(title_text="Range (rad)", row=1, col=2)
+        fig.update_yaxes(title_text="Length (m)", row=1, col=2)
 
         fig.show()
 
@@ -296,11 +309,12 @@ class MuscleValidator:
         dof_names = self.model.dof_names
 
         var = ceil(nb_muscles / 5)
-        nb_line = var if var < 5 else 5
+        nb_row = var if var < 5 else 5
+        nb_col = ceil(nb_muscles / nb_row)
 
         fig = make_subplots(
-            rows=nb_line,
-            cols=ceil(nb_muscles / nb_line),
+            rows=nb_row,
+            cols=nb_col,
             subplot_titles=tuple(muscle_names),
         )
 
@@ -310,7 +324,7 @@ class MuscleValidator:
             row = 0
             x = self.states[dof, :]
             for muscle in range(nb_muscles):
-                col = muscle % ceil(nb_muscles / nb_line) + 1
+                col = muscle % nb_col + 1
                 if col == 1:
                     row = row + 1
                 fig.add_trace(
@@ -336,13 +350,31 @@ class MuscleValidator:
             return button
 
         fig.update_layout(
+            title="Moment arm",
+            title_x=0.5,
             updatemenus=[
                 go.layout.Updatemenu(
                     active=0,
-                    buttons=list(map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)),
+                    buttons=list(
+                        map(
+                            lambda dof_name: create_layout_button_kin(dof_name),
+                            dof_names,
+                        )
+                    ),
                 )
-            ]
+            ],
         )
+
+        # legends
+        for idx_row in range(nb_row):
+            fig.update_yaxes(title_text="Moment arm (m)", row=idx_row + 1, col=1)
+
+        for idx_col in range(nb_col):
+            fig.update_xaxes(title_text="Range (rad)", row=nb_row, col=idx_col + 1)  # title_font=dict(size=10)
+
+        if nb_col != nb_row:
+            for idx_col in range(nb_col - (nb_row * nb_col - nb_muscles), nb_col):
+                fig.update_xaxes(title_text="Range (rad)", row=nb_row - 1, col=idx_col + 1)
 
         fig.show()
 
@@ -358,11 +390,12 @@ class MuscleValidator:
         dof_names = self.model.dof_names
 
         var = ceil(nb_muscles / 5)
-        nb_line = var if var < 5 else 5
+        nb_row = var if var < 5 else 5
+        nb_col = ceil(nb_muscles / nb_row)
 
         fig = make_subplots(
-            rows=nb_line,
-            cols=ceil(nb_muscles / nb_line),
+            rows=nb_row,
+            cols=nb_col,
             subplot_titles=tuple(muscle_names),
         )
 
@@ -372,7 +405,7 @@ class MuscleValidator:
             row = 0
             x = self.states[dof, :]
             for muscle in range(nb_muscles):
-                col = muscle % ceil(nb_muscles / nb_line) + 1
+                col = muscle % nb_col + 1
                 if col == 1:
                     row = row + 1
                 fig.add_trace(
@@ -407,12 +440,30 @@ class MuscleValidator:
             return button
 
         fig.update_layout(
+            title="Torque",
+            title_x=0.5,
             updatemenus=[
                 go.layout.Updatemenu(
                     active=0,
-                    buttons=list(map(lambda dof_name: create_layout_button_kin(dof_name), dof_names)),
+                    buttons=list(
+                        map(
+                            lambda dof_name: create_layout_button_kin(dof_name),
+                            dof_names,
+                        )
+                    ),
                 )
-            ]
+            ],
         )
+
+        # legends
+        for idx_row in range(nb_row):
+            fig.update_yaxes(title_text="Torque (N.m)", row=idx_row + 1, col=1)
+
+        for idx_col in range(nb_col):
+            fig.update_xaxes(title_text="Range (rad)", row=nb_row, col=idx_col + 1)  # title_font=dict(size=10)
+
+        if nb_col != nb_row:
+            for idx_col in range(nb_col - (nb_row * nb_col - nb_muscles), nb_col):
+                fig.update_xaxes(title_text="Range (rad)", row=nb_row - 1, col=idx_col + 1)
 
         fig.show()
