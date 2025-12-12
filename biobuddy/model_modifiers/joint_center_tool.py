@@ -203,19 +203,22 @@ class RigidSegmentIdentification:
         # Center of mass
         # CoM stays at the same place in the global reference frame
         com_position_global = original_model.segment_com_in_global(self.child_name)
-        new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
-            new_child_jcs_in_global.inverse @ com_position_global
-        )
+        if com_position_global is not None:
+            new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
+                new_child_jcs_in_global.inverse @ com_position_global
+            )
 
         # Inertia
         # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
         # change in length of the segments due to the displacement of the jcs.
-        inertia = original_model.segments[self.child_name].inertia_parameters.inertia[:3, :3]
-        rotation_transform = (
-            new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
-        )
-        new_inertia = rotation_transform @ inertia @ rotation_transform.T
-        new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
+        inertia_parameters = original_model.segments[self.child_name].inertia_parameters
+        if inertia_parameters is not None:
+            inertia = inertia_parameters.inertia[:3, :3]
+            rotation_transform = (
+                new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            )
+            new_inertia = rotation_transform @ inertia @ rotation_transform.T
+            new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
 
         # Next JCS position
         child_names = original_model.children_segment_names(self.child_name)
@@ -233,12 +236,18 @@ class RigidSegmentIdentification:
 
         # Meshes
         if original_model.segments[self.child_name].mesh is not None:
-            raise NotImplementedError(
-                "The transformation of meshes was not tested. Please try the code below and make a PR if it is fine."
-            )
-            new_model.segments[self.child_name].mesh.positions = (
-                new_child_jcs_in_global.inverse
-                @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
+            # TODO @pariterre Implement a len for meshes
+            mesh = original_model.segments[self.child_name].mesh
+            mesh_count = mesh.positions.shape[1]
+            new_model.segments[self.child_name].mesh.positions = np.concatenate(
+                [
+                    new_child_jcs_in_global.inverse
+                    @ point_from_local_to_global(
+                        original_model.segments[self.child_name].mesh.positions[:, i], global_jcs
+                    )
+                    for i in range(mesh_count)
+                ],
+                axis=1,
             )
 
         # Mesh files
@@ -1086,7 +1095,8 @@ class JointCenterTool:
         joint_model.to_biomod(temporary_model_path)
         return joint_model
 
-    def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
+    # TODO @pariterre revise the type hinting
+    def replace_joint_centers(self, marker_weights=None) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
