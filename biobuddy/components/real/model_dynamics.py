@@ -780,19 +780,31 @@ class ModelDynamics:
 
     def animate(self, view_as: ViewAs = ViewAs.BIORBD, model_path: str = None):
 
-        if view_as == ViewAs.BIORBD:
-            try:
-                import pyorerun
+        if view_as == ViewAs.BIORBD or view_as == ViewAs.BIORBD_BIOVIZ:
+            if model_path is None or not model_path.endswith(".bioMod"):
+                model_path = "temporary.bioMod"
+                self.to_biomod(model_path, with_mesh=False)
 
-                if model_path is None or not model_path.endswith(".bioMod"):
-                    model_path = "temporary.bioMod"
-                    self.to_biomod(model_path, with_mesh=False)
+            if view_as == ViewAs.BIORBD_BIOVIZ:
+                try:
+                    import bioviz
+                except ImportError:
+                    _logger.error("bioviz is not installed. Cannot animate the model with BIORBD_BIOVIZ.")
+                    return
+
+                viz = bioviz.Viz(model_path)
+                viz.exec()
+                return
+            else:
+                try:
+                    import pyorerun
+                except ImportError:
+                    _logger.error("pyorerun is not installed. Cannot animate the model.")
 
                 animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
-            except ImportError:
-                _logger.error("pyorerun is not installed. Cannot animate the model.")
+                return
 
         else:
             raise NotImplementedError(

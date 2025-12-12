@@ -41,4 +41,5 @@ class Translations(Enum):
 
 class ViewAs(Enum):
     BIORBD = "biorbd"
+    BIORBD_BIOVIZ = "biorbd_bioviz"
     # OPENSIM = "opensim"
