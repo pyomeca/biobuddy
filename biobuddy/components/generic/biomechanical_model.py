@@ -123,6 +123,7 @@ class BiomechanicalModel(ModelUtils):
             )
 
             for marker in segment.markers:
+                # TODO @pariterre Scouts all the for loops like these to create good error message that provide the names
                 model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
 
             for contact in segment.contacts:

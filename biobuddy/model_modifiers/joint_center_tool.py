@@ -26,7 +26,7 @@ _logger = logging.getLogger(__name__)
 class RigidSegmentIdentification:
     def __init__(
         self,
-        functional_c3d: C3dData,
+        functional_c3d: C3dData,  # TODO There is no reason to force C3dData here, any Data would do
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -555,7 +555,9 @@ class RigidSegmentIdentification:
         return output
 
     def rt_from_trial(
-        self, parent_rt_init, child_rt_init
+        self,
+        parent_rt_init=RotoTransMatrixTimeSeries(nb_frames=0),
+        child_rt_init=RotoTransMatrixTimeSeries(nb_frames=0),
     ) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
@@ -577,9 +579,9 @@ class RigidSegmentIdentification:
 
 
 class Score(RigidSegmentIdentification):
-
-    def _score_algorithm(
-        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
+    @staticmethod
+    def score_algorithm(
+        rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
@@ -647,8 +649,8 @@ class Score(RigidSegmentIdentification):
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
         if recursive_outlier_removal:
-            valid = self.get_good_frames(residuals, nb_frames)
-            return self._score_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
+            valid = Score.get_good_frames(residuals, nb_frames)
+            return Score.score_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -665,6 +667,10 @@ class Score(RigidSegmentIdentification):
         parent_rt_init: np.ndarray,
         child_rt_init: np.ndarray,
     ):
+        # TODO: @pariterre I feel this method should perform only what it is meant to do, which is computing the optimal
+        # rotation point between two segments. Returning these point could allow for utins Score in other contexts.
+        # TODO: @pariterre I would recommend against modifying the original model sent to this function.
+        # TODO: This Score should agnostic of any model, that is passing a series of rt_parent and rt_child matrices and it returns the optimal point of rotation.
 
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
@@ -677,7 +683,7 @@ class Score(RigidSegmentIdentification):
             )
 
         # Identify center of rotation
-        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(
+        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self.score_algorithm(
             rt_parent_functional.get_rt_matrix(), rt_child_functional.get_rt_matrix(), recursive_outlier_removal=True
         )
 
@@ -1002,7 +1008,7 @@ class Sara(RigidSegmentIdentification):
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal, animate_reconstruction: bool = False):
 
-        # Make sure that the scs ar in local before starting
+        # Make sure that the scs are in local before starting
         for segment in original_model.segments:
             if segment.segment_coordinate_system.is_in_global:
                 segment.segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -1049,6 +1055,7 @@ class JointCenterTool:
         joint_model = BiomechanicalModelReal()
         segment_chain = self.original_model.get_chain_between_segments(task.parent_name, task.child_name)
 
+        # TODO: @charbie Ground is not mandatory in the model
         joint_model.add_segment(
             SegmentReal(
                 name="ground",
@@ -1060,6 +1067,7 @@ class JointCenterTool:
         )
 
         # Copy all segments in the chain
+        # TODO: @pariterre Is that useful? Is there any chance a CoR is between more than two segments?
         for segment_name in segment_chain:
 
             # get the filename so that we can point to the Geometry_cleaned forler
@@ -1092,26 +1100,30 @@ class JointCenterTool:
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
-        joint_model.to_biomod(temporary_model_path)
+        joint_model.to_biomod(temporary_model_path)  # TODO @pariterre Is this for debug?
         return joint_model
 
     # TODO @pariterre revise the type hinting
-    def replace_joint_centers(self, marker_weights=None) -> BiomechanicalModelReal:
+    def replace_joint_centers(self, marker_weights=None, reconstruct_whole_body: bool = None) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
             # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
-            reconstruct_whole_body = True
-            for marker in self.original_model.marker_names:
-                if marker not in task.c3d_data.marker_names:
-                    reconstruct_whole_body = False
-                    break
+            # TODO @charbie Why? Reconstructing the whole body exposes to less accurate results while increasing computation time
+            reconstruct_whole_body = True if reconstruct_whole_body is None else reconstruct_whole_body
+            if reconstruct_whole_body:
+                # Make sure that all markers are present in the c3d, otherwise reconstruct_whole_body cannot be True
+                for marker in self.original_model.marker_names:
+                    if marker not in task.c3d_data.marker_names:
+                        reconstruct_whole_body = False
+                        break
 
             if reconstruct_whole_body:
                 marker_names = self.original_model.marker_names
                 model_for_initial_rt = deepcopy(self.original_model)
             else:
+                # TODO @pariterre 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
                 marker_names = task.parent_marker_names + task.child_marker_names
                 model_for_initial_rt = self._setup_model_for_initial_rt(task)
 
@@ -1128,6 +1140,8 @@ class JointCenterTool:
                 if marker not in task.c3d_data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
+            # TODO: @pariterre Inverse kinematics may not be the right tool here as parallelisation is not possible while
+            # during the rigidifcation for the SCoRE algorithm each frame is technically independent
             q_init, _ = model_for_initial_rt.inverse_kinematics(
                 marker_positions=marker_positions,
                 marker_names=marker_names,
@@ -1139,6 +1153,7 @@ class JointCenterTool:
             child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
+            # TODO: @pariterre 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
             task.parent_static_markers_in_global = static_markers_in_global[
                 :, self.original_model.markers_indices(task.parent_marker_names)
             ]

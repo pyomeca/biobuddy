@@ -8,6 +8,7 @@ from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ....utils.protocols import Data
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
+from ....model_modifiers.joint_center_tool import Score
 
 
 class SegmentCoordinateSystem:
@@ -178,4 +179,73 @@ class SegmentCoordinateSystemUtils:
         -------
         A lambda function that can be called during the to_real process
         """
+
         return lambda m, bio: np.nanmean(np.nanmean(np.array([m[name] for name in marker_names]), axis=2), axis=0)
+
+    @staticmethod
+    def score(
+        functional_data: Data,
+        parent_marker_names: tuple[str, ...] | list[str],
+        child_marker_names: tuple[str, ...] | list[str],
+    ) -> Callable:
+        """
+        Compute the score point between two sets of markers
+
+        Parameters
+        ----------
+        parent_marker_names
+            The names of the markers on the parent segment to compute the score point from
+        child_marker_names
+            The names of the markers on the child segment to compute the score point from
+
+        Returns
+        -------
+        A lambda function that can be called during the to_real process
+        """
+
+        score_cache = []  # We only need to perform score once. So we store the result here.
+
+        def rigidify(markers: dict[str, np.ndarray], marker_names: tuple[str, ...]) -> np.ndarray:
+            # TODO @pariterre This should be provided by the Score class in joint_center_tool.py
+            nb_frames = markers[marker_names[0]].shape[1]
+            rt_matrices = np.zeros((4, 4, nb_frames))
+            for i_frame in range(nb_frames):
+                pts = np.array([markers[name][:3, i_frame] for name in marker_names]).T  # 3 x n_markers
+                centroid = np.mean(pts, axis=1, keepdims=True)  # 3 x 1
+                pts_centered = pts - centroid  # 3 x n_markers
+                u, s, vh = np.linalg.svd(pts_centered)
+                r = vh.T @ u.T
+                if np.linalg.det(r) < 0:
+                    vh[2, :] *= -1
+                    r = vh.T @ u.T
+                t = centroid.flatten()
+                rt_matrices[:, :, i_frame] = np.vstack((np.hstack((r, t.reshape(3, 1))), [0, 0, 0, 1]))
+            return rt_matrices
+
+        def collapse(static_markers, model):
+            if not score_cache:
+                # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
+                rt_parent = rigidify(
+                    {name: functional_data.values[name] for name in parent_marker_names}, parent_marker_names
+                )
+                rt_child = rigidify(
+                    {name: functional_data.values[name] for name in child_marker_names}, child_marker_names
+                )
+                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent, rt_child)
+                score_cache.append()
+
+            # Rigidify the parent segment at static markers
+            parent_in_static = rigidify(
+                {name: static_markers[name] for name in parent_marker_names}, parent_marker_names
+            )
+
+            # Project the optimal point into the static parent segment
+            n_frames = parent_in_static.shape[2]
+            cor_global = np.zeros((4, n_frames))
+            for i_frame in range(n_frames):
+                cor_global[:, i_frame] = parent_in_static[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
+
+            # Collapse across frames
+            return np.nanmean(cor_global, axis=1)
+
+        return collapse

@@ -281,6 +281,7 @@ class RotoTransMatrixTimeSeries:
         """
         Returns the RotoTransMatrix as a 3D numpy array of shape (4, 4, nb_frames)
         """
+        # TODO @charbie: Is np.eye(4) a better default value?
         rt_matrices = np.zeros((4, 4, len(self._rt_time_series)))
         for i_frame, rt in enumerate(self._rt_time_series):
             rt_matrices[:, :, i_frame] = rt.rt_matrix
