@@ -1,9 +1,8 @@
-from copy import deepcopy
-
 from .rigidbody.segment import Segment
 from .muscle.muscle_group import MuscleGroup
 from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.aliases import Point, point_to_array
+from ...utils.error import error_context
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
 from ...utils.linear_algebra import RotoTransMatrix
@@ -88,63 +87,68 @@ class BiomechanicalModel(ModelUtils):
         model = BiomechanicalModelReal(gravity=gravity)
 
         for segment in self.segments:
-            scs = SegmentCoordinateSystemReal()
-            scs_global = RotoTransMatrix()
-            if segment.segment_coordinate_system is not None:
-                parent_scs_global = model.segment_coordinate_system_in_global(segment.parent_name)
-                scs = segment.segment_coordinate_system.to_scs(data, model, parent_scs_global)
-                scs_global = parent_scs_global @ scs.scs
+            with error_context(f"Segment '{segment.name}'"):
+                scs = SegmentCoordinateSystemReal()
+                scs_global = RotoTransMatrix()
+                if segment.segment_coordinate_system is not None:
+                    parent_scs_global = model.segment_coordinate_system_in_global(segment.parent_name)
+                    scs = segment.segment_coordinate_system.to_scs(data, model, parent_scs_global)
+                    scs_global = parent_scs_global @ scs.scs
 
-            inertia_parameters = None
-            if segment.inertia_parameters is not None:
-                inertia_parameters = segment.inertia_parameters.to_inertia(data, model, scs_global)
+                inertia_parameters = None
+                if segment.inertia_parameters is not None:
+                    inertia_parameters = segment.inertia_parameters.to_inertia(data, model, scs_global)
 
-            mesh = None
-            if segment.mesh is not None:
-                mesh = segment.mesh.to_mesh(data, model, scs_global)
+                mesh = None
+                if segment.mesh is not None:
+                    mesh = segment.mesh.to_mesh(data, model, scs_global)
 
-            mesh_file = None
-            if segment.mesh_file is not None:
-                mesh_file = segment.mesh_file.to_mesh_file(data, model)
+                mesh_file = None
+                if segment.mesh_file is not None:
+                    mesh_file = segment.mesh_file.to_mesh_file(data, model)
 
-            model.add_segment(
-                SegmentReal(
-                    name=segment.name,
-                    parent_name=segment.parent_name,
-                    segment_coordinate_system=scs,
-                    translations=segment.translations,
-                    rotations=segment.rotations,
-                    q_ranges=segment.q_ranges,
-                    qdot_ranges=segment.qdot_ranges,
-                    inertia_parameters=inertia_parameters,
-                    mesh=mesh,
-                    mesh_file=mesh_file,
+                model.add_segment(
+                    SegmentReal(
+                        name=segment.name,
+                        parent_name=segment.parent_name,
+                        segment_coordinate_system=scs,
+                        translations=segment.translations,
+                        rotations=segment.rotations,
+                        q_ranges=segment.q_ranges,
+                        qdot_ranges=segment.qdot_ranges,
+                        inertia_parameters=inertia_parameters,
+                        mesh=mesh,
+                        mesh_file=mesh_file,
+                    )
                 )
-            )
 
-            for marker in segment.markers:
-                # TODO @pariterre Scouts all the for loops like these to create good error message that provide the names
-                model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
+                for marker in segment.markers:
+                    with error_context(f"Marker '{marker.name}'"):
+                        model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
 
-            for contact in segment.contacts:
-                model.segments[contact.parent_name].add_contact(contact.to_contact(data, model, scs_global))
+                for contact in segment.contacts:
+                    with error_context(f"Contact '{contact.name}'"):
+                        model.segments[contact.parent_name].add_contact(contact.to_contact(data, model, scs_global))
 
         for muscle_group in self.muscle_groups:
-            model.add_muscle_group(
-                MuscleGroupReal(
-                    name=muscle_group.name,
-                    origin_parent_name=muscle_group.origin_parent_name,
-                    insertion_parent_name=muscle_group.insertion_parent_name,
-                )
-            )
-
-            for muscle in muscle_group.muscles:
-                model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model, scs_global))
-
-                for via_point in muscle.via_points:
-                    model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
-                        via_point.to_via_point(data, model, scs_global)
+            with error_context(f"Muscle group '{muscle_group.name}'"):
+                model.add_muscle_group(
+                    MuscleGroupReal(
+                        name=muscle_group.name,
+                        origin_parent_name=muscle_group.origin_parent_name,
+                        insertion_parent_name=muscle_group.insertion_parent_name,
                     )
+                )
+
+                for muscle in muscle_group.muscles:
+                    with error_context(f"Muscle '{muscle.name}'"):
+                        model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model, scs_global))
+
+                        for via_point in muscle.via_points:
+                            with error_context(f"Via point '{via_point.name}'"):
+                                model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
+                                    via_point.to_via_point(data, model, scs_global)
+                                )
 
         model.validate_model()
         return model
