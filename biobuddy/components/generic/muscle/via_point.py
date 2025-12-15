@@ -1,10 +1,15 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
 import numpy as np
 
-from ....utils.protocols import Data
-from ....utils.checks import check_name
 from ....utils.aliases import points_to_array
+from ....utils.checks import check_name
 from ....utils.linear_algebra import RotoTransMatrix
+from ....utils.protocols import Data
+
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.muscle.via_point_real import ViaPointReal
 
 
 class ViaPoint:

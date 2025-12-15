@@ -1,12 +1,12 @@
-from .rigidbody.segment import Segment
 from .muscle.muscle_group import MuscleGroup
+from .rigidbody.segment import Segment
+from ..model_utils import ModelUtils
 from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.aliases import Point, point_to_array
-from ...utils.error import error_context
+from ...utils.errors import error_context
+from ...utils.linear_algebra import RotoTransMatrix
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
-from ...utils.linear_algebra import RotoTransMatrix
-from ..model_utils import ModelUtils
 
 
 class BiomechanicalModel(ModelUtils):

@@ -14,7 +14,7 @@ class Material:
         self.color = color
 
     @staticmethod
-    def from_element(element: etree.Element) -> "Self":
+    def from_element(element: etree.Element) -> "Material":
         # TODO: implement the transparency with the A from RGBA
 
         name = element.attrib["name"]

@@ -27,7 +27,7 @@ def visualize_modified_model_output(
     """
     Only for debugging purposes.
     """
-    import pyorerun
+    import pyorerun  # type: ignore
 
     # Compare the result visually
     t = np.linspace(0, 1, original_q.shape[1])

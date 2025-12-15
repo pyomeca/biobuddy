@@ -1,7 +1,6 @@
-from .aliases import point_to_array, Point
-
 import numpy as np
 
+from .aliases import point_to_array, Point
 
 # TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
 
@@ -10,7 +9,7 @@ class RotationMatrix:
     def __init__(self):
         self._rotation_matrix = np.identity(3)
 
-    def __matmul__(self, other: "Self" | Point) -> "Self" | Point:
+    def __matmul__(self, other: "RotationMatrix" | Point) -> "RotationMatrix" | Point:
         if isinstance(other, RotationMatrix):
             # Matrix multiplication of two RotationMatrix objects gives a new RotationMatrix object
             mult_result = self._rotation_matrix @ other._rotation_matrix
@@ -73,7 +72,7 @@ class RotationMatrix:
         return to_euler(self.rotation_matrix, angle_sequence)
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "RotationMatrix":
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
         out_inverse = RotationMatrix()
         out_inverse.from_rotation_matrix(inverse_rotation_matrix)
@@ -84,7 +83,7 @@ class RotoTransMatrix:
     def __init__(self):
         self._rt = np.identity(4)
 
-    def __matmul__(self, other: "Self" | Point) -> "Self" | Point:
+    def __matmul__(self, other: "RotationMatrix" | Point) -> "RotationMatrix" | Point:
         if isinstance(other, RotoTransMatrix):
             # Matrix multiplication of two RotoTransMatrix objects gives a new RotoTransMatrix object
             mult_result = self.rt_matrix @ other.rt_matrix
@@ -181,7 +180,7 @@ class RotoTransMatrix:
         return to_euler(self.rotation_matrix, angle_sequence)
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "RotationMatrix":
 
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
         inverse_translation = -inverse_rotation_matrix.reshape(3, 3) @ self.translation

@@ -1,16 +1,23 @@
-from enum import Enum
 from copy import deepcopy
+from functools import wraps
 import logging
+from typing import TYPE_CHECKING, Union
+
+
 import numpy as np
 from scipy import optimize
-from functools import wraps
 
-from ...utils.linear_algebra import (
-    RotoTransMatrix,
-    RotoTransMatrixTimeSeries,
-    point_from_local_to_global,
-)
+from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, point_from_local_to_global
 from ...utils.enums import ViewAs
+
+if TYPE_CHECKING:
+    try:
+        import biorbd  # type: ignore
+    except ImportError:
+        pass
+    from .biomechanical_model_real import BiomechanicalModelReal
+    from .rigidbody.marker_weight import MarkerWeight
+    from ...utils.named_list import NamedList
 
 _logger = logging.getLogger(__name__)
 
@@ -135,7 +142,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_residual(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q_regularization_weight: np.ndarray[float],
         qdot_regularization_weight: np.ndarray[float],
         q_target: np.ndarray,
@@ -192,7 +199,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_distance(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q: np.ndarray,
         marker_names: list[str],
         experimental_markers: np.ndarray,
@@ -219,7 +226,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_jacobian(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q_regularization_weight: np.ndarray[float],
         qdot_regularization_weight: np.ndarray[float],
         q: np.ndarray,
@@ -307,7 +314,7 @@ class ModelDynamics:
 
         try:
             # biorbd (in c++) is quicker than this custom Python code, which makes a large difference here
-            import biorbd
+            import biorbd  # type: ignore
 
             self.to_biomod("temporary.bioMod", with_mesh=False)
             with_biorbd = True
@@ -446,7 +453,7 @@ class ModelDynamics:
             else:
 
                 # Compare the result visually
-                import pyorerun
+                import pyorerun  # type: ignore
 
                 t = np.linspace(0, 1, optimal_q.shape[1])
                 viz = pyorerun.PhaseRerun(t)
@@ -787,7 +794,7 @@ class ModelDynamics:
 
             if view_as == ViewAs.BIORBD_BIOVIZ:
                 try:
-                    import bioviz
+                    import bioviz  # type: ignore
                 except ImportError:
                     _logger.error("bioviz is not installed. Cannot animate the model with BIORBD_BIOVIZ.")
                     return
@@ -797,7 +804,7 @@ class ModelDynamics:
                 return
             else:
                 try:
-                    import pyorerun
+                    import pyorerun  # type: ignore
                 except ImportError:
                     _logger.error("pyorerun is not installed. Cannot animate the model.")
 

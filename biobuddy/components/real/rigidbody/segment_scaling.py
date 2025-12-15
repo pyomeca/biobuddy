@@ -1,9 +1,12 @@
-import xml.etree.cElementTree as ET
-import numpy as np
-from typing import TypeAlias
+from typing import TypeAlias, TYPE_CHECKING
 
-from .marker_real import MarkerReal
+import numpy as np
+import xml.etree.cElementTree as ET
+
 from ....utils.enums import Translations
+
+if TYPE_CHECKING:
+    from ....components.real.biomechanical_model_real import BiomechanicalModelReal
 
 
 class ScaleFactor:

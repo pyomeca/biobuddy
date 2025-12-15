@@ -1,9 +1,15 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
 import numpy as np
 
 from ....utils.protocols import Data
 from ....utils.aliases import points_to_array, inertia_to_array
 from ....utils.linear_algebra import RotoTransMatrix
+
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.rigidbody.inertia_parameters_real import InertiaParametersReal
+    from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 
 
 class InertiaParameters:

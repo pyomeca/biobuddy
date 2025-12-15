@@ -1,9 +1,10 @@
-import numpy as np
 from math import ceil
 from typing import TYPE_CHECKING
 
+import numpy as np
+
 if TYPE_CHECKING:
-    import plotly.graph_objects as go
+    import plotly.graph_objects as go  # type: ignore
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 
@@ -102,7 +103,7 @@ class MuscleValidator:
         model_min_force: np.ndarray
             Min muscle forces for every state
         """
-        import biorbd
+        import biorbd  # type: ignore
 
         nb_muscles = self.model.nb_muscles
         nb_dof = self.model.nb_q
@@ -139,7 +140,7 @@ class MuscleValidator:
         muscle_lengths: np.ndarray
             Muscle lengths for every state
         """
-        import biorbd
+        import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
         biorbd_model = biorbd.Model("temporary.bioMod")
@@ -178,7 +179,7 @@ class MuscleValidator:
         muscle_moment_arm: np.ndarray
          Muscle moment arm for every state
         """
-        import biorbd
+        import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
         biorbd_model = biorbd.Model("temporary.bioMod")
@@ -202,7 +203,7 @@ class MuscleValidator:
         joint_min_torques: np.ndarray
             Min joint torque for every state
         """
-        import biorbd
+        import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
         biorbd_model = biorbd.Model("temporary.bioMod")
@@ -241,8 +242,8 @@ class MuscleValidator:
         """
         Plot force lengths graphs for the model using plotly
         """
-        from plotly.subplots import make_subplots
-        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots  # type: ignore
+        import plotly.graph_objects as go  # type: ignore
 
         nb_muscles = self.model.nb_muscles
         nb_lines = 1
@@ -333,8 +334,8 @@ class MuscleValidator:
         """
         Plot moment arm for each muscle of the model over each joint using plotly
         """
-        from plotly.subplots import make_subplots
-        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots  # type: ignore
+        import plotly.graph_objects as go  # type: ignore
 
         nb_muscles = self.model.nb_muscles
         nb_dof = self.model.nb_q
@@ -418,8 +419,8 @@ class MuscleValidator:
         """
         Plot the min and max torques at each joint of the model for each muscle activation using plotly
         """
-        from plotly.subplots import make_subplots
-        import plotly.graph_objects as go
+        from plotly.subplots import make_subplots  # type: ignore
+        import plotly.graph_objects as go  # type: ignore
 
         nb_muscles = self.model.nb_muscles
         nb_dof = self.model.nb_q

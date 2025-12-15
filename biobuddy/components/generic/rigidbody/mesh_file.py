@@ -1,7 +1,12 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
 import numpy as np
 
 from ....utils.protocols import Data
+
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.rigidbody.mesh_file_real import MeshFileReal
 
 
 class MeshFile:

@@ -1,10 +1,10 @@
 from copy import deepcopy
+
 from lxml import etree
 import numpy as np
 
 from ....utils.aliases import Point, Points
-from ....utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix
-from ....utils.linear_algebra import rot2eul
+from ....utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix, rot2eul
 
 
 class SegmentCoordinateSystemReal:
@@ -93,7 +93,7 @@ class SegmentCoordinateSystemReal:
         return SegmentCoordinateSystemReal(scs=scs, is_scs_local=is_scs_local)
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "SegmentCoordinateSystemReal":
         out = deepcopy(self)
         out.scs = out.scs.inverse
         return out
