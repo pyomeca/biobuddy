@@ -19,6 +19,8 @@ from .model_parser import *
 # Model modifiers
 from .model_modifiers import *
 
+# Model validation
+from .validation import *
 
 __all__ = (
     components.__all__
@@ -27,15 +29,6 @@ __all__ = (
     + mesh_parser.__all__
     + model_parser.__all__
     + model_modifiers.__all__
+    + validation.__all__
     + ["__version__"]
 )
-
-
-# Model validation
-try:
-    import biorbd
-    from .validation import *
-
-    __all__ += validation.__all__
-except ImportError:
-    pass
