@@ -33,7 +33,7 @@ Once you have set up your environment, you can install BioBuddy by running:
 ```bash
 pip install .
 ```
-from the root directory of the BioBuddy source code. 
+from the root directory of the BioBuddy source code (the folder containing the function setup.py). 
 
 ### For developer
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command before installing BioBuddy:
