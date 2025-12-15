@@ -15,6 +15,7 @@
 # How to install 
 Currently, the only way to install `BioBuddy` is from source. But it will be available on conda-forge and pip in the near future.
 
+### Set-up environment
 If you are a user, you can set up your environment with minimal dependencies.
 ```bash
 conda install -c conda-forge python=3.11.11 pip
@@ -27,13 +28,22 @@ And if you want to access all features, you will also need to install the follow
 conda install -c conda-forge plotly pyorerun rerun-sdk=0.21.0
 ```
 
-However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
+### Installing Biobuddy
+Once you have set up your environment, you can install BioBuddy by running:
+```bash
+pip install .
+```
+from the root directory of the BioBuddy source code (the folder containing the function setup.py). 
+
+### For developer
+However, if you are a developer and want to contribute, you will need to set up your environment using the following command before installing BioBuddy:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
 pip install pytest pytest-cov codecov
 conda install -c opensim-org opensim=4.5.1
 conda install -c conda-forge biorbd=1.11.2=py311h9439bbc_1 deepdiff
 ```
+
 
 # Model translation
 You can load the original model using one of the `BiomechanicalModelReal().from_[format]` methods, and then export it 
@@ -97,11 +107,21 @@ There are many different components available to build a model (see this [exampl
 
 # Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:
-- [Scaling](#scaling)
-- [Identifying joint centers](#joint-center-identification)
-- [Merging segments](#merging-segments)
-- [Modifying the kinematic chain](#modifying-the-kinematic-chain)
-- [Flattening to get a planar model](#flattening-the-model)
+- [How to install](#how-to-install)
+    - [Set-up environment](#set-up-environment)
+    - [Installing Biobuddy](#installing-biobuddy)
+    - [For developer](#for-developer)
+- [Model translation](#model-translation)
+- [Model creation](#model-creation)
+- [Model personalization/modification](#model-personalizationmodification)
+    - [Scaling:](#scaling)
+    - [Joint center identification:](#joint-center-identification)
+    - [Merging segments:](#merging-segments)
+    - [Modifying the kinematic chain:](#modifying-the-kinematic-chain)
+    - [Flattening the model:](#flattening-the-model)
+- [Note](#note)
+- [How to cite](#how-to-cite)
+- [How to contribute](#how-to-contribute)
 
 ### Scaling:
 The scaling is performed by the `ScaleTool` which can be initialized from scratch like this:
