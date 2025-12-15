@@ -556,22 +556,22 @@ class RigidSegmentIdentification:
 
     def rt_from_trial(
         self,
-        parent_rt_init=RotoTransMatrixTimeSeries(nb_frames=0),
-        child_rt_init=RotoTransMatrixTimeSeries(nb_frames=0),
+        parent_rt_init: RotoTransMatrixTimeSeries = None,
+        child_rt_init: RotoTransMatrixTimeSeries = None,
     ) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
-        Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
+        Estimate the rigid transformation matrices rt (4x4xN) that align local marker positions to global marker positions over time.
         """
         rt_parent_functional = self.scipy_optimal_rt(
             markers_in_global=self.parent_markers_global,
             static_markers_in_local=self.parent_static_markers_in_local,
-            rt_init=parent_rt_init,
+            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init,
             marker_names=self.parent_marker_names,
         )
         rt_child_functional = self.scipy_optimal_rt(
             markers_in_global=self.child_markers_global,
             static_markers_in_local=self.child_static_markers_in_local,
-            rt_init=child_rt_init,
+            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init,
             marker_names=self.child_marker_names,
         )
 
@@ -669,8 +669,8 @@ class Score(RigidSegmentIdentification):
     ):
         # TODO: @pariterre I feel this method should perform only what it is meant to do, which is computing the optimal
         # rotation point between two segments. Returning these point could allow for utins Score in other contexts.
-        # TODO: @pariterre I would recommend against modifying the original model sent to this function.
-        # TODO: This Score should agnostic of any model, that is passing a series of rt_parent and rt_child matrices and it returns the optimal point of rotation.
+        # TODO: This Score should agnostic of any model, that is passing a series of rt_parent and rt_child matrices
+        # and it returns the optimal point of rotation.
 
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
@@ -1021,7 +1021,7 @@ class JointCenterTool:
         self.animate_reconstruction = animate_reconstruction
 
         # Extended attributes to be filled
-        self.joint_center_tasks = []  # Not a NamedList because nothing in BioBuddy refer to joints (only segments)
+        self.joint_center_tasks: list[RigidSegmentIdentification] = []
         self.new_model = deepcopy(original_model)
 
     def add(self, jcs_identifier: Score | Sara):
@@ -1055,7 +1055,6 @@ class JointCenterTool:
         joint_model = BiomechanicalModelReal()
         segment_chain = self.original_model.get_chain_between_segments(task.parent_name, task.child_name)
 
-        # TODO: @charbie Ground is not mandatory in the model
         joint_model.add_segment(
             SegmentReal(
                 name="ground",
@@ -1104,14 +1103,13 @@ class JointCenterTool:
         return joint_model
 
     # TODO @pariterre revise the type hinting
-    def replace_joint_centers(self, marker_weights=None, reconstruct_whole_body: bool = None) -> BiomechanicalModelReal:
+    def replace_joint_centers(self, marker_weights=None, reconstruct_whole_body: bool = True) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
             # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
             # TODO @charbie Why? Reconstructing the whole body exposes to less accurate results while increasing computation time
-            reconstruct_whole_body = True if reconstruct_whole_body is None else reconstruct_whole_body
             if reconstruct_whole_body:
                 # Make sure that all markers are present in the c3d, otherwise reconstruct_whole_body cannot be True
                 for marker in self.original_model.marker_names:
