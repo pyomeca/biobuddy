@@ -15,7 +15,7 @@
 # How to install 
 Currently, the only way to install `BioBuddy` is from source. But it will be available on conda-forge and pip in the near future.
 
-## Set-up environment
+### Set-up environment
 If you are a user, you can set up your environment with minimal dependencies.
 ```bash
 conda install -c conda-forge python=3.11.11 pip
@@ -28,7 +28,7 @@ And if you want to access all features, you will also need to install the follow
 conda install -c conda-forge plotly pyorerun rerun-sdk=0.21.0
 ```
 
-## For developer
+### For developer
 However, if you are a developer and want to contribute, you will need to set up your environment using the following command:
 Due to the OpenSim dependency used only in BioBuddy's tests, we recommend using python=3.11.
 ```bash
@@ -36,7 +36,7 @@ pip install pytest pytest-cov codecov
 conda install -c opensim-org opensim=4.5.1
 conda install -c conda-forge biorbd=1.11.2=py311h9439bbc_1 deepdiff
 ```
-## Installing Biobuddy
+### Installing Biobuddy
 Once you have set up your environment, you can install BioBuddy by running:
 ```bash
 pip install .
@@ -106,9 +106,9 @@ There are many different components available to build a model (see this [exampl
 # Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:
 - [How to install](#how-to-install)
-  - [Set-up environment](#set-up-environment)
-  - [For developer](#for-developer)
-  - [Installing Biobuddy](#installing-biobuddy)
+    - [Set-up environment](#set-up-environment)
+    - [For developer](#for-developer)
+    - [Installing Biobuddy](#installing-biobuddy)
 - [Model translation](#model-translation)
 - [Model creation](#model-creation)
 - [Model personalization/modification](#model-personalizationmodification)
