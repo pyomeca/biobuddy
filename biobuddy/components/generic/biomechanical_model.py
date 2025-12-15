@@ -87,7 +87,7 @@ class BiomechanicalModel(ModelUtils):
         model = BiomechanicalModelReal(gravity=gravity)
 
         for segment in self.segments:
-            with error_context(f"Segment '{segment.name}'"):
+            with error_context(f"The following error occured when collapsing: Segment '{segment.name}'"):
                 scs = SegmentCoordinateSystemReal()
                 scs_global = RotoTransMatrix()
                 if segment.segment_coordinate_system is not None:

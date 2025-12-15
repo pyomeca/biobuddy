@@ -187,6 +187,7 @@ class SegmentCoordinateSystemUtils:
         functional_data: Data,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
+        vizualize: bool = False,
     ) -> Callable:
         """
         Compute the score point between two sets of markers
@@ -197,6 +198,8 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the score point from
         child_marker_names
             The names of the markers on the child segment to compute the score point from
+        vizualize
+            If True, a 3D visualization of the score point computation will be shown. Plotly is required for this.
 
         Returns
         -------
@@ -207,22 +210,33 @@ class SegmentCoordinateSystemUtils:
 
         def rigidify(markers: dict[str, np.ndarray], marker_names: tuple[str, ...]) -> np.ndarray:
             # TODO @pariterre This should be provided by the Score class in joint_center_tool.py
-            nb_frames = markers[marker_names[0]].shape[1]
-            rt_matrices = np.zeros((4, 4, nb_frames))
-            for i_frame in range(nb_frames):
-                pts = np.array([markers[name][:3, i_frame] for name in marker_names]).T  # 3 x n_markers
-                centroid = np.mean(pts, axis=1, keepdims=True)  # 3 x 1
-                pts_centered = pts - centroid  # 3 x n_markers
-                u, s, vh = np.linalg.svd(pts_centered)
+            frame_count = markers[marker_names[0]].shape[1]
+            rt_matrices = np.eye(4)[:, :, np.newaxis].repeat(frame_count, axis=2)
+
+            reference_pts = np.array([markers[name][:3, 0] for name in marker_names]).T  # 3 x N at frame 0
+            reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
+            reference_pts_centered = reference_pts - reference_centroid
+
+            for i_frame in range(frame_count):
+                pts = np.array([markers[name][:3, i_frame] for name in marker_names]).T  # 3 x N
+                centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
+                pts_centered = pts - centroid
+
+                h = reference_pts_centered @ pts_centered.T
+                u, _, vh = np.linalg.svd(h, full_matrices=False)
                 r = vh.T @ u.T
+
+                # Check for reflection (instead of rotation) and correct if needed
                 if np.linalg.det(r) < 0:
-                    vh[2, :] *= -1
+                    vh[-1, :] *= -1
                     r = vh.T @ u.T
+
                 t = centroid.flatten()
-                rt_matrices[:, :, i_frame] = np.vstack((np.hstack((r, t.reshape(3, 1))), [0, 0, 0, 1]))
+                rt_matrices[:, :, i_frame] = np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1]))
+
             return rt_matrices
 
-        def collapse(static_markers, model):
+        def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
             if not score_cache:
                 # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
                 rt_parent = rigidify(
@@ -232,20 +246,126 @@ class SegmentCoordinateSystemUtils:
                     {name: functional_data.values[name] for name in child_marker_names}, child_marker_names
                 )
                 _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent, rt_child)
-                score_cache.append()
+                score_cache.append(cor_parent_local)
 
             # Rigidify the parent segment at static markers
             parent_in_static = rigidify(
                 {name: static_markers[name] for name in parent_marker_names}, parent_marker_names
             )
+            child_in_static = rigidify({name: static_markers[name] for name in child_marker_names}, child_marker_names)
 
             # Project the optimal point into the static parent segment
             n_frames = parent_in_static.shape[2]
             cor_global = np.zeros((4, n_frames))
+            cor_in_local = np.hstack((score_cache[0], 1))
             for i_frame in range(n_frames):
-                cor_global[:, i_frame] = parent_in_static[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
+                cor_global[:, i_frame] = parent_in_static[:, :, i_frame] @ cor_in_local
+
+            if vizualize:
+                _vizualize_score(np.array(list(static_markers.values())), parent_in_static, child_in_static, cor_global)
 
             # Collapse across frames
             return np.nanmean(cor_global, axis=1)
 
         return collapse
+
+
+# TODO @charbie Remove this function when not needed anymore?
+def _vizualize_score(data: np.ndarray, rt_parent: np.ndarray, rt_child: np.ndarray, cor_global: np.ndarray):
+    import plotly.graph_objects as go
+
+    frame_count = rt_parent.shape[2]
+    frame_data = []
+    frames = []
+    scaling = 0.05
+    for k in range(frame_count):
+        parent_origin = rt_parent[:3, 3, k]
+        parent_rt_points = rt_parent[:, :, k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
+
+        child_origin = rt_child[:3, 3, k]
+        child_rt_points = rt_child[:, :, k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
+
+        frame_data.append(
+            [
+                go.Scatter3d(
+                    x=[parent_origin[0], parent_rt_points[0, 0]],
+                    y=[parent_origin[1], parent_rt_points[1, 0]],
+                    z=[parent_origin[2], parent_rt_points[2, 0]],
+                    mode="lines",
+                    line=dict(color="red", width=5),
+                ),
+                go.Scatter3d(
+                    x=[parent_origin[0], parent_rt_points[0, 1]],
+                    y=[parent_origin[1], parent_rt_points[1, 1]],
+                    z=[parent_origin[2], parent_rt_points[2, 1]],
+                    mode="lines",
+                    line=dict(color="green", width=5),
+                ),
+                go.Scatter3d(
+                    x=[parent_origin[0], parent_rt_points[0, 2]],
+                    y=[parent_origin[1], parent_rt_points[1, 2]],
+                    z=[parent_origin[2], parent_rt_points[2, 2]],
+                    mode="lines",
+                    line=dict(color="blue", width=5),
+                ),
+                go.Scatter3d(
+                    x=[child_origin[0], child_rt_points[0, 0]],
+                    y=[child_origin[1], child_rt_points[1, 0]],
+                    z=[child_origin[2], child_rt_points[2, 0]],
+                    mode="lines",
+                    line=dict(color="red", width=5),
+                ),
+                go.Scatter3d(
+                    x=[child_origin[0], child_rt_points[0, 1]],
+                    y=[child_origin[1], child_rt_points[1, 1]],
+                    z=[child_origin[2], child_rt_points[2, 1]],
+                    mode="lines",
+                    line=dict(color="green", width=5),
+                ),
+                go.Scatter3d(
+                    x=[child_origin[0], child_rt_points[0, 2]],
+                    y=[child_origin[1], child_rt_points[1, 2]],
+                    z=[child_origin[2], child_rt_points[2, 2]],
+                    mode="lines",
+                    line=dict(color="blue", width=5),
+                ),
+                go.Scatter3d(
+                    x=data[:, 0, k],
+                    y=data[:, 1, k],
+                    z=data[:, 2, k],
+                    mode="markers",
+                    marker=dict(size=2, color="blue"),
+                ),
+                go.Scatter3d(
+                    x=[cor_global[0, k]],
+                    y=[cor_global[1, k]],
+                    z=[cor_global[2, k]],
+                    mode="markers",
+                    marker=dict(size=5, color="red"),
+                ),
+            ]
+        )
+        frames.append(go.Frame(data=frame_data[-1], name=str(k)))
+
+    fig = go.Figure(data=frame_data[0], frames=frames)
+    sliders = [
+        dict(
+            active=0,
+            currentvalue={"prefix": "Frame: "},
+            pad={"t": 50},
+            steps=[
+                dict(
+                    method="animate",
+                    args=[[str(k)], {"frame": {"duration": 0, "redraw": True}, "mode": "immediate"}],
+                    label=str(k),
+                )
+                for k in range(len(frames))
+            ],
+        )
+    ]
+    fig.update_layout(
+        sliders=sliders,
+        scene=dict(xaxis_title="X", yaxis_title="Y", zaxis_title="Z", aspectmode="data"),
+        title="Score Point Visualization",
+    )
+    fig.show()
