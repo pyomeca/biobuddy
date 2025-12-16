@@ -1,4 +1,5 @@
 from typing import Callable
+
 import numpy as np
 
 from .axis import Axis
@@ -8,7 +9,7 @@ from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ....utils.protocols import Data
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
-from ....model_modifiers.joint_center_tool import Score
+from ....model_modifiers.joint_center_tool import Score, Sara
 
 
 # TODO @charbie Inherit from Data when Data is moved to an abstract class
@@ -243,7 +244,7 @@ class SegmentCoordinateSystemUtils:
         vizualize: bool = False,
     ) -> Callable:
         """
-        Compute the score point between two sets of markers
+        Compute the SCoRE (Symmetrical Center of Rotation Estimation) between two sets of markers
 
         Parameters
         ----------
@@ -305,6 +306,81 @@ class SegmentCoordinateSystemUtils:
             return np.nanmean(cor_static, axis=1)
 
         return collapse
+
+    @staticmethod
+    def sara(
+        name: Axis.Name,
+        functional_data: Data,
+        parent_marker_names: tuple[str, ...] | list[str],
+        child_marker_names: tuple[str, ...] | list[str],
+        perpendicular_axis: Axis,
+        vizualize: bool = False,
+    ) -> Callable:
+        """
+        Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
+
+        Parameters
+        ----------
+        parent_marker_names
+            The names of the markers on the parent segment to compute the SARA axis from
+        child_marker_names
+            The names of the markers on the child segment to compute the SARA axis from
+        perpendicular_axis
+            The axis that is perpendicular to the axis of rotation
+        vizualize
+            If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
+
+        Returns
+        -------
+        A lambda function that can be called during the to_real process
+        """
+
+        sara_cache = []  # We only need to perform SARA once. So we store the result here.
+        vizualize = [vizualize]  # Use a list to be able to modify the variable in nested function
+
+        def collapse_axis(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
+            vizualize[0] = vizualize[0] and not sara_cache  # Do not show twice the same vizualization
+            if not sara_cache:
+                # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
+                rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: functional_data.values[name] for name in parent_marker_names})
+                )
+                rt_child_func = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: functional_data.values[name] for name in child_marker_names})
+                )
+                aor_parent_local, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
+                sara_cache.extend([rt_parent_func, rt_child_func, aor_parent_local])
+
+            # Rigidify the parent segment at static markers
+            rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                _InternalData({name: static_markers[name] for name in parent_marker_names})
+            )
+            aor_in_local = sara_cache[2]
+
+            # Project the optimal point into the static parent segment
+            frame_count_static = len(rt_parent_static)
+            aor_static = np.zeros((4, frame_count_static))
+            for i_frame in range(frame_count_static):
+                aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_in_local)[:, 0]
+
+            if vizualize[0]:
+                rt_child_static = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: static_markers[name] for name in child_marker_names})
+                )
+                _vizualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, aor_static)
+
+                rt_parent_func = sara_cache[0]
+                rt_child_func = sara_cache[1]
+                frame_count_func = len(rt_parent_func)
+                aor_func = np.zeros((4, frame_count_func))
+                for i_frame in range(frame_count_func):
+                    aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_in_local)[:, 0]
+                _vizualize_score(functional_data, rt_parent_func, rt_child_func, aor_func)
+
+            # Collapse across frames
+            return np.nanmean(aor_static, axis=1), np.nanstd(aor_static, axis=1)
+
+        return [Axis(name=name, start=collapse_axis, end=collapse_axis), collapse_axis]
 
 
 # TODO @charbie Remove this function when not needed anymore?
