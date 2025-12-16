@@ -11,6 +11,16 @@ from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 from ....model_modifiers.joint_center_tool import Score
 
 
+# TODO @charbie Inherit from Data when Data is moved to an abstract class
+class _InternalData:
+    """
+    Internal data class to store temporary data during the conversion from generic to real model
+    """
+
+    def __init__(self, values: dict[str, np.ndarray]):
+        self.values = values
+
+
 class SegmentCoordinateSystem:
     def __init__(
         self,
@@ -163,6 +173,50 @@ class SegmentCoordinateSystem:
 
 
 class SegmentCoordinateSystemUtils:
+    @staticmethod
+    def rigidify(data: Data) -> RotoTransMatrixTimeSeries:
+        """
+        Compute the rigid body transformation matrices from a set of markers
+
+        Parameters
+        ----------
+        data
+            The data containing the markers
+
+        Returns
+        -------
+        The rigid body transformation matrices as a RotoTransMatrixTimeSeries (4x4xT)
+        """
+        markers = np.array(list(data.values.values()))
+        frame_count = markers.shape[2]
+
+        reference_pts = markers[:, :3, 0].T  # 3 x N at frame 0
+        reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
+        reference_pts_centered = reference_pts - reference_centroid
+
+        rt_matrices = RotoTransMatrixTimeSeries(frame_count)
+        for i_frame in range(frame_count):
+            pts = markers[:, :3, i_frame].T
+            centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
+            pts_centered = pts - centroid
+
+            h = reference_pts_centered @ pts_centered.T
+            try:
+                u, _, vh = np.linalg.svd(h, full_matrices=False)
+            except np.linalg.LinAlgError as e:
+                rt_matrices[:, :, i_frame] = np.nan
+                continue
+            r = vh.T @ u.T
+
+            # Check for reflection (instead of rotation) and correct if needed
+            if np.linalg.det(r) < 0:
+                vh[-1, :] *= -1
+                r = vh.T @ u.T
+
+            t = centroid.flatten()
+            rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1])))
+
+        return rt_matrices
 
     @staticmethod
     def mean_markers(marker_names: tuple[str, ...] | list[str]) -> Callable:
@@ -206,84 +260,71 @@ class SegmentCoordinateSystemUtils:
         """
 
         score_cache = []  # We only need to perform score once. So we store the result here.
-
-        def rigidify(markers: dict[str, np.ndarray], marker_names: tuple[str, ...]) -> np.ndarray:
-            # TODO @pariterre This should be provided by the Score class in joint_center_tool.py
-            frame_count = markers[marker_names[0]].shape[1]
-            rt_matrices = np.eye(4)[:, :, np.newaxis].repeat(frame_count, axis=2)
-
-            reference_pts = np.array([markers[name][:3, 0] for name in marker_names]).T  # 3 x N at frame 0
-            reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
-            reference_pts_centered = reference_pts - reference_centroid
-
-            for i_frame in range(frame_count):
-                pts = np.array([markers[name][:3, i_frame] for name in marker_names]).T  # 3 x N
-                centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
-                pts_centered = pts - centroid
-
-                h = reference_pts_centered @ pts_centered.T
-                u, _, vh = np.linalg.svd(h, full_matrices=False)
-                r = vh.T @ u.T
-
-                # Check for reflection (instead of rotation) and correct if needed
-                if np.linalg.det(r) < 0:
-                    vh[-1, :] *= -1
-                    r = vh.T @ u.T
-
-                t = centroid.flatten()
-                rt_matrices[:, :, i_frame] = np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1]))
-
-            return rt_matrices
+        vizualize = [vizualize]  # Use a list to be able to modify the variable in nested function
 
         def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
+            vizualize[0] = vizualize[0] and not score_cache  # Do not show twice the same vizualization
             if not score_cache:
                 # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
-                rt_parent = rigidify(
-                    {name: functional_data.values[name] for name in parent_marker_names}, parent_marker_names
+                rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: functional_data.values[name] for name in parent_marker_names})
                 )
-                rt_child = rigidify(
-                    {name: functional_data.values[name] for name in child_marker_names}, child_marker_names
+                rt_child_func = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: functional_data.values[name] for name in child_marker_names})
                 )
-                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent, rt_child)
-                score_cache.append(cor_parent_local)
+                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent_func, rt_child_func)
+                score_cache.extend([rt_parent_func, rt_child_func, cor_parent_local])
 
             # Rigidify the parent segment at static markers
-            parent_in_static = rigidify(
-                {name: static_markers[name] for name in parent_marker_names}, parent_marker_names
+            rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                _InternalData({name: static_markers[name] for name in parent_marker_names})
             )
-            child_in_static = rigidify({name: static_markers[name] for name in child_marker_names}, child_marker_names)
+            cor_in_local = np.hstack((score_cache[2], 1))
 
             # Project the optimal point into the static parent segment
-            n_frames = parent_in_static.shape[2]
-            cor_global = np.zeros((4, n_frames))
-            cor_in_local = np.hstack((score_cache[0], 1))
-            for i_frame in range(n_frames):
-                cor_global[:, i_frame] = parent_in_static[:, :, i_frame] @ cor_in_local
+            frame_count_static = len(rt_parent_static)
+            cor_static = np.zeros((4, frame_count_static))
+            for i_frame in range(frame_count_static):
+                cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local)[:, 0]
 
-            if vizualize:
-                _vizualize_score(np.array(list(static_markers.values())), parent_in_static, child_in_static, cor_global)
+            if vizualize[0]:
+                rt_child_static = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: static_markers[name] for name in child_marker_names})
+                )
+                _vizualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, cor_static)
+
+                rt_parent_func = score_cache[0]
+                rt_child_func = score_cache[1]
+                frame_count_func = len(rt_parent_func)
+                cor_func = np.zeros((4, frame_count_func))
+                for i_frame in range(frame_count_func):
+                    cor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_in_local)[:, 0]
+                _vizualize_score(functional_data, rt_parent_func, rt_child_func, cor_func)
 
             # Collapse across frames
-            return np.nanmean(cor_global, axis=1)
+            return np.nanmean(cor_static, axis=1)
 
         return collapse
 
 
 # TODO @charbie Remove this function when not needed anymore?
-def _vizualize_score(data: np.ndarray, rt_parent: np.ndarray, rt_child: np.ndarray, cor_global: np.ndarray):
+def _vizualize_score(
+    data: Data, rt_parent: RotoTransMatrixTimeSeries, rt_child: RotoTransMatrixTimeSeries, cor_global: np.ndarray
+):
     import plotly.graph_objects as go
 
-    frame_count = rt_parent.shape[2]
+    data_np = np.array(list(data.values.values()))
+
+    frame_count = len(rt_parent)
     frame_data = []
     frames = []
     scaling = 0.05
     for k in range(frame_count):
-        parent_origin = rt_parent[:3, 3, k]
-        parent_rt_points = rt_parent[:, :, k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
+        parent_origin = rt_parent[k].translation
+        parent_rt_points = rt_parent[k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
 
-        child_origin = rt_child[:3, 3, k]
-        child_rt_points = rt_child[:, :, k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
-
+        child_origin = rt_child[k].translation
+        child_rt_points = rt_child[k] @ np.array([[scaling, 0, 0], [0, scaling, 0], [0, 0, scaling], [1, 1, 1]])
         frame_data.append(
             [
                 go.Scatter3d(
@@ -329,9 +370,9 @@ def _vizualize_score(data: np.ndarray, rt_parent: np.ndarray, rt_child: np.ndarr
                     line=dict(color="blue", width=5),
                 ),
                 go.Scatter3d(
-                    x=data[:, 0, k],
-                    y=data[:, 1, k],
-                    z=data[:, 2, k],
+                    x=data_np[:, 0, k],
+                    y=data_np[:, 1, k],
+                    z=data_np[:, 2, k],
                     mode="markers",
                     marker=dict(size=2, color="blue"),
                 ),
