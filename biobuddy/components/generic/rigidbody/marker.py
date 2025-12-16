@@ -44,6 +44,7 @@ class Marker:
             If False, the marker is defined in the global coordinate system.
         """
         self.name = name
+        # TODO @charbie Change ._function from Callable[np.array] to Callable[Data] (so any backend can be used, e.g. pandas)
         self.function = function
         self.parent_name = check_name(parent_name)
         self.is_technical = is_technical

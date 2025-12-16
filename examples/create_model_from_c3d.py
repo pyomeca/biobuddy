@@ -149,8 +149,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
     # The foot is a special case since the position of the ankle relatively to the foot length is not given in De Leva
     # So here we assume that the foot com is in the middle of the three foot markers
     foot_inertia_parameters = de_leva[SegmentName.FOOT]
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation(
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="y",
         angles=np.array([-np.pi / 2]),
         translation=np.array([0.0, 0.0, 0.0]),
@@ -242,8 +241,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
     reduced_model.segments["LTibia"].add_marker(Marker("LSPH", is_technical=True, is_anatomical=True))
 
     foot_inertia_parameters = de_leva[SegmentName.FOOT]
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation(
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="y",
         angles=np.array([-np.pi / 2]),
         translation=np.array([0.0, 0.0, 0.0]),

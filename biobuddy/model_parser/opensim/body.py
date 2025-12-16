@@ -18,8 +18,7 @@ def _extend_mesh_list_with_extra_components(
                 translation = frame.find("translation").text
                 translation_array = np.array([float(t) for t in translation.split(" ")])
                 mesh = frame.find("attached_geometry").find("Mesh")
-                mesh_rt = RotoTransMatrix()
-                mesh_rt.from_rotation_matrix_and_translation(
+                mesh_rt = RotoTransMatrix.from_rotation_matrix_and_translation(
                     rotation_matrix=np.identity(3), translation=translation_array
                 )
                 mesh_list_and_offset += [(mesh, mesh_rt)]

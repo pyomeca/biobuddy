@@ -246,8 +246,9 @@ def test_kinematic_chain_tool_errors():
                 ),
             )
         )
-        rt_matrix = RotoTransMatrix()
-        rt_matrix.from_euler_angles_and_translation("xyz", np.array([0.1, 0.2, 0.3]), np.array([0.1, 0.2, 0.3]))
+        rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.1, 0.2, 0.3]), np.array([0.1, 0.2, 0.3])
+        )
         simple_model.segments["child"].segment_coordinate_system.scs = rt_matrix
         kinematic_chain_modifier = ModifyKinematicChainTool(simple_model)
         kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="grand_child", new_segment_name="PELVIS"))

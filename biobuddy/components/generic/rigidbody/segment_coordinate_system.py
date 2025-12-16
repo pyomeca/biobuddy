@@ -129,8 +129,7 @@ class SegmentCoordinateSystem:
         rt[:3, third_axis_name, :] = third_axis_vector / np.linalg.norm(third_axis_vector, axis=0)
         rt[:3, 3, :] = origin[:3, :]
         rt[3, 3, :] = 1
-        all_scs = RotoTransMatrixTimeSeries(n_frames)
-        all_scs.from_rt_matrix(rt)
+        all_scs = RotoTransMatrixTimeSeries.from_rt_matrix(rt)
         scs = all_scs.mean_homogenous_matrix()
 
         return scs

@@ -172,8 +172,7 @@ class UrdfModelParser(AbstractModelParser):
                 origin_translation = read_float_vector(origin.attrib["xyz"])
             if "rpy" in origin.attrib:
                 origin_rotation_angles = read_float_vector(origin.attrib["rpy"])
-        scs = RotoTransMatrix()
-        scs.from_euler_angles_and_translation(
+        scs = RotoTransMatrix.from_euler_angles_and_translation(
             angle_sequence="xyz", angles=origin_rotation_angles, translation=origin_translation
         )
         return SegmentCoordinateSystemReal(scs=scs, is_scs_local=True)

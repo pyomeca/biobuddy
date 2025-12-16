@@ -400,8 +400,7 @@ class BiomodModelParser(AbstractModelParser):
 def _get_rt_matrix(next_token: Callable, current_rt_in_matrix: bool) -> np.ndarray:
     if current_rt_in_matrix:
         scs = SegmentCoordinateSystemReal.from_rt_matrix(
-            rt_matrix=read_float_vector(next_token=next_token, length=16).reshape((4, 4)),
-            is_scs_local=True,
+            rt_matrix=read_float_vector(next_token=next_token, length=16).reshape((4, 4)), is_scs_local=True
         )
     else:
         angles = read_float_vector(next_token=next_token, length=3)

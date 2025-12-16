@@ -1,7 +1,4 @@
 import os
-import numpy as np
-import numpy.testing as npt
-from lxml import etree
 
 from biobuddy import (
     BiomechanicalModelReal,
@@ -24,6 +21,9 @@ from biobuddy import (
     Ranges,
     MeshReal,
 )
+from lxml import etree
+import numpy as np
+import numpy.testing as npt
 
 
 def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):

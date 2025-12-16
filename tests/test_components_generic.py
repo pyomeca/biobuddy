@@ -27,8 +27,7 @@ from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
 
 
-MOCK_RT = RotoTransMatrix()
-MOCK_RT.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
+MOCK_RT = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
 
 
 # ------- Via Point ------- #

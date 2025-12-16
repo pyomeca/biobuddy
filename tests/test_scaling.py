@@ -841,8 +841,7 @@ def test_scaling_factors_and_masses_bodywise():
 
 def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_rt_matrix(
+    rt_matrix = RotoTransMatrix.from_rt_matrix(
         np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
 
@@ -861,8 +860,7 @@ def test_scale_rt():
 def test_scale_imu():
     """Test scaling of imu"""
     simple_model = create_simple_model()
-    imu_matrix = RotoTransMatrix()
-    imu_matrix.from_rt_matrix(
+    imu_matrix = RotoTransMatrix.from_rt_matrix(
         np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
     original_imu = InertialMeasurementUnitReal(

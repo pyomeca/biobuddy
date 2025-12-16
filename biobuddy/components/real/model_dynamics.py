@@ -116,9 +116,7 @@ class ModelDynamics:
                     f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
                 )
             else:
-                out_rt = RotoTransMatrix()
-                out_rt.from_rt_matrix(np.identity(4))
-                return out_rt
+                return RotoTransMatrix.from_rt_matrix(np.identity(4))
         else:
             rt = self.segments[segment_name].segment_coordinate_system.scs @ RotoTransMatrix()
             while parent_name != parent_offset_name:
