@@ -600,14 +600,16 @@ class Score(RigidSegmentIdentification):
 
         Returns
         -------
-        cor_global : np.ndarray, shape (3,)
+        cor_mean_global : np.ndarray, shape (3,)
             Estimated global position of the center of rotation.
         cor_parent_local : np.ndarray, shape (3,)
             Estimated position of the center of rotation in the parent segment's local frame.
         cor_child_local : np.ndarray, shape (3,)
             Estimated position of the center of rotation in the child segment's local frame.
-        rt_parent : np.ndarray, shape (4, 4, N)
+        rt_parent : RotoTransMatrixTimeSeries
             Homogeneous transformations of the parent segment after outlier removal.
+        rt_child : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the child segment after outlier removal.
         """
 
         nb_frames = len(rt_parent)
@@ -649,9 +651,10 @@ class Score(RigidSegmentIdentification):
 
         if recursive_outlier_removal:
             valid = Score.get_good_frames(residuals, nb_frames)
-            rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
-            rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-            return Score.score_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+            if not np.all(valid):
+                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                return Score.score_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -684,7 +687,7 @@ class Score(RigidSegmentIdentification):
             )
 
         # Identify center of rotation
-        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self.score_algorithm(
+        _, cor_parent_local, _, _, _ = self.score_algorithm(
             rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
 
@@ -750,7 +753,16 @@ class Sara(RigidSegmentIdentification):
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
         recursive_outlier_removal: bool = True,
-    ) -> Tuple[np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+    ) -> Tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        RotoTransMatrixTimeSeries,
+        RotoTransMatrixTimeSeries,
+    ]:
         """
         Perform the SARA algorithm (Ehrig et al., 2007) to estimate the axis of rotation (AoR)
         between two segments over time using homogeneous transformation matrices.
@@ -768,67 +780,97 @@ class Sara(RigidSegmentIdentification):
         -------
         aor_global : ndarray (3, N)
             Orientation of the axis of rotation expressed in the global frame at each frame.
+        aor_parent_local : ndarray (3,)
+            Orientation of the axis of rotation expressed in the parent segment's local frame.
+        aor_child_local : ndarray (3,)
+            Orientation of the axis of rotation expressed in the child segment's local frame.
+        cor_global : ndarray (3, N)
+            Position of the center of rotation expressed in the global frame at each frame.
+        cor_parent_local : ndarray (3,)
+            Position of the center of rotation expressed in the parent segment's local frame.
+        cor_child_local : ndarray (3,)
+            Position of the center of rotation expressed in the child segment's local frame.
+        rt_parent : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the parent segment after outlier removal.
+        rt_child : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the child segment after outlier removal.
         """
-
-        # Remove nans
-        rt_parent_np = rt_parent.to_numpy()
-        rt_child_np = rt_child.to_numpy()
-        valid_rows = ~(np.logical_or(np.isnan(rt_parent_np[0, 0, :]), np.isnan(rt_child_np[0, 0, :])))
-        rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent_np[:, :, valid_rows])
-        rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child_np[:, :, valid_rows])
 
         nb_frames = len(rt_parent)
 
-        # Build block matrix system R * [rCsi; rCsj] = (p_j - p_i)
-        rot = np.zeros((3 * nb_frames, 6))
-        trans = np.zeros((3 * nb_frames, 1))
+        # Build linear system A x = b to solve for CoR positions in child and parent segment frames
+        A = np.zeros((3 * nb_frames, 6))
+        b = np.zeros((3 * nb_frames,))
+        A[:, :] = np.nan
+        b[:] = np.nan
 
         for i_frame in range(nb_frames):
-            rotation_parent = rt_parent[i_frame].rotation_matrix
-            rotation_child = rt_child[i_frame].rotation_matrix
-            rot[3 * i_frame : 3 * i_frame + 3, :3] = rotation_parent
-            rot[3 * i_frame : 3 * i_frame + 3, 3:] = -rotation_child
-            trans[3 * i_frame : 3 * i_frame + 3, 0] = rt_child[i_frame].translation - rt_parent[i_frame].translation
+            A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
+            A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+            b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
-        # SVD of the block matrix
-        U, S, Vt = np.linalg.svd(rot, full_matrices=False)
+        # Remove nans
+        valid_rows = ~np.isnan(np.sum(A, axis=1)) & ~np.isnan(b)
+        A_valid = A[valid_rows, :]
+        b_valid = b[valid_rows]
+
+        # Compute SVD
+        U, S, Vt = np.linalg.svd(A_valid, full_matrices=False)
         V = Vt.T
 
-        # Axis orientations in local frames
-        aor_local_parent = V[:3, -1]
-        aor_local_child = V[3:, -1]
-        aor_local_parent /= np.linalg.norm(aor_local_parent)
-        aor_local_child /= np.linalg.norm(aor_local_child)
+        # Extract AoR from the last column of V
+        aor = V[:, -1]
+        aor_parent_local = aor[3:]
+        aor_parent_local /= np.linalg.norm(aor_parent_local)
+        aor_child_local = aor[:3]
+        aor_child_local /= np.linalg.norm(aor_child_local)
 
-        # Compute axis direction in global frame over time
-        a_parent_global = np.zeros((3, nb_frames))
-        a_child_global = np.zeros((3, nb_frames))
-        residual_angle = np.zeros((nb_frames,))
+        # Compute pseudo-inverse solution
+        cor = V @ np.diag(1.0 / S) @ U.T @ b_valid
+        cor_parent_local = cor[3:]
+        cor_child_local = cor[:3]
+
+        # Compute transformed AoR positions in global frame
+        aor_parent_global = np.zeros((4, nb_frames))
+        aor_child_global = np.zeros((4, nb_frames))
+        cor_parent_global = np.zeros((4, nb_frames))
+        cor_child_global = np.zeros((4, nb_frames))
+        residuals = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
-            a_parent_global[:, i_frame] = rt_parent[i_frame].rotation_matrix @ aor_local_parent
-            a_child_global[:, i_frame] = rt_child[i_frame].rotation_matrix @ aor_local_child
-            residual_angle[i_frame] = np.arccos(
-                np.dot(a_parent_global[:, i_frame], a_child_global[:, i_frame])
-                / (np.linalg.norm(a_parent_global[:, i_frame]) * np.linalg.norm(a_child_global[:, i_frame]))
+            aor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((aor_parent_local, 1)))[:, 0]
+            aor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((aor_child_local, 1)))[:, 0]
+            residuals[i_frame] = np.arccos(
+                np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
+                / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
             )
+            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
+            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
 
         if recursive_outlier_removal:
-            valid = Sara.get_good_frames(residual_angle, nb_frames)
-            rt_parent_np = rt_parent.to_numpy()[:, :, valid]
-            rt_child_np = rt_child.to_numpy()[:, :, valid]
-            return Sara.sara_algorithm(
-                RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent_np),
-                RotoTransMatrixTimeSeries.from_rt_matrix(rt_child_np),
-                recursive_outlier_removal=False,
-            )
+            valid = Sara.get_good_frames(residuals, nb_frames)
+            if not np.all(valid):
+                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                return Sara.sara_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
-        aor_global = 0.5 * (a_parent_global + a_child_global)
+        # Final output
+        aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
+        cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
         _logger.info(
-            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residual_angle)*180/np.pi} +- {np.nanstd(residual_angle)*180/np.pi} degrees."
+            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
         )
 
-        return aor_global, rt_parent, rt_child
+        return (
+            aor_mean_global,
+            aor_parent_local,
+            aor_child_local,
+            cor_mean_global,
+            cor_parent_local,
+            cor_child_local,
+            rt_parent,
+            rt_child,
+        )
 
     def _longitudinal_axis(self, original_model: BiomechanicalModelReal) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -989,7 +1031,7 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global, rt_parent_valid_frames, rt_child_valid_frames = self.sara_algorithm(
+        aor_global, _, _, _, _, _, rt_parent_valid_frames, _ = self.sara_algorithm(
             rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
         aor_global = self._check_aor(original_model, aor_global)

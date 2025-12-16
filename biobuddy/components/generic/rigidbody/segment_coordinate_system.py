@@ -175,7 +175,7 @@ class SegmentCoordinateSystem:
 
 class SegmentCoordinateSystemUtils:
     @staticmethod
-    def rigidify(data: Data) -> RotoTransMatrixTimeSeries:
+    def rigidify(data: Data, reference_data: Data = None) -> RotoTransMatrixTimeSeries:
         """
         Compute the rigid body transformation matrices from a set of markers
 
@@ -183,18 +183,29 @@ class SegmentCoordinateSystemUtils:
         ----------
         data
             The data containing the markers
+        reference_data
+            The static data containing the markers, only the first frame is considered.
+            If None is provided, the first frame of data is used as reference. Please note, the resulting rt won't
+            correspond to another trial with a different initial pose.
 
         Returns
         -------
         The rigid body transformation matrices as a RotoTransMatrixTimeSeries (4x4xT)
         """
-        markers = np.array(list(data.values.values()))
-        frame_count = markers.shape[2]
+        # Determine a static
+        marker_names = list(data.values.keys())
+        static_markers = (
+            np.array([reference_data[name] for name in marker_names])[:, :, 0:1]
+            if reference_data is not None
+            else np.array(list(data.values.values()))[:, :, 0:1]
+        )
 
-        reference_pts = markers[:, :3, 0].T  # 3 x N at frame 0
+        reference_pts = static_markers[:, :3, 0].T  # 3 x N at frame 0
         reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
         reference_pts_centered = reference_pts - reference_centroid
 
+        markers = np.array(list(data.values.values()))
+        frame_count = markers.shape[2]
         rt_matrices = RotoTransMatrixTimeSeries(frame_count)
         for i_frame in range(frame_count):
             pts = markers[:, :3, i_frame].T
@@ -205,7 +216,7 @@ class SegmentCoordinateSystemUtils:
             try:
                 u, _, vh = np.linalg.svd(h, full_matrices=False)
             except np.linalg.LinAlgError as e:
-                rt_matrices[:, :, i_frame] = np.nan
+                rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.ndarray((4, 4, 1)) * np.nan)
                 continue
             r = vh.T @ u.T
 
@@ -266,12 +277,14 @@ class SegmentCoordinateSystemUtils:
         def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
             vizualize[0] = vizualize[0] and not score_cache  # Do not show twice the same vizualization
             if not score_cache:
-                # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
+                static_markers
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in parent_marker_names})
+                    _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
+                    reference_data=static_markers,
                 )
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in child_marker_names})
+                    _InternalData({name: functional_data.values[name] for name in child_marker_names}),
+                    reference_data=static_markers,
                 )
                 _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent_func, rt_child_func)
                 score_cache.extend([rt_parent_func, rt_child_func, cor_parent_local])
@@ -313,9 +326,8 @@ class SegmentCoordinateSystemUtils:
         functional_data: Data,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
-        perpendicular_axis: Axis,
         vizualize: bool = False,
-    ) -> Callable:
+    ) -> Axis:
         """
         Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
 
@@ -325,8 +337,6 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
-        perpendicular_axis
-            The axis that is perpendicular to the axis of rotation
         vizualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
@@ -338,54 +348,65 @@ class SegmentCoordinateSystemUtils:
         sara_cache = []  # We only need to perform SARA once. So we store the result here.
         vizualize = [vizualize]  # Use a list to be able to modify the variable in nested function
 
-        def collapse_axis(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
+        def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
             vizualize[0] = vizualize[0] and not sara_cache  # Do not show twice the same vizualization
             if not sara_cache:
-                # TODO: @pariterre Compute the rigid body transformations from the markers for both segments
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in parent_marker_names})
+                    _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
+                    reference_data=static_markers,
                 )
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in child_marker_names})
+                    _InternalData({name: functional_data.values[name] for name in child_marker_names}),
+                    reference_data=static_markers,
                 )
-                aor_parent_local, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
-                sara_cache.extend([rt_parent_func, rt_child_func, aor_parent_local])
+                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
+                sara_cache.extend([rt_parent_func, rt_child_func, aor_parent, cor_parent])
 
             # Rigidify the parent segment at static markers
             rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
                 _InternalData({name: static_markers[name] for name in parent_marker_names})
             )
-            aor_in_local = sara_cache[2]
+            aor_parent = sara_cache[2]
+            cor_parent = sara_cache[3]
 
             # Project the optimal point into the static parent segment
             frame_count_static = len(rt_parent_static)
-            aor_static = np.zeros((4, frame_count_static))
+            end_aor_static = np.ones((4, frame_count_static))
+            start_aor_static = np.ones((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_in_local)[:, 0]
+                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent)[:, 0]
+                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent)[:, 0]
 
             if vizualize[0]:
                 rt_child_static = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: static_markers[name] for name in child_marker_names})
                 )
-                _vizualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, aor_static)
+                _vizualize_score(
+                    _InternalData(static_markers), rt_parent_static, rt_child_static, [start_aor_static, end_aor_static]
+                )
 
                 rt_parent_func = sara_cache[0]
                 rt_child_func = sara_cache[1]
                 frame_count_func = len(rt_parent_func)
-                aor_func = np.zeros((4, frame_count_func))
+                end_aor_func = np.zeros((4, frame_count_func))
+                start_aor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_in_local)[:, 0]
-                _vizualize_score(functional_data, rt_parent_func, rt_child_func, aor_func)
+                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent)[:, 0]
+                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent)[:, 0]
+                _vizualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
 
             # Collapse across frames
-            return np.nanmean(aor_static, axis=1), np.nanstd(aor_static, axis=1)
+            return np.nanmean(start_aor_static, axis=1), np.nanmean(end_aor_static, axis=1)
 
-        return [Axis(name=name, start=collapse_axis, end=collapse_axis), collapse_axis]
+        return Axis(name=name, start=lambda x, model: collapse(x, model)[0], end=lambda x, model: collapse(x, model)[1])
 
 
 # TODO @charbie Remove this function when not needed anymore?
 def _vizualize_score(
-    data: Data, rt_parent: RotoTransMatrixTimeSeries, rt_child: RotoTransMatrixTimeSeries, cor_global: np.ndarray
+    data: Data,
+    rt_parent: RotoTransMatrixTimeSeries,
+    rt_child: RotoTransMatrixTimeSeries,
+    cor_global: np.ndarray | tuple[np.ndarray, np.ndarray],
 ):
     import plotly.graph_objects as go
 
@@ -452,15 +473,29 @@ def _vizualize_score(
                     mode="markers",
                     marker=dict(size=2, color="blue"),
                 ),
+            ]
+        )
+        if isinstance(cor_global, list) or isinstance(cor_global, tuple):
+            frame_data[-1] += [
+                go.Scatter3d(
+                    x=np.array([cor_global[0][0, k], cor_global[1][0, k]]),
+                    y=np.array([cor_global[0][1, k], cor_global[1][1, k]]),
+                    z=np.array([cor_global[0][2, k], cor_global[1][2, k]]),
+                    mode="lines",
+                    line=dict(width=5, color="red"),
+                )
+            ]
+
+        else:
+            frame_data[-1] += [
                 go.Scatter3d(
                     x=[cor_global[0, k]],
                     y=[cor_global[1, k]],
                     z=[cor_global[2, k]],
                     mode="markers",
                     marker=dict(size=5, color="red"),
-                ),
+                )
             ]
-        )
         frames.append(go.Frame(data=frame_data[-1], name=str(k)))
 
     fig = go.Figure(data=frame_data[0], frames=frames)
