@@ -36,7 +36,7 @@ def create_hand_root_model(
     this_height,
     this_ankle_height,
     this_knee_height,
-    this_pelvis_height,
+    this_hip_height,
     this_shoulder_height,
     this_finger_span,
     this_wrist_span,
@@ -53,7 +53,7 @@ def create_hand_root_model(
         total_height=this_height,
         ankle_height=this_ankle_height,
         knee_height=this_knee_height,
-        pelvis_height=this_pelvis_height,
+        hip_height=this_hip_height,
         shoulder_height=this_shoulder_height,
         finger_span=this_finger_span,
         wrist_span=this_wrist_span,
@@ -92,7 +92,7 @@ def main():
     total_height = [1.50, 1.70, 1.90]  # m
     ankle_height = [0.01]  # m
     knee_height_coeff = [0.23, 0.25, 0.27]
-    pelvis_height_coeff = [0.48, 0.49, 0.51]
+    hip_height_coeff = [0.48, 0.49, 0.51]
     shoulder_height_coeff = [0.78, 0.80, 0.82]
     shoulder_width_coeff = [0.30, 0.32, 0.34]
     elbow_span_coeff = [0.63, 0.65, 0.67]
@@ -108,7 +108,7 @@ def main():
         total_height,
         ankle_height,
         knee_height_coeff,
-        pelvis_height_coeff,
+        hip_height_coeff,
         shoulder_height_coeff,
         shoulder_width_coeff,
         elbow_span_coeff,
@@ -122,7 +122,7 @@ def main():
             this_height,
             this_ankle_height_coeff,
             this_knee_height_coeff,
-            this_pelvis_height_coeff,
+            this_hip_height_coeff,
             this_shoulder_height_coeff,
             this_shoulder_span_coeff,
             this_elbow_span_coeff,
@@ -135,7 +135,7 @@ def main():
         # Get the measurements for this model
         this_ankle_height = this_ankle_height_coeff * this_height
         this_knee_height = this_knee_height_coeff * this_height
-        this_pelvis_height = this_pelvis_height_coeff * this_height
+        this_hip_height = this_hip_height_coeff * this_height
         this_shoulder_height = this_shoulder_height_coeff * this_height
         this_shoulder_span = this_shoulder_span_coeff * this_height
         this_elbow_span = this_elbow_span_coeff * this_height
@@ -148,7 +148,7 @@ def main():
             this_height,
             this_ankle_height,
             this_knee_height,
-            this_pelvis_height,
+            this_hip_height,
             this_shoulder_height,
             this_finger_span,
             this_wrist_span,

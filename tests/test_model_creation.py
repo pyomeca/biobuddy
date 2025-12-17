@@ -284,7 +284,7 @@ class FakeData:
         self.nb_frames = 1
 
 
-def test_model_creation_from_data():
+def test_model_creation_from_static():
 
     kinematic_model_filepath = "temporary.bioMod"
     test_model_creation_from_static(remove_temporary=False)
@@ -295,7 +295,7 @@ def test_model_creation_from_data():
     # Fill the kinematic chain model
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
-    de_leva.from_data(fake_data)
+    de_leva.from_static(fake_data)
 
     model.add_segment(
         Segment(
@@ -478,7 +478,7 @@ def test_model_creation_from_data():
         os.remove(kinematic_model_filepath)
 
 
-def test_model_creation_from_data_lower_body():
+def test_model_creation_from_static_lower_body():
 
     from examples.create_model_from_c3d import model_creation_from_measured_data
 

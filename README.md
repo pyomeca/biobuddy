@@ -134,9 +134,52 @@ model_real = model.to_real(C3dData(c3d_filepath))
 ```
 See the example [create_model_from_c3d.py](examples/create_model_from_c3d.py) for more details.
 
+### Model components
 There are many different components available to build a model (see this [example](examples/create_model.py) to see how to add those components to your model).
 
 ![Build_segment](docs/images/Build_segment.png)
+
+### Inertial parameters 
+As you might have noticed, the inertial parameters of the segments can be defined by hand or using anthropometric tables.
+For now, only the table from DeLeva (1996) is implemented through the `DeLevaTable` class, but more tables will be added in the future.
+A `DeLevaTable` can be initialized only using total height (normative segment proportions will be used) like this: 
+```python3
+de_leva.from_height(total_height=1.70)
+```
+or using more detailed measurements like this:
+```python3
+# From manual measurements or from marker positions
+de_leva.from_measurements(
+    total_height=1.70,
+    ankle_height=0.07,
+    knee_height=0.45,
+    hip_height=0.98,
+    shoulder_height=1.42,
+    finger_span=1.72,
+    wrist_span=1.53,
+    elbow_span=0.85,
+    shoulder_span=0.34,
+    foot_length=0.34,
+    hip_width=0.35,
+)
+```
+or directly from a static trial (`.c3d` file) using markers placed on anatomical landmarks like this:
+```python3
+de_leva.from_static(static=C3dData(c3d_filepath))
+```
+
+Once you have set your table, you can extract the inertial parameters from one segment like this:
+```python3
+head_inertia_parameters = de_leva[SegmentName.HEAD]
+```
+
+or you can define a whole body model from a `DeLevaTable` like this:
+```python3
+model = de_leva.to_simple_model()
+```
+![DeLeva](docs/images/DeLeva.png)
+![DeLeva_measures](docs/images/DeLeva_measures.png)
+
 
 ## Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:

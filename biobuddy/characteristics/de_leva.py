@@ -11,10 +11,6 @@ from ..utils.protocols import Data
 from ..utils.enums import Translations, Rotations
 
 
-# TODO: Add a figure to the documentation to illustrate the segment definitions
-# And create a simple table with all the values at the same place
-
-
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
     return coef * (end - start)
 
@@ -30,6 +26,9 @@ class Sex(Enum):
 
 class SegmentName(Enum):
     HEAD = "HEAD"
+    LOWER_TRUNK = "LOWER_TRUNK"
+    MID_TRUNK = "MID_TRUNK"
+    UPPER_TRUNK = "UPPER_TRUNK"
     TRUNK = "TRUNK"
     UPPER_ARM = "UPPER_ARM"
     LOWER_ARM = "LOWER_ARM"
@@ -56,40 +55,45 @@ class DeLevaTable:
         self.sex = sex
         self.total_mass = total_mass
 
-        # The following attributes will be set either by from_data or from_measurements
-        self.inertial_table = None
-        self.total_height = None
-        self.pelvis_height = None
-        self.trunk_length = None
-        self.hand_length = None
-        self.lower_arm_length = None
-        self.upper_arm_length = None
-        self.shoulder_width = None
-        self.thigh_length = None
-        self.shank_length = None
-        self.hip_width = None
-        self.foot_length = None
+        # The following attributes will be set either by from_static or from_measurements
+        self.inertial_table: dict[Sex, dict[SegmentName, InertiaParameters]] = None
+        self.total_height: float = None
+        self.hip_height: float = None
+        self.trunk_length: float = None
+        self.lower_trunk_length: float | None = None
+        self.mid_trunk_length: float | None = None
+        self.upper_trunk_length: float | None = None
+        self.hand_length: float = None
+        self.lower_arm_length: float = None
+        self.upper_arm_length: float = None
+        self.shoulder_width: float = None
+        self.thigh_length: float = None
+        self.shank_length: float = None
+        self.hip_width: float = None
+        self.foot_length: float = None
 
         # The following attributes will be set by get_joint_position_from_measurements
-        self.pelvis_position = None
-        self.neck_position = None
-        self.top_head_position = None
-        self.right_shoulder_position = None
-        self.right_elbow_position = None
-        self.right_wrist_position = None
-        self.right_finger_position = None
-        self.left_shoulder_position = None
-        self.left_elbow_position = None
-        self.left_wrist_position = None
-        self.left_finger_position = None
-        self.right_hip_position = None
-        self.right_knee_position = None
-        self.right_ankle_position = None
-        self.right_toe_position = None
-        self.left_hip_position = None
-        self.left_knee_position = None
-        self.left_ankle_position = None
-        self.left_toe_position = None
+        self.pelvis_position: np.ndarray = None
+        self.umbilicus_position: np.ndarray | None = None  # Will not be set if umbilicus height is not provided
+        self.xiphoid_position: np.ndarray| None = None  # Will not be set if xiphoid height is not provided
+        self.neck_position: np.ndarray = None
+        self.top_head_position: np.ndarray = None
+        self.right_shoulder_position: np.ndarray = None
+        self.right_elbow_position: np.ndarray = None
+        self.right_wrist_position: np.ndarray = None
+        self.right_finger_position: np.ndarray = None
+        self.left_shoulder_position: np.ndarray = None
+        self.left_elbow_position: np.ndarray = None
+        self.left_wrist_position: np.ndarray = None
+        self.left_finger_position: np.ndarray = None
+        self.right_hip_position: np.ndarray = None
+        self.right_knee_position: np.ndarray = None
+        self.right_ankle_position: np.ndarray = None
+        self.right_toe_position: np.ndarray = None
+        self.left_hip_position: np.ndarray = None
+        self.left_knee_position: np.ndarray = None
+        self.left_ankle_position: np.ndarray = None
+        self.left_toe_position: np.ndarray = None
 
     def define_inertial_table(self):
         """
@@ -97,9 +101,9 @@ class DeLevaTable:
         """
         # TODO: Adapt to elderly with https://www.sciencedirect.com/science/article/pii/S0021929015004571?via%3Dihub
         # TODO: add Dumas et al. from https://www.sciencedirect.com/science/article/pii/S0021929006000728
-        self.inertial_table = {
-            Sex.MALE: {
-                SegmentName.HEAD: InertiaParameters(
+
+        self.inertial_table = {Sex.MALE:{}, Sex.FEMALE:{}}
+        self.inertial_table[Sex.MALE][SegmentName.HEAD] = InertiaParameters(
                     mass=lambda m, bio: 0.0694 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.5002), start=self.neck_position, end=self.top_head_position
@@ -110,20 +114,58 @@ class DeLevaTable:
                         start=self.top_head_position,
                         end=self.neck_position,
                     ),
+                )
+        if self.lower_trunk_length is not None and self.mid_trunk_length is not None and self.upper_trunk_length is not None:
+            self.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1117 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.6115), start=self.pelvis_position, end=self.neck_position
                 ),
-                SegmentName.TRUNK: InertiaParameters(
-                    mass=lambda m, bio: 0.4346 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.5138), start=self.pelvis_position, end=self.neck_position
-                    ),
-                    inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
-                        mass=0.4346 * self.total_mass,
-                        coef=(0.328, 0.306, 0.169),
-                        start=self.neck_position,
-                        end=self.pelvis_position,
-                    ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1117 * self.total_mass,
+                    coef=(0.615, 0.551, 0.587),
+                    start=self.umbilicus_position,
+                    end=self.pelvis_position,
                 ),
-                SegmentName.UPPER_ARM: InertiaParameters(
+            )
+            self.inertial_table[Sex.MALE][SegmentName.MID_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1633 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.4502), start=self.pelvis_position, end=self.neck_position
+                ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1633 * self.total_mass,
+                    coef=(0.482, 0.383, 0.468),
+                    start=self.xiphoid_position,
+                    end=self.umbilicus_position,
+                ),
+            )
+            self.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1596 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.5066), start=self.pelvis_position, end=self.neck_position
+                ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1596 * self.total_mass,
+                    coef=(0.505, 0.320, 0.465),
+                    start=self.neck_position,
+                    end=self.xiphoid_position,
+                ),
+            )
+        else:
+            self.inertial_table[Sex.MALE][SegmentName.TRUNK] = InertiaParameters(
+                        mass=lambda m, bio: 0.4346 * self.total_mass,
+                        center_of_mass=lambda m, bio: point_on_vector_in_local(
+                            (1 - 0.5138), start=self.pelvis_position, end=self.neck_position
+                        ),
+                        inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                            mass=0.4346 * self.total_mass,
+                            coef=(0.328, 0.306, 0.169),
+                            start=self.neck_position,
+                            end=self.pelvis_position,
+                        ),
+                    )
+        self.inertial_table[Sex.MALE][SegmentName.UPPER_ARM] = InertiaParameters(
                     mass=lambda m, bio: 0.0271 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.5772), start=self.right_shoulder_position, end=self.right_elbow_position
@@ -134,8 +176,8 @@ class DeLevaTable:
                         start=self.right_shoulder_position,
                         end=self.right_elbow_position,
                     ),
-                ),
-                SegmentName.LOWER_ARM: InertiaParameters(
+                )
+        self.inertial_table[Sex.MALE][SegmentName.LOWER_ARM] = InertiaParameters(
                     mass=lambda m, bio: 0.0162 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.4574), start=self.right_elbow_position, end=self.right_wrist_position
@@ -146,8 +188,8 @@ class DeLevaTable:
                         start=self.right_elbow_position,
                         end=self.right_wrist_position,
                     ),
-                ),
-                SegmentName.HAND: InertiaParameters(
+                )
+        self.inertial_table[Sex.MALE][SegmentName.HAND] = InertiaParameters(
                     mass=lambda m, bio: 0.0061 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.3624, start=self.right_wrist_position, end=self.right_finger_position
@@ -158,8 +200,8 @@ class DeLevaTable:
                         start=self.right_wrist_position,
                         end=self.right_finger_position,
                     ),
-                ),
-                SegmentName.THIGH: InertiaParameters(
+                )
+        self.inertial_table[Sex.MALE][SegmentName.THIGH] = InertiaParameters(
                     mass=lambda m, bio: 0.1416 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4095, start=self.right_hip_position, end=self.right_knee_position
@@ -170,8 +212,8 @@ class DeLevaTable:
                         start=self.right_hip_position,
                         end=self.right_knee_position,
                     ),
-                ),
-                SegmentName.SHANK: InertiaParameters(
+                )
+        self.inertial_table[Sex.MALE][SegmentName.SHANK] = InertiaParameters(
                     mass=lambda m, bio: 0.0433 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4459, start=self.right_knee_position, end=self.right_ankle_position
@@ -182,8 +224,8 @@ class DeLevaTable:
                         start=self.right_knee_position,
                         end=self.right_ankle_position,
                     ),
-                ),
-                SegmentName.FOOT: InertiaParameters(
+                )
+        self.inertial_table[Sex.MALE][SegmentName.FOOT] = InertiaParameters(
                     mass=lambda m, bio: 0.0137 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4415, start=self.right_ankle_position, end=self.right_toe_position
@@ -194,10 +236,8 @@ class DeLevaTable:
                         start=self.right_ankle_position,
                         end=self.right_toe_position,
                     ),
-                ),
-            },
-            Sex.FEMALE: {
-                SegmentName.HEAD: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.HEAD] = InertiaParameters(
                     mass=lambda m, bio: 0.0669 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.4841), start=self.neck_position, end=self.top_head_position
@@ -208,20 +248,58 @@ class DeLevaTable:
                         start=self.top_head_position,
                         end=self.neck_position,
                     ),
+                )
+        if self.lower_trunk_length is not None and self.mid_trunk_length is not None and self.upper_trunk_length is not None:
+            self.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1247 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.4920), start=self.pelvis_position, end=self.neck_position
                 ),
-                SegmentName.TRUNK: InertiaParameters(
-                    mass=lambda m, bio: 0.4257 * self.total_mass,
-                    center_of_mass=lambda m, bio: point_on_vector_in_local(
-                        (1 - 0.4964), start=self.pelvis_position, end=self.neck_position
-                    ),
-                    inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
-                        mass=0.4257 * self.total_mass,
-                        coef=(0.307, 0.292, 0.147),
-                        start=self.neck_position,
-                        end=self.pelvis_position,
-                    ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1247 * self.total_mass,
+                    coef=(0.433, 0.402, 0.444),
+                    start=self.umbilicus_position,
+                    end=self.pelvis_position,
                 ),
-                SegmentName.UPPER_ARM: InertiaParameters(
+            )
+            self.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1465 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.4512), start=self.pelvis_position, end=self.neck_position
+                ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1465 * self.total_mass,
+                    coef=(0.433, 0.354, 0.415),
+                    start=self.xiphoid_position,
+                    end=self.umbilicus_position,
+                ),
+            )
+            self.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK] = InertiaParameters(
+                mass=lambda m, bio: 0.1545 * self.total_mass,
+                center_of_mass=lambda m, bio: point_on_vector_in_local(
+                    (1 - 0.5050), start=self.pelvis_position, end=self.neck_position
+                ),
+                inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                    mass=0.1545 * self.total_mass,
+                    coef=(0.466, 0.314, 0.449),
+                    start=self.neck_position,
+                    end=self.xiphoid_position,
+                ),
+            )
+        else:
+            self.inertial_table[Sex.FEMALE][SegmentName.TRUNK] = InertiaParameters(
+                        mass=lambda m, bio: 0.4257 * self.total_mass,
+                        center_of_mass=lambda m, bio: point_on_vector_in_local(
+                            (1 - 0.4964), start=self.pelvis_position, end=self.neck_position
+                        ),
+                        inertia=lambda m, bio: InertiaParameters.radii_of_gyration_to_inertia(
+                            mass=0.4257 * self.total_mass,
+                            coef=(0.307, 0.292, 0.147),
+                            start=self.neck_position,
+                            end=self.pelvis_position,
+                        ),
+                    )
+        self.inertial_table[Sex.FEMALE][SegmentName.UPPER_ARM] = InertiaParameters(
                     mass=lambda m, bio: 0.0255 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.5754), start=self.right_shoulder_position, end=self.right_elbow_position
@@ -232,8 +310,8 @@ class DeLevaTable:
                         start=self.right_shoulder_position,
                         end=self.right_elbow_position,
                     ),
-                ),
-                SegmentName.LOWER_ARM: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.LOWER_ARM] = InertiaParameters(
                     mass=lambda m, bio: 0.0138 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         (1 - 0.4559), start=self.right_elbow_position, end=self.right_wrist_position
@@ -244,8 +322,8 @@ class DeLevaTable:
                         start=self.right_elbow_position,
                         end=self.right_wrist_position,
                     ),
-                ),
-                SegmentName.HAND: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.HAND] = InertiaParameters(
                     mass=lambda m, bio: 0.0056 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.3427, start=self.right_wrist_position, end=self.right_finger_position
@@ -256,8 +334,8 @@ class DeLevaTable:
                         start=self.right_wrist_position,
                         end=self.right_finger_position,
                     ),
-                ),
-                SegmentName.THIGH: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.THIGH] = InertiaParameters(
                     mass=lambda m, bio: 0.1478 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.3612, start=self.right_hip_position, end=self.right_knee_position
@@ -268,8 +346,8 @@ class DeLevaTable:
                         start=self.right_hip_position,
                         end=self.right_knee_position,
                     ),
-                ),
-                SegmentName.SHANK: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.SHANK] = InertiaParameters(
                     mass=lambda m, bio: 0.0481 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4416, start=self.right_knee_position, end=self.right_ankle_position
@@ -280,8 +358,8 @@ class DeLevaTable:
                         start=self.right_knee_position,
                         end=self.right_ankle_position,
                     ),
-                ),
-                SegmentName.FOOT: InertiaParameters(
+                )
+        self.inertial_table[Sex.FEMALE][SegmentName.FOOT] = InertiaParameters(
                     mass=lambda m, bio: 0.0129 * self.total_mass,
                     center_of_mass=lambda m, bio: point_on_vector_in_local(
                         0.4014, start=self.right_ankle_position, end=self.right_toe_position
@@ -292,29 +370,30 @@ class DeLevaTable:
                         start=self.right_ankle_position,
                         end=self.right_toe_position,
                     ),
-                ),
-            },
-        }
+                )
 
     def get_joint_position_from_measurements(self) -> None:
 
         # Upper body
-        self.pelvis_position = np.array([0.0, 0.0, self.pelvis_height, 1.0])
-        self.neck_position = np.array([0.0, 0.0, self.pelvis_height + self.trunk_length, 1.0])
+        self.pelvis_position = np.array([0.0, 0.0, self.hip_height, 1.0])
+        if self.lower_trunk_length is not None and self.mid_trunk_length is not None and self.upper_trunk_length is not None:
+            self.umbilicus_position = np.array([0.0, 0.0, self.hip_height + self.lower_trunk_length, 1.0])
+            self.xiphoid_position = np.array([0.0, 0.0, self.hip_height + self.lower_trunk_length + self.mid_trunk_length, 1.0])
+        self.neck_position = np.array([0.0, 0.0, self.hip_height + self.trunk_length, 1.0])
         self.top_head_position = np.array([0.0, 0.0, self.total_height, 1.0])
 
         # Right arm
         self.right_shoulder_position = np.array(
-            [0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0]
+            [0.0, -self.shoulder_width / 2, self.hip_height + self.trunk_length, 1.0]
         )
         self.right_elbow_position = np.array(
-            [0.0, -self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0]
+            [0.0, -self.shoulder_width / 2, self.hip_height + self.trunk_length - self.upper_arm_length, 1.0]
         )
         self.right_wrist_position = np.array(
             [
                 0.0,
                 -self.shoulder_width / 2,
-                self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
+                self.hip_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
                 1.0,
             ]
         )
@@ -322,7 +401,7 @@ class DeLevaTable:
             [
                 0.0,
                 -self.shoulder_width / 2,
-                self.pelvis_height
+                self.hip_height
                 + self.trunk_length
                 - self.upper_arm_length
                 - self.lower_arm_length
@@ -333,16 +412,16 @@ class DeLevaTable:
 
         # Left arm
         self.left_shoulder_position = np.array(
-            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length, 1.0]
+            [0.0, self.shoulder_width / 2, self.hip_height + self.trunk_length, 1.0]
         )
         self.left_elbow_position = np.array(
-            [0.0, self.shoulder_width / 2, self.pelvis_height + self.trunk_length - self.upper_arm_length, 1.0]
+            [0.0, self.shoulder_width / 2, self.hip_height + self.trunk_length - self.upper_arm_length, 1.0]
         )
         self.left_wrist_position = np.array(
             [
                 0.0,
                 self.shoulder_width / 2,
-                self.pelvis_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
+                self.hip_height + self.trunk_length - self.upper_arm_length - self.lower_arm_length,
                 1.0,
             ]
         )
@@ -350,7 +429,7 @@ class DeLevaTable:
             [
                 0.0,
                 self.shoulder_width / 2,
-                self.pelvis_height
+                self.hip_height
                 + self.trunk_length
                 - self.upper_arm_length
                 - self.lower_arm_length
@@ -360,44 +439,46 @@ class DeLevaTable:
         )
 
         # Right leg
-        self.right_hip_position = np.array([0, -self.hip_width / 2, self.pelvis_height, 1])
-        self.right_knee_position = np.array([0, -self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
+        self.right_hip_position = np.array([0, -self.hip_width / 2, self.hip_height, 1])
+        self.right_knee_position = np.array([0, -self.hip_width / 2, self.hip_height - self.thigh_length, 1])
         self.right_ankle_position = np.array(
-            [0, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
+            [0, -self.hip_width / 2, self.hip_height - self.thigh_length - self.shank_length, 1]
         )
         # Toes position is false due to the heel being behind the ankle
         self.right_toe_position = np.array(
-            [self.foot_length, -self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
+            [self.foot_length, -self.hip_width / 2, self.hip_height - self.thigh_length - self.shank_length, 1]
         )
 
         # Left leg
-        self.left_hip_position = np.array([0, self.hip_width / 2, self.pelvis_height, 1])
-        self.left_knee_position = np.array([0, self.hip_width / 2, self.pelvis_height - self.thigh_length, 1])
+        self.left_hip_position = np.array([0, self.hip_width / 2, self.hip_height, 1])
+        self.left_knee_position = np.array([0, self.hip_width / 2, self.hip_height - self.thigh_length, 1])
         self.left_ankle_position = np.array(
-            [0, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
+            [0, self.hip_width / 2, self.hip_height - self.thigh_length - self.shank_length, 1]
         )
         # Toes position is false due to the heel being behind the ankle
         self.left_toe_position = np.array(
-            [self.foot_length, self.hip_width / 2, self.pelvis_height - self.thigh_length - self.shank_length, 1]
+            [self.foot_length, self.hip_width / 2, self.hip_height - self.thigh_length - self.shank_length, 1]
         )
 
-    def from_data(self, data: Data):
+    def from_static(self, data: Data):
         """
         Create the De Leva table from a Data object containing the measurements of the subject.
         This is useful if you want to measure segment length using the markers from a static trial.
         Only the z (3rd) components are used to measure segment length, except for the foot length.
+
+        Note: from_static assumes that the trunk has only one segment (no lower, mid and upper trunk segments).
         """
 
         self.total_height = float(data.values["TOP_HEAD"][2])
-        self.pelvis_height = float(data.values["PELVIS"][2])
-        self.trunk_length = float(data.values["SHOULDER"][2] - data.values["PELVIS"][2])
+        self.hip_height = float((data.values["HIP_LEFT"][2] + data.values["HIP_RIGHT"][2]) / 2)
+        self.trunk_length = float((data.values["SHOULDER_LEFT"][2] + data.values["SHOULDER_RIGHT"][2]) / 2 - (data.values["HIP_LEFT"][2] + data.values["HIP_RIGHT"][2]) / 2)
         self.hand_length = float(data.values["WRIST"][2] - data.values["FINGER"][2])
         self.lower_arm_length = float(data.values["ELBOW"][2] - data.values["WRIST"][2])
-        self.upper_arm_length = float(data.values["SHOULDER"][2] - data.values["ELBOW"][2])
-        self.shoulder_width = 0  # Not defined
-        self.thigh_length = float(data.values["PELVIS"][2] - data.values["KNEE"][2])
+        self.upper_arm_length = float((data.values["SHOULDER_LEFT"][2] + data.values["SHOULDER_RIGHT"][2]) / 2 - data.values["ELBOW"][2])
+        self.shoulder_width = float(np.linalg.norm(data.values["SHOULDER_LEFT"] - data.values["SHOULDER_RIGHT"]))
+        self.thigh_length = float((data.values["HIP_LEFT"][2] + data.values["HIP_RIGHT"][2]) / 2 - data.values["KNEE"][2])
         self.shank_length = float(data.values["KNEE"][2] - data.values["ANKLE"][2])
-        self.hip_width = 0  # Not defined
+        self.hip_width = float(np.linalg.norm(data.values["HIP_LEFT"] - data.values["HIP_RIGHT"]))
         self.foot_length = float(np.linalg.norm(data.values["HEEL"] - data.values["TOE"]))
 
         self.get_joint_position_from_measurements()
@@ -408,7 +489,7 @@ class DeLevaTable:
         total_height: float,
         ankle_height: float,
         knee_height: float,
-        pelvis_height: float,
+        hip_height: float,
         shoulder_height: float,
         finger_span: float,
         wrist_span: float,
@@ -416,6 +497,8 @@ class DeLevaTable:
         shoulder_span: float,
         hip_width: float,
         foot_length: float,
+        umbilicus_height: float = None,
+        xiphoid_height: float = None,
     ):
         """
         Create the De Leva table from a manual measurements of the subject.
@@ -423,13 +506,17 @@ class DeLevaTable:
 
         # Define some length from measurements
         self.total_height = total_height
-        self.pelvis_height = pelvis_height
-        self.trunk_length = shoulder_height - pelvis_height
+        self.hip_height = hip_height
+        if umbilicus_height is not None and xiphoid_height is not None:
+            self.lower_trunk_length = umbilicus_height - hip_height
+            self.mid_trunk_length = xiphoid_height - umbilicus_height
+            self.upper_trunk_length = shoulder_height - xiphoid_height
+        self.trunk_length = shoulder_height - hip_height
         self.hand_length = (finger_span - wrist_span) / 2
         self.lower_arm_length = (wrist_span - elbow_span) / 2
         self.upper_arm_length = (elbow_span - shoulder_span) / 2
         self.shoulder_width = shoulder_span
-        self.thigh_length = pelvis_height - knee_height
+        self.thigh_length = hip_height - knee_height
         self.shank_length = knee_height - ankle_height
         self.hip_width = hip_width
         self.foot_length = foot_length
@@ -442,7 +529,9 @@ class DeLevaTable:
         total_height: float,
     ):
         """
-        Create the De Leva table using standard body proportions.
+        Create the De Leva table using standard body proportions (does not account for individual variations).
+
+        Note: from_height assumes that the trunk has only one segment (no lower, mid and upper trunk segments).
         """
 
         length_ratios = {
@@ -482,7 +571,7 @@ class DeLevaTable:
         self.hand_length = length_ratios[self.sex]["hand_length"] * total_height
 
         # Approximate pelvis height as the sum of shank and thigh lengths
-        self.pelvis_height = self.shank_length + self.thigh_length
+        self.hip_height = self.shank_length + self.thigh_length
 
         self.get_joint_position_from_measurements()
         self.define_inertial_table()
@@ -509,23 +598,65 @@ class DeLevaTable:
         # Generate the personalized kinematic model
         model = BiomechanicalModel()
 
-        model.add_segment(
-            Segment(
-                name="TRUNK",
-                translations=Translations.XYZ,
-                rotations=Rotations.XYZ,
-                inertia_parameters=self.inertial_table[self.sex][SegmentName.TRUNK],
-                segment_coordinate_system=SegmentCoordinateSystem(
-                    origin=lambda m, model: self.pelvis_position,
-                ),
-                mesh=Mesh((lambda m, model: self.pelvis_position, lambda m, model: self.neck_position), is_local=False),
+        if self.lower_trunk_length is not None and self.mid_trunk_length is not None and self.upper_trunk_length is not None:
+            model.add_segment(
+                Segment(
+                    name="LOWER_TRUNK",
+                    translations=Translations.XYZ,
+                    rotations=Rotations.XYZ,
+                    inertia_parameters=self.inertial_table[self.sex][SegmentName.LOWER_TRUNK],
+                    segment_coordinate_system=SegmentCoordinateSystem(
+                        origin=lambda m, model: self.pelvis_position,
+                    ),
+                    mesh=Mesh((lambda m, model: self.pelvis_position, lambda m, model: self.umbilicus_position), is_local=False),
+                )
             )
-        )
+            model.add_segment(
+                Segment(
+                    name="MID_TRUNK",
+                    rotations=Rotations.XYZ,
+                    inertia_parameters=self.inertial_table[self.sex][SegmentName.MID_TRUNK],
+                    segment_coordinate_system=SegmentCoordinateSystem(
+                        origin=lambda m, model: self.umbilicus_position,
+                    ),
+                    mesh=Mesh((lambda m, model: self.umbilicus_position, lambda m, model: self.xiphoid_position), is_local=False),
+                )
+            )
+            model.add_segment(
+                Segment(
+                    name="UPPER_TRUNK",
+                    rotations=Rotations.XYZ,
+                    inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_TRUNK],
+                    segment_coordinate_system=SegmentCoordinateSystem(
+                        origin=lambda m, model: self.xiphoid_position,
+                    ),
+                    mesh=Mesh((lambda m, model: self.xiphoid_position, lambda m, model: self.neck_position), is_local=False),
+                )
+            )
+            head_parent = "UPPER_TRUNK"
+            legs_parent = "LOWER_TRUNK"
+            arms_parent = "UPPER_TRUNK"
+        else:
+            model.add_segment(
+                Segment(
+                    name="TRUNK",
+                    translations=Translations.XYZ,
+                    rotations=Rotations.XYZ,
+                    inertia_parameters=self.inertial_table[self.sex][SegmentName.TRUNK],
+                    segment_coordinate_system=SegmentCoordinateSystem(
+                        origin=lambda m, model: self.pelvis_position,
+                    ),
+                    mesh=Mesh((lambda m, model: self.pelvis_position, lambda m, model: self.neck_position), is_local=False),
+                )
+            )
+            head_parent = "TRUNK"
+            legs_parent = "TRUNK"
+            arms_parent = "TRUNK"
 
         model.add_segment(
             Segment(
                 name="HEAD",
-                parent_name="TRUNK",
+                parent_name=head_parent,
                 translations=Translations.NONE,
                 rotations=Rotations.XYZ,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.HEAD],
@@ -541,7 +672,7 @@ class DeLevaTable:
         model.add_segment(
             Segment(
                 name="R_THIGH",
-                parent_name="TRUNK",
+                parent_name=legs_parent,
                 rotations=Rotations.XY,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.THIGH],
                 segment_coordinate_system=SegmentCoordinateSystem(
@@ -589,7 +720,7 @@ class DeLevaTable:
         model.add_segment(
             Segment(
                 name="L_THIGH",
-                parent_name="TRUNK",
+                parent_name=legs_parent,
                 rotations=Rotations.XY,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.THIGH],
                 segment_coordinate_system=SegmentCoordinateSystem(
@@ -636,7 +767,7 @@ class DeLevaTable:
         model.add_segment(
             Segment(
                 name="R_UPPER_ARM",
-                parent_name="TRUNK",
+                parent_name=arms_parent,
                 rotations=Rotations.ZX,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_ARM],
                 segment_coordinate_system=SegmentCoordinateSystem(
@@ -684,7 +815,7 @@ class DeLevaTable:
         model.add_segment(
             Segment(
                 name="L_UPPER_ARM",
-                parent_name="TRUNK",
+                parent_name=arms_parent,
                 rotations=Rotations.ZX,
                 inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_ARM],
                 segment_coordinate_system=SegmentCoordinateSystem(

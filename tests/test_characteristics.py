@@ -32,9 +32,13 @@ class MOCK_DATA:
             "HEAD_Z": np.array([0, 0, 9.5]),
             "HEAD_XZ": np.array([0.5, 0.5, 9.5]),
             "SHOULDER": np.array([0, 0, 8]),
+            "SHOULDER_RIGHT": np.array([0, 0, 8]),
+            "SHOULDER_LEFT": np.array([0, 0, 8]),
             "SHOULDER_X": np.array([0, 0.5, 8]),
             "SHOULDER_XY": np.array([0.5, 0.5, 8]),
             "PELVIS": np.array([0, 0, 5]),
+            "HIP_RIGHT": np.array([0, 0, 5]),
+            "HIP_LEFT": np.array([0, 0, 5]),
             "ELBOW": np.array([1, 0, 7]),
             "ELBOW_Y": np.array([1, 0.5, 7]),
             "ELBOW_XY": np.array([1.5, 0.5, 7]),
@@ -275,19 +279,19 @@ def test_segment_name_enum():
     assert len(list(SegmentName)) == len(expected_segments)
 
 
-def test_de_leva_table_constructor_from_data():
+def test_de_leva_table_constructor_from_static():
     """Test DeLevaTable constructor."""
     total_mass = 70.0
 
     # Test male constructor
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_data(MOCK_DATA())
+    male_table.from_static(MOCK_DATA())
     assert male_table.sex == Sex.MALE
     assert hasattr(male_table, "inertial_table")
 
     # Test female constructor
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_data(MOCK_DATA())
+    female_table.from_static(MOCK_DATA())
     assert female_table.sex == Sex.FEMALE
     assert hasattr(female_table, "inertial_table")
 
@@ -325,7 +329,7 @@ def test_de_leva_table_constructor_from_data():
 
     # Test intermediate values
     npt.assert_almost_equal(male_table.total_height, 10)
-    npt.assert_almost_equal(male_table.pelvis_height, 5)
+    npt.assert_almost_equal(male_table.hip_height, 5)
     npt.assert_almost_equal(male_table.trunk_length, 3)
     npt.assert_almost_equal(male_table.hand_length, 0.5)
     npt.assert_almost_equal(male_table.lower_arm_length, 1)
@@ -354,11 +358,12 @@ def test_de_leva_table_constructor_from_data():
 
 def test_de_leva_table_constructor_from_measurements():
     """Test DeLevaTable constructor."""
+    # --- Test with only one trunk segment --- #
     total_mass = 70.0
     total_height = 1.70
     ankle_height = 0.01
     knee_height = 0.4
-    pelvis_height = 0.95
+    hip_height = 0.95
     shoulder_height = 1.5
     finger_span = 1.70
     wrist_span = 1.5
@@ -373,7 +378,7 @@ def test_de_leva_table_constructor_from_measurements():
         total_height,
         ankle_height,
         knee_height,
-        pelvis_height,
+        hip_height,
         shoulder_height,
         finger_span,
         wrist_span,
@@ -391,7 +396,7 @@ def test_de_leva_table_constructor_from_measurements():
         total_height,
         ankle_height,
         knee_height,
-        pelvis_height,
+        hip_height,
         shoulder_height,
         finger_span,
         wrist_span,
@@ -410,7 +415,16 @@ def test_de_leva_table_constructor_from_measurements():
     assert male_segments == female_segments
 
     # Test that all expected segments are present
-    expected_segments = set(SegmentName)
+    expected_segments = set([
+        SegmentName.LOWER_ARM,
+        SegmentName.HAND,
+        SegmentName.HEAD,
+        SegmentName.SHANK,
+        SegmentName.THIGH,
+        SegmentName.TRUNK,
+        SegmentName.UPPER_ARM,
+        SegmentName.FOOT
+    ])
     assert male_segments == expected_segments
     assert all(
         segment_name in ["LOWER_ARM", "HAND", "HEAD", "SHANK", "THIGH", "TRUNK", "UPPER_ARM", "FOOT"]
@@ -419,6 +433,8 @@ def test_de_leva_table_constructor_from_measurements():
 
     # Test some values
     npt.assert_almost_equal(female_table.pelvis_position, np.array([0.0, 0.0, 0.95, 1.0]))
+    assert female_table.umbilicus_position is None
+    assert female_table.xiphoid_position is None
     npt.assert_almost_equal(female_table.top_head_position, np.array([0.0, 0.0, 1.7, 1.0]))
     npt.assert_almost_equal(female_table.right_shoulder_position, np.array([0.0, 0.0, 1.5, 1.0]))
     npt.assert_almost_equal(female_table.left_shoulder_position, np.array([0.0, 0.0, 1.5, 1.0]))
@@ -437,7 +453,10 @@ def test_de_leva_table_constructor_from_measurements():
 
     # Test intermediate values
     npt.assert_almost_equal(female_table.total_height, total_height)
-    npt.assert_almost_equal(female_table.pelvis_height, pelvis_height)
+    npt.assert_almost_equal(female_table.hip_height, hip_height)
+    assert female_table.lower_trunk_length is None
+    assert female_table.mid_trunk_length is None
+    assert female_table.upper_trunk_length is None
     npt.assert_almost_equal(female_table.trunk_length, 0.55)
     npt.assert_almost_equal(female_table.hand_length, 0.1)
     npt.assert_almost_equal(female_table.lower_arm_length, 0.15)
@@ -464,13 +483,135 @@ def test_de_leva_table_constructor_from_measurements():
     )
 
 
+    # --- Test with tree trunk segments --- #
+    umbilicus_height = 1.05
+    xiphoid_height = 1.30
+
+    # Test male constructor
+    male_table = DeLevaTable(total_mass, Sex.MALE)
+    male_table.from_measurements(
+        total_height,
+        ankle_height,
+        knee_height,
+        hip_height,
+        shoulder_height,
+        finger_span,
+        wrist_span,
+        elbow_span,
+        shoulder_span,
+        hip_width,
+        foot_length,
+        umbilicus_height=umbilicus_height,
+        xiphoid_height=xiphoid_height,
+    )
+    assert male_table.sex == Sex.MALE
+    assert hasattr(male_table, "inertial_table")
+
+    # Test female constructor
+    female_table = DeLevaTable(total_mass, Sex.FEMALE)
+    female_table.from_measurements(
+        total_height,
+        ankle_height,
+        knee_height,
+        hip_height,
+        shoulder_height,
+        finger_span,
+        wrist_span,
+        elbow_span,
+        shoulder_span,
+        hip_width,
+        foot_length,
+        umbilicus_height=umbilicus_height,
+        xiphoid_height=xiphoid_height,
+    )
+    assert female_table.sex == Sex.FEMALE
+    assert hasattr(female_table, "inertial_table")
+
+    # Test that both tables have the same structure
+    male_segments = set(male_table.inertial_table[Sex.MALE].keys())
+    female_segments = set(female_table.inertial_table[Sex.FEMALE].keys())
+    segment_names = [m.value for m in male_segments]
+    assert male_segments == female_segments
+
+    # Test that all expected segments are present
+    expected_segments = set([
+        SegmentName.LOWER_ARM,
+        SegmentName.HAND,
+        SegmentName.HEAD,
+        SegmentName.SHANK,
+        SegmentName.THIGH,
+        SegmentName.LOWER_TRUNK,
+        SegmentName.MID_TRUNK,
+        SegmentName.UPPER_TRUNK,
+        SegmentName.UPPER_ARM,
+        SegmentName.FOOT,
+    ])
+    assert male_segments == expected_segments
+    assert all(
+        segment_name in ["LOWER_ARM", "HAND", "HEAD", "SHANK", "THIGH", "LOWER_TRUNK", "MID_TRUNK", "UPPER_TRUNK", "UPPER_ARM", "FOOT"]
+        for segment_name in segment_names
+    )
+
+    # Test some values
+    npt.assert_almost_equal(female_table.pelvis_position, np.array([0.0, 0.0, 0.95, 1.0]))
+    npt.assert_almost_equal(female_table.umbilicus_position, np.array([0.0, 0.0, 1.05, 1.0]))
+    npt.assert_almost_equal(female_table.xiphoid_position, np.array([0.0, 0.0, 1.30, 1.0]))
+    npt.assert_almost_equal(female_table.pelvis_position, np.array([0.0, 0.0, 0.95, 1.0]))
+    npt.assert_almost_equal(female_table.top_head_position, np.array([0.0, 0.0, 1.7, 1.0]))
+    npt.assert_almost_equal(female_table.right_shoulder_position, np.array([0.0, 0.0, 1.5, 1.0]))
+    npt.assert_almost_equal(female_table.left_shoulder_position, np.array([0.0, 0.0, 1.5, 1.0]))
+    npt.assert_almost_equal(female_table.right_elbow_position, np.array([0.0, 0.0, 0.9, 1.0]))
+    npt.assert_almost_equal(female_table.left_elbow_position, np.array([0.0, 0.0, 0.9, 1.0]))
+    npt.assert_almost_equal(female_table.right_wrist_position, np.array([0.0, 0.0, 0.75, 1.0]))
+    npt.assert_almost_equal(female_table.left_wrist_position, np.array([0.0, 0.0, 0.75, 1.0]))
+    npt.assert_almost_equal(female_table.right_finger_position, np.array([0.0, 0.0, 0.65, 1.0]))
+    npt.assert_almost_equal(female_table.left_finger_position, np.array([0.0, 0.0, 0.65, 1.0]))
+    npt.assert_almost_equal(female_table.right_knee_position, np.array([0.0, 0.0, 0.4, 1.0]))
+    npt.assert_almost_equal(female_table.left_knee_position, np.array([0.0, 0.0, 0.4, 1.0]))
+    npt.assert_almost_equal(female_table.right_ankle_position, np.array([0.0, 0.0, 0.01, 1.0]))
+    npt.assert_almost_equal(female_table.left_ankle_position, np.array([0.0, 0.0, 0.01, 1.0]))
+    npt.assert_almost_equal(female_table.right_toe_position, np.array([0.35, 0.0, 0.01, 1.0]))
+    npt.assert_almost_equal(female_table.left_toe_position, np.array([0.35, 0.0, 0.01, 1.0]))
+
+    # Test intermediate values
+    npt.assert_almost_equal(female_table.total_height, total_height)
+    npt.assert_almost_equal(female_table.hip_height, hip_height)
+    npt.assert_almost_equal(female_table.trunk_length, 0.55)
+    npt.assert_almost_equal(female_table.lower_trunk_length, 0.10)
+    npt.assert_almost_equal(female_table.mid_trunk_length, 0.25)
+    npt.assert_almost_equal(female_table.upper_trunk_length, 0.20)
+    npt.assert_almost_equal(female_table.hand_length, 0.1)
+    npt.assert_almost_equal(female_table.lower_arm_length, 0.15)
+    npt.assert_almost_equal(female_table.upper_arm_length, 0.6)
+    npt.assert_almost_equal(female_table.shoulder_width, 0)
+    npt.assert_almost_equal(female_table.thigh_length, 0.55)
+    npt.assert_almost_equal(female_table.shank_length, 0.39)
+    npt.assert_almost_equal(female_table.hip_width, 0)
+    npt.assert_almost_equal(female_table.foot_length, 0.35)
+
+    # Test the simple model
+    female_model = female_table.to_simple_model()
+    npt.assert_almost_equal(
+        female_model.total_com_in_global().reshape(
+            4,
+        ),
+        np.array([0.00362464, 0.0, 1.0398931, 1.0]),
+    )
+    female_model.to_biomod("temporary_path.bioMod")
+    female_model_biomod = biorbd.Model("temporary_path.bioMod")
+    npt.assert_almost_equal(
+        female_model_biomod.bodyInertia(np.zeros((female_model.nb_q,))).to_array(),
+        np.array([[15.56404561,  0.        ,  0.26130957], [0.        , 15.46755677,  0.        ], [0.26130957,  0.        ,  0.46762415]]),
+    )
+
+
 def test_de_leva_table_getitem():
     """Test DeLevaTable.__getitem__ method."""
     total_mass = 70.0
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_data(MOCK_DATA())
+    male_table.from_static(MOCK_DATA())
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_data(MOCK_DATA())
+    female_table.from_static(MOCK_DATA())
 
     # Test that we can access all segments
     for segment in SegmentName:
@@ -492,9 +633,9 @@ def test_de_leva_table_mass_calculations():
     total_mass = 70.0
     mock_values = MOCK_DATA().values
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_data(MOCK_DATA())
+    male_table.from_static(MOCK_DATA())
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_data(MOCK_DATA())
+    female_table.from_static(MOCK_DATA())
 
     # Test the MASS values
     expected_male_masses = {
@@ -666,7 +807,7 @@ def test_de_leva_table_comprehensive():
     # Test both sexes
     for sex in [Sex.MALE, Sex.FEMALE]:
         table = DeLevaTable(total_mass, sex)
-        table.from_data(MOCK_DATA())
+        table.from_static(MOCK_DATA())
 
         # Test that all segments are accessible
         for segment in SegmentName:
@@ -688,9 +829,9 @@ def test_sex_differences():
     total_mass = 70.0
     mock_values = MOCK_DATA().values
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_data(MOCK_DATA())
+    male_table.from_static(MOCK_DATA())
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_data(MOCK_DATA())
+    female_table.from_static(MOCK_DATA())
 
     # Test that head mass is different between males and females
     male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_values, None)
@@ -718,9 +859,9 @@ def test_de_leva_table_different_masses():
 
     for total_mass in masses:
         male_table = DeLevaTable(total_mass, Sex.MALE)
-        male_table.from_data(MOCK_DATA())
+        male_table.from_static(MOCK_DATA())
         female_table = DeLevaTable(total_mass, Sex.FEMALE)
-        female_table.from_data(MOCK_DATA())
+        female_table.from_static(MOCK_DATA())
 
         # Test head mass scales correctly
         male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_values, None)
@@ -735,7 +876,7 @@ def test_de_leva_table_edge_cases():
     # Test with very small mass
     small_mass = 0.1
     table = DeLevaTable(small_mass, Sex.MALE)
-    table.from_data(MOCK_DATA())
+    table.from_static(MOCK_DATA())
     mock_values = MOCK_DATA().values
 
     # Should still work with very small masses
@@ -746,7 +887,7 @@ def test_de_leva_table_edge_cases():
     # Test with very large mass
     large_mass = 200.0
     table = DeLevaTable(large_mass, Sex.FEMALE)
-    table.from_data(MOCK_DATA())
+    table.from_static(MOCK_DATA())
     head_mass = table[SegmentName.HEAD].relative_mass(mock_values, None)
     expected = 0.0669 * large_mass
     npt.assert_almost_equal(head_mass, expected)
@@ -757,7 +898,7 @@ def test_model_evaluation():
     total_mass = 70.0
     sex = Sex.FEMALE
     de_leva_table = DeLevaTable(total_mass=total_mass, sex=sex)
-    de_leva_table.from_data(MOCK_DATA())
+    de_leva_table.from_static(MOCK_DATA())
 
     model = get_biomechanical_model(de_leva_table)
 
