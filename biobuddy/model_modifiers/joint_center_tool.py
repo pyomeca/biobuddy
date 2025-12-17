@@ -795,7 +795,7 @@ class Sara(RigidSegmentIdentification):
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformations of the child segment after outlier removal.
         """
-
+        # TODO: Unify the code with SCoRE algorithm as they are very similar
         nb_frames = len(rt_parent)
 
         # Build linear system A x = b to solve for CoR positions in child and parent segment frames
@@ -1072,7 +1072,9 @@ class JointCenterTool:
         self.animate_reconstruction = animate_reconstruction
 
         # Extended attributes to be filled
-        self.joint_center_tasks: list[RigidSegmentIdentification] = []
+        self.joint_center_tasks: list[RigidSegmentIdentification] = (
+            []
+        )  # Not a NamedList because RigidSegmentIdentification does not have .name property
         self.new_model = deepcopy(original_model)
 
     def add(self, jcs_identifier: Score | Sara):
@@ -1117,7 +1119,6 @@ class JointCenterTool:
         )
 
         # Copy all segments in the chain
-        # TODO: @pariterre Is that useful? Is there any chance a CoR is between more than two segments?
         for segment_name in segment_chain:
 
             # get the filename so that we can point to the Geometry_cleaned forler
@@ -1150,7 +1151,7 @@ class JointCenterTool:
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
-        joint_model.to_biomod(temporary_model_path)  # TODO @pariterre Is this for debug?
+        joint_model.to_biomod(temporary_model_path)  # TODO @charbie Is this for debug?
         return joint_model
 
     # TODO @pariterre revise the type hinting
@@ -1172,7 +1173,7 @@ class JointCenterTool:
                 marker_names = self.original_model.marker_names
                 model_for_initial_rt = deepcopy(self.original_model)
             else:
-                # TODO @pariterre 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
+                # TODO @charbie 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
                 marker_names = task.parent_marker_names + task.child_marker_names
                 model_for_initial_rt = self._setup_model_for_initial_rt(task)
 
@@ -1189,7 +1190,7 @@ class JointCenterTool:
                 if marker not in task._data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
-            # TODO: @pariterre Inverse kinematics may not be the right tool here as parallelisation is not possible while
+            # TODO: @charbie Inverse kinematics may not be the right tool here as parallelisation is not possible while
             # during the rigidifcation for the SCoRE algorithm each frame is technically independent
             q_init, _ = model_for_initial_rt.inverse_kinematics(
                 marker_positions=marker_positions,
@@ -1202,7 +1203,7 @@ class JointCenterTool:
             child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
-            # TODO: @pariterre 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
+            # TODO: @charbie 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
             task.parent_static_markers_in_global = static_markers_in_global[
                 :, self.original_model.markers_indices(task.parent_marker_names)
             ]

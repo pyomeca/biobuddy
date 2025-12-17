@@ -13,8 +13,7 @@ class RotationMatrix:
         if isinstance(other, RotationMatrix):
             # Matrix multiplication of two RotationMatrix objects gives a new RotationMatrix object
             mult_result = self._rotation_matrix @ other._rotation_matrix
-            out = RotationMatrix()
-            out.from_rotation_matrix(mult_result)
+            out = RotationMatrix.from_rotation_matrix(mult_result)
         elif isinstance(other, np.ndarray):
             # Matrix multiplication of a RotationMatrix with a Point (np.array vector) gives a Point (np.array vector)
             if other.shape == (3, 3):
@@ -28,14 +27,18 @@ class RotationMatrix:
             )
         return out
 
-    def from_rotation_matrix(self, rotation_matrix: np.ndarray):
+    @classmethod
+    def from_rotation_matrix(cls, rotation_matrix: np.ndarray):
         if rotation_matrix.shape != (3, 3):
             raise ValueError(
                 f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
-        self._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
+        instance = cls()
+        instance._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
+        return instance
 
-    def from_euler_angles(self, angle_sequence: str, angles: np.ndarray):
+    @classmethod
+    def from_euler_angles(cls, angle_sequence: str, angles: np.ndarray):
         if len(angles.shape) > 1:
             raise ValueError(
                 f"The angles used to initialize a RotationMatrix should be of shape (nb_angles, ). You have {angles.shape}"
@@ -54,7 +57,9 @@ class RotationMatrix:
         rotation_matrix = np.identity(3)
         for angle, axis in zip(angles, angle_sequence):
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
-        self._rotation_matrix = rotation_matrix
+        instance = cls()
+        instance._rotation_matrix = rotation_matrix
+        return instance
 
     @property
     def rotation_matrix(self) -> np.ndarray:
@@ -74,8 +79,7 @@ class RotationMatrix:
     @property
     def inverse(self) -> "RotationMatrix":
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
-        out_inverse = RotationMatrix()
-        out_inverse.from_rotation_matrix(inverse_rotation_matrix)
+        out_inverse = RotationMatrix.from_rotation_matrix(inverse_rotation_matrix)
         return out_inverse
 
 
@@ -136,8 +140,7 @@ class RotoTransMatrix:
             )
 
         rt_matrix = np.identity(4)
-        rotation_matrix = RotationMatrix()
-        rotation_matrix.from_euler_angles(angle_sequence=angle_sequence, angles=angles)
+        rotation_matrix = RotationMatrix.from_euler_angles(angle_sequence=angle_sequence, angles=angles)
         rt_matrix[:3, :3] = rotation_matrix.rotation_matrix
         rt_matrix[:3, 3] = translation[:3]
 
@@ -195,12 +198,11 @@ class RotoTransMatrix:
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = inverse_rotation_matrix.reshape(3, 3)
-        rt_matrix[:3, 3] = inverse_translation.reshape(
-            3,
-        )
+        rt_matrix[:3, 3] = inverse_translation.reshape(3)
         rt_matrix[3, 3] = 1.0
 
-        return RotoTransMatrix.from_rt_matrix(rt_matrix)
+        out_inverse = RotoTransMatrix.from_rt_matrix(rt_matrix)
+        return out_inverse
 
     @property
     def is_identity(self) -> bool:

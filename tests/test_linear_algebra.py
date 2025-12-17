@@ -696,8 +696,7 @@ def test_rotation_matrix_class():
     """Test RotationMatrix class."""
     # Test initialization from rotation matrix
     rotation = rot_x_matrix(np.pi / 4)
-    rot_obj = RotationMatrix()
-    rot_obj.from_rotation_matrix(rotation)
+    rot_obj = RotationMatrix.from_rotation_matrix(rotation)
 
     # Check properties
     npt.assert_almost_equal(rot_obj.rotation_matrix, rotation)
@@ -706,8 +705,7 @@ def test_rotation_matrix_class():
     angles = np.array([np.pi / 6, np.pi / 4, np.pi / 3])
     angle_sequence = "xyz"
 
-    rot_obj2 = RotationMatrix()
-    rot_obj2.from_euler_angles(angle_sequence, angles)
+    rot_obj2 = RotationMatrix.from_euler_angles(angle_sequence, angles)
     npt.assert_almost_equal(
         rot_obj2.rotation_matrix,
         np.array(

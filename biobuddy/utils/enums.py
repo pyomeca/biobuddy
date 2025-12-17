@@ -40,6 +40,7 @@ class Translations(Enum):
 
 
 class ViewAs(Enum):
+    # TODO @charbie Split Backend model and Backend visualizer
     BIORBD = "biorbd"
     BIORBD_BIOVIZ = "biorbd_bioviz"
     # OPENSIM = "opensim"
