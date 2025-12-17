@@ -1,3 +1,5 @@
+from functools import partial
+import hashlib
 from typing import Callable
 
 import numpy as np
@@ -252,7 +254,7 @@ class SegmentCoordinateSystemUtils:
         functional_data: Data,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
-        vizualize: bool = False,
+        visualize: bool = False,
     ) -> Callable:
         """
         Compute the SCoRE (Symmetrical Center of Rotation Estimation) between two sets of markers
@@ -263,7 +265,7 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the score point from
         child_marker_names
             The names of the markers on the child segment to compute the score point from
-        vizualize
+        visualize
             If True, a 3D visualization of the score point computation will be shown. Plotly is required for this.
 
         Returns
@@ -271,13 +273,19 @@ class SegmentCoordinateSystemUtils:
         A lambda function that can be called during the to_real process
         """
 
-        score_cache = []  # We only need to perform score once. So we store the result here.
-        vizualize = [vizualize]  # Use a list to be able to modify the variable in nested function
+        score_cache = {}  # We only need to perform score once. So we store the result here.
 
-        def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
-            vizualize[0] = vizualize[0] and not score_cache  # Do not show twice the same vizualization
-            if not score_cache:
-                static_markers
+        def collapse(static_markers: dict[str, np.ndarray], _: BiomechanicalModelReal, visualize: bool) -> np.ndarray:
+            static_markers_hash = _markers_fingerprint(static_markers)
+
+            is_in_cache = static_markers_hash in score_cache
+            if not is_in_cache:
+                # Rigidify the parent segment at static markers
+                rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: static_markers[name] for name in parent_marker_names})
+                )
+
+                # Rigidify functional data
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
                     reference_data=static_markers,
@@ -286,39 +294,38 @@ class SegmentCoordinateSystemUtils:
                     _InternalData({name: functional_data.values[name] for name in child_marker_names}),
                     reference_data=static_markers,
                 )
-                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent_func, rt_child_func)
-                score_cache.extend([rt_parent_func, rt_child_func, cor_parent_local])
 
-            # Rigidify the parent segment at static markers
-            rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
-                _InternalData({name: static_markers[name] for name in parent_marker_names})
-            )
-            cor_in_local = np.hstack((score_cache[2], 1))
+                # Compute the SCoRE point
+                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent_func, rt_child_func)
+                score_cache[static_markers_hash] = [rt_parent_static, rt_parent_func, rt_child_func, cor_parent_local]
+
+            rt_parent_static = score_cache[static_markers_hash][0]
+            cor_in_local = np.hstack((score_cache[static_markers_hash][3], 1))
 
             # Project the optimal point into the static parent segment
             frame_count_static = len(rt_parent_static)
             cor_static = np.zeros((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local)[:, 0]
+                cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
 
-            if vizualize[0]:
+            if visualize and not is_in_cache:  # Do not show twice the same visualization
                 rt_child_static = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: static_markers[name] for name in child_marker_names})
                 )
-                _vizualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, cor_static)
+                _visualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, cor_static)
 
-                rt_parent_func = score_cache[0]
-                rt_child_func = score_cache[1]
+                rt_parent_func = score_cache[static_markers_hash][1]
+                rt_child_func = score_cache[static_markers_hash][2]
                 frame_count_func = len(rt_parent_func)
                 cor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    cor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_in_local)[:, 0]
-                _vizualize_score(functional_data, rt_parent_func, rt_child_func, cor_func)
+                    cor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_in_local).reshape(4)
+                _visualize_score(functional_data, rt_parent_func, rt_child_func, cor_func)
 
             # Collapse across frames
             return np.nanmean(cor_static, axis=1)
 
-        return collapse
+        return partial(collapse, visualize=visualize)
 
     @staticmethod
     def sara(
@@ -326,7 +333,7 @@ class SegmentCoordinateSystemUtils:
         functional_data: Data,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
-        vizualize: bool = False,
+        visualize: bool = False,
     ) -> Axis:
         """
         Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
@@ -337,7 +344,7 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
-        vizualize
+        visualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
         Returns
@@ -345,12 +352,19 @@ class SegmentCoordinateSystemUtils:
         A lambda function that can be called during the to_real process
         """
 
-        sara_cache = []  # We only need to perform SARA once. So we store the result here.
-        vizualize = [vizualize]  # Use a list to be able to modify the variable in nested function
+        sara_cache = {}  # We only need to perform SARA once. So we store the result here.
 
-        def collapse(static_markers: Data, _: BiomechanicalModelReal) -> np.ndarray:
-            vizualize[0] = vizualize[0] and not sara_cache  # Do not show twice the same vizualization
-            if not sara_cache:
+        def collapse(static_markers: dict[str, np.ndarray], _: BiomechanicalModelReal, visualize: bool) -> np.ndarray:
+            static_markers_hash = _markers_fingerprint(static_markers)
+
+            is_in_cache = static_markers_hash in sara_cache
+            if not is_in_cache:
+                # Rigidify the parent segment at static markers
+                rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
+                    _InternalData({name: static_markers[name] for name in parent_marker_names})
+                )
+
+                # Rigidify functional data
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
                     reference_data=static_markers,
@@ -359,50 +373,58 @@ class SegmentCoordinateSystemUtils:
                     _InternalData({name: functional_data.values[name] for name in child_marker_names}),
                     reference_data=static_markers,
                 )
-                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
-                sara_cache.extend([rt_parent_func, rt_child_func, aor_parent, cor_parent])
 
-            # Rigidify the parent segment at static markers
-            rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
-                _InternalData({name: static_markers[name] for name in parent_marker_names})
-            )
-            aor_parent = sara_cache[2]
-            cor_parent = sara_cache[3]
+                # Compute the SARA axis
+                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
+                sara_cache[static_markers_hash] = [
+                    rt_parent_static,
+                    rt_parent_func,
+                    rt_child_func,
+                    aor_parent,
+                    cor_parent,
+                ]
+
+            rt_parent_static = sara_cache[static_markers_hash][0]
+            aor_parent = sara_cache[static_markers_hash][3]
+            cor_parent = sara_cache[static_markers_hash][4]
 
             # Project the optimal point into the static parent segment
             frame_count_static = len(rt_parent_static)
             end_aor_static = np.ones((4, frame_count_static))
             start_aor_static = np.ones((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent)[:, 0]
-                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent)[:, 0]
+                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
+                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
 
-            if vizualize[0]:
+            if visualize and not is_in_cache:  # Do not show twice the same visualization
                 rt_child_static = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: static_markers[name] for name in child_marker_names})
                 )
-                _vizualize_score(
+                _visualize_score(
                     _InternalData(static_markers), rt_parent_static, rt_child_static, [start_aor_static, end_aor_static]
                 )
 
-                rt_parent_func = sara_cache[0]
-                rt_child_func = sara_cache[1]
+                rt_parent_func = sara_cache[static_markers_hash][1]
+                rt_child_func = sara_cache[static_markers_hash][2]
                 frame_count_func = len(rt_parent_func)
                 end_aor_func = np.zeros((4, frame_count_func))
                 start_aor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent)[:, 0]
-                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent)[:, 0]
-                _vizualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
+                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent).reshape(4)
+                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent).reshape(4)
+                _visualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
 
             # Collapse across frames
             return np.nanmean(start_aor_static, axis=1), np.nanmean(end_aor_static, axis=1)
 
-        return Axis(name=name, start=lambda x, model: collapse(x, model)[0], end=lambda x, model: collapse(x, model)[1])
+        return Axis(
+            name=name,
+            start=lambda x, model: collapse(x, model, visualize=visualize)[0],
+            end=lambda x, model: collapse(x, model, visualize=visualize)[1],
+        )
 
 
-# TODO @charbie Remove this function when not needed anymore?
-def _vizualize_score(
+def _visualize_score(
     data: Data,
     rt_parent: RotoTransMatrixTimeSeries,
     rt_child: RotoTransMatrixTimeSeries,
@@ -520,3 +542,18 @@ def _vizualize_score(
         title="Score Point Visualization",
     )
     fig.show()
+
+
+def _markers_fingerprint(markers: dict[str, np.ndarray]) -> str:
+    h = hashlib.sha256()
+
+    marker_names = markers.keys()
+    for name in sorted(marker_names):  # order-independent
+        arr = markers[name]
+
+        h.update(name.encode("utf-8"))
+        h.update(str(arr.shape).encode())
+        h.update(str(arr.dtype).encode())
+        h.update(arr.tobytes())
+
+    return h.hexdigest()

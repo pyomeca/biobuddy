@@ -128,6 +128,7 @@ class Marker:
             )
 
         # Get the position of the markers and do some sanity checks
+        # TODO @charbie Consider changing the signature of function to accept Data only (instead of np.ndarray) as first argument
         position = points_to_array(points=self.function(data.values, model), name=f"marker function")
         marker_position = scs.inverse @ position
 
