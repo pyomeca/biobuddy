@@ -1,6 +1,6 @@
 import os
-import pytest
 from pathlib import Path
+import platform
 
 import numpy as np
 import numpy.testing as npt
@@ -34,7 +34,6 @@ def test_model_creation_from_static(remove_temporary: bool = True):
     """
     Produces a model from real data
     """
-
     kinematic_model_filepath = "temporary.bioMod"
 
     # Create a model holder
@@ -285,7 +284,6 @@ class FakeData:
 
 
 def test_model_creation_from_data():
-
     kinematic_model_filepath = "temporary.bioMod"
     test_model_creation_from_static(remove_temporary=False)
 
@@ -645,30 +643,20 @@ def test_complex_model():
     assert real_model.segments["PENDULUM"].qdot_ranges.min_bound == [-10, -10, -10, -np.pi * 10]
     assert real_model.segments["PENDULUM"].qdot_ranges.max_bound == [10, 10, 10, np.pi * 10]
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(4),
         np.array([1.0, 1.0, 10.0, 1.0]),
     )
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(4),
         np.array([np.pi / 2, 0.0, 0.0, 1.0]),
     )
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(4),
         np.array([0.1, 0.0, 0.0, 1.0]),
     )
 
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"]
-        .contacts["PENDULUM_CONTACT"]
-        .position.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].position.reshape(4),
         np.array([0.0, 0.0, 0.0, 1.0]),
     )
     assert real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].axis == Translations.XYZ

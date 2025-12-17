@@ -778,7 +778,7 @@ class Sara(RigidSegmentIdentification):
 
         Returns
         -------
-        aor_global : ndarray (3, N)
+        aor_global : ndarray (3,)
             Orientation of the axis of rotation expressed in the global frame at each frame.
         aor_parent_local : ndarray (3,)
             Orientation of the axis of rotation expressed in the parent segment's local frame.
@@ -1031,16 +1031,20 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global, _, _, _, _, _, rt_parent_valid_frames, _ = self.sara_algorithm(
+        aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.sara_algorithm(
             rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
-        aor_global = self._check_aor(original_model, aor_global)
-        aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
+        # # TODO: @charbie Initially, aor_global was returning a 3xN matrix, but for sake of consistency with other methods,
+        # # it now returns a 3x1 vector. However, the _check_aor and _get_aor_local methods expect a 3xN matrix.
+        # # More over, the output of _get_aor_local is now directly returned by SARA (now renamed aor_local_child).
+        # # I therefore commented the next block of lines, I think they could be removed entirely, but I am not 100% sure.
+        # aor_global = self._check_aor(original_model, aor_global)
+        # aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
             original_model=original_model,
-            aor_local=aor_local,
+            aor_local=aor_local_child,
             joint_center_local=joint_center_local,
             longitudinal_axis_local=longitudinal_axis_local,
         )

@@ -4,7 +4,6 @@ Tests for biobuddy.characteristics.de_leva module
 
 import numpy as np
 import numpy.testing as npt
-import pytest
 import biorbd
 
 from biobuddy import (
@@ -344,6 +343,7 @@ def test_de_leva_table_constructor_from_data():
         ),
         np.array([3.75010100e-03, 0.00000000e00, 5.51640248e00, 1.00000000e00]),
     )
+
     male_model.to_biomod("temporary_path.bioMod")
     male_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
@@ -451,11 +451,10 @@ def test_de_leva_table_constructor_from_measurements():
     # Test the simple model
     female_model = female_table.to_simple_model()
     npt.assert_almost_equal(
-        female_model.total_com_in_global().reshape(
-            4,
-        ),
+        female_model.total_com_in_global().reshape(4),
         np.array([0.00362464, 0.0, 0.96795513, 1.0]),
     )
+
     female_model.to_biomod("temporary_path.bioMod")
     female_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(

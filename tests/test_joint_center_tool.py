@@ -1,20 +1,13 @@
 import os
-import pytest
-import numpy as np
-import numpy.testing as npt
 
 from biobuddy.utils.named_list import NamedList
-from test_utils import remove_temporary_biomods, MockEmptyC3dData
-from biobuddy import (
-    BiomechanicalModelReal,
-    JointCenterTool,
-    Score,
-    Sara,
-    C3dData,
-    MarkerWeight,
-    Rotations,
-)
+from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations
 from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification
+import numpy as np
+import numpy.testing as npt
+import pytest
+
+from test_utils import remove_temporary_biomods, MockEmptyC3dData
 
 
 def visualize_modified_model_output(
@@ -96,7 +89,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_data=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -107,7 +100,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_data=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -335,6 +328,7 @@ def test_score_and_sara_with_ghost_segments():
 
     # --- Paths --- #
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
     leg_model_filepath = parent_path + "/examples/models/leg_with_ghost_parents.bioMod"
     score_biomod_filepath = parent_path + "/examples/models/leg_with_ghost_parents_score.bioMod"
 
@@ -346,10 +340,8 @@ def test_score_and_sara_with_ghost_segments():
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
 
     # Read the .bioMod file
-    scaled_model = BiomechanicalModelReal().from_biomod(
-        filepath=leg_model_filepath,
-    )
-    marker_weights = NamedList()
+    scaled_model = BiomechanicalModelReal().from_biomod(filepath=leg_model_filepath)
+    marker_weights = NamedList[MarkerWeight]()
     marker_weights.append(MarkerWeight("RASIS", 1.0))
     marker_weights.append(MarkerWeight("LASIS", 1.0))
     marker_weights.append(MarkerWeight("LPSIS", 0.5))
@@ -371,7 +363,7 @@ def test_score_and_sara_with_ghost_segments():
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_data=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -382,7 +374,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_data=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -754,7 +746,7 @@ def test_longitudinal_axis():
         filepath=leg_model_filepath,
     )
     sara = Sara(
-        functional_c3d=knee_c3d,
+        functional_data=knee_c3d,
         parent_name=parent_name,
         child_name=child_name,
         parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],

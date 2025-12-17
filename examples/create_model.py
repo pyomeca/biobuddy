@@ -115,7 +115,7 @@ def complex_model_from_scratch(mesh_path, remove_temporary: bool = True):
     # Put the model together
     real_model = bio_model.to_real({}, None)
 
-    # Pprint it to a bioMod file
+    # Print it to a bioMod file
     real_model.to_biomod(kinematic_model_filepath)
 
     model = biorbd.Model(kinematic_model_filepath)
