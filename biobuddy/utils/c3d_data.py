@@ -82,6 +82,15 @@ class C3dData:
             self.ezc3d_data["data"]["points"][:, self._indices_in_c3d(marker_names), self.first_frame : self.last_frame]
         )
 
+    def mean_values(self) -> "Self":
+        """
+        Get the mean value of the marker positions.
+        """
+        mean_values = {}
+        for marker_name in self.marker_names:
+            mean_values[marker_name] = np.nanmean(self.get_position((marker_name,))[:, 0, :], axis=1)
+        return mean_values
+
     def _to_meter(self, data: np.array) -> np.ndarray:
         units = self.ezc3d_data["parameters"]["POINT"]["UNITS"]["value"]
         units = units[0] if len(units) > 0 else units

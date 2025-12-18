@@ -287,6 +287,9 @@ class FakeData:
         self.values["SHOULDER_RIGHT"] = np.array([[0], [0], [0.53]])
         self.nb_frames = 1
 
+    def mean_values(self):
+        return {name: self.values[name] for name in self.values.keys()}
+
 
 def test_model_creation_from_static():
 
