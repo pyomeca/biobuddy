@@ -738,7 +738,7 @@ class DeLevaTable:
                     origin=lambda m, model: self.right_ankle_position,
                 ),
                 mesh=Mesh(
-                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, self.foot_length, 0, 1])),
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([self.foot_length, 0, 0, 1])),
                     is_local=True,
                 ),
             )
@@ -785,7 +785,7 @@ class DeLevaTable:
                     origin=lambda m, model: self.left_ankle_position,
                 ),
                 mesh=Mesh(
-                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([0, self.foot_length, 0, 1])),
+                    (lambda m, model: np.array([0, 0, 0, 1]), lambda m, model: np.array([self.foot_length, 0, 0, 1])),
                     is_local=True,
                 ),
             )
