@@ -15,7 +15,7 @@ def point_to_array(point: Point, name: str = "unknown") -> np.ndarray:
     point
         The point to convert
     name
-        The name of the point tu use in the error message is needed
+        The name of the point to use in the error message is needed
 
     Returns
     -------

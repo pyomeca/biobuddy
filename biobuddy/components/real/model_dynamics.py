@@ -786,7 +786,12 @@ class ModelDynamics:
 
                 if model_path is None or not model_path.endswith(".bioMod"):
                     model_path = "temporary.bioMod"
-                    self.to_biomod(model_path, with_mesh=False)
+                    if self.has_mesh_files:
+                        # TODO: match the mesh_file directory to allow seeing the mesh files too
+                        self.to_biomod(model_path, with_mesh=False)
+                    else:
+                        # Allow to see the mesh points
+                        self.to_biomod(model_path, with_mesh=True)
 
                 animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)

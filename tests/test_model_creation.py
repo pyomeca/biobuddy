@@ -30,7 +30,7 @@ from biobuddy import (
 from test_utils import destroy_model
 
 
-def test_model_creation_from_static(remove_temporary: bool = True):
+def test_model_creation_from_static_func(remove_temporary: bool = True):
     """
     Produces a model from real data
     """
@@ -281,13 +281,17 @@ class FakeData:
         q = np.zeros(model.nbQ())
         marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
         self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
+        self.values["HIP_LEFT"] = np.array([[0], [0], [0]])
+        self.values["HIP_RIGHT"] = np.array([[0], [0], [0]])
+        self.values["SHOULDER_LEFT"] = np.array([[0], [0], [0.53]])
+        self.values["SHOULDER_RIGHT"] = np.array([[0], [0], [0.53]])
         self.nb_frames = 1
 
 
-def test_model_creation_from_data():
+def test_model_creation_from_static():
 
     kinematic_model_filepath = "temporary.bioMod"
-    test_model_creation_from_static(remove_temporary=False)
+    test_model_creation_from_static_func(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
     fake_data = FakeData(Model(kinematic_model_filepath))
@@ -295,7 +299,7 @@ def test_model_creation_from_data():
     # Fill the kinematic chain model
     model = BiomechanicalModel()
     de_leva = DeLevaTable(total_mass=100, sex=Sex.FEMALE)
-    de_leva.from_data(fake_data)
+    de_leva.from_static(fake_data)
 
     model.add_segment(
         Segment(
@@ -478,7 +482,7 @@ def test_model_creation_from_data():
         os.remove(kinematic_model_filepath)
 
 
-def test_model_creation_from_data_lower_body():
+def test_model_creation_from_static_lower_body():
 
     from examples.create_model_from_c3d import model_creation_from_measured_data
 

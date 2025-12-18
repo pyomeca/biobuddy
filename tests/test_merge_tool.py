@@ -264,7 +264,7 @@ def test_merge_segments_tool_merge_mean():
         this_height=this_height,
         this_ankle_height=0.01 * this_height,
         this_knee_height=0.25 * this_height,
-        this_pelvis_height=0.50 * this_height,
+        this_hip_height=0.50 * this_height,
         this_shoulder_height=0.80 * this_height,
         this_finger_span=1 * this_height,
         this_wrist_span=0.9 * this_height,
