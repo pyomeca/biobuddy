@@ -415,16 +415,18 @@ def test_de_leva_table_constructor_from_measurements():
     assert male_segments == female_segments
 
     # Test that all expected segments are present
-    expected_segments = set([
-        SegmentName.LOWER_ARM,
-        SegmentName.HAND,
-        SegmentName.HEAD,
-        SegmentName.SHANK,
-        SegmentName.THIGH,
-        SegmentName.TRUNK,
-        SegmentName.UPPER_ARM,
-        SegmentName.FOOT
-    ])
+    expected_segments = set(
+        [
+            SegmentName.LOWER_ARM,
+            SegmentName.HAND,
+            SegmentName.HEAD,
+            SegmentName.SHANK,
+            SegmentName.THIGH,
+            SegmentName.TRUNK,
+            SegmentName.UPPER_ARM,
+            SegmentName.FOOT,
+        ]
+    )
     assert male_segments == expected_segments
     assert all(
         segment_name in ["LOWER_ARM", "HAND", "HEAD", "SHANK", "THIGH", "TRUNK", "UPPER_ARM", "FOOT"]
@@ -482,7 +484,6 @@ def test_de_leva_table_constructor_from_measurements():
         np.array([[12.4874833, 0.0, 0.24305711], [0.0, 12.40340046, 0.0], [0.24305711, 0.0, 0.44760615]]),
     )
 
-
     # --- Test with tree trunk segments --- #
     umbilicus_height = 1.05
     xiphoid_height = 1.30
@@ -534,21 +535,35 @@ def test_de_leva_table_constructor_from_measurements():
     assert male_segments == female_segments
 
     # Test that all expected segments are present
-    expected_segments = set([
-        SegmentName.LOWER_ARM,
-        SegmentName.HAND,
-        SegmentName.HEAD,
-        SegmentName.SHANK,
-        SegmentName.THIGH,
-        SegmentName.LOWER_TRUNK,
-        SegmentName.MID_TRUNK,
-        SegmentName.UPPER_TRUNK,
-        SegmentName.UPPER_ARM,
-        SegmentName.FOOT,
-    ])
+    expected_segments = set(
+        [
+            SegmentName.LOWER_ARM,
+            SegmentName.HAND,
+            SegmentName.HEAD,
+            SegmentName.SHANK,
+            SegmentName.THIGH,
+            SegmentName.LOWER_TRUNK,
+            SegmentName.MID_TRUNK,
+            SegmentName.UPPER_TRUNK,
+            SegmentName.UPPER_ARM,
+            SegmentName.FOOT,
+        ]
+    )
     assert male_segments == expected_segments
     assert all(
-        segment_name in ["LOWER_ARM", "HAND", "HEAD", "SHANK", "THIGH", "LOWER_TRUNK", "MID_TRUNK", "UPPER_TRUNK", "UPPER_ARM", "FOOT"]
+        segment_name
+        in [
+            "LOWER_ARM",
+            "HAND",
+            "HEAD",
+            "SHANK",
+            "THIGH",
+            "LOWER_TRUNK",
+            "MID_TRUNK",
+            "UPPER_TRUNK",
+            "UPPER_ARM",
+            "FOOT",
+        ]
         for segment_name in segment_names
     )
 
@@ -601,7 +616,7 @@ def test_de_leva_table_constructor_from_measurements():
     female_model_biomod = biorbd.Model("temporary_path.bioMod")
     npt.assert_almost_equal(
         female_model_biomod.bodyInertia(np.zeros((female_model.nb_q,))).to_array(),
-        np.array([[15.56404561,  0.        ,  0.26130957], [0.        , 15.46755677,  0.        ], [0.26130957,  0.        ,  0.46762415]]),
+        np.array([[15.56404561, 0.0, 0.26130957], [0.0, 15.46755677, 0.0], [0.26130957, 0.0, 0.46762415]]),
     )
 
 
