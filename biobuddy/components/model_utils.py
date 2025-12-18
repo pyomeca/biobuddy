@@ -81,6 +81,22 @@ class ModelUtils:
         """True if the segment segment_name has an offset parent."""
         return segment_name + "_parent_offset" in self.segment_names
 
+    @property
+    def has_meshes(self) -> bool:
+        """True if at least one segment has a mesh."""
+        for segment in self.segments:
+            if segment.mesh is not None:
+                return True
+        return False
+
+    @property
+    def has_mesh_files(self) -> bool:
+        """True if at least one segment has a mesh file."""
+        for segment in self.segments:
+            if segment.mesh_file is not None:
+                return True
+        return False
+
     def children_segment_names(self, parent_name: str):
         children = []
         for segment_name in self.segments.keys():
