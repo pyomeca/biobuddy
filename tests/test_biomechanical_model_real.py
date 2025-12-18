@@ -435,6 +435,7 @@ def test_get_full_segment_chain():
     ):
         model.get_full_segment_chain(segment_name="new")
 
+
 def test_has_mesh():
     # create a simple model
     model = create_simple_model()
@@ -447,6 +448,7 @@ def test_has_mesh():
     model.segments["child"].mesh = None
     assert not model.has_meshes
 
+
 def test_has_mesh_file():
     # create a simple model
     model = create_simple_model()
@@ -455,8 +457,5 @@ def test_has_mesh_file():
     assert not model.has_mesh_files
 
     # Add a mesh file to one segment
-    model.segments["parent"].mesh_file = MeshFileReal(
-        mesh_file_name="parent_mesh.obj", mesh_file_directory="geometry"
-    )
+    model.segments["parent"].mesh_file = MeshFileReal(mesh_file_name="parent_mesh.obj", mesh_file_directory="geometry")
     assert model.has_mesh_files
-
