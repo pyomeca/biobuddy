@@ -614,6 +614,7 @@ class DeLevaTable:
             model.add_segment(
                 Segment(
                     name="MID_TRUNK",
+                    parent_name="LOWER_TRUNK",
                     rotations=Rotations.XYZ,
                     inertia_parameters=self.inertial_table[self.sex][SegmentName.MID_TRUNK],
                     segment_coordinate_system=SegmentCoordinateSystem(
@@ -625,6 +626,7 @@ class DeLevaTable:
             model.add_segment(
                 Segment(
                     name="UPPER_TRUNK",
+                    parent_name="MID_TRUNK",
                     rotations=Rotations.XYZ,
                     inertia_parameters=self.inertial_table[self.sex][SegmentName.UPPER_TRUNK],
                     segment_coordinate_system=SegmentCoordinateSystem(
