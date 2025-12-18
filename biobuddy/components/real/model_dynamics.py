@@ -788,14 +788,21 @@ class ModelDynamics:
         if view_as == ViewAs.BIORBD or view_as == ViewAs.BIORBD_BIOVIZ:
             if model_path is None or not model_path.endswith(".bioMod"):
                 model_path = "temporary.bioMod"
-                self.to_biomod(model_path, with_mesh=False)
-
+                if self.has_mesh_files:
+                    # TODO: match the mesh_file directory to allow seeing the mesh files too
+                    self.to_biomod(model_path, with_mesh=False)
+                else:
+                    # Allow to see the mesh points
+                    self.to_biomod(model_path, with_mesh=True)
+                    
             if view_as == ViewAs.BIORBD_BIOVIZ:
                 try:
                     import bioviz  # type: ignore
                 except ImportError:
                     _logger.error("bioviz is not installed. Cannot animate the model with BIORBD_BIOVIZ.")
                     return
+
+
 
                 viz = bioviz.Viz(model_path)
                 viz.exec()

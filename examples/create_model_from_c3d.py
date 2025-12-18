@@ -41,7 +41,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
         knee_height=SegmentCoordinateSystemUtils.mean_markers(["RLFE", "RMFE", "LLFE", "LMFE"])(
             static_trial.values, None
         )[2],
-        pelvis_height=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"])(
+        hip_height=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"])(
             static_trial.values, None
         )[2],
         shoulder_height=SegmentCoordinateSystemUtils.mean_markers(["LA", "RA"])(static_trial.values, None)[2],

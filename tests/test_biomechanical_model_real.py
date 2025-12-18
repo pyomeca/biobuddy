@@ -9,6 +9,7 @@ from biobuddy import (
     SimmSpline,
     SegmentReal,
     MeshFileReal,
+    MeshReal,
     RangeOfMotion,
     Ranges,
 )
@@ -433,3 +434,28 @@ def test_get_full_segment_chain():
         match="The segments in the model are not in the correct order to get the full segment chain for new.",
     ):
         model.get_full_segment_chain(segment_name="new")
+
+
+def test_has_mesh():
+    # create a simple model
+    model = create_simple_model()
+
+    # Initially, two segments have a mesh
+    assert model.has_meshes
+
+    # Remove meshes
+    model.segments["parent"].mesh = None
+    model.segments["child"].mesh = None
+    assert not model.has_meshes
+
+
+def test_has_mesh_file():
+    # create a simple model
+    model = create_simple_model()
+
+    # Initially, no segments have mesh file files
+    assert not model.has_mesh_files
+
+    # Add a mesh file to one segment
+    model.segments["parent"].mesh_file = MeshFileReal(mesh_file_name="parent_mesh.obj", mesh_file_directory="geometry")
+    assert model.has_mesh_files
