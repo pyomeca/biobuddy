@@ -30,7 +30,7 @@ from biobuddy import (
 from test_utils import destroy_model
 
 
-def test_model_creation_from_static(remove_temporary: bool = True):
+def test_model_creation_from_static_func(remove_temporary: bool = True):
     """
     Produces a model from real data
     """
@@ -287,7 +287,7 @@ class FakeData:
 def test_model_creation_from_static():
 
     kinematic_model_filepath = "temporary.bioMod"
-    test_model_creation_from_static(remove_temporary=False)
+    test_model_creation_from_static_func(remove_temporary=False)
 
     # Prepare a fake model and a fake static from the previous test
     fake_data = FakeData(Model(kinematic_model_filepath))

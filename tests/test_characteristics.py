@@ -269,7 +269,7 @@ def test_sex_enum():
 
 def test_segment_name_enum():
     """Test SegmentName enum values."""
-    expected_segments = ["HEAD", "TRUNK", "UPPER_ARM", "LOWER_ARM", "HAND", "THIGH", "SHANK", "FOOT"]
+    expected_segments = ["HEAD", "TRUNK", "LOWER_TRUNK", "MID_TRUNK", "UPPER_TRUNK", "UPPER_ARM", "LOWER_ARM", "HAND", "THIGH", "SHANK", "FOOT"]
 
     for segment_name in expected_segments:
         segment = getattr(SegmentName, segment_name)
@@ -302,7 +302,16 @@ def test_de_leva_table_constructor_from_static():
     assert male_segments == female_segments
 
     # Test that all expected segments are present
-    expected_segments = set(SegmentName)
+    expected_segments = set([
+        SegmentName.LOWER_ARM,
+        SegmentName.HAND,
+        SegmentName.HEAD,
+        SegmentName.SHANK,
+        SegmentName.THIGH,
+        SegmentName.TRUNK,
+        SegmentName.UPPER_ARM,
+        SegmentName.FOOT,
+    ])
     assert male_segments == expected_segments
     assert all(
         segment_name in ["LOWER_ARM", "HAND", "HEAD", "SHANK", "THIGH", "TRUNK", "UPPER_ARM", "FOOT"]
@@ -619,6 +628,85 @@ def test_de_leva_table_constructor_from_measurements():
         np.array([[15.56404561, 0.0, 0.26130957], [0.0, 15.46755677, 0.0], [0.26130957, 0.0, 0.46762415]]),
     )
 
+    # Have to test the inertial parameters here since from_static does not handle 3 part trunk
+    # Mass - Female
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        8.729,
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        10.255,
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        10.815,
+    )
+    # CoM - Female
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.    , 0.    , 0.2794, 0.    ]),
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.     , 0.     , 0.30184, 0.     ]),
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.     , 0.     , 0.27225, 0.     ]),
+    )
+    # Inertia - Female
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.01636591, 0.01410641, 0.017208]),
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.12016873, 0.08031972, 0.11038546]),
+    )
+    npt.assert_almost_equal(
+        female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.09394169, 0.04265263, 0.08721259]),
+    )
+    # Mass - male
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        7.819,
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        11.431,
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].relative_mass(MOCK_DATA().values, BiomechanicalModel()),
+        11.172,
+    )
+    # CoM - male
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.    , 0.    , 0.213675, 0.    ]),
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.     , 0.     , 0.30239, 0.     ]),
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].center_of_mass(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.     , 0.     , 0.27137, 0.     ]),
+    )
+    # Inertia - male
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.02957341, 0.02373856, 0.02694185]),
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.16598098, 0.10480012, 0.15647896]),
+    )
+    npt.assert_almost_equal(
+        male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        np.array([0.11396557, 0.04576051, 0.09662663]),
+    )
 
 def test_de_leva_table_getitem():
     """Test DeLevaTable.__getitem__ method."""
@@ -630,6 +718,9 @@ def test_de_leva_table_getitem():
 
     # Test that we can access all segments
     for segment in SegmentName:
+        if segment == SegmentName.LOWER_TRUNK or segment == SegmentName.MID_TRUNK or segment == SegmentName.UPPER_TRUNK:
+            # These segments are not in the static table
+            continue
         male_params = male_table[segment]
         female_params = female_table[segment]
 
@@ -826,6 +917,10 @@ def test_de_leva_table_comprehensive():
 
         # Test that all segments are accessible
         for segment in SegmentName:
+            if segment == SegmentName.LOWER_TRUNK or segment == SegmentName.MID_TRUNK or segment == SegmentName.UPPER_TRUNK:
+                # These segments are not in the static table
+                continue
+
             params = table[segment]
 
             # Test that all required functions are present
