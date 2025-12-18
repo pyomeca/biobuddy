@@ -281,6 +281,10 @@ class FakeData:
         q = np.zeros(model.nbQ())
         marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
         self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
+        self.values["HIP_LEFT"] = np.array([[0], [0], [0]])
+        self.values["HIP_RIGHT"] = np.array([[0], [0], [0]])
+        self.values["SHOULDER_LEFT"] = np.array([[0], [0], [0.53]])
+        self.values["SHOULDER_RIGHT"] = np.array([[0], [0], [0.53]])
         self.nb_frames = 1
 
 
