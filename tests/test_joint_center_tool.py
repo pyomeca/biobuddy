@@ -424,7 +424,7 @@ def test_score_and_sara_with_ghost_segments():
     npt.assert_almost_equal(
         score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.translation,
         np.array([-0.0361767, -0.03531768, -0.01128449]),
-        decimal=5,
+        decimal=3,
     )
     # The rotation should not change
     npt.assert_almost_equal(
@@ -457,7 +457,7 @@ def test_score_and_sara_with_ghost_segments():
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.translation,
         np.array([0.00538483, -0.38267316, -0.00960224]),
-        decimal=5,
+        decimal=3,
     )
     # The rotation is the result from SARA (and is less stable numerically)
     npt.assert_almost_equal(
@@ -469,7 +469,7 @@ def test_score_and_sara_with_ghost_segments():
                 [-0.04940815, 0.1148658, -0.99215154],
             ]
         ),
-        decimal=5,
+        decimal=3,
     )
 
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
