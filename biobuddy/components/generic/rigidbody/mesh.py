@@ -5,6 +5,7 @@ import numpy as np
 from ....utils.protocols import Data
 from ....utils.linear_algebra import RotoTransMatrix
 from ....utils.aliases import points_to_array
+from ...generic.rigidbody.marker import Marker
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
@@ -48,6 +49,8 @@ class Mesh:
                     ]
                 elif callable(function):
                     functions_list += [function]
+                elif isinstance(function, Marker):
+                    functions_list += [function.function]
                 else:
                     raise TypeError(
                         f"Expected a callable or a string, got {type(function)} instead. "

@@ -1,7 +1,8 @@
 """
 This example shows how to create a personalized kinematic model from a C3D file containing a static trial.
 Here, we generate a simple lower-body model with only a trunk segment.
-The marker position and names are taken from Maldonado & al., 2018 (https://hal.science/hal-01841355/)
+The marker position and names are taken from Maldonado & al., 2018 (https://hal.science/hal-01841355/).
+TODO: Collect functional trials to define joint centers more accurately, and then move the example to applied_examples.
 """
 
 import os

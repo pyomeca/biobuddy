@@ -280,6 +280,12 @@ class SegmentCoordinateSystemUtils:
 
             is_in_cache = static_markers_hash in score_cache
             if not is_in_cache:
+
+                # Check that the markers are in the static
+                for name in parent_marker_names + child_marker_names:
+                    if name not in static_markers:
+                        raise RuntimeError(f"The marker {name} is not present in the static markers.")
+
                 # Rigidify the parent segment at static markers
                 rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
                     _InternalData({name: static_markers[name] for name in parent_marker_names})
