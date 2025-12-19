@@ -12,6 +12,9 @@ from biobuddy import (
     RotoTransMatrix,
     InertiaParametersReal,
     InertialMeasurementUnitReal,
+    SegmentCoordinateSystemReal,
+    RangeOfMotion,
+    Ranges,
 )
 from test_utils import create_simple_model
 from biobuddy.utils.linear_algebra import point_from_local_to_global
@@ -44,43 +47,76 @@ def test_kinematic_chain_tool_modify():
 
     original_model = create_simple_model()
 
+    # Add a segment with ranges
+    segment_coordinate_system = SegmentCoordinateSystemReal().from_euler_and_translation(
+        angles=np.zeros((3,)),
+        angle_sequence="xyz",
+        translation=np.array([0.0, 0.0, 0.0, 1.0]),
+    )
+    segment_coordinate_system.is_in_local = True
+    original_model.add_segment(
+        SegmentReal(
+            name="grand_child",
+            parent_name="child",
+            rotations=Rotations.X,
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=np.array([0]), max_bound=np.array([np.pi/2])),
+            qdot_ranges=RangeOfMotion(range_type=Ranges.Qdot, min_bound=np.array([-1]), max_bound=np.array([10])),
+            segment_coordinate_system=segment_coordinate_system,
+            inertia_parameters=InertiaParametersReal(
+                mass=5.0, center_of_mass=np.array([0.0, 0.1, 0.0, 1.0]), inertia=np.eye(3) * 0.01
+            ),
+        )
+    )
+
     kinematic_chain_modifier = ModifyKinematicChainTool(original_model)
-    kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="child", new_segment_name="PELVIS"))
+    kinematic_chain_modifier.add(ChangeFirstSegment(first_segment_name="grand_child", new_segment_name="PELVIS"))
     modified_model = kinematic_chain_modifier.modify()
 
     # Check the number of elements
-    assert modified_model.nb_segments == 4
+    assert modified_model.nb_segments == 5
     assert modified_model.nb_muscles == 1
     assert modified_model.nb_via_points == 1
     assert modified_model.nb_markers == 4
     assert modified_model.nb_contacts == 2
 
     # Check the segment's name
-    assert modified_model.segment_names == ["root", "child", "parent", "PELVIS"]
+    assert modified_model.segment_names == ["root", "grand_child", "child", "parent", "PELVIS"]
 
     # Check the segment's parent name
-    assert modified_model.segments["child"].parent_name == "root"
+    assert modified_model.segments["grand_child"].parent_name == "root"
+    assert modified_model.segments["child"].parent_name == "grand_child"
     assert modified_model.segments["parent"].parent_name == "child"
     assert modified_model.segments["PELVIS"].parent_name == "parent"
 
     # Check the segment's dofs
-    assert modified_model.segments["child"].translations == Translations.XYZ
-    assert modified_model.segments["child"].rotations == Rotations.XYZ
+    assert modified_model.segments["grand_child"].translations == Translations.XYZ
+    assert modified_model.segments["grand_child"].rotations == Rotations.XYZ
+    assert modified_model.segments["child"].translations == Translations.NONE
+    assert modified_model.segments["child"].rotations == original_model.segments["grand_child"].rotations
     assert modified_model.segments["parent"].translations == Translations.NONE
     assert modified_model.segments["parent"].rotations == original_model.segments["child"].rotations
     assert modified_model.segments["PELVIS"].translations == Translations.NONE
     assert modified_model.segments["PELVIS"].rotations == Rotations.NONE
 
-    # TODO: another segment should be added to test ranges
-    assert modified_model.segments["child"].q_ranges is None
+    assert modified_model.segments["grand_child"].q_ranges is None
+    assert modified_model.segments["child"].q_ranges is not None
+    npt.assert_almost_equal(modified_model.segments["child"].q_ranges.min_bound, np.array([-np.pi/2]))
+    npt.assert_almost_equal(modified_model.segments["child"].q_ranges.max_bound, np.array([0]))
+    assert modified_model.segments["child"].qdot_ranges is not None
+    npt.assert_almost_equal(modified_model.segments["child"].qdot_ranges.min_bound, np.array([-10]))
+    npt.assert_almost_equal(modified_model.segments["child"].qdot_ranges.max_bound, np.array([1]))
     assert modified_model.segments["parent"].q_ranges is None
     assert modified_model.segments["PELVIS"].q_ranges is None
 
     # Check the segment's scs
     expected_new_root_origin = RotoTransMatrix()
-    expected_new_root_origin.translation = original_model.segment_com_in_global("child")
+    expected_new_root_origin.translation = original_model.segment_com_in_global("grand_child")
     npt.assert_almost_equal(
-        modified_model.segments["child"].segment_coordinate_system.scs.rt_matrix, expected_new_root_origin.rt_matrix
+        modified_model.segments["grand_child"].segment_coordinate_system.scs.rt_matrix, expected_new_root_origin.rt_matrix
+    )
+    npt.assert_almost_equal(
+        modified_model.segment_coordinate_system_in_global("child").rt_matrix,
+        original_model.segment_coordinate_system_in_global("grand_child").rt_matrix,
     )
     npt.assert_almost_equal(
         modified_model.segment_coordinate_system_in_global("parent").rt_matrix,
@@ -93,6 +129,10 @@ def test_kinematic_chain_tool_modify():
 
     # Check the segment's mass
     npt.assert_almost_equal(
+        modified_model.segments["grand_child"].inertia_parameters.mass,
+        original_model.segments["grand_child"].inertia_parameters.mass,
+    )
+    npt.assert_almost_equal(
         modified_model.segments["child"].inertia_parameters.mass,
         original_model.segments["child"].inertia_parameters.mass,
     )
@@ -104,10 +144,16 @@ def test_kinematic_chain_tool_modify():
 
     # Check that the segment's com did not move in the global
     npt.assert_almost_equal(
-        modified_model.segments["child"].inertia_parameters.center_of_mass.reshape(
+        modified_model.segments["grand_child"].inertia_parameters.center_of_mass.reshape(
             4,
         ),
         np.array([0, 0, 0, 1]),
+    )
+    npt.assert_almost_equal(
+        modified_model.segments["child"].inertia_parameters.center_of_mass.reshape(
+            4,
+        ),
+        np.array([0, 0.1, 0, 1]),
     )
     npt.assert_almost_equal(
         modified_model.segment_com_in_global("child"), original_model.segment_com_in_global("child")
@@ -124,6 +170,10 @@ def test_kinematic_chain_tool_modify():
     npt.assert_almost_equal(modified_model.total_com_in_global(), original_model.total_com_in_global())
 
     # Check the merged segment's inertia
+    npt.assert_almost_equal(
+        modified_model.segments["grand_child"].inertia_parameters.inertia,
+        original_model.segments["grand_child"].inertia_parameters.inertia,
+    )
     npt.assert_almost_equal(
         modified_model.segments["child"].inertia_parameters.inertia,
         original_model.segments["child"].inertia_parameters.inertia,
@@ -142,7 +192,7 @@ def test_kinematic_chain_tool_modify():
         modified_model.segments["parent"].mesh.positions, np.array([[0.0, 0.2], [0.0, 0.1], [-1.0, -0.7], [1.0, 1.0]])
     )
     npt.assert_almost_equal(
-        modified_model.segments["child"].mesh.positions, np.array([[0.0, 0.2], [-0.1, 0.0], [0.0, 0.3], [1.0, 1.0]])
+        modified_model.segments["child"].mesh.positions, np.array([[0.0, 0.2], [0.0, 0.1], [0.0, 0.3], [1.0, 1.0]])
     )
     assert modified_model.segments["PELVIS"].mesh is None
 

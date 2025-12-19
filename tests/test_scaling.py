@@ -412,7 +412,7 @@ def test_scaling_wholebody():
             @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
         )
         if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
-            # TODO: fix -> There is still a problem with the fingers in BioBuddy
+            # TODO: fix -> There is still a problem with the fingers in BioBuddy (should be fixed)
             decimal = 2
         else:
             decimal = 5
