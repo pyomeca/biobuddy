@@ -642,8 +642,12 @@ class Score(RigidSegmentIdentification):
         cor_parent_global = np.zeros((4, nb_frames))
         cor_child_global = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
-            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1))).reshape(4, )
-            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1))).reshape(4, )
+            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1))).reshape(
+                4,
+            )
+            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1))).reshape(
+                4,
+            )
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 

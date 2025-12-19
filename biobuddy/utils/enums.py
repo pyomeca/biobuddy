@@ -43,6 +43,7 @@ class ViewAs(Enum):
     BIORBD = "biorbd"
     # OPENSIM = "opensim"  # TODO
 
+
 class ViewerType(Enum):
     PYORERUN = "pyorerun"
     BIOVIZ = "bioviz"

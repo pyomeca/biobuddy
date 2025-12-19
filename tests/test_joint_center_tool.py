@@ -162,9 +162,13 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
             # Both rotation and translation parts were modified
-            np.array([[-0.99777447,  0.06656149,  0.00396018],
-                    [ 0.06658715,  0.99151884,  0.11160891],
-                    [ 0.00350226,  0.11162422, -0.99374432]]),
+            np.array(
+                [
+                    [-0.99777447, 0.06656149, 0.00396018],
+                    [0.06658715, 0.99151884, 0.11160891],
+                    [0.00350226, 0.11162422, -0.99374432],
+                ]
+            ),
             decimal=5,
         )
     else:
@@ -177,9 +181,13 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
-            np.array([[ 0.99777494,  0.06547161, -0.01259532],
-                [-0.0664371 ,  0.99220326, -0.1054457 ],
-                [ 0.00559341,  0.10604788,  0.99434529]]),
+            np.array(
+                [
+                    [0.99777494, 0.06547161, -0.01259532],
+                    [-0.0664371, 0.99220326, -0.1054457],
+                    [0.00559341, 0.10604788, 0.99434529],
+                ]
+            ),
             decimal=5,
         )
 
@@ -243,8 +251,15 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Animate the output
     if animate:
         from pyorerun import PyoMarkers
-        pyomarkers = PyoMarkers(data=hip_c3d.get_position(list(marker_weights.keys())), channels=list(marker_weights.keys()), show_labels=False)
-        visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
+
+        pyomarkers = PyoMarkers(
+            data=hip_c3d.get_position(list(marker_weights.keys())),
+            channels=list(marker_weights.keys()),
+            show_labels=False,
+        )
+        visualize_modified_model_output(
+            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+        )
 
     # Knee
     marker_names = list(marker_weights.keys())
@@ -264,8 +279,11 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Animate the results
     if animate:
         from pyorerun import PyoMarkers
+
         pyomarkers = PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
-        visualize_modified_model_output(leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers)
+        visualize_modified_model_output(
+            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+        )
 
     markers_index = scaled_model.markers_indices(marker_names)
 
@@ -405,7 +423,7 @@ def test_score_and_sara_with_ghost_segments():
     # The translation is the result from SCoRE (and should not change)
     npt.assert_almost_equal(
         score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.translation,
-        np.array([-0.0361767 , -0.03531768, -0.01128449]),
+        np.array([-0.0361767, -0.03531768, -0.01128449]),
         decimal=5,
     )
     # The rotation should not change
@@ -444,9 +462,13 @@ def test_score_and_sara_with_ghost_segments():
     # The rotation is the result from SARA (and is less stable numerically)
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix,
-        np.array([[-0.98002501,  0.18601934,  0.07034055],
-            [ 0.1926391 ,  0.97580872,  0.10338049],
-            [-0.04940815,  0.1148658 , -0.99215154]]),
+        np.array(
+            [
+                [-0.98002501, 0.18601934, 0.07034055],
+                [0.1926391, 0.97580872, 0.10338049],
+                [-0.04940815, 0.1148658, -0.99215154],
+            ]
+        ),
         decimal=5,
     )
 

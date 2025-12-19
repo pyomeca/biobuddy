@@ -784,10 +784,10 @@ class ModelDynamics:
         return muscle_tendon_length
 
     def animate(
-            self,
-            view_as: ViewAs = ViewAs.BIORBD,
-            viewer_type: ViewerType = ViewerType.PYORERUN,
-            model_path: str = None,
+        self,
+        view_as: ViewAs = ViewAs.BIORBD,
+        viewer_type: ViewerType = ViewerType.PYORERUN,
+        model_path: str = None,
     ):
 
         if view_as == ViewAs.BIORBD:
@@ -799,7 +799,7 @@ class ModelDynamics:
                 else:
                     # Allow to see the mesh points
                     self.to_biomod(model_path, with_mesh=True)
-                    
+
             if viewer_type == ViewerType.BIOVIZ:
                 try:
                     import bioviz  # type: ignore
