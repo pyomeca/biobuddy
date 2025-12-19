@@ -3,7 +3,6 @@ from .rigidbody.segment import Segment
 from ..model_utils import ModelUtils
 from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.aliases import Point, point_to_array
-from ...utils.errors import error_context
 from ...utils.linear_algebra import RotoTransMatrix
 from ...utils.named_list import NamedList
 from ...utils.protocols import Data
@@ -87,7 +86,7 @@ class BiomechanicalModel(ModelUtils):
         model = BiomechanicalModelReal(gravity=gravity)
 
         for segment in self.segments:
-            with error_context(f"The following error occured when collapsing: Segment '{segment.name}'"):
+            try:
                 scs = SegmentCoordinateSystemReal()
                 scs_global = RotoTransMatrix()
                 if segment.segment_coordinate_system is not None:
@@ -123,15 +122,22 @@ class BiomechanicalModel(ModelUtils):
                 )
 
                 for marker in segment.markers:
-                    with error_context(f"Marker '{marker.name}'"):
+                    try:
                         model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
+                    except Exception as e:  # Marker try
+                        raise RuntimeError(f"The marker '{marker.name}' could not be collided: {e}")
 
                 for contact in segment.contacts:
-                    with error_context(f"Contact '{contact.name}'"):
+                    try:
                         model.segments[contact.parent_name].add_contact(contact.to_contact(data, model, scs_global))
+                    except Exception as e:  # Contact try
+                        raise RuntimeError(f"The contact '{contact.name}' could not be collided: {e}")
+
+            except Exception as e:  # Segment try
+                raise RuntimeError(f"The following error occurred when collapsing the segment '{segment.name}': {e}")
 
         for muscle_group in self.muscle_groups:
-            with error_context(f"Muscle group '{muscle_group.name}'"):
+            try:
                 model.add_muscle_group(
                     MuscleGroupReal(
                         name=muscle_group.name,
@@ -141,14 +147,20 @@ class BiomechanicalModel(ModelUtils):
                 )
 
                 for muscle in muscle_group.muscles:
-                    with error_context(f"Muscle '{muscle.name}'"):
+                    try:
                         model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model, scs_global))
+                    except Exception as e:  # Muscle try
+                        raise RuntimeError(f"The muscle '{muscle.name}' could not be collided: {e}")
 
-                        for via_point in muscle.via_points:
-                            with error_context(f"Via point '{via_point.name}'"):
-                                model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
-                                    via_point.to_via_point(data, model, scs_global)
-                                )
+                    for via_point in muscle.via_points:
+                        try:
+                            model.muscle_groups[muscle_group.name].muscles[muscle.name].add_via_point(
+                                via_point.to_via_point(data, model, scs_global)
+                            )
+                        except Exception as e:  # Via Point try
+                            raise RuntimeError(f"The via point '{via_point.name}' could not be collided: {e}")
 
+            except Exception as e:  # Muscle Group try
+                raise RuntimeError(f"The following error occurred when collapsing the muscle group '{muscle_group.name}': {e}")
         model.validate_model()
         return model
