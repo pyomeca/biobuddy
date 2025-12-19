@@ -120,8 +120,6 @@ class RigidSegmentIdentification:
             mesh_file = None
             if original_model.segments[segment_name].mesh_file is not None:
                 mesh_file = deepcopy(original_model.segments[segment_name].mesh_file)
-                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
-                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
             joint_model.add_segment(
                 SegmentReal(
                     name=segment_name,
@@ -644,8 +642,8 @@ class Score(RigidSegmentIdentification):
         cor_parent_global = np.zeros((4, nb_frames))
         cor_child_global = np.zeros((4, nb_frames))
         for i_frame in range(nb_frames):
-            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
-            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
+            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1))).reshape(4, )
+            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1))).reshape(4, )
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 

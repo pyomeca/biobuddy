@@ -8,7 +8,7 @@ import numpy as np
 from scipy import optimize
 
 from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, point_from_local_to_global
-from ...utils.enums import ViewAs
+from ...utils.enums import ViewAs, ViewerType
 
 if TYPE_CHECKING:
     try:
@@ -116,7 +116,7 @@ class ModelDynamics:
                     f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
                 )
             else:
-                return RotoTransMatrix.from_rt_matrix(np.identity(4))
+                return RotoTransMatrix()
         else:
             rt = self.segments[segment_name].segment_coordinate_system.scs @ RotoTransMatrix()
             while parent_name != parent_offset_name:
@@ -783,9 +783,14 @@ class ModelDynamics:
 
         return muscle_tendon_length
 
-    def animate(self, view_as: ViewAs = ViewAs.BIORBD, model_path: str = None):
+    def animate(
+            self,
+            view_as: ViewAs = ViewAs.BIORBD,
+            viewer_type: ViewerType = ViewerType.PYORERUN,
+            model_path: str = None,
+    ):
 
-        if view_as == ViewAs.BIORBD or view_as == ViewAs.BIORBD_BIOVIZ:
+        if view_as == ViewAs.BIORBD:
             if model_path is None or not model_path.endswith(".bioMod"):
                 model_path = "temporary.bioMod"
                 if self.has_mesh_files:
@@ -795,28 +800,30 @@ class ModelDynamics:
                     # Allow to see the mesh points
                     self.to_biomod(model_path, with_mesh=True)
                     
-            if view_as == ViewAs.BIORBD_BIOVIZ:
+            if viewer_type == ViewerType.BIOVIZ:
                 try:
                     import bioviz  # type: ignore
                 except ImportError:
-                    _logger.error("bioviz is not installed. Cannot animate the model with BIORBD_BIOVIZ.")
+                    _logger.error("bioviz is not installed. Cannot animate the model with BIOVIZ.")
                     return
-
-
 
                 viz = bioviz.Viz(model_path)
                 viz.exec()
                 return
-            else:
+            elif viewer_type == ViewerType.PYORERUN:
                 try:
                     import pyorerun  # type: ignore
                 except ImportError:
                     _logger.error("pyorerun is not installed. Cannot animate the model.")
+                    return
 
                 animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
                 return
+
+            else:
+                raise RuntimeError(f"The viewer_type {viewer_type} is not recognized for model type {view_as}.")
 
         else:
             raise NotImplementedError(
