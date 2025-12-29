@@ -1,7 +1,7 @@
 from typing import Callable
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 
 
 class MeshFile:
@@ -96,7 +96,7 @@ class MeshFile:
 
     def to_mesh_file(
         self,
-        data: Data,
+        data: MarkerData,
         model: "BiomechanicalModelReal",
     ) -> "MeshFileReal":
         """

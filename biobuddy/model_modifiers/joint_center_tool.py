@@ -9,7 +9,7 @@ from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
-from ..utils.c3d_data import C3dData
+from ..utils.marker_data import C3dData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
     mean_unit_vector,

@@ -21,7 +21,7 @@ from ..components.real.muscle.muscle_group_real import MuscleGroupReal
 from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
-from ..utils.c3d_data import C3dData
+from ..utils.marker_data import C3dData
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
 from ..utils.aliases import Point

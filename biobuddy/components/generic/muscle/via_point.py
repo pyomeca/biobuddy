@@ -1,7 +1,7 @@
 from typing import Callable
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.checks import check_name
 from ....utils.aliases import points_to_array
 from ....utils.linear_algebra import RotoTransMatrix
@@ -86,7 +86,7 @@ class ViaPoint:
             position_function = None
         self._position_function = position_function
 
-    def to_via_point(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ViaPointReal":
+    def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
 

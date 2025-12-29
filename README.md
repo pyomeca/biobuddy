@@ -330,13 +330,13 @@ See the example [simplify_an_arm_model.py](examples/applied_examples/simplify_an
 
 
 ## Other useful features
-### Data class
+### MarkerData classes
 When providing a motion capture trial (`static_trial` or `functional_trial`), you can provide a `C3dData` class to read and manipulate a `.c3d` files.
 ```python3
 c3d_data = C3dData(c3d_path, first_frame, last_frame)
 ```
 Similarly, you can use the `CsvData` class to read and manipulate `.csv` files.
-But if you want to create your own data class, you can inherit from the abstract `Data` class.
+But if you want to create your own data class, you can inherit from the abstract `MarkerData` class.
 
 
 # Note
