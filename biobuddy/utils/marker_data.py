@@ -21,20 +21,22 @@ class MarkerData(ABC):
     Abstract class to handle marker data.
     """
 
-    def __init__(self, first_frame: int | None, last_frame: int | None):
+    def __init__(self, first_frame: int | None, last_frame: int | None, total_nb_frames: int):
 
-        self.first_frame = first_frame
-        self.last_frame = last_frame
+        # Fix the value of the first and last frames for easy accessing
+        if first_frame is None:
+            self.first_frame = 0
+        else:
+            self.first_frame = first_frame
+
+        if last_frame is None:
+            self.last_frame = total_nb_frames - 1
+        else:
+            self.last_frame = last_frame
 
         self.marker_names = self.set_marker_names()
         self.nb_frames = self.set_nb_frames()
         self.nb_markers = self.set_nb_markers()
-
-        # Fix the value of the first and last frames for easy accessing
-        if self.first_frame is None:
-            self.first_frame = 0
-        if self.last_frame is None:
-            self.last_frame = self.first_frame + self.nb_frames
 
     @abstractmethod
     def set_marker_names(self) -> list[str]:
@@ -211,8 +213,9 @@ class CsvData(MarkerData):
         self.column_titles = list(pd_csv_data.columns)
         self.axis_titles = np.array(pd_csv_data)[0, :].tolist()
         self.csv_array = np.array(pd_csv_data)[1:, :].astype(float)
+        total_nb_frames = self.csv_array.shape[0]
 
-        super().__init__(first_frame, last_frame)
+        super().__init__(first_frame, last_frame, total_nb_frames)
 
         self.csv_data = self.finalize_marker_data()
         self.values = MarkerData.set_values(self)
@@ -235,7 +238,7 @@ class CsvData(MarkerData):
                     "The second row of your csv file should contain the coordinate name 'X', 'Y', 'Z' is order."
                     "Here, it should be 'X'."
                     "Please see the readme to build a proper .csv file.")
-            csv_data[i_ax, i_marker, :] = self.csv_array[:, i_marker * 3 + i_ax]
+            csv_data[i_ax, i_marker, :] = self.csv_array[self.first_frame:self.last_frame + 1, i_marker * 3 + i_ax]
             i_ax += 1
             if i_ax == 3:
                 i_ax = 0
@@ -244,10 +247,13 @@ class CsvData(MarkerData):
         return csv_data
 
     def set_marker_names(self) -> list[str]:
-        return self.column_titles[0::3]
+        marker_names = []
+        for marker in self.column_titles[0::3]:
+            marker_names += [marker.strip()]
+        return marker_names
 
     def set_nb_frames(self) -> int:
-        return self.csv_array.shape[0]
+        return self.last_frame + 1 - self.first_frame
 
     def set_nb_markers(self) -> int:
         if self.csv_array.shape[1] % 3 != 0:

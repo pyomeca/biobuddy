@@ -16,9 +16,36 @@ def test_csv_data_initialization():
 
     assert marker_data.csv_path == csv_path
     assert marker_data.first_frame == 0
-    assert marker_data.nb_frames == 27
+    assert marker_data.last_frame == 27
+    assert marker_data.nb_frames == 28
     assert marker_data.nb_markers == 21
     assert len(marker_data.marker_names) == 21
+    marker_names = marker_data.marker_names
+    for marker in marker_names:
+        if marker not in [
+            'WRA',
+            'WRB',
+            'RU_1',
+            'RU_2',
+            'RU_3',
+            'RU_4',
+            'ELB_M',
+            'ELB_L',
+            'H_1',
+            'H_2',
+            'H_3',
+            'H_4',
+            'H_5',
+            'H_6',
+            'SA_1',
+            'SA_2',
+            'SA_3',
+            'CS_1',
+            'CS_2',
+            'CS_3',
+            'CS_4',
+        ]:
+            raise AssertionError(f"Unexpected marker name: {marker}")
 
 
 def test_csv_data_initialization_with_frame_range():
