@@ -21,7 +21,7 @@ from ..components.real.muscle.muscle_group_real import MuscleGroupReal
 from ..components.real.muscle.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
-from ..utils.marker_data import C3dData
+from ..utils.marker_data import MarkerData
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
 from ..utils.aliases import Point
@@ -108,7 +108,7 @@ class ScaleTool:
 
     def scale(
         self,
-        static_trial: C3dData,
+        static_trial: MarkerData,
         mass: float,
         q_regularization_weight: float = None,
         qdot_regularization_weight: float = None,
