@@ -2,8 +2,7 @@ from typing import Callable
 
 import numpy as np
 
-from ....utils.aliases import Point, point_to_array, Points, points_to_array
-from ....utils.protocols import Data
+from ....utils.aliases import Point, points_to_array
 from ....utils.enums import Translations
 from ....utils.checks import check_name
 

@@ -96,7 +96,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_trial=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -107,7 +107,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_trial=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -371,7 +371,7 @@ def test_score_and_sara_with_ghost_segments():
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_trial=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -382,7 +382,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_trial=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -754,7 +754,7 @@ def test_longitudinal_axis():
         filepath=leg_model_filepath,
     )
     sara = Sara(
-        functional_c3d=knee_c3d,
+        functional_trial=knee_c3d,
         parent_name=parent_name,
         child_name=child_name,
         parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],

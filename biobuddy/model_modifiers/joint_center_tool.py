@@ -26,7 +26,7 @@ _logger = logging.getLogger(__name__)
 class RigidSegmentIdentification:
     def __init__(
         self,
-        functional_c3d: C3dData,
+        functional_trial: C3dData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -37,7 +37,7 @@ class RigidSegmentIdentification:
         """
         Parameters
         ----------
-        functional_c3d
+        functional_trial
             The .c3d file containing the functional trial.
         parent_name
             The name of the joint's parent segment.
@@ -54,7 +54,7 @@ class RigidSegmentIdentification:
         """
 
         # Original attributes
-        self.c3d_data = functional_c3d
+        self.c3d_data = functional_trial
         self.parent_name = parent_name
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
@@ -703,7 +703,7 @@ class Score(RigidSegmentIdentification):
 class Sara(RigidSegmentIdentification):
     def __init__(
         self,
-        functional_c3d: C3dData,
+        functional_trial: C3dData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -716,7 +716,7 @@ class Sara(RigidSegmentIdentification):
     ):
 
         super(Sara, self).__init__(
-            functional_c3d=functional_c3d,
+            functional_trial=functional_trial,
             parent_name=parent_name,
             child_name=child_name,
             parent_marker_names=parent_marker_names,

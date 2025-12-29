@@ -194,7 +194,7 @@ def test_scaling_wholebody():
     ):
         scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
         scaled_model = scale_tool.scale(
-            static_c3d=c3d_data,
+            static_trial=c3d_data,
             mass=69.2,
             q_regularization_weight=0.1,
             make_static_pose_the_models_zero=False,
@@ -204,7 +204,7 @@ def test_scaling_wholebody():
     original_model.fix_via_points()
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
-        static_c3d=c3d_data,
+        static_trial=c3d_data,
         mass=69.2,
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=False,
@@ -380,7 +380,7 @@ def test_scaling_wholebody():
     # Make sure the experimental markers are at the same position as the model's ones in static pose
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
-        static_c3d=c3d_data,
+        static_trial=c3d_data,
         mass=69.2,
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=True,

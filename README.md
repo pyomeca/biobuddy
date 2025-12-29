@@ -219,7 +219,7 @@ mass of your participant using the `ScaleTool.scale` like this:
 ```python3
 # Performing the scaling based on a static trial
 scale_tool = ScaleTool.from_biomod(biomod_filepath)
-scaled_model = scale_tool.scale(static_c3d=C3dData(filepath), mass=mass)
+scaled_model = scale_tool.scale(static_trial=C3dData(filepath), mass=mass)
 ```
 See the example [scaling_model.py](examples/scaling_model.py) for more details.
 
@@ -243,7 +243,7 @@ joint_center_tool = JointCenterTool(scaled_model)
 # Example for the right hip
 joint_center_tool.add(
     Score(
-        functional_c3d=C3dData(c3d_filepath, first_frame=100, last_frame=900),
+        functional_trial=C3dData(c3d_filepath, first_frame=100, last_frame=900),
         parent_name="pelvis",
         child_name="femur_r",
         parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -253,7 +253,7 @@ joint_center_tool.add(
 # Example for the right knee
 joint_center_tool.add(
     Sara(
-        functional_c3d=C3dData(c3d_filepath),
+        functional_trial=C3dData(c3d_filepath),
         parent_name="femur_r",
         child_name="tibia_r",
         parent_marker_names=["RGT", "RUB_Leg", "RUF_Leg", "FBF_Leg"],
@@ -327,6 +327,16 @@ symmetry_tool = FlatteningTool(model, axis=Translations.Z)
 model = symmetry_tool.flatten()
 ```
 See the example [simplify_an_arm_model.py](examples/applied_examples/simplify_an_arm_model.py) for more details.
+
+
+## Other useful features
+### Data class
+When providing a motion capture trial (`static_trial` or `functional_trial`), you can provide a `C3dData` class to read and manipulate a `.c3d` files.
+```python3
+c3d_data = C3dData(c3d_path, first_frame, last_frame)
+```
+Similarly, you can use the `CsvData` class to read and manipulate `.csv` files.
+But if you want to create your own data class, you can inherit from the abstract `Data` class.
 
 
 # Note

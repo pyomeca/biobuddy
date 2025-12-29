@@ -108,7 +108,7 @@ class ScaleTool:
 
     def scale(
         self,
-        static_c3d: C3dData,
+        static_trial: C3dData,
         mass: float,
         q_regularization_weight: float = None,
         qdot_regularization_weight: float = None,
@@ -122,7 +122,7 @@ class ScaleTool:
 
         Parameters
         ----------
-        static_c3d
+        static_trial
             The .c3d or .trc file of the static trial to use for the scaling
         mass
             The mass of the subject
@@ -140,8 +140,8 @@ class ScaleTool:
         method
             The lease square method to use. (default: "lm", other options: "trf" or "dogbox")
         """
-        exp_marker_names = static_c3d.marker_names
-        exp_marker_positions = static_c3d.all_marker_positions
+        exp_marker_names = static_trial.marker_names
+        exp_marker_positions = static_trial.all_marker_positions
 
         marker_indices = [idx for idx, m in enumerate(exp_marker_names) if m in self.original_model.marker_names]
         marker_names = [exp_marker_names[idx] for idx in marker_indices]

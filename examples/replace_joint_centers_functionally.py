@@ -50,8 +50,8 @@ def main(visualization):
     static_filepath = f"{current_path_file}/data/anat_pose_ECH.c3d"
     score_directory = f"{current_path_file}/data/functional_trials"
 
-    static_c3d = ezc3d.c3d(static_filepath, extract_forceplat_data=True)
-    summed_force = static_c3d["data"]["platform"][0]["force"] + static_c3d["data"]["platform"][0]["force"]
+    static_trial = ezc3d.c3d(static_filepath, extract_forceplat_data=True)
+    summed_force = static_trial["data"]["platform"][0]["force"] + static_trial["data"]["platform"][0]["force"]
     mass = np.median(np.linalg.norm(summed_force[:, 2000:9000], axis=0)) / 9.81
     rt_method = "optimization"
 
@@ -80,9 +80,9 @@ def main(visualization):
 
     # Scale the model
     scale_tool = ScaleTool(original_model=original_osim_model).from_xml(filepath=xml_filepath)
-    static_c3d = C3dData(static_filepath, first_frame=500, last_frame=600)
+    static_trial = C3dData(static_filepath, first_frame=500, last_frame=600)
     scaled_model = scale_tool.scale(
-        static_c3d=static_c3d,
+        static_trial=static_trial,
         mass=mass,
         q_regularization_weight=0.01,
         make_static_pose_the_models_zero=True,
@@ -126,7 +126,7 @@ def main(visualization):
     # Marker inversion happening after the 500th frame in the example data!
     joint_center_tool.add(
         Score(
-            functional_c3d=C3dData(c3d_path=f"{score_directory}/right_hip.c3d", first_frame=1, last_frame=500),
+            functional_trial=C3dData(c3d_path=f"{score_directory}/right_hip.c3d", first_frame=1, last_frame=500),
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -137,7 +137,7 @@ def main(visualization):
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=C3dData(c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100),
+            functional_trial=C3dData(c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100),
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT"] + technical_marker_to_add["femur_r"],
