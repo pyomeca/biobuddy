@@ -154,7 +154,7 @@ def test_scaling_wholebody():
     c3d_data = C3dData(
         c3d_path=static_filepath,
         first_frame=0,
-        last_frame=137,
+        last_frame=136,
     )
 
     # --- Convert the vtp mesh files --- #

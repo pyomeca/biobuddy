@@ -2290,10 +2290,10 @@ def test_c3d_data_all_marker_positions_setter_wrong_shape():
 
     marker_data = C3dData(c3d_path=c3d_path)
 
-    with pytest.raises(ValueError, match=rf"Expected shape \(4, 49, 138\), got \(3, 49, 49\)."):
+    with pytest.raises(ValueError, match=rf"Expected shape \(4, 49, 138\), got \(3, 49, 138\)."):
         marker_data.all_marker_positions = np.zeros((3, 49, 138))
 
-    with pytest.raises(ValueError, match=rf"Expected shape \(4, 49, 138\), got \(4, 10, 49\)."):
+    with pytest.raises(ValueError, match=rf"Expected shape \(4, 49, 138\), got \(4, 10, 138\)."):
         marker_data.all_marker_positions = np.zeros((4, 10, 138))
 
     with pytest.raises(ValueError, match=rf"Expected shape \(4, 49, 138\), got \(4, 49, 10\)."):
