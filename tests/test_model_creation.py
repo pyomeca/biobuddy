@@ -487,7 +487,11 @@ def test_model_creation_from_static_lower_body():
 
     # Load the static trial
     current_path_file = Path(__file__).parent
-    static_trial = C3dData(f"{current_path_file}/../examples/data/static_lower_body.c3d")
+    static_trial = C3dData(
+        f"{current_path_file}/../examples/data/static_lower_body.c3d",
+        first_frame=0,
+        last_frame=342,
+    )
 
     # Create the model
     model_real = model_creation_from_measured_data(

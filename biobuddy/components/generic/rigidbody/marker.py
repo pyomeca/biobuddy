@@ -2,7 +2,7 @@ from typing import Callable, TYPE_CHECKING
 
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.checks import check_name
 from ....utils.aliases import points_to_array
 from ....utils.linear_algebra import RotoTransMatrix
@@ -103,7 +103,7 @@ class Marker:
     def is_anatomical(self, value: bool) -> None:
         self._is_anatomical = value
 
-    def to_marker(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MarkerReal":
+    def to_marker(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MarkerReal":
         """
         This constructs a MarkerReal by evaluating the function that defines the marker to get an actual position
 

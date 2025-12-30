@@ -2,7 +2,7 @@ from typing import Callable, TYPE_CHECKING
 
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrix
 from ....utils.aliases import points_to_array
 from ...generic.rigidbody.marker import Marker
@@ -60,7 +60,7 @@ class Mesh:
             functions_list = None
         self._functions = functions_list
 
-    def to_mesh(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MeshReal":
+    def to_mesh(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MeshReal":
         """
         This construct a MeshReal object by evaluating the functions that defines the mesh to get actual positions.
 

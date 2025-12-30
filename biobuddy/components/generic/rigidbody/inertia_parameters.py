@@ -2,7 +2,7 @@ from typing import Callable, TYPE_CHECKING
 
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.aliases import points_to_array, inertia_to_array
 from ....utils.linear_algebra import RotoTransMatrix
 
@@ -79,7 +79,7 @@ class InertiaParameters:
 
     def to_inertia(
         self,
-        data: Data,
+        data: MarkerData,
         model: "BiomechanicalModelReal",
         scs: "SegmentCoordinateSystemReal",
     ) -> "InertiaParametersReal":

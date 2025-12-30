@@ -2,8 +2,6 @@ from lxml import etree
 
 import numpy as np
 
-from ..biomechanical_model_real import BiomechanicalModelReal
-from ....utils.protocols import Data
 from ....utils.aliases import point_to_array
 from ....utils.linear_algebra import RotoTransMatrix
 

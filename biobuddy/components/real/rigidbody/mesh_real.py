@@ -2,11 +2,7 @@ from typing import Callable
 
 import numpy as np
 
-from .protocols import CoordinateSystemRealProtocol
-from ..biomechanical_model_real import BiomechanicalModelReal
-from ....utils.aliases import Point, point_to_array, Points, points_to_array
-from ....utils.protocols import Data
-from ....utils.linear_algebra import RotoTransMatrix
+from ....utils.aliases import Points, points_to_array
 
 
 class MeshReal:

@@ -4,7 +4,7 @@ import numpy as np
 from ..rigidbody.marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrix
 
 
@@ -90,7 +90,7 @@ class Axis:
         else:
             raise RuntimeError("End must be a Marker, a str, or a callable")
 
-    def to_axis(self, data: Data, model: BiomechanicalModelReal, scs: RotoTransMatrix) -> AxisReal:
+    def to_axis(self, data: MarkerData, model: BiomechanicalModelReal, scs: RotoTransMatrix) -> AxisReal:
         """
         Compute the axis from actual data
         Parameters

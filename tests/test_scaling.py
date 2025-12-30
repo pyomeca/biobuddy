@@ -151,7 +151,11 @@ def test_scaling_wholebody():
     trc_file_path = parent_path + "/examples/data/static.trc"
     # Markers are rotated since OpenSim has Y-up and biorbd has Z-up
     static_filepath = parent_path + "/examples/data/static_rotated.c3d"
-    c3d_data = C3dData(c3d_path=static_filepath)
+    c3d_data = C3dData(
+        c3d_path=static_filepath,
+        first_frame=0,
+        last_frame=136,
+    )
 
     # --- Convert the vtp mesh files --- #
     # geometry_path = parent_path + "/external/opensim-models/Geometry"
@@ -194,7 +198,7 @@ def test_scaling_wholebody():
     ):
         scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
         scaled_model = scale_tool.scale(
-            static_c3d=c3d_data,
+            static_trial=c3d_data,
             mass=69.2,
             q_regularization_weight=0.1,
             make_static_pose_the_models_zero=False,
@@ -204,7 +208,7 @@ def test_scaling_wholebody():
     original_model.fix_via_points()
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
-        static_c3d=c3d_data,
+        static_trial=c3d_data,
         mass=69.2,
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=False,
@@ -380,7 +384,7 @@ def test_scaling_wholebody():
     # Make sure the experimental markers are at the same position as the model's ones in static pose
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
     scaled_model = scale_tool.scale(
-        static_c3d=c3d_data,
+        static_trial=c3d_data,
         mass=69.2,
         q_regularization_weight=0.1,
         make_static_pose_the_models_zero=True,

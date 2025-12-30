@@ -5,7 +5,7 @@ from ..real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.aliases import Point, point_to_array
 from ...utils.linear_algebra import RotoTransMatrix
 from ...utils.named_list import NamedList
-from ...utils.protocols import Data
+from ...utils.marker_data import MarkerData
 
 
 class BiomechanicalModel(ModelUtils):
@@ -68,7 +68,7 @@ class BiomechanicalModel(ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
-    def to_real(self, data: Data, gravity: Point = None) -> BiomechanicalModelReal:
+    def to_real(self, data: MarkerData, gravity: Point = None) -> BiomechanicalModelReal:
         """
         Collapse the model to an actual personalized biomechanical model based on the generic model and the data
         file (usually a static trial)

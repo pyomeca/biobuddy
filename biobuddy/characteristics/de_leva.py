@@ -7,8 +7,8 @@ from ..components.generic.biomechanical_model import BiomechanicalModel
 from ..components.generic.rigidbody.segment import Segment
 from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystem
 from ..components.generic.rigidbody.mesh import Mesh
-from ..utils.protocols import Data
 from ..utils.enums import Translations, Rotations
+from ..utils.marker_data import MarkerData
 
 
 def point_on_vector_in_local(coef: float, start: np.ndarray, end: np.ndarray) -> np.ndarray:
@@ -464,7 +464,7 @@ class DeLevaTable:
             [self.foot_length, self.hip_width / 2, self.hip_height - self.thigh_length - self.shank_length, 1]
         )
 
-    def from_static(self, data: Data):
+    def from_static(self, data: MarkerData):
         """
         Create the De Leva table from a Data object containing the measurements of the subject.
         This is useful if you want to measure segment length using the markers from a static trial.

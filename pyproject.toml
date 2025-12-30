@@ -37,6 +37,7 @@ test = [
     "pyorerun",
     "bioviz", 
     "plotly",
+    "pandas",
 ]
 
 [project.urls]

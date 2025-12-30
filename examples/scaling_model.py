@@ -102,9 +102,9 @@ def main(visualization):
     # )
 
     # Scale the model
-    static_c3d = C3dData(static_filepath, first_frame=100, last_frame=200)
+    static_trial = C3dData(static_filepath, first_frame=100, last_frame=199)
     scaled_model = scale_tool.scale(
-        static_c3d=static_c3d,
+        static_trial=static_trial,
         mass=80,
         q_regularization_weight=0.01,
         make_static_pose_the_models_zero=True,

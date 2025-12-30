@@ -2,7 +2,7 @@ from typing import Callable, TYPE_CHECKING
 
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
@@ -101,7 +101,7 @@ class MeshFile:
 
     def to_mesh_file(
         self,
-        data: Data,
+        data: MarkerData,
         model: "BiomechanicalModelReal",
     ) -> "MeshFileReal":
         """

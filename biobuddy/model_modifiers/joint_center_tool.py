@@ -11,7 +11,7 @@ from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
-from ..utils.protocols import Data
+from ..utils.marker_data import MarkerData
 from ..utils.linear_algebra import (
     RotoTransMatrix,
     mean_unit_vector,
@@ -28,7 +28,7 @@ _logger = logging.getLogger(__name__)
 class RigidSegmentIdentification:
     def __init__(
         self,
-        functional_data: Data,
+        functional_trial: MarkerData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -39,8 +39,8 @@ class RigidSegmentIdentification:
         """
         Parameters
         ----------
-        functional_data
-            The data containing the functional trial.
+        functional_trial
+            The .c3d file containing the functional trial.
         parent_name
             The name of the joint's parent segment.
         child_name
@@ -75,7 +75,7 @@ class RigidSegmentIdentification:
         self.marker_positions: np.ndarray = None
 
         self._check_segment_names()
-        self._check_c3d_functional_trial_file()
+        self._check_marker_functional_trial_file()
 
     def _check_segment_names(self):
         illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
@@ -89,7 +89,7 @@ class RigidSegmentIdentification:
                     f"The names {name} are not allowed in the parent or child names. Please change the segment named {self.child_name} from the Score configuration."
                 )
 
-    def _check_c3d_functional_trial_file(self):
+    def _check_marker_functional_trial_file(self):
         """
         Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
         """
@@ -724,7 +724,7 @@ class Score(RigidSegmentIdentification):
 class Sara(RigidSegmentIdentification):
     def __init__(
         self,
-        functional_data: Data,
+        functional_trial: MarkerData,
         parent_name: str,
         child_name: str,
         parent_marker_names: list[str],
@@ -737,7 +737,7 @@ class Sara(RigidSegmentIdentification):
     ):
 
         super(Sara, self).__init__(
-            functional_data=functional_data,
+            functional_trial=functional_trial,
             parent_name=parent_name,
             child_name=child_name,
             parent_marker_names=parent_marker_names,
