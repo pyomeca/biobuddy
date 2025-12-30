@@ -66,9 +66,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
     hip_c3d = C3dData(
-        hip_functional_trial_path, first_frame=1, last_frame=500
+        hip_functional_trial_path, first_frame=1, last_frame=499
     )  # Marker inversion happening after the 500th frame in the example data!
-    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=822)
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=821)
 
     # Read the .bioMod file
     scaled_model = BiomechanicalModelReal().from_biomod(
@@ -96,7 +96,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_trial=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -107,7 +107,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_trial=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -341,9 +341,9 @@ def test_score_and_sara_with_ghost_segments():
     hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
     hip_c3d = C3dData(
-        hip_functional_trial_path, first_frame=250, last_frame=350
+        hip_functional_trial_path, first_frame=250, last_frame=349
     )  # Marker inversion happening after the 500th frame in the example data!
-    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
 
     # Read the .bioMod file
     scaled_model = BiomechanicalModelReal().from_biomod(
@@ -371,7 +371,7 @@ def test_score_and_sara_with_ghost_segments():
     # Hip Right
     joint_center_tool.add(
         Score(
-            functional_c3d=hip_c3d,
+            functional_trial=hip_c3d,
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -382,7 +382,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     joint_center_tool.add(
         Sara(
-            functional_c3d=knee_c3d,
+            functional_trial=knee_c3d,
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
@@ -581,7 +581,7 @@ def test_init_rigid_segment_identification():
     # Set up
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
-    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
+    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
 
     # Create a test instance
     parent_name = "femur_r"
@@ -625,7 +625,7 @@ def test_init_rigid_segment_identification():
         )
 
     # Test with valid marker movement
-    rsi._check_c3d_functional_trial_file()  # Should not raise an error
+    rsi._check_marker_functional_trial_file()  # Should not raise an error
 
     # Test with no markers
     with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
@@ -657,7 +657,7 @@ def test_marker_residual():
     # Set up
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
-    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
+    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
 
     # Create a test instance
     parent_name = "femur_r"
@@ -746,7 +746,7 @@ def test_longitudinal_axis():
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
-    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=400)
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
 
     child_name = "tibia_r"
     parent_name = "femur_r"
@@ -754,7 +754,7 @@ def test_longitudinal_axis():
         filepath=leg_model_filepath,
     )
     sara = Sara(
-        functional_c3d=knee_c3d,
+        functional_trial=knee_c3d,
         parent_name=parent_name,
         child_name=child_name,
         parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],

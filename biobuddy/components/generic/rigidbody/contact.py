@@ -1,7 +1,7 @@
 from typing import Callable
 import numpy as np
 
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.enums import Translations
 from ....utils.checks import check_name
 from ....utils.linear_algebra import RotoTransMatrix
@@ -75,7 +75,7 @@ class Contact:
     def axis(self, value: Translations) -> None:
         self._axis = value
 
-    def to_contact(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ContactReal":
+    def to_contact(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ContactReal":
         """
         This constructs the ContactReal by evaluating the function that defines the contact to get an actual position
 

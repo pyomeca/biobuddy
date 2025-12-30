@@ -40,7 +40,8 @@ test = [
     "opensim",
     "biorbd",
     "pyorerun",
-    "deepdiff"
+    "deepdiff",
+    "pandas",
 ]
 
 [project.urls]

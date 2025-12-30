@@ -2,7 +2,7 @@ from typing import Callable, Any
 
 from ..muscle.via_point import ViaPoint
 from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.named_list import NamedList
 from ....utils.linear_algebra import RotoTransMatrix
 
@@ -227,7 +227,7 @@ class Muscle(MuscleUtils):
     def maximal_excitation(self, value: float):
         self._maximal_excitation = value
 
-    def to_muscle(self, data: Data, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MuscleReal":
+    def to_muscle(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MuscleReal":
         """
         This constructs a MuscleReal by evaluating the function that defines the muscle to get an actual position
 

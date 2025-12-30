@@ -6,7 +6,7 @@ from .marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ....utils.protocols import Data
+from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 
 
@@ -66,7 +66,7 @@ class SegmentCoordinateSystem:
         self._origin = value
 
     def get_axes(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
+        self, data: MarkerData, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
     ) -> tuple[AxisReal, AxisReal, AxisReal.Name]:
 
         # Find the two adjacent axes and reorder accordingly (assuming right-hand RT)
@@ -135,7 +135,7 @@ class SegmentCoordinateSystem:
         return scs
 
     def to_scs(
-        self, data: Data, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
+        self, data: MarkerData, model: BiomechanicalModelReal, parent_scs: RotoTransMatrix
     ) -> SegmentCoordinateSystemReal:
         """
         This constructs a SegmentCoordinateSystemReal by evaluating the function that defines the marker to get an
