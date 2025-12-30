@@ -65,7 +65,7 @@ jobs:
       - name: Install test dependencies
         run: |
           pip install pytest pytest-cov codecov
-          conda install -c conda-forge deepdiff pinocchio
+          conda install -c conda-forge deepdiff pinocchio pandas
           conda install -c opensim-org opensim=4.5.1
 
       - name: Run tests with code coverage
