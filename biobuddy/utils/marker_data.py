@@ -44,12 +44,11 @@ class MarkerData(ABC):
         pass
 
     @abstractmethod
-    def set_nb_frames(self) -> int:
-        pass
-
-    @abstractmethod
     def set_nb_markers(self) -> int:
         pass
+
+    def set_nb_frames(self) -> int:
+        return self.last_frame + 1 - self.first_frame
 
     def set_values(self) -> dict[str, Points]:
         values = {}
@@ -114,16 +113,14 @@ class C3dData(MarkerData):
 
         self.c3d_path = c3d_path
         self.ezc3d_data = ezc3d.c3d(c3d_path)
+        total_nb_frames = self.ezc3d_data["data"]["points"].shape[1]
 
-        super().__init__(first_frame, last_frame)
+        super().__init__(first_frame, last_frame, total_nb_frames)
 
         self.values = MarkerData.set_values(self)
 
     def set_marker_names(self) -> list[str]:
         return self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"]
-
-    def set_nb_frames(self) -> int:
-        return self.ezc3d_data["data"]["points"][:, :, self.first_frame : self.last_frame+1].shape[2]
 
     def set_nb_markers(self) -> int:
         return self.ezc3d_data["data"]["points"].shape[1]
@@ -252,9 +249,6 @@ class CsvData(MarkerData):
         for marker in self.column_titles[0::3]:
             marker_names += [marker.strip()]
         return marker_names
-
-    def set_nb_frames(self) -> int:
-        return self.last_frame + 1 - self.first_frame
 
     def set_nb_markers(self) -> int:
         if self.csv_array.shape[1] % 3 != 0:
