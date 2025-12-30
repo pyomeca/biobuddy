@@ -137,7 +137,9 @@ def main(visualization):
     )
     joint_center_tool.add(
         Sara(
-            functional_trial=C3dData(c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100),
+            functional_trial=C3dData(
+                c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100
+            ),
             parent_name="femur_r",
             child_name="tibia_r",
             parent_marker_names=["RGT"] + technical_marker_to_add["femur_r"],
