@@ -113,7 +113,7 @@ class C3dData(MarkerData):
 
         self.c3d_path = c3d_path
         self.ezc3d_data = ezc3d.c3d(c3d_path)
-        total_nb_frames = self.ezc3d_data["data"]["points"].shape[1]
+        total_nb_frames = self.ezc3d_data["data"]["points"].shape[2]
 
         super().__init__(first_frame, last_frame, total_nb_frames)
 

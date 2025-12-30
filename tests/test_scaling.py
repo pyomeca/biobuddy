@@ -152,6 +152,9 @@ def test_scaling_wholebody():
     # Markers are rotated since OpenSim has Y-up and biorbd has Z-up
     static_filepath = parent_path + "/examples/data/static_rotated.c3d"
     c3d_data = C3dData(c3d_path=static_filepath)
+    print("#####################")
+    print(c3d_data.nb_frames)
+    print("#####################")
 
     # --- Convert the vtp mesh files --- #
     # geometry_path = parent_path + "/external/opensim-models/Geometry"

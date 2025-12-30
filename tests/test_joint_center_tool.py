@@ -625,7 +625,7 @@ def test_init_rigid_segment_identification():
         )
 
     # Test with valid marker movement
-    rsi._check_c3d_functional_trial_file()  # Should not raise an error
+    rsi._check_marker_functional_trial_file()  # Should not raise an error
 
     # Test with no markers
     with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
