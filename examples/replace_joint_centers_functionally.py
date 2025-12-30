@@ -80,7 +80,7 @@ def main(visualization):
 
     # Scale the model
     scale_tool = ScaleTool(original_model=original_osim_model).from_xml(filepath=xml_filepath)
-    static_trial = C3dData(static_filepath, first_frame=500, last_frame=600)
+    static_trial = C3dData(static_filepath, first_frame=500, last_frame=599)
     scaled_model = scale_tool.scale(
         static_trial=static_trial,
         mass=mass,
@@ -102,7 +102,7 @@ def main(visualization):
     }
 
     jcs_in_global = scaled_model.forward_kinematics()
-    c3d_data = C3dData(static_filepath, first_frame=500, last_frame=600)
+    c3d_data = C3dData(static_filepath, first_frame=500, last_frame=599)
     for segment_name in technical_marker_to_add.keys():
         for marker in technical_marker_to_add[segment_name]:
             position_in_global = c3d_data.mean_marker_position(marker)
@@ -126,7 +126,7 @@ def main(visualization):
     # Marker inversion happening after the 500th frame in the example data!
     joint_center_tool.add(
         Score(
-            functional_trial=C3dData(c3d_path=f"{score_directory}/right_hip.c3d", first_frame=1, last_frame=500),
+            functional_trial=C3dData(c3d_path=f"{score_directory}/right_hip.c3d", first_frame=1, last_frame=499),
             parent_name="pelvis",
             child_name="femur_r",
             parent_marker_names=["RASIS", "LASIS", "LPSIS", "RPSIS"],
@@ -138,7 +138,7 @@ def main(visualization):
     joint_center_tool.add(
         Sara(
             functional_trial=C3dData(
-                c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 100
+                c3d_path=f"{score_directory}/right_knee.c3d", first_frame=300, last_frame=922 - 101
             ),
             parent_name="femur_r",
             child_name="tibia_r",
@@ -163,7 +163,7 @@ def main(visualization):
         q = np.zeros((42, 10))
 
         # Add the experimental markers from the static trial
-        static_exp_markers = C3dData(static_filepath, first_frame=500, last_frame=510)
+        static_exp_markers = C3dData(static_filepath, first_frame=500, last_frame=509)
         static_marker_positions = static_exp_markers.get_position(scaled_model.marker_names)
         pyomarkers = pyorerun.PyoMarkers(
             data=static_marker_positions, channels=scaled_model.marker_names, show_labels=False
