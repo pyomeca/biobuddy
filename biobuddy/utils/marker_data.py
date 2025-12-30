@@ -2,6 +2,7 @@ from enum import Enum
 from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
+from copy import deepcopy
 
 from ..utils.aliases import Points
 
@@ -292,8 +293,7 @@ class CsvData(MarkerData):
         if data.shape[0] != 3:
             raise RuntimeError(f"The data array should be shape (3, nb_frames), you have {data.shape}")
         factor = 100  # cm
-        data /= factor
-        return data
+        return data / factor
 
     def change_ref_frame(self, ref_from: ReferenceFrame, ref_to: ReferenceFrame) -> None:
         """
@@ -303,7 +303,7 @@ class CsvData(MarkerData):
             return
 
         if ref_from == ReferenceFrame.Z_UP and ref_to == ReferenceFrame.Y_UP:
-            temporary_data = self.csv_array[self.first_frame: self.last_frame + 1, :]
+            temporary_data = deepcopy(self.csv_array[self.first_frame: self.last_frame + 1, :])
             # X = X
             self.csv_array[self.first_frame: self.last_frame + 1, 0::3] = temporary_data[self.first_frame: self.last_frame + 1, 0::3]
             # Y = Z
@@ -312,7 +312,7 @@ class CsvData(MarkerData):
             self.csv_array[self.first_frame: self.last_frame + 1, 2::3] = -temporary_data[self.first_frame: self.last_frame + 1, 1::3]
 
         elif ref_from == ReferenceFrame.Y_UP and ref_to == ReferenceFrame.Z_UP:
-            temporary_data = self.csv_array[self.first_frame: self.last_frame + 1, :]
+            temporary_data = deepcopy(self.csv_array[self.first_frame: self.last_frame + 1, :])
             # X = X
             self.csv_array[self.first_frame: self.last_frame + 1, 0::3] = temporary_data[self.first_frame: self.last_frame + 1, 0::3]
             # Y = -Z
@@ -326,5 +326,23 @@ class CsvData(MarkerData):
         """
         Save the changes made to the CSV file.
         """
-        pd_csv_data = pd.data_frame()
-        pd.write_csv(pd_csv_data, new_path)
+
+        # Column titles
+        column_titles = []
+        i_unnamed = 0
+        for marker in self.marker_names:
+            column_titles += [marker, f"Unnamed: {i_unnamed + 1}", f"Unnamed: {i_unnamed + 2}"]
+            i_unnamed += 2
+
+        # Axis titles
+        axis_titles = ["X", "Y", "Z"] * self.nb_markers
+        axis_row = pd.DataFrame([axis_titles], columns=column_titles)
+
+        # Data rows
+        data_df = pd.DataFrame(self.csv_array, columns=column_titles)
+
+        # Combine them
+        pd_csv_data = pd.concat([axis_row, data_df], ignore_index=True)
+
+        # Save the output file
+        pd_csv_data.to_csv(new_path, index=False)
