@@ -473,28 +473,28 @@ class DeLevaTable:
         Note: from_static assumes that the trunk has only one segment (no lower, mid and upper trunk segments).
         """
 
-        self.total_height = float(data.get_position(["TOP_HEAD"])[2])
-        self.hip_height = float((data.get_position(["HIP_LEFT"])[2] + data.get_position(["HIP_RIGHT"])[2]) / 2)
+        self.total_height = float(np.nanmean(data.get_position(["TOP_HEAD"])[2, 0, :], axis=0))
+        self.hip_height = float((np.nanmean(data.get_position(["HIP_LEFT"])[2, 0, :], axis=0) + np.nanmean(data.get_position(["HIP_RIGHT"])[2, 0, :], axis=0)) / 2)
         self.trunk_length = float(
-            (data.get_position(["SHOULDER_LEFT"])[2] + data.get_position(["SHOULDER_RIGHT"])[2]) / 2
-            - (data.get_position(["HIP_LEFT"])[2] + data.get_position(["HIP_RIGHT"])[2]) / 2
+            (np.nanmean(data.get_position(["SHOULDER_LEFT"])[2, 0, :], axis=0) + np.nanmean(data.get_position(["SHOULDER_RIGHT"])[2, 0, :], axis=0)) / 2
+            - (np.nanmean(data.get_position(["HIP_LEFT"])[2, 0, :], axis=0) + np.nanmean(data.get_position(["HIP_RIGHT"])[2, 0, :], axis=0)) / 2
         )
-        self.hand_length = float(data.get_position(["WRIST"])[2] - data.get_position(["FINGER"])[2])
-        self.lower_arm_length = float(data.get_position(["ELBOW"])[2] - data.get_position(["WRIST"])[2])
+        self.hand_length = float(np.nanmean(data.get_position(["WRIST"])[2, 0, :], axis=0) - np.nanmean(data.get_position(["FINGER"])[2, 0, :], axis=0))
+        self.lower_arm_length = float(np.nanmean(data.get_position(["ELBOW"])[2, 0, :], axis=0) - np.nanmean(data.get_position(["WRIST"])[2, 0, :], axis=0))
         self.upper_arm_length = float(
-            (data.get_position(["SHOULDER_LEFT"])[2] + data.get_position(["SHOULDER_RIGHT"])[2]) / 2
-            - data.get_position(["ELBOW"])[2]
+            (np.nanmean(data.get_position(["SHOULDER_LEFT"])[2, 0, :], axis=0) + np.nanmean(data.get_position(["SHOULDER_RIGHT"])[2, 0, :], axis=0)) / 2
+            - np.nanmean(data.get_position(["ELBOW"])[2, 0, :], axis=0)
         )
         self.shoulder_width = float(
-            np.linalg.norm(data.get_position(["SHOULDER_LEFT"]) - data.get_position(["SHOULDER_RIGHT"]))
+            np.linalg.norm(np.nanmean(data.get_position(["SHOULDER_LEFT"])[:, 0, :], axis=0) - np.nanmean(data.get_position(["SHOULDER_RIGHT"])[:, 0, :], axis=0))
         )
         self.thigh_length = float(
-            (data.get_position(["HIP_LEFT"])[2] + data.get_position(["HIP_RIGHT"])[2]) / 2
-            - data.get_position(["KNEE"])[2]
+            (np.nanmean(data.get_position(["HIP_LEFT"])[2, 0, :], axis=0) + np.nanmean(data.get_position(["HIP_RIGHT"])[2, 0, :], axis=0)) / 2
+            - np.nanmean(data.get_position(["KNEE"])[2, 0, :], axis=0)
         )
-        self.shank_length = float(data.get_position(["KNEE"])[2] - data.get_position(["ANKLE"])[2])
-        self.hip_width = float(np.linalg.norm(data.get_position(["HIP_LEFT"]) - data.get_position(["HIP_RIGHT"])))
-        self.foot_length = float(np.linalg.norm(data.get_position(["HEEL"]) - data.get_position(["TOE"])))
+        self.shank_length = float(np.nanmean(data.get_position(["KNEE"])[2, 0, :], axis=0) - np.nanmean(data.get_position(["ANKLE"])[2, 0, :], axis=0))
+        self.hip_width = float(np.linalg.norm(np.nanmean(data.get_position(["HIP_LEFT"])[:, 0, :], axis=1) - np.nanmean(data.get_position(["HIP_RIGHT"])[:, 0, :], axis=1)))
+        self.foot_length = float(np.linalg.norm(np.nanmean(data.get_position(["HEEL"])[:, 0, :], axis=1) - np.nanmean(data.get_position(["TOE"])[:, 0, :], axis=1)))
 
         self.get_joint_position_from_measurements()
         self.define_inertial_table()

@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import platform
 
 import numpy as np
 import numpy.testing as npt
@@ -26,6 +25,7 @@ from biobuddy import (
     Sex,
     SegmentName,
     C3dData,
+    MarkerData,
 )
 from test_utils import destroy_model
 
@@ -275,16 +275,33 @@ def test_model_creation_from_static_func(remove_temporary: bool = True):
         os.remove(kinematic_model_filepath)
 
 
-class FakeData:
+class FakeData(MarkerData):
     def __init__(self, model):
+
         q = np.zeros(model.nbQ())
         marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
-        self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
-        self.values["HIP_LEFT"] = np.array([[0], [0], [0]])
-        self.values["HIP_RIGHT"] = np.array([[0], [0], [0]])
-        self.values["SHOULDER_LEFT"] = np.array([[0], [0], [0.53]])
-        self.values["SHOULDER_RIGHT"] = np.array([[0], [0], [0.53]])
-        self.nb_frames = 1
+        self.values = {m.to_string(): np.vstack((marker_positions[:, i, :], np.array([1]))).reshape(4, ) for i, m in enumerate(model.markerNames())}
+        self.values["HIP_LEFT"] = np.array([0, 0, 0, 1])
+        self.values["HIP_RIGHT"] = np.array([0, 0, 0, 1])
+        self.values["SHOULDER_LEFT"] = np.array([0, 0, 0.53, 1])
+        self.values["SHOULDER_RIGHT"] = np.array([0, 0, 0.53, 1])
+
+        super().__init__()
+
+    def set_marker_names(self) -> list[str]:
+        return list(self.values.keys())
+
+    def get_position(self, marker_names: tuple[str, ...] | list[str]):
+        values = np.zeros((4, len(marker_names), self.nb_frames))
+        i_marker = 0
+        for name in self.marker_names:
+            if name in marker_names:
+                values[:, i_marker, 0] = self.values[name]
+                i_marker += 1
+        return values
+
+    def save(self, new_path: str):
+        pass
 
 
 def test_model_creation_from_static():

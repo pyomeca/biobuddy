@@ -581,12 +581,6 @@ class MockC3dData(C3dData):
 
         C3dData.__init__(self, c3d_path, first_frame=0, last_frame=9)
 
-        # Fix the seed for reproducibility
-        np.random.seed(42)
-
-        # Create marker positions for 10 frames
-        self.all_marker_positions = np.random.rand(4, 73, 10)
-
 
 def read_xml_str():
     # Read the content

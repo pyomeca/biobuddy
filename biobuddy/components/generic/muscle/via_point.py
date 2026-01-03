@@ -100,7 +100,7 @@ class ViaPoint:
             )
         self._position_function = position_function
 
-    def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ViaPointReal":
+    def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix = None) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
 
@@ -121,14 +121,17 @@ class ViaPoint:
             raise RuntimeError("You must provide a position function to evaluate the ViaPoint into a ViaPointReal.")
 
         if self.is_local:
+            # The scs has no effect (should be None)
             scs = RotoTransMatrix()
-        elif scs is None:
-            raise RuntimeError(
-                "If you want to provide a global mesh, you must provide the segment's coordinate system."
-            )
+        else:
+            # The scs must be provided when using global coordinates
+            if scs is None:
+                raise RuntimeError(
+                    "If you want to provide a global mesh, you must provide the segment's coordinate system."
+                )
 
         # Get the position of the contact points and do some sanity checks
-        p = np.nanmean(points_to_array(points=self.position_function(data, model), name="via point function"), axis=1)
+        p = points_to_array(points=self.position_function(data, model), name="via point function")
         position = scs.inverse @ p
         if np.isnan(position).all():
             raise RuntimeError(f"All the values for {self.position_function} returned nan which is not permitted")

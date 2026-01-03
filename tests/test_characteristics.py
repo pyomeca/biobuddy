@@ -12,6 +12,7 @@ from biobuddy import (
     SegmentName,
     InertiaParameters,
     BiomechanicalModel,
+    BiomechanicalModelReal,
     Segment,
     Translations,
     Rotations,
@@ -19,48 +20,67 @@ from biobuddy import (
     Axis,
     SegmentCoordinateSystem,
     Mesh,
+    MarkerData,
 )
 from biobuddy.characteristics.de_leva import point_on_vector_in_local, point_on_vector_in_global
 
 
-class MOCK_DATA:
+class MOCK_DATA(MarkerData):
     def __init__(self):
+
         self.values = {
-            "TOP_HEAD": np.array([0, 0, 10]),
-            "BOTTOM_HEAD": np.array([0, 0, 9]),
-            "HEAD_Z": np.array([0, 0, 9.5]),
-            "HEAD_XZ": np.array([0.5, 0.5, 9.5]),
-            "SHOULDER": np.array([0, 0, 8]),
-            "SHOULDER_RIGHT": np.array([0, 0, 8]),
-            "SHOULDER_LEFT": np.array([0, 0, 8]),
-            "SHOULDER_X": np.array([0, 0.5, 8]),
-            "SHOULDER_XY": np.array([0.5, 0.5, 8]),
-            "PELVIS": np.array([0, 0, 5]),
-            "HIP_RIGHT": np.array([0, 0, 5]),
-            "HIP_LEFT": np.array([0, 0, 5]),
-            "ELBOW": np.array([1, 0, 7]),
-            "ELBOW_Y": np.array([1, 0.5, 7]),
-            "ELBOW_XY": np.array([1.5, 0.5, 7]),
-            "WRIST": np.array([2, 0, 6]),
-            "FINGER": np.array([3, 0, 5.5]),
-            "HAND_Y": np.array([2, 0.5, 6]),
-            "HAND_YZ": np.array([2.5, 0.5, 6]),
-            "KNEE": np.array([0, 0, 3]),
-            "KNEE_Z": np.array([0, 0, 0.35]),
-            "KNEE_XZ": np.array([0.5, 0.5, 3]),
-            "ANKLE": np.array([0, 0, 1]),
-            "ANKLE_Z": np.array([0, 0.5, 1]),
-            "ANKLE_YZ": np.array([0.5, 0.5, 1]),
-            "TOE": np.array([0, 0.3, 0]),
-            "HEEL": np.array([0, -0.01, 0]),
-            "THIGH_ORIGIN": np.array([0, 0, 4]),
-            "THIGH_X": np.array([0, 0.5, 4]),
-            "THIGH_Y": np.array([0.5, 0.5, 4]),
-            "TRUNK": np.array([0, 0, 6]),
-            "TRUNK_Y": np.array([0, 0.5, 6]),
-            "TRUNK_Z": np.array([0, 0, 6.5]),
-            "TRUNK_X": np.array([0.5, 0, 6]),
+            "TOP_HEAD": np.array([0, 0, 10, 1]),
+            "BOTTOM_HEAD": np.array([0, 0, 9, 1]),
+            "HEAD_Z": np.array([0, 0, 9.5, 1]),
+            "HEAD_XZ": np.array([0.5, 0.5, 9.5, 1]),
+            "SHOULDER": np.array([0, 0, 8, 1]),
+            "SHOULDER_RIGHT": np.array([0, 0, 8, 1]),
+            "SHOULDER_LEFT": np.array([0, 0, 8, 1]),
+            "SHOULDER_X": np.array([0, 0.5, 8, 1]),
+            "SHOULDER_XY": np.array([0.5, 0.5, 8, 1]),
+            "PELVIS": np.array([0, 0, 5, 1]),
+            "HIP_RIGHT": np.array([0, 0, 5, 1]),
+            "HIP_LEFT": np.array([0, 0, 5, 1]),
+            "ELBOW": np.array([1, 0, 7, 1]),
+            "ELBOW_Y": np.array([1, 0.5, 7, 1]),
+            "ELBOW_XY": np.array([1.5, 0.5, 7, 1]),
+            "WRIST": np.array([2, 0, 6, 1]),
+            "FINGER": np.array([3, 0, 5.5, 1]),
+            "HAND_Y": np.array([2, 0.5, 6, 1]),
+            "HAND_YZ": np.array([2.5, 0.5, 6, 1]),
+            "KNEE": np.array([0, 0, 3, 1]),
+            "KNEE_Z": np.array([0, 0, 0.35, 1]),
+            "KNEE_XZ": np.array([0.5, 0.5, 3, 1]),
+            "ANKLE": np.array([0, 0, 1, 1]),
+            "ANKLE_Z": np.array([0, 0.5, 1, 1]),
+            "ANKLE_YZ": np.array([0.5, 0.5, 1, 1]),
+            "TOE": np.array([0, 0.3, 0, 1]),
+            "HEEL": np.array([0, -0.01, 0, 1]),
+            "THIGH_ORIGIN": np.array([0, 0, 4, 1]),
+            "THIGH_X": np.array([0, 0.5, 4, 1]),
+            "THIGH_Y": np.array([0.5, 0.5, 4, 1]),
+            "TRUNK": np.array([0, 0, 6, 1]),
+            "TRUNK_Y": np.array([0, 0.5, 6, 1]),
+            "TRUNK_Z": np.array([0, 0, 6.5, 1]),
+            "TRUNK_X": np.array([0.5, 0, 6, 1]),
         }
+
+        super().__init__()
+
+    def set_marker_names(self) -> list[str]:
+        return list(self.values.keys())
+
+    def get_position(self, marker_names: tuple[str, ...] | list[str]):
+        values = np.zeros((4, len(marker_names), self.nb_frames))
+        i_marker = 0
+        for name in self.marker_names:
+            if name in marker_names:
+                values[:, i_marker, 0] = self.values[name]
+                i_marker += 1
+        return values
+
+    def save(self, new_path: str):
+        pass
 
 
 def get_biomechanical_model(de_leva):
@@ -293,16 +313,17 @@ def test_segment_name_enum():
 def test_de_leva_table_constructor_from_static():
     """Test DeLevaTable constructor."""
     total_mass = 70.0
+    mock_data = MOCK_DATA()
 
     # Test male constructor
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_static(MOCK_DATA())
+    male_table.from_static(mock_data)
     assert male_table.sex == Sex.MALE
     assert hasattr(male_table, "inertial_table")
 
     # Test female constructor
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_static(MOCK_DATA())
+    female_table.from_static(mock_data)
     assert female_table.sex == Sex.FEMALE
     assert hasattr(female_table, "inertial_table")
 
@@ -381,6 +402,9 @@ def test_de_leva_table_constructor_from_static():
 
 def test_de_leva_table_constructor_from_measurements():
     """Test DeLevaTable constructor."""
+    mock_data = MOCK_DATA()
+    mock_model = BiomechanicalModelReal()
+
     # --- Test with only one trunk segment --- #
     total_mass = 70.0
     total_height = 1.70
@@ -645,109 +669,109 @@ def test_de_leva_table_constructor_from_measurements():
     # Mass - Female
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         8.729,
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         10.255,
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         10.815,
     )
     # CoM - Female
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.2794, 0.0]),
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.30184, 0.0]),
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.27225, 0.0]),
     )
     # Inertia - Female
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.LOWER_TRUNK].inertia(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.01636591, 0.01410641, 0.017208]),
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.MID_TRUNK].inertia(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.12016873, 0.08031972, 0.11038546]),
     )
     npt.assert_almost_equal(
         female_table.inertial_table[Sex.FEMALE][SegmentName.UPPER_TRUNK].inertia(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.09394169, 0.04265263, 0.08721259]),
     )
     # Mass - male
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         7.819,
     )
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         11.431,
     )
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].relative_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         11.172,
     )
     # CoM - male
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.213675, 0.0]),
     )
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.30239, 0.0]),
     )
     npt.assert_almost_equal(
         male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].center_of_mass(
-            MOCK_DATA().values, BiomechanicalModel()
+            mock_data, mock_model
         ),
         np.array([0.0, 0.0, 0.27137, 0.0]),
     )
     # Inertia - male
     npt.assert_almost_equal(
-        male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        male_table.inertial_table[Sex.MALE][SegmentName.LOWER_TRUNK].inertia(mock_data, mock_model),
         np.array([0.02957341, 0.02373856, 0.02694185]),
     )
     npt.assert_almost_equal(
-        male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        male_table.inertial_table[Sex.MALE][SegmentName.MID_TRUNK].inertia(mock_data, mock_model),
         np.array([0.16598098, 0.10480012, 0.15647896]),
     )
     npt.assert_almost_equal(
-        male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].inertia(MOCK_DATA().values, BiomechanicalModel()),
+        male_table.inertial_table[Sex.MALE][SegmentName.UPPER_TRUNK].inertia(mock_data, mock_model),
         np.array([0.11396557, 0.04576051, 0.09662663]),
     )
 
@@ -755,10 +779,11 @@ def test_de_leva_table_constructor_from_measurements():
 def test_de_leva_table_getitem():
     """Test DeLevaTable.__getitem__ method."""
     total_mass = 70.0
+    mock_data = MOCK_DATA()
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_static(MOCK_DATA())
+    male_table.from_static(mock_data)
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_static(MOCK_DATA())
+    female_table.from_static(mock_data)
 
     # Test that we can access all segments
     for segment in SegmentName:
@@ -781,11 +806,13 @@ def test_de_leva_table_getitem():
 def test_de_leva_table_mass_calculations():
     """Test that mass calculations are correct."""
     total_mass = 70.0
-    mock_values = MOCK_DATA().values
+    mock_data = MOCK_DATA()
+    mock_model = BiomechanicalModelReal()
+
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_static(MOCK_DATA())
+    male_table.from_static(mock_data)
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_static(MOCK_DATA())
+    female_table.from_static(mock_data)
 
     # Test the MASS values
     expected_male_masses = {
@@ -811,111 +838,111 @@ def test_de_leva_table_mass_calculations():
     for segment in expected_male_masses.keys():
         # Male
         npt.assert_almost_equal(
-            male_table[segment].relative_mass(mock_values, BiomechanicalModel()), expected_male_masses[segment]
+            male_table[segment].relative_mass(mock_data, mock_model), expected_male_masses[segment]
         )
         # Female
         npt.assert_almost_equal(
-            female_table[segment].relative_mass(mock_values, BiomechanicalModel()), expected_female_masses[segment]
+            female_table[segment].relative_mass(mock_data, mock_model), expected_female_masses[segment]
         )
 
     # Test the center of mass values : coef (end - start)
     expected_male_com = {
-        SegmentName.HEAD: (1 - 0.5002) * (mock_values["TOP_HEAD"] - mock_values["SHOULDER"]),
-        SegmentName.TRUNK: (1 - 0.5138) * (mock_values["SHOULDER"] - mock_values["PELVIS"]),
-        SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5772) * (mock_values["ELBOW"][2] - mock_values["SHOULDER"][2])]),
-        SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4574) * (mock_values["WRIST"][2] - mock_values["ELBOW"][2])]),
-        SegmentName.HAND: np.array([0, 0, 0.3624 * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
-        SegmentName.THIGH: np.array([0, 0, 0.4095 * (mock_values["KNEE"][2] - mock_values["PELVIS"][2])]),
-        SegmentName.SHANK: np.array([0, 0, 0.4459 * (mock_values["ANKLE"][2] - mock_values["KNEE"][2])]),
-        SegmentName.FOOT: np.array([0.4415 * (mock_values["TOE"][1] - mock_values["HEEL"][1]), 0, 0]),
+        SegmentName.HEAD: (1 - 0.5002) * (mock_data.values["TOP_HEAD"] - mock_data.values["SHOULDER"]),
+        SegmentName.TRUNK: (1 - 0.5138) * (mock_data.values["SHOULDER"] - mock_data.values["PELVIS"]),
+        SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5772) * (mock_data.values["ELBOW"][2] - mock_data.values["SHOULDER"][2])]),
+        SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4574) * (mock_data.values["WRIST"][2] - mock_data.values["ELBOW"][2])]),
+        SegmentName.HAND: np.array([0, 0, 0.3624 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]),
+        SegmentName.THIGH: np.array([0, 0, 0.4095 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]),
+        SegmentName.SHANK: np.array([0, 0, 0.4459 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]),
+        SegmentName.FOOT: np.array([0.4415 * (mock_data.values["TOE"][1] - mock_data.values["HEEL"][1]), 0, 0]),
     }
     expected_female_com = {
-        SegmentName.HEAD: (1 - 0.4841) * (mock_values["TOP_HEAD"] - mock_values["SHOULDER"]),
-        SegmentName.TRUNK: (1 - 0.4964) * (mock_values["SHOULDER"] - mock_values["PELVIS"]),
-        SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5754) * (mock_values["ELBOW"][2] - mock_values["SHOULDER"][2])]),
-        SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4559) * (mock_values["WRIST"][2] - mock_values["ELBOW"][2])]),
-        SegmentName.HAND: np.array([0, 0, 0.3427 * (mock_values["FINGER"][2] - mock_values["WRIST"][2])]),
-        SegmentName.THIGH: np.array([0, 0, 0.3612 * (mock_values["KNEE"][2] - mock_values["PELVIS"][2])]),
-        SegmentName.SHANK: np.array([0, 0, 0.4416 * (mock_values["ANKLE"][2] - mock_values["KNEE"][2])]),
-        SegmentName.FOOT: np.array([0.4014 * (mock_values["TOE"][1] - mock_values["HEEL"][1]), 0, 0]),
+        SegmentName.HEAD: (1 - 0.4841) * (mock_data.values["TOP_HEAD"] - mock_data.values["SHOULDER"]),
+        SegmentName.TRUNK: (1 - 0.4964) * (mock_data.values["SHOULDER"] - mock_data.values["PELVIS"]),
+        SegmentName.UPPER_ARM: np.array([0, 0, (1 - 0.5754) * (mock_data.values["ELBOW"][2] - mock_data.values["SHOULDER"][2])]),
+        SegmentName.LOWER_ARM: np.array([0, 0, (1 - 0.4559) * (mock_data.values["WRIST"][2] - mock_data.values["ELBOW"][2])]),
+        SegmentName.HAND: np.array([0, 0, 0.3427 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]),
+        SegmentName.THIGH: np.array([0, 0, 0.3612 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]),
+        SegmentName.SHANK: np.array([0, 0, 0.4416 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]),
+        SegmentName.FOOT: np.array([0.4014 * (mock_data.values["TOE"][1] - mock_data.values["HEEL"][1]), 0, 0]),
     }
     for segment in expected_male_com.keys():
         # Male
         npt.assert_almost_equal(
-            male_table[segment].center_of_mass(mock_values, BiomechanicalModel())[:3], expected_male_com[segment][:3]
+            male_table[segment].center_of_mass(mock_data, mock_model)[:3], expected_male_com[segment][:3]
         )
         # Female
         npt.assert_almost_equal(
-            female_table[segment].center_of_mass(mock_values, BiomechanicalModel())[:3],
+            female_table[segment].center_of_mass(mock_data, mock_model)[:3],
             expected_female_com[segment][:3],
         )
 
     # Test inertia values
     # Male
     npt.assert_almost_equal(
-        male_table[SegmentName.HEAD].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.HEAD].inertia(mock_data, mock_model),
         np.array([1.78403249, 1.9281402, 1.32372727]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.TRUNK].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.TRUNK].inertia(mock_data, mock_model),
         np.array([29.45628403, 25.63734953, 7.81994468]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.UPPER_ARM].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.UPPER_ARM].inertia(mock_data, mock_model),
         np.array([0.15408382, 0.13726882, 0.04735671]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.LOWER_ARM].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.LOWER_ARM].inertia(mock_data, mock_model),
         np.array([0.08638358, 0.07963515, 0.01660289]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.HAND].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.HAND].inertia(mock_data, mock_model),
         np.array([0.00885427, 0.00589527, 0.00361413]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.THIGH].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.THIGH].inertia(mock_data, mock_model),
         np.array([4.29153917, 4.29153917, 0.88022525]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.SHANK].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.SHANK].inertia(mock_data, mock_model),
         np.array([0.7883631, 0.75170012, 0.12862352]),
     )
     npt.assert_almost_equal(
-        male_table[SegmentName.FOOT].inertia(mock_values, BiomechanicalModel()),
+        male_table[SegmentName.FOOT].inertia(mock_data, mock_model),
         np.array([0.00608707, 0.0055319, 0.00141705]),
     )
 
     # Female
     npt.assert_almost_equal(
-        female_table[SegmentName.HEAD].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.HEAD].inertia(mock_data, mock_model),
         np.array([1.37569681, 1.6301523, 1.27604257]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.TRUNK].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.TRUNK].inertia(mock_data, mock_model),
         np.array([25.27673356, 22.86703742, 5.79533932]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.UPPER_ARM].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.UPPER_ARM].inertia(mock_data, mock_model),
         np.array([0.13795194, 0.120666, 0.03909864]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.LOWER_ARM].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.LOWER_ARM].inertia(mock_data, mock_model),
         np.array([0.06580489, 0.06380333, 0.00853558]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.HAND].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.HAND].inertia(mock_data, mock_model),
         np.array([0.00583453, 0.00423987, 0.00331789]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.THIGH].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.THIGH].inertia(mock_data, mock_model),
         np.array([5.63488682, 5.48321446, 1.0860817]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.SHANK].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.SHANK].inertia(mock_data, mock_model),
         np.array([0.98910339, 0.96012025, 0.11648473]),
     )
     npt.assert_almost_equal(
-        female_table[SegmentName.FOOT].inertia(mock_values, BiomechanicalModel()),
+        female_table[SegmentName.FOOT].inertia(mock_data, mock_model),
         np.array([0.00775807, 0.00675491, 0.0013343]),
     )
 
@@ -953,11 +980,12 @@ def test_radii_of_gyration_to_inertia():
 def test_de_leva_table_comprehensive():
     """Comprehensive test to ensure data consistency."""
     total_mass = 70.0
+    mock_data = MOCK_DATA()
 
     # Test both sexes
     for sex in [Sex.MALE, Sex.FEMALE]:
         table = DeLevaTable(total_mass, sex)
-        table.from_static(MOCK_DATA())
+        table.from_static(mock_data)
 
         # Test that all segments are accessible
         for segment in SegmentName:
@@ -985,15 +1013,15 @@ def test_de_leva_table_comprehensive():
 def test_sex_differences():
     """Test that male and female tables have different values."""
     total_mass = 70.0
-    mock_values = MOCK_DATA().values
+    mock_data = MOCK_DATA()
     male_table = DeLevaTable(total_mass, Sex.MALE)
-    male_table.from_static(MOCK_DATA())
+    male_table.from_static(mock_data)
     female_table = DeLevaTable(total_mass, Sex.FEMALE)
-    female_table.from_static(MOCK_DATA())
+    female_table.from_static(mock_data)
 
     # Test that head mass is different between males and females
-    male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_values, None)
-    female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_values, None)
+    male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_data, None)
+    female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_data, None)
 
     # Should be 0.0694 vs 0.0669 * total_mass
     npt.assert_almost_equal(male_head_mass, 0.0694 * total_mass)
@@ -1001,8 +1029,8 @@ def test_sex_differences():
     assert male_head_mass != female_head_mass
 
     # Test that trunk mass is different
-    male_trunk_mass = male_table[SegmentName.TRUNK].relative_mass(mock_values, None)
-    female_trunk_mass = female_table[SegmentName.TRUNK].relative_mass(mock_values, None)
+    male_trunk_mass = male_table[SegmentName.TRUNK].relative_mass(mock_data, None)
+    female_trunk_mass = female_table[SegmentName.TRUNK].relative_mass(mock_data, None)
 
     # Should be 0.4346 vs 0.4257 * total_mass
     npt.assert_almost_equal(male_trunk_mass, 0.4346 * total_mass)
@@ -1013,17 +1041,17 @@ def test_sex_differences():
 def test_de_leva_table_different_masses():
     """Test De Leva table with different total masses."""
     masses = [50.0, 70.0, 100.0, 120.0]
-    mock_values = MOCK_DATA().values
+    mock_data = MOCK_DATA()
 
     for total_mass in masses:
         male_table = DeLevaTable(total_mass, Sex.MALE)
-        male_table.from_static(MOCK_DATA())
+        male_table.from_static(mock_data)
         female_table = DeLevaTable(total_mass, Sex.FEMALE)
-        female_table.from_static(MOCK_DATA())
+        female_table.from_static(mock_data)
 
         # Test head mass scales correctly
-        male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_values, None)
-        female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_values, None)
+        male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_data, None)
+        female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_data, None)
 
         npt.assert_almost_equal(male_head_mass, 0.0694 * total_mass)
         npt.assert_almost_equal(female_head_mass, 0.0669 * total_mass)
@@ -1033,20 +1061,20 @@ def test_de_leva_table_edge_cases():
     """Test edge cases for De Leva table."""
     # Test with very small mass
     small_mass = 0.1
+    mock_data = MOCK_DATA()
     table = DeLevaTable(small_mass, Sex.MALE)
-    table.from_static(MOCK_DATA())
-    mock_values = MOCK_DATA().values
+    table.from_static(mock_data)
 
     # Should still work with very small masses
-    head_mass = table[SegmentName.HEAD].relative_mass(mock_values, None)
+    head_mass = table[SegmentName.HEAD].relative_mass(mock_data, None)
     expected = 0.0694 * small_mass
     npt.assert_almost_equal(head_mass, expected)
 
     # Test with very large mass
     large_mass = 200.0
     table = DeLevaTable(large_mass, Sex.FEMALE)
-    table.from_static(MOCK_DATA())
-    head_mass = table[SegmentName.HEAD].relative_mass(mock_values, None)
+    table.from_static(mock_data)
+    head_mass = table[SegmentName.HEAD].relative_mass(mock_data, None)
     expected = 0.0669 * large_mass
     npt.assert_almost_equal(head_mass, expected)
 
@@ -1055,8 +1083,9 @@ def test_model_evaluation():
     """Test that the model can be evaluated with the De Leva table."""
     total_mass = 70.0
     sex = Sex.FEMALE
+    mock_data = MOCK_DATA()
     de_leva_table = DeLevaTable(total_mass=total_mass, sex=sex)
-    de_leva_table.from_static(MOCK_DATA())
+    de_leva_table.from_static(mock_data)
 
     model = get_biomechanical_model(de_leva_table)
 
@@ -1069,19 +1098,19 @@ def test_model_evaluation():
     assert segment.q_ranges is None
     assert segment.qdot_ranges is None
     assert segment.segment_coordinate_system is None
-    npt.assert_almost_equal(segment.inertia_parameters.relative_mass(MOCK_DATA().values, model), 29.7990)
+    npt.assert_almost_equal(segment.inertia_parameters.relative_mass(mock_data, model), 29.7990)
     npt.assert_almost_equal(
-        segment.inertia_parameters.center_of_mass(MOCK_DATA().values, model)[:3], np.array([0.0, 0.0, 1.5108])
+        segment.inertia_parameters.center_of_mass(mock_data, model)[:3], np.array([0.0, 0.0, 1.5108])
     )
     npt.assert_almost_equal(
-        segment.inertia_parameters.inertia(MOCK_DATA().values, model)[:3],
+        segment.inertia_parameters.inertia(mock_data, model)[:3],
         np.array([25.27673356, 22.86703742, 5.79533932]),
     )
-    npt.assert_almost_equal(segment.mesh.functions[0](MOCK_DATA().values, model)[:3], np.array([0, 0, 5]))
-    npt.assert_almost_equal(segment.mesh.functions[1](MOCK_DATA().values, model)[:3], np.array([0, 0, 8]))
+    npt.assert_almost_equal(segment.mesh.functions[0](mock_data, model)[:3].reshape(3, ), np.array([0, 0, 5]))
+    npt.assert_almost_equal(segment.mesh.functions[1](mock_data, model)[:3].reshape(3, ), np.array([0, 0, 8]))
     assert segment.mesh_file is None
 
-    model_real = model.to_real(MOCK_DATA())
+    model_real = model.to_real(mock_data)
 
     # Check only the trunk segment
     segment = model_real.segments[1]

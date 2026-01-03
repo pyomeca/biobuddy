@@ -23,6 +23,8 @@ from biobuddy import (
     Rotations,
     RotoTransMatrix,
     SegmentCoordinateSystemUtils,
+    DictData,
+    BiomechanicalModelReal,
 )
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
@@ -50,21 +52,21 @@ def test_init_via_points():
     # Test with string position function
     via_point = ViaPoint(name="test_via_point", position_function="marker1")
     # Call the position function with a mock marker dictionary
-    markers = {"marker1": np.array([1, 2, 3])}
-    result = via_point.position_function(markers, None)
-    np.testing.assert_array_equal(result, np.array([1, 2, 3]))
+    mock_markers_data = DictData({"marker1": np.array([1, 2, 3, 1]).reshape(4, 1)})
+    result = via_point.position_function(mock_markers_data, None)
+    np.testing.assert_array_equal(result.reshape(4, ), np.array([1, 2, 3, 1]))
 
     # Test with callable position function
-    custom_func = lambda m, bio: np.array([4, 5, 6])
+    custom_func = lambda m, bio: np.array([4, 5, 6, 1])
     via_point = ViaPoint(name="test_via_point", position_function=custom_func)
     result = via_point.position_function(None, None)
-    np.testing.assert_array_equal(result, np.array([4, 5, 6]))
+    np.testing.assert_array_equal(result, np.array([4, 5, 6, 1]))
 
 
 def test_to_via_point_local():
     # Mock the ViaPointReal class
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Crete a via point
     via_point = ViaPoint(
@@ -78,31 +80,40 @@ def test_to_via_point_local():
     with pytest.raises(
         RuntimeError, match="You must provide a position function to evaluate the ViaPoint into a ViaPointReal."
     ):
-        via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+        via_point_real = via_point.to_via_point(mock_data, mock_model)
 
     # Set the function
-    via_point.position_function = lambda m, bio: m["HV"]
+    via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
+    expected_position = np.array([0.5758053 , 0.60425486, 1.67896849, 1.])
+    npt.assert_almost_equal(
+        np.mean(mock_data.get_position(["HV"]), axis=2).reshape(4, ),
+        expected_position,
+    )
+    npt.assert_almost_equal(
+        np.mean(mock_data.values["HV"], axis=1).reshape(4, ),
+        expected_position,
+    )
 
     # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    via_point_real = via_point.to_via_point(mock_data, mock_model)
     npt.assert_almost_equal(
-        np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
+        via_point.position_function(mock_data, mock_model).reshape(
             4,
         ),
-        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+        expected_position,
     )
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+        expected_position,
     )
 
     # Set the marker name
     via_point.position_function = "HV"
 
     # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    via_point_real = via_point.to_via_point(mock_data, mock_model)
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
@@ -114,7 +125,7 @@ def test_to_via_point_local():
 def test_to_via_point_global():
     # Mock the ViaPointReal class
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Crete a via point
     via_point = ViaPoint(
@@ -131,21 +142,28 @@ def test_to_via_point_global():
         via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
 
     # Set the function
-    via_point.position_function = lambda m, bio: m["HV"]
+    via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
+    expected_position = np.array([-0.65174504, 0.60837317, 0.78210787, 1.0])
+    npt.assert_almost_equal(
+        np.linalg.inv(MOCK_RT.rt_matrix) @ np.mean(mock_data.get_position(["HV"]), axis=2).reshape(4, ),
+        expected_position,
+    )
 
     # Call to_via_point
     via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    # Make sure the position_function is in global coordinates
     npt.assert_almost_equal(
-        np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
+        np.mean(via_point.position_function(mock_data, mock_model), axis=1).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
+    # And the via point real position is in local
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+        expected_position,
     )
 
     # Set the marker name
@@ -157,7 +175,7 @@ def test_to_via_point_global():
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+        expected_position,
     )
 
 
@@ -353,7 +371,7 @@ def test_muscle_to_muscle_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -413,7 +431,7 @@ def test_muscle_to_muscle_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -473,7 +491,7 @@ def test_muscle_functions():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -691,7 +709,7 @@ def test_muscle_group_with_via_points():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -827,9 +845,9 @@ def test_init_marker():
     # Test with string function
     marker = Marker(name="test_marker", function="HV")
     # Call the function with a mock marker dictionary
-    markers = {"HV": np.array([1, 2, 3, 1])[:, np.newaxis]}
-    result = marker.function(markers, None)
-    npt.assert_array_equal(result, np.array([1, 2, 3, 1]))
+    mock_markers_data = DictData({"HV": np.array([1, 2, 3, 1]).reshape(4, 1)})
+    result = marker.function(mock_markers_data, None)
+    npt.assert_array_equal(result.reshape(4, ), np.array([1, 2, 3, 1]))
 
 
 def test_marker_to_marker_local():
@@ -838,7 +856,7 @@ def test_marker_to_marker_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Marker without a position function is by default its name in the c3d
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
@@ -850,12 +868,12 @@ def test_marker_to_marker_local():
     )
 
     # Set the function
-    marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
+    marker.function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
 
-    # Call to_via_point
+    # Call to_via_marker
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
-        marker.function(mock_data.values, mock_model).reshape(
+        marker.function(mock_data, mock_model).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
@@ -876,7 +894,7 @@ def test_marker_to_marker_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Marker without a position function is by default its name in the c3d
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
@@ -888,12 +906,12 @@ def test_marker_to_marker_global():
     )
 
     # Set the function
-    marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
+    marker.function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
 
     # Call to_via_point
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
-        marker.function(mock_data.values, mock_model).reshape(
+        marker.function(mock_data, mock_model).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
@@ -928,7 +946,7 @@ def test_axis_to_axis_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real axis
     axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
@@ -959,7 +977,7 @@ def test_axis_to_axis_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real axis
     axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
@@ -1009,7 +1027,7 @@ def test_segment_coordinate_system_to_scs_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     result = scs.to_scs(mock_data, mock_model, MOCK_RT)
 
@@ -1038,7 +1056,7 @@ def test_segment_coordinate_system_to_scs_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     result = scs.to_scs(mock_data, mock_model, MOCK_RT)
 
@@ -1095,7 +1113,7 @@ def test_mesh_to_mesh_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
@@ -1119,7 +1137,7 @@ def test_mesh_to_mesh_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
@@ -1188,7 +1206,7 @@ def test_mesh_file_to_mesh_file_real():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh_file.to_mesh_file(mock_data, mock_model)
@@ -1243,7 +1261,7 @@ def test_inertia_parameters_to_inertia_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real inertia parameters
     inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
@@ -1271,7 +1289,7 @@ def test_inertia_parameters_to_inertia_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real inertia parameters
     inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
@@ -1334,7 +1352,7 @@ def test_init_contact():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1")
     # Call the function with a mock marker dictionary
     mock_data = MockC3dData()
-    result = contact.function(mock_data.values, None)
+    result = contact.function(mock_data, None)
     npt.assert_almost_equal(
         result.reshape(
             4,
@@ -1348,7 +1366,7 @@ def test_contact_to_contact_global():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1")
 
     # Mock data
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
     mock_data = MockC3dData()
 
     # Convert to real contact
@@ -1372,7 +1390,7 @@ def test_contact_to_contact_local():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1", is_local=True)
 
     # Mock data
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
     mock_data = MockC3dData()
 
     # Convert to real contact
