@@ -1067,7 +1067,7 @@ def test_rigidify():
         [-0.001, 0.07, 0.10],
     ])
     # Rigidify the markers
-    rigidified_markers = SegmentCoordinateSystemUtils.rigidify(data=markers, reference_data=)
+    rigidified_markers = SegmentCoordinateSystemUtils.rigidify(data=markers, reference_data=markers)
 
 
 
