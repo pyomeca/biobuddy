@@ -8,6 +8,7 @@ from ....utils.aliases import points_to_array
 from ...generic.rigidbody.marker import Marker
 
 if TYPE_CHECKING:
+    from ...generic.biomechanical_model import BiomechanicalModel
     from ...real.biomechanical_model_real import BiomechanicalModelReal
     from ...real.rigidbody.mesh_real import MeshReal
 
@@ -15,7 +16,7 @@ if TYPE_CHECKING:
 class Mesh:
     def __init__(
         self,
-        functions: tuple[Callable | str, ...],
+        functions: tuple[Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str, ...],
         is_local: bool = False,
     ):
         """
@@ -33,18 +34,18 @@ class Mesh:
         self.is_local = is_local
 
     @property
-    def functions(self) -> list[Callable | str]:
+    def functions(self) -> list[Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str]:
         return self._functions
 
     @functions.setter
-    def functions(self, value: list[Callable | str]) -> None:
+    def functions(self, value: list[Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str]) -> None:
         functions_list = []
         if value is not None:
             for function in value:
                 if isinstance(function, str):
                     functions_list += [
                         lambda m, bio, name=function: (
-                            m[name] if len(m[name].shape) == 1 else np.nanmean(m[name], axis=1)
+                            m.get_position([name]) if len(m.get_position([name]).shape) == 1 else m.mean_marker_position(name)
                         )
                     ]
                 elif callable(function):
@@ -90,7 +91,7 @@ class Mesh:
         # Get the position of the all the mesh points and do some sanity checks
         all_p = points_to_array(points=None, name="mesh_real")
         for f in self.functions:
-            p = np.nanmean(points_to_array(points=f(data.values, model), name="mesh function"), axis=1)
+            p = np.nanmean(points_to_array(points=f(data, model), name="mesh function"), axis=1)
             projected_p = scs.inverse @ p
             if np.isnan(projected_p).all():
                 raise RuntimeError(f"All the values for {f} returned nan which is not permitted")

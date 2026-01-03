@@ -27,7 +27,7 @@ class _InternalData:
 class SegmentCoordinateSystem:
     def __init__(
         self,
-        origin: Callable | str | Marker,
+        origin: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str | Marker,
         first_axis: Axis = Axis(Axis.Name.X),
         second_axis: Axis = Axis(Axis.Name.Y),
         axis_to_keep: AxisReal.Name = Axis.Name.X,
@@ -177,7 +177,7 @@ class SegmentCoordinateSystem:
 
 class SegmentCoordinateSystemUtils:
     @staticmethod
-    def rigidify(data: Data, reference_data: Data = None) -> RotoTransMatrixTimeSeries:
+    def rigidify(data: MarkerData, reference_data: MarkerData = None) -> RotoTransMatrixTimeSeries:
         """
         Compute the rigid body transformation matrices from a set of markers
 
@@ -247,11 +247,11 @@ class SegmentCoordinateSystemUtils:
         A lambda function that can be called during the to_real process
         """
 
-        return lambda m, bio: np.nanmean(np.nanmean(np.array([m[name] for name in marker_names]), axis=2), axis=0)
+        return lambda m, bio: np.nanmean(m.markers_center_position(marker_names), axis=1)
 
     @staticmethod
     def score(
-        functional_data: Data,
+        functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
         visualize: bool = False,
@@ -336,7 +336,7 @@ class SegmentCoordinateSystemUtils:
     @staticmethod
     def sara(
         name: Axis.Name,
-        functional_data: Data,
+        functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
         visualize: bool = False,
@@ -431,7 +431,7 @@ class SegmentCoordinateSystemUtils:
 
 
 def _visualize_score(
-    data: Data,
+    data: MarkerData,
     rt_parent: RotoTransMatrixTimeSeries,
     rt_child: RotoTransMatrixTimeSeries,
     cor_global: np.ndarray | tuple[np.ndarray, np.ndarray],

@@ -16,7 +16,7 @@ class Marker:
     def __init__(
         self,
         name: str = None,
-        function: Callable | str = None,
+        function: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str = None,
         parent_name: str = None,
         is_technical: bool = True,
         is_anatomical: bool = False,
@@ -44,7 +44,6 @@ class Marker:
             If False, the marker is defined in the global coordinate system.
         """
         self.name = name
-        # TODO @charbie Change ._function from Callable[np.array] to Callable[Data] (so any backend can be used, e.g. pandas)
         self.function = function
         self.parent_name = check_name(parent_name)
         self.is_technical = is_technical
@@ -68,17 +67,17 @@ class Marker:
         self._parent_name = value
 
     @property
-    def function(self) -> Callable | str:
+    def function(self) -> Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str:
         return self._function
 
     @function.setter
-    def function(self, value: Callable | str) -> None:
+    def function(self, value: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str) -> None:
         if value is None:
             # Set the function to the name of the marker, so it can be used as a default
             value = self.name
 
         if isinstance(value, str):
-            self._function = lambda m, bio: m[value] if len(m[value].shape) == 1 else np.nanmean(m[value], axis=1)
+            self._function = lambda m, bio: m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
         elif callable(value):
             self._function = value
         else:
@@ -128,8 +127,7 @@ class Marker:
             )
 
         # Get the position of the markers and do some sanity checks
-        # TODO @charbie Consider changing the signature of function to accept Data only (instead of np.ndarray) as first argument
-        position = points_to_array(points=self.function(data.values, model), name=f"marker function")
+        position = points_to_array(points=self.function(data, model), name=f"marker function")
         marker_position = scs.inverse @ position
 
         if np.isnan(marker_position).all():

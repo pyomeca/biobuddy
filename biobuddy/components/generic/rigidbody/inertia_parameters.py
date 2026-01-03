@@ -7,6 +7,7 @@ from ....utils.aliases import points_to_array, inertia_to_array
 from ....utils.linear_algebra import RotoTransMatrix
 
 if TYPE_CHECKING:
+    from ...generic.biomechanical_model import BiomechanicalModel
     from ...real.biomechanical_model_real import BiomechanicalModelReal
     from ...real.rigidbody.inertia_parameters_real import InertiaParametersReal
     from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
@@ -15,9 +16,9 @@ if TYPE_CHECKING:
 class InertiaParameters:
     def __init__(
         self,
-        mass: Callable = None,
-        center_of_mass: Callable = None,
-        inertia: Callable = None,
+        mass: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] = None,
+        center_of_mass: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] = None,
+        inertia: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] = None,
         is_local: bool = True,
     ):
         """
@@ -109,12 +110,12 @@ class InertiaParameters:
         # Mass
         if self.relative_mass is None:
             raise RuntimeError("To compute the inertia parameters, you must provide a mass function.")
-        mass = self.relative_mass(data.values, model)
+        mass = self.relative_mass(data, model)
 
         # Center of mass
         if self.center_of_mass is None:
             raise RuntimeError("To compute the inertia parameters, you must provide a center of mass function.")
-        com_p = points_to_array(points=self.center_of_mass(data.values, model), name=f"center_of_mass function")
+        com_p = points_to_array(points=self.center_of_mass(data, model), name=f"center_of_mass function")
         # Transform into local coordinates if needed
         com = scs.inverse @ com_p
         if np.isnan(com).all():
@@ -123,7 +124,7 @@ class InertiaParameters:
         # Inertia
         if self.inertia is None:
             raise RuntimeError("To compute the inertia parameters, you must provide a inertia function.")
-        inertia = inertia_to_array(inertia=self.inertia(data.values, model), name="inertia parameter function")
+        inertia = inertia_to_array(inertia=self.inertia(data, model), name="inertia parameter function")
         # Do not transform inertia because it does not make any sens to express it elsewhere than at the CoM
 
         return InertiaParametersReal(mass, com, inertia)

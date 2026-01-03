@@ -19,8 +19,8 @@ class Axis:
     def __init__(
         self,
         name: AxisReal.Name,
-        start: Callable | str | Marker | None = None,
-        end: Callable | str | Marker | None = None,
+        start: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str | Marker | None = None,
+        end: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str | Marker | None = None,
     ):
         """
         Defines an axis to create a SegmentCoordinateSystemReal. The axis is defined by a start and an end point.

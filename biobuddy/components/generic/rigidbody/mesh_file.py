@@ -123,7 +123,7 @@ class MeshFile:
         if self.scaling_function is None:
             mesh_scale = np.array([1, 1, 1])
         else:
-            mesh_scale: np.ndarray = self.scaling_function(data.values, model)
+            mesh_scale: np.ndarray = self.scaling_function(data, model)
             if not isinstance(mesh_scale, np.ndarray):
                 raise RuntimeError(
                     f"The scaling_function {self.scaling_function} must return a vector of dimension 3 (XYZ)"
@@ -138,7 +138,7 @@ class MeshFile:
         if self.rotation_function is None:
             mesh_rotation = np.array([0, 0, 0])
         else:
-            mesh_rotation: np.ndarray = self.rotation_function(data.values, model)
+            mesh_rotation: np.ndarray = self.rotation_function(data, model)
             if not isinstance(mesh_rotation, np.ndarray):
                 raise RuntimeError(
                     f"The rotation_function {self.rotation_function} must return a vector of dimension 3 (XYZ)"
@@ -153,7 +153,7 @@ class MeshFile:
         if self.translation_function is None:
             mesh_translation = np.array([0, 0, 0])
         else:
-            mesh_translation: np.ndarray = self.translation_function(data.values, model)
+            mesh_translation: np.ndarray = self.translation_function(data, model)
             if not isinstance(mesh_translation, np.ndarray):
                 raise RuntimeError(
                     f"The translation_function {self.translation_function} must return a vector of dimension 3 (XYZ)"

@@ -19,7 +19,7 @@ class ViaPoint:
         parent_name: str = None,
         muscle_name: str = None,
         muscle_group: str = None,
-        position_function: Callable | str = None,
+        position_function: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str = None,
         is_local: bool = True,
     ):
         """
@@ -80,15 +80,22 @@ class ViaPoint:
         self._muscle_group = value
 
     @property
-    def position_function(self) -> Callable | str:
+    def position_function(self) -> Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str:
         return self._position_function
 
     @position_function.setter
-    def position_function(self, value: Callable | str) -> None:
-        if value is not None:
-            position_function = (lambda m, bio: m[value]) if isinstance(value, str) else value
-        else:
+    def position_function(self, value: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str) -> None:
+        if isinstance(value, str):
+            position_function = lambda m, bio: m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+        elif callable(value):
+            position_function = value
+        elif value is None:
             position_function = None
+        else:
+            raise TypeError(
+                f"Expected a callable or a string, got {type(value)} instead. "
+                "Please provide a valid function or marker name."
+            )
         self._position_function = position_function
 
     def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ViaPointReal":
@@ -120,7 +127,7 @@ class ViaPoint:
 
         # Get the position of the contact points and do some sanity checks
         p = np.nanmean(
-            points_to_array(points=self.position_function(data.values, model), name="via point function"), axis=1
+            points_to_array(points=self.position_function(data, model), name="via point function"), axis=1
         )
         position = scs.inverse @ p
         if np.isnan(position).all():

@@ -257,10 +257,10 @@ class Muscle(MuscleUtils):
             self.muscle_group,
             origin_position,
             insertion_position,
-            optimal_length=self.optimal_length_function(model, data.values),
-            maximal_force=self.maximal_force_function(model, data.values),
-            tendon_slack_length=self.tendon_slack_length_function(model, data.values),
-            pennation_angle=self.pennation_angle_function(model, data.values),
+            optimal_length=self.optimal_length_function(model, data),
+            maximal_force=self.maximal_force_function(model, data),
+            tendon_slack_length=self.tendon_slack_length_function(model, data),
+            pennation_angle=self.pennation_angle_function(model, data),
             maximal_excitation=self.maximal_excitation,
         )
 
