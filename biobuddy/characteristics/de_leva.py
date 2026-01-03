@@ -482,11 +482,15 @@ class DeLevaTable:
         self.hand_length = float(data.get_position(["WRIST"])[2] - data.get_position(["FINGER"])[2])
         self.lower_arm_length = float(data.get_position(["ELBOW"])[2] - data.get_position(["WRIST"])[2])
         self.upper_arm_length = float(
-            (data.get_position(["SHOULDER_LEFT"])[2] + data.get_position(["SHOULDER_RIGHT"])[2]) / 2 - data.get_position(["ELBOW"])[2]
+            (data.get_position(["SHOULDER_LEFT"])[2] + data.get_position(["SHOULDER_RIGHT"])[2]) / 2
+            - data.get_position(["ELBOW"])[2]
         )
-        self.shoulder_width = float(np.linalg.norm(data.get_position(["SHOULDER_LEFT"]) - data.get_position(["SHOULDER_RIGHT"])))
+        self.shoulder_width = float(
+            np.linalg.norm(data.get_position(["SHOULDER_LEFT"]) - data.get_position(["SHOULDER_RIGHT"]))
+        )
         self.thigh_length = float(
-            (data.get_position(["HIP_LEFT"])[2] + data.get_position(["HIP_RIGHT"])[2]) / 2 - data.get_position(["KNEE"])[2]
+            (data.get_position(["HIP_LEFT"])[2] + data.get_position(["HIP_RIGHT"])[2]) / 2
+            - data.get_position(["KNEE"])[2]
         )
         self.shank_length = float(data.get_position(["KNEE"])[2] - data.get_position(["ANKLE"])[2])
         self.hip_width = float(np.linalg.norm(data.get_position(["HIP_LEFT"]) - data.get_position(["HIP_RIGHT"])))

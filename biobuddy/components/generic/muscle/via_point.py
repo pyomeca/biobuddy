@@ -86,7 +86,9 @@ class ViaPoint:
     @position_function.setter
     def position_function(self, value: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str) -> None:
         if isinstance(value, str):
-            position_function = lambda m, bio: m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            position_function = lambda m, bio: (
+                m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            )
         elif callable(value):
             position_function = value
         elif value is None:
@@ -126,9 +128,7 @@ class ViaPoint:
             )
 
         # Get the position of the contact points and do some sanity checks
-        p = np.nanmean(
-            points_to_array(points=self.position_function(data, model), name="via point function"), axis=1
-        )
+        p = np.nanmean(points_to_array(points=self.position_function(data, model), name="via point function"), axis=1)
         position = scs.inverse @ p
         if np.isnan(position).all():
             raise RuntimeError(f"All the values for {self.position_function} returned nan which is not permitted")

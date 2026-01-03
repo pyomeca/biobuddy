@@ -72,7 +72,9 @@ class Contact:
             value = self.name
 
         if isinstance(value, str):
-            self._function = lambda m, bio: m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            self._function = lambda m, bio: (
+                m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            )
         elif callable(value):
             self._function = value
         else:

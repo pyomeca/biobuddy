@@ -45,7 +45,9 @@ class Mesh:
                 if isinstance(function, str):
                     functions_list += [
                         lambda m, bio, name=function: (
-                            m.get_position([name]) if len(m.get_position([name]).shape) == 1 else m.mean_marker_position(name)
+                            m.get_position([name])
+                            if len(m.get_position([name]).shape) == 1
+                            else m.mean_marker_position(name)
                         )
                     ]
                 elif callable(function):

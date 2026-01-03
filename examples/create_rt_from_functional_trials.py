@@ -2,6 +2,7 @@
 This example shows how to build a RT from functional trials.
 See https://github.com/s2mLab/momentum_health_walking_reconstruction/blob/main/momentum_health_walking_reconstruction/models/lower_body.py for a more complete example.
 """
+
 import logging
 from pathlib import Path
 
@@ -68,11 +69,11 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
     # Hip
     right_knee_mid = SegmentCoordinateSystemUtils.mean_markers(["RLFE", "RMFE"])
     right_hip_origin = SegmentCoordinateSystemUtils.score(
-                            functional_data=right_hip_data,
-                            parent_marker_names=["LPSIS", "RPSIS", "LASIS", "RASIS"],
-                            child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-                            visualize=True,
-                        )
+        functional_data=right_hip_data,
+        parent_marker_names=["LPSIS", "RPSIS", "LASIS", "RASIS"],
+        child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
+        visualize=True,
+    )
     model.add_segment(
         Segment(
             name="RThigh",
@@ -85,7 +86,17 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
                 axis_to_keep=Axis.Name.Z,
             ),
             mesh=Mesh(
-                (right_hip_origin, "RTHI1", "RTHI3", "RTHI2", "RTHI1", "RLFE", right_knee_mid, "RMFE", right_hip_origin),
+                (
+                    right_hip_origin,
+                    "RTHI1",
+                    "RTHI3",
+                    "RTHI2",
+                    "RTHI1",
+                    "RLFE",
+                    right_knee_mid,
+                    "RMFE",
+                    right_hip_origin,
+                ),
                 is_local=False,
             ),
         )
@@ -98,12 +109,12 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
 
     # Knee
     right_tibia_axis = SegmentCoordinateSystemUtils.sara(
-                        name=Axis.Name.X,
-                        functional_data=right_knee_data,
-                        parent_marker_names=["RTHI1", "RTHI2", "RTHI3"],
-                        child_marker_names=["RLEG1", "RLEG2", "RLEG3", "RATT", "RLM", "RSPH"],
-                        visualize=True,
-                    )
+        name=Axis.Name.X,
+        functional_data=right_knee_data,
+        parent_marker_names=["RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RLEG1", "RLEG2", "RLEG3", "RATT", "RLM", "RSPH"],
+        visualize=True,
+    )
     right_ankle_mid = SegmentCoordinateSystemUtils.mean_markers(["RLM", "RSPH"])
     model.add_segment(
         Segment(
@@ -116,7 +127,21 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
                 second_axis=right_tibia_axis,
                 axis_to_keep=Axis.Name.X,
             ),
-            mesh=Mesh((right_tibia_axis.start, "RLEG1", "RLEG2", "RLEG3", "RLEG1", right_tibia_axis.start, right_ankle_mid, "RLM", "RSPH", right_tibia_axis.start), is_local=False),
+            mesh=Mesh(
+                (
+                    right_tibia_axis.start,
+                    "RLEG1",
+                    "RLEG2",
+                    "RLEG3",
+                    "RLEG1",
+                    right_tibia_axis.start,
+                    right_ankle_mid,
+                    "RLM",
+                    "RSPH",
+                    right_tibia_axis.start,
+                ),
+                is_local=False,
+            ),
         )
     )
     model.segments["RShank"].add_marker(Marker("RLEG1", is_technical=True, is_anatomical=False))

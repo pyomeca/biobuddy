@@ -125,15 +125,19 @@ class BiomechanicalModel(ModelUtils):
                     try:
                         model.segments[marker.parent_name].add_marker(marker.to_marker(data, model, scs_global))
                     except Exception as e:  # Marker try
-                        raise RuntimeError(f"The segment '{segment.name}' could not be collided: \n" +
-                                           f"\tThe marker '{marker.name}' could not be collided: \n\t\t{e}")
+                        raise RuntimeError(
+                            f"The segment '{segment.name}' could not be collided: \n"
+                            + f"\tThe marker '{marker.name}' could not be collided: \n\t\t{e}"
+                        )
 
                 for contact in segment.contacts:
                     try:
                         model.segments[contact.parent_name].add_contact(contact.to_contact(data, model, scs_global))
                     except Exception as e:  # Contact try
-                        raise RuntimeError(f"The segment '{segment.name}' could not be collided: \n" +
-                                           f"\tThe contact '{contact.name}' could not be collided: \n\t\t{e}")
+                        raise RuntimeError(
+                            f"The segment '{segment.name}' could not be collided: \n"
+                            + f"\tThe contact '{contact.name}' could not be collided: \n\t\t{e}"
+                        )
 
             except Exception as e:  # Segment try
                 raise RuntimeError(f"The following error occurred when collapsing the segment '{segment.name}': {e}")
@@ -152,8 +156,10 @@ class BiomechanicalModel(ModelUtils):
                     try:
                         model.muscle_groups[muscle_group.name].add_muscle(muscle.to_muscle(data, model, scs_global))
                     except Exception as e:  # Muscle try
-                        raise RuntimeError(f"The muscle group '{muscle_group.name}' could not be collided: \n" +
-                                           f"\tThe muscle '{muscle.name}' could not be collided: \n\t\t{e}")
+                        raise RuntimeError(
+                            f"The muscle group '{muscle_group.name}' could not be collided: \n"
+                            + f"\tThe muscle '{muscle.name}' could not be collided: \n\t\t{e}"
+                        )
 
                     for via_point in muscle.via_points:
                         try:
@@ -161,11 +167,15 @@ class BiomechanicalModel(ModelUtils):
                                 via_point.to_via_point(data, model, scs_global)
                             )
                         except Exception as e:  # Via Point try
-                            raise RuntimeError(f"The muscle group '{muscle_group.name}' could not be collided: \n" +
-                                               f"\tThe muscle '{muscle.name}' could not be collided: \n"
-                                               f"\t\tThe via point '{via_point.name}' could not be collided: \t\t\t{e}")
+                            raise RuntimeError(
+                                f"The muscle group '{muscle_group.name}' could not be collided: \n"
+                                + f"\tThe muscle '{muscle.name}' could not be collided: \n"
+                                f"\t\tThe via point '{via_point.name}' could not be collided: \t\t\t{e}"
+                            )
 
             except Exception as e:  # Muscle Group try
-                raise RuntimeError(f"The following error occurred when collapsing the muscle group '{muscle_group.name}': {e}")
+                raise RuntimeError(
+                    f"The following error occurred when collapsing the muscle group '{muscle_group.name}': {e}"
+                )
         model.validate_model()
         return model

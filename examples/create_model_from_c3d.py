@@ -36,15 +36,11 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
     de_leva = DeLevaTable(total_mass=total_mass, sex=Sex.FEMALE)
     de_leva.from_measurements(
         total_height=total_height,
-        ankle_height=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM", "LLM", "LSPH"])(
-            static_trial, None
-        )[2],
-        knee_height=SegmentCoordinateSystemUtils.mean_markers(["RLFE", "RMFE", "LLFE", "LMFE"])(
-            static_trial, None
-        )[2],
-        hip_height=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"])(
-            static_trial, None
-        )[2],
+        ankle_height=SegmentCoordinateSystemUtils.mean_markers(["RSPH", "RLM", "LLM", "LSPH"])(static_trial, None)[2],
+        knee_height=SegmentCoordinateSystemUtils.mean_markers(["RLFE", "RMFE", "LLFE", "LMFE"])(static_trial, None)[2],
+        hip_height=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"])(static_trial, None)[
+            2
+        ],
         shoulder_height=SegmentCoordinateSystemUtils.mean_markers(["LA", "RA"])(static_trial, None)[2],
         finger_span=total_height,
         wrist_span=total_height * 0.9,  # TODO: find data from literature for these % to set default values
@@ -93,9 +89,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
             rotations=Rotations.XY,
             inertia_parameters=de_leva[SegmentName.THIGH],
             segment_coordinate_system=SegmentCoordinateSystem(
-                origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(
-                    static_trial, None
-                )
+                origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(static_trial, None)
                 - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 first_axis=Axis(name=Axis.Name.X, start="RMFE", end="RLFE"),
                 second_axis=Axis(
@@ -107,15 +101,11 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
             ),
             mesh=Mesh(
                 (
-                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(
-                        static_trial, None
-                    )
+                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(static_trial, None)
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                     "RMFE",
                     "RLFE",
-                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(
-                        static_trial, None
-                    )
+                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(static_trial, None)
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 ),
                 is_local=False,
@@ -186,9 +176,7 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
             rotations=Rotations.XY,
             inertia_parameters=de_leva[SegmentName.THIGH],
             segment_coordinate_system=SegmentCoordinateSystem(
-                origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                    static_trial, None
-                )
+                origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(static_trial, None)
                 - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 first_axis=Axis(name=Axis.Name.X, start="LLFE", end="LMFE"),
                 second_axis=Axis(
@@ -200,15 +188,11 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
             ),
             mesh=Mesh(
                 (
-                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                        static_trial, None
-                    )
+                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(static_trial, None)
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                     "LMFE",
                     "LLFE",
-                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(
-                        static_trial, None
-                    )
+                    lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(static_trial, None)
                     - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
                 ),
                 is_local=False,

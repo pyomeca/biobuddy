@@ -59,7 +59,7 @@ def test_kinematic_chain_tool_modify():
             name="grand_child",
             parent_name="child",
             rotations=Rotations.X,
-            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=np.array([0]), max_bound=np.array([np.pi/2])),
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=np.array([0]), max_bound=np.array([np.pi / 2])),
             qdot_ranges=RangeOfMotion(range_type=Ranges.Qdot, min_bound=np.array([-1]), max_bound=np.array([10])),
             segment_coordinate_system=segment_coordinate_system,
             inertia_parameters=InertiaParametersReal(
@@ -100,7 +100,7 @@ def test_kinematic_chain_tool_modify():
 
     assert modified_model.segments["grand_child"].q_ranges is None
     assert modified_model.segments["child"].q_ranges is not None
-    npt.assert_almost_equal(modified_model.segments["child"].q_ranges.min_bound, np.array([-np.pi/2]))
+    npt.assert_almost_equal(modified_model.segments["child"].q_ranges.min_bound, np.array([-np.pi / 2]))
     npt.assert_almost_equal(modified_model.segments["child"].q_ranges.max_bound, np.array([0]))
     assert modified_model.segments["child"].qdot_ranges is not None
     npt.assert_almost_equal(modified_model.segments["child"].qdot_ranges.min_bound, np.array([-10]))
@@ -112,7 +112,8 @@ def test_kinematic_chain_tool_modify():
     expected_new_root_origin = RotoTransMatrix()
     expected_new_root_origin.translation = original_model.segment_com_in_global("grand_child")
     npt.assert_almost_equal(
-        modified_model.segments["grand_child"].segment_coordinate_system.scs.rt_matrix, expected_new_root_origin.rt_matrix
+        modified_model.segments["grand_child"].segment_coordinate_system.scs.rt_matrix,
+        expected_new_root_origin.rt_matrix,
     )
     npt.assert_almost_equal(
         modified_model.segment_coordinate_system_in_global("child").rt_matrix,
