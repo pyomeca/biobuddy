@@ -363,7 +363,9 @@ class DictData(MarkerData):
     The dictionary should have marker names as keys and numpy arrays of shape (4, nb_frames) as values.
     """
 
-    def __init__(self, marker_dict: dict[str, np.ndarray], first_frame: int | None = None, last_frame: int | None = None):
+    def __init__(
+        self, marker_dict: dict[str, np.ndarray], first_frame: int | None = None, last_frame: int | None = None
+    ):
 
         self.marker_dict = marker_dict
         total_nb_frames = None

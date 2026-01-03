@@ -54,7 +54,12 @@ def test_init_via_points():
     # Call the position function with a mock marker dictionary
     mock_markers_data = DictData({"marker1": np.array([1, 2, 3, 1]).reshape(4, 1)})
     result = via_point.position_function(mock_markers_data, None)
-    np.testing.assert_array_equal(result.reshape(4, ), np.array([1, 2, 3, 1]))
+    np.testing.assert_array_equal(
+        result.reshape(
+            4,
+        ),
+        np.array([1, 2, 3, 1]),
+    )
 
     # Test with callable position function
     custom_func = lambda m, bio: np.array([4, 5, 6, 1])
@@ -84,13 +89,17 @@ def test_to_via_point_local():
 
     # Set the function
     via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
-    expected_position = np.array([0.5758053 , 0.60425486, 1.67896849, 1.])
+    expected_position = np.array([0.5758053, 0.60425486, 1.67896849, 1.0])
     npt.assert_almost_equal(
-        np.mean(mock_data.get_position(["HV"]), axis=2).reshape(4, ),
+        np.mean(mock_data.get_position(["HV"]), axis=2).reshape(
+            4,
+        ),
         expected_position,
     )
     npt.assert_almost_equal(
-        np.mean(mock_data.values["HV"], axis=1).reshape(4, ),
+        np.mean(mock_data.values["HV"], axis=1).reshape(
+            4,
+        ),
         expected_position,
     )
 
@@ -145,7 +154,10 @@ def test_to_via_point_global():
     via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
     expected_position = np.array([-0.65174504, 0.60837317, 0.78210787, 1.0])
     npt.assert_almost_equal(
-        np.linalg.inv(MOCK_RT.rt_matrix) @ np.mean(mock_data.get_position(["HV"]), axis=2).reshape(4, ),
+        np.linalg.inv(MOCK_RT.rt_matrix)
+        @ np.mean(mock_data.get_position(["HV"]), axis=2).reshape(
+            4,
+        ),
         expected_position,
     )
 
@@ -847,7 +859,12 @@ def test_init_marker():
     # Call the function with a mock marker dictionary
     mock_markers_data = DictData({"HV": np.array([1, 2, 3, 1]).reshape(4, 1)})
     result = marker.function(mock_markers_data, None)
-    npt.assert_array_equal(result.reshape(4, ), np.array([1, 2, 3, 1]))
+    npt.assert_array_equal(
+        result.reshape(
+            4,
+        ),
+        np.array([1, 2, 3, 1]),
+    )
 
 
 def test_marker_to_marker_local():

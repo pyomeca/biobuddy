@@ -100,7 +100,9 @@ class ViaPoint:
             )
         self._position_function = position_function
 
-    def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix = None) -> "ViaPointReal":
+    def to_via_point(
+        self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix = None
+    ) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
 
