@@ -1058,19 +1058,18 @@ def test_segment_coordinate_system_to_scs_local():
 # ------- SegmentCoordinateStstemUtils ------- #
 def test_rigidify():
     # Define a set of markers
-    markers = np.array([
-        [0.05, 0.12, -0.19],
-        [0.04, 0.01, 0.16],
-        [0.01, -0.02, 0.04],
-        [-0.05, 0.10, -0.09],
-        [0.15, 0.15, 0.03],
-        [-0.001, 0.07, 0.10],
-    ])
+    markers = np.array(
+        [
+            [0.05, 0.12, -0.19],
+            [0.04, 0.01, 0.16],
+            [0.01, -0.02, 0.04],
+            [-0.05, 0.10, -0.09],
+            [0.15, 0.15, 0.03],
+            [-0.001, 0.07, 0.10],
+        ]
+    )
     # Rigidify the markers
     rigidified_markers = SegmentCoordinateSystemUtils.rigidify(data=markers, reference_data=markers)
-
-
-
 
 
 # ------- Mesh ------- #
