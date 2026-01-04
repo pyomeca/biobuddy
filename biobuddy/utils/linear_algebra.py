@@ -1,6 +1,6 @@
 import numpy as np
 
-from .aliases import points_to_array, point_to_array, Point
+from .aliases import points_to_array, point_to_array, Point, Points
 
 # TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
 
@@ -221,6 +221,7 @@ class RotoTransMatrixTimeSeries:
     """
 
     def __init__(self, nb_frames: int):
+        self.nb_frames = nb_frames
         self._rt_time_series = [RotoTransMatrix() for _ in range(nb_frames)]
 
     def __getitem__(self, index: int):
@@ -231,6 +232,24 @@ class RotoTransMatrixTimeSeries:
 
     def __len__(self):
         return len(self._rt_time_series)
+
+    def __matmul__(self, other: Points) -> Points:
+        if isinstance(other, np.ndarray):
+            # Matrix multiplication of a RotoTransMatrixTimeSeries with Points (np.array vector) gives Points (np.array vector)
+            if other.shape != (4, self.nb_frames) and other.shape != (3, self.nb_frames):
+                raise ValueError(
+                    f"The multiplication of RotoTransMatrixTimeSeries is only possible with np.array of shape (3, nb_frames) or (4, nb_frames)."
+                    f"Expected {self.nb_frames}, got shape {other.shape}."
+                )
+            out = np.zeros((4, self.nb_frames))
+            points_array = points_to_array(points=other)
+            for i_frame in range(self.nb_frames):
+                out[:, i_frame] = self[i_frame].rt_matrix @ points_array[:, i_frame]
+        else:
+            raise NotImplementedError(
+                f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
+            )
+        return out
 
     @classmethod
     def from_rotation_matrix_and_translation(cls, rotation_matrix: np.ndarray, translation: np.ndarray):

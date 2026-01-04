@@ -272,7 +272,7 @@ class SegmentCoordinateSystemUtils:
 
                 # Check that the markers are in the static
                 for name in parent_marker_names + child_marker_names:
-                    if name not in static_markers:
+                    if name not in static_markers.marker_names:
                         raise RuntimeError(f"The marker {name} is not present in the static markers.")
 
                 # Rigidify the parent segment at static markers
@@ -327,7 +327,7 @@ class SegmentCoordinateSystemUtils:
 
     @staticmethod
     def sara(
-        name: Axis.Name,
+        name: int,
         functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],

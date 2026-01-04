@@ -25,6 +25,7 @@ from biobuddy import (
     SegmentCoordinateSystemUtils,
     DictData,
     BiomechanicalModelReal,
+    RotoTransMatrixTimeSeries,
 )
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
@@ -1165,11 +1166,14 @@ def test_score():
         "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
     }
     
-    # Create child markers (moving relative to parent)
+    # Create child markers (moving relative to rt)
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation("xyz", np.array([i_frame * 0.01, 0, i_frame * 0.02]), np.array([0.2, 0.2, 0.2]))
     child_markers = {
-        "child1": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.3], [0.4], [0.5], [1.0]]),
-        "child2": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.35], [0.45], [0.55], [1.0]]),
-        "child3": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.4], [0.5], [0.6], [1.0]]),
+        "child1": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
     }
     
     all_markers = {**parent_markers, **child_markers}
@@ -1189,16 +1193,13 @@ def test_score():
     
     # Call the score function
     mock_model = BiomechanicalModelReal()
-    result = score_func(static_data, mock_model)
-    
-    # TODO: Add expected values once you have reference data
-    # The result should be a 4-element array representing the center of rotation
-    assert result.shape == (4,)
-    assert result[3] == 1.0  # Homogeneous coordinate should be 1
+    result_cor = score_func(static_data, mock_model)
+    # CoR close to [0.35, 0.45, 0.55] + [0.2, 0.2, 0.2]
+    npt.assert_almost_equal(result_cor, np.array([0.56213852, 0.62106317, 0.73310333, 1.        ]))
     
     # Test that calling twice returns the same result (caching)
-    result2 = score_func(static_data, mock_model)
-    npt.assert_array_equal(result, result2)
+    result_cor2 = score_func(static_data, mock_model)
+    npt.assert_array_equal(result_cor, result_cor2)
 
 
 def test_sara():
@@ -1213,11 +1214,15 @@ def test_sara():
         "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
     }
     
-    # Create child markers (moving relative to parent)
+    # Create child markers (moving relative to rt)
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        # Only rotate on the X-axis (with a little something on the Z-axis)
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation("xyz", np.array([i_frame * 0.05, 0, i_frame * 0.0001]), np.array([0.2, 0.2, 0.2]))
     child_markers = {
-        "child1": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.3], [0.4], [0.5], [1.0]]),
-        "child2": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.35], [0.45], [0.55], [1.0]]),
-        "child3": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.4], [0.5], [0.6], [1.0]]),
+        "child1": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
     }
     
     all_markers = {**parent_markers, **child_markers}
@@ -1229,7 +1234,7 @@ def test_sara():
     
     # Create SARA axis
     sara_axis = SegmentCoordinateSystemUtils.sara(
-        name=Axis.Name.Z,
+        name=Axis.Name.X,
         functional_data=functional_data,
         parent_marker_names=["parent1", "parent2", "parent3"],
         child_marker_names=["child1", "child2", "child3"],
@@ -1238,21 +1243,22 @@ def test_sara():
     
     # Verify it returns an Axis object
     assert isinstance(sara_axis, Axis)
-    assert sara_axis.name == Axis.Name.Z
+    assert sara_axis.name == Axis.Name.X
     
-    # Convert to real axis
+    # Evaluate the sara function
     mock_model = BiomechanicalModelReal()
-    axis_real = sara_axis.to_axis(static_data, mock_model, MOCK_RT)
-    
-    # TODO: Add expected values once you have reference data
-    # The axis should have start and end points
-    assert axis_real.start_point.position.shape == (4,)
-    assert axis_real.end_point.position.shape == (4,)
-    assert axis_real.start_point.position[3] == 1.0
-    assert axis_real.end_point.position[3] == 1.0
-    
-    # The start and end should be different (defining an axis)
-    assert not np.allclose(axis_real.start_point.position, axis_real.end_point.position)
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    # TODO: @pariterre -> the AoR is suspicious ?
+    npt.assert_almost_equal(result_aor.start_point.position.reshape(4, ), np.array([0.4174604 , 0.48005109, 0.55874133, 1.]))
+    npt.assert_almost_equal(result_aor.end_point.position.reshape(4, ), np.array([0.81595683, 0.8115111 , 0.82951004, 1.]))
+    npt.assert_almost_equal(result_aor.axis().reshape(4, ), np.array([0.39849643, 0.33146001, 0.27076872, 0.]))
+
+    # Test that calling twice returns the same result (caching)
+    result_aor2 = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+    npt.assert_array_equal(result_aor.start_point.position, result_aor2.start_point.position)
+    npt.assert_array_equal(result_aor.end_point.position, result_aor2.end_point.position)
+    npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
 
 
 # ------- Mesh ------- #
