@@ -352,7 +352,9 @@ class SegmentCoordinateSystemUtils:
 
         sara_cache = {}  # We only need to perform SARA once. So we store the result here.
 
-        def collapse(static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool) -> tuple[np.ndarray, np.ndarray]:
+        def collapse(
+            static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool
+        ) -> tuple[np.ndarray, np.ndarray]:
             static_markers_hash = _markers_fingerprint(static_markers)
 
             is_in_cache = static_markers_hash in sara_cache
@@ -402,9 +404,7 @@ class SegmentCoordinateSystemUtils:
                 rt_child_static = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=child_static_marker_data,
                 )
-                _visualize_score(
-                    static_markers, rt_parent_static, rt_child_static, [start_aor_static, end_aor_static]
-                )
+                _visualize_score(static_markers, rt_parent_static, rt_child_static, [start_aor_static, end_aor_static])
 
                 rt_parent_func = sara_cache[static_markers_hash][1]
                 rt_child_func = sara_cache[static_markers_hash][2]

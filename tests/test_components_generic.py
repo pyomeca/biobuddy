@@ -1109,9 +1109,25 @@ def test_rigidify():
     expected_euler = np.array([1.0, 0.0, 0.0])
     fake_functional_trial = {name: np.ones((4, nb_frames)) for name in markers.keys()}
     for name in markers.keys():
-        rt_this_marker = RotoTransMatrix().from_euler_angles_and_translation("xyz", expected_euler, np.zeros(4, ))
+        rt_this_marker = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz",
+            expected_euler,
+            np.zeros(
+                4,
+            ),
+        )
         for i_frame in range(nb_frames):
-            fake_functional_trial[name][:, i_frame] = np.reshape(rt_this_marker @ (markers[name].reshape(4, ) + np.random.random((4,)) * 0.1 - 0.05), (4, ))
+            fake_functional_trial[name][:, i_frame] = np.reshape(
+                rt_this_marker
+                @ (
+                    markers[name].reshape(
+                        4,
+                    )
+                    + np.random.random((4,)) * 0.1
+                    - 0.05
+                ),
+                (4,),
+            )
     mock_functional_data = DictData(fake_functional_trial)
 
     # Rigidify the markers with a static trial
@@ -1121,12 +1137,30 @@ def test_rigidify():
     )
 
     # Check the translation
-    centroid_functional_marker_position = np.mean(mock_functional_data.markers_center_position(mock_functional_data.marker_names), axis=1)
-    centroid_static_marker_position = mock_static_data.markers_center_position(mock_static_data.marker_names).reshape(4, )
+    centroid_functional_marker_position = np.mean(
+        mock_functional_data.markers_center_position(mock_functional_data.marker_names), axis=1
+    )
+    centroid_static_marker_position = mock_static_data.markers_center_position(mock_static_data.marker_names).reshape(
+        4,
+    )
     # There are differences due to the random noise added, but they should be small
-    assert np.all(np.abs(np.reshape(rt_this_marker.inverse @ centroid_functional_marker_position, (4, )) - centroid_static_marker_position) < 0.01)
-    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().translation - centroid_functional_marker_position[:3]) < 0.0001)
-    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().translation - np.reshape(rt_this_marker @ centroid_static_marker_position, (4, ))[:3]) < 0.01)
+    assert np.all(
+        np.abs(
+            np.reshape(rt_this_marker.inverse @ centroid_functional_marker_position, (4,))
+            - centroid_static_marker_position
+        )
+        < 0.01
+    )
+    assert np.all(
+        np.abs(rigidified_rt.mean_homogenous_matrix().translation - centroid_functional_marker_position[:3]) < 0.0001
+    )
+    assert np.all(
+        np.abs(
+            rigidified_rt.mean_homogenous_matrix().translation
+            - np.reshape(rt_this_marker @ centroid_static_marker_position, (4,))[:3]
+        )
+        < 0.01
+    )
 
     # Check the rotation (the sign of the Euler angles is inverted)
     assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - -expected_euler) < 0.02)
@@ -1140,7 +1174,7 @@ def test_mean_markers():
     # Test mean_markers with a single marker
     mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV"])
     result = mean_func(mock_data, mock_model)
-    
+
     # Should return the mean position of HV marker
     expected = np.mean(mock_data.get_position(["HV"]), axis=2)[:, 0]
     npt.assert_almost_equal(result, expected)
@@ -1148,7 +1182,7 @@ def test_mean_markers():
     # Test mean_markers with multiple markers
     mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV", "STR", "SUP"])
     result = mean_func(mock_data, mock_model)
-    
+
     # Should return the mean position of all three markers
     expected = np.nanmean(mock_data.markers_center_position(["HV", "STR", "SUP"]), axis=1)
     npt.assert_almost_equal(result, expected)
@@ -1158,31 +1192,36 @@ def test_score():
     # Create mock marker data for parent and child segments
     np.random.seed(42)
     nb_frames = 50
-    
+
     # Create parent markers (relatively stationary)
     parent_markers = {
         "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
         "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
         "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
     }
-    
+
     # Create child markers (moving relative to rt)
     rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
     for i_frame in range(nb_frames):
-        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation("xyz", np.array([i_frame * 0.01, 0, i_frame * 0.02]), np.array([0.2, 0.2, 0.2]))
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.01, 0, i_frame * 0.02]), np.array([0.2, 0.2, 0.2])
+        )
     child_markers = {
-        "child1": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
-        "child2": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
-        "child3": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
     }
-    
+
     all_markers = {**parent_markers, **child_markers}
     functional_data = DictData(all_markers)
-    
+
     # Create static data (first frame)
     static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
     static_data = DictData(static_markers)
-    
+
     # Create score function
     score_func = SegmentCoordinateSystemUtils.score(
         functional_data=functional_data,
@@ -1190,13 +1229,13 @@ def test_score():
         child_marker_names=["child1", "child2", "child3"],
         visualize=False,
     )
-    
+
     # Call the score function
     mock_model = BiomechanicalModelReal()
     result_cor = score_func(static_data, mock_model)
     # CoR close to [0.35, 0.45, 0.55] + [0.2, 0.2, 0.2]
-    npt.assert_almost_equal(result_cor, np.array([0.56213852, 0.62106317, 0.73310333, 1.        ]))
-    
+    npt.assert_almost_equal(result_cor, np.array([0.56213852, 0.62106317, 0.73310333, 1.0]))
+
     # Test that calling twice returns the same result (caching)
     result_cor2 = score_func(static_data, mock_model)
     npt.assert_array_equal(result_cor, result_cor2)
@@ -1206,32 +1245,37 @@ def test_sara():
     # Create mock marker data for parent and child segments
     np.random.seed(42)
     nb_frames = 50
-    
+
     # Create parent markers (relatively stationary)
     parent_markers = {
         "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
         "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
         "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
     }
-    
+
     # Create child markers (moving relative to rt)
     rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
     for i_frame in range(nb_frames):
         # Only rotate on the X-axis (with a little something on the Z-axis)
-        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation("xyz", np.array([i_frame * 0.05, 0, i_frame * 0.0001]), np.array([0.2, 0.2, 0.2]))
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.05, 0, i_frame * 0.0001]), np.array([0.2, 0.2, 0.2])
+        )
     child_markers = {
-        "child1": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
-        "child2": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
-        "child3": rt_matrix_time_series @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
     }
-    
+
     all_markers = {**parent_markers, **child_markers}
     functional_data = DictData(all_markers)
-    
+
     # Create static data (first frame)
     static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
     static_data = DictData(static_markers)
-    
+
     # Create SARA axis
     sara_axis = SegmentCoordinateSystemUtils.sara(
         name=Axis.Name.X,
@@ -1240,19 +1284,34 @@ def test_sara():
         child_marker_names=["child1", "child2", "child3"],
         visualize=False,
     )
-    
+
     # Verify it returns an Axis object
     assert isinstance(sara_axis, Axis)
     assert sara_axis.name == Axis.Name.X
-    
+
     # Evaluate the sara function
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
     # TODO: @pariterre -> the AoR is suspicious ?
-    npt.assert_almost_equal(result_aor.start_point.position.reshape(4, ), np.array([0.4174604 , 0.48005109, 0.55874133, 1.]))
-    npt.assert_almost_equal(result_aor.end_point.position.reshape(4, ), np.array([0.81595683, 0.8115111 , 0.82951004, 1.]))
-    npt.assert_almost_equal(result_aor.axis().reshape(4, ), np.array([0.39849643, 0.33146001, 0.27076872, 0.]))
+    npt.assert_almost_equal(
+        result_aor.start_point.position.reshape(
+            4,
+        ),
+        np.array([0.4174604, 0.48005109, 0.55874133, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.end_point.position.reshape(
+            4,
+        ),
+        np.array([0.81595683, 0.8115111, 0.82951004, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.axis().reshape(
+            4,
+        ),
+        np.array([0.39849643, 0.33146001, 0.27076872, 0.0]),
+    )
 
     # Test that calling twice returns the same result (caching)
     result_aor2 = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())

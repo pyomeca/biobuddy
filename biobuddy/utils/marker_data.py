@@ -422,4 +422,3 @@ class DictData(MarkerData):
     def save(self, new_path: str):
         with open(new_path, "wb") as f:
             pickle.dump(self.marker_dict, f)
-
