@@ -1090,21 +1090,45 @@ def test_segment_coordinate_system_to_scs_local():
     )
 
 
-# ------- SegmentCoordinateStstemUtils ------- #
+# ------- SegmentCoordinateSystemUtils ------- #
 def test_rigidify():
+    np.random.seed(0)
+    nb_frames = 100
+    markers = {
+        "marker1": np.array([0.05, 0.12, -0.19, 1]),
+        "marker2": np.array([0.04, 0.01, 0.16, 1]),
+        "marker3": np.array([0.01, -0.02, 0.04, 1]),
+        "marker4": np.array([-0.05, 0.10, -0.09, 1]),
+        "marker5": np.array([0.15, 0.15, 0.03, 1]),
+        "marker6": np.array([-0.001, 0.07, 0.10, 1]),
+    }
+
     # Define a set of markers
-    markers = np.array(
-        [
-            [0.05, 0.12, -0.19],
-            [0.04, 0.01, 0.16],
-            [0.01, -0.02, 0.04],
-            [-0.05, 0.10, -0.09],
-            [0.15, 0.15, 0.03],
-            [-0.001, 0.07, 0.10],
-        ]
+    mock_static_data = DictData(markers)
+    expected_euler = np.array([1.0, 0.0, 0.0])
+    fake_functional_trial = {name: np.ones((4, nb_frames)) for name in markers.keys()}
+    for name in markers.keys():
+        rt_this_marker = RotoTransMatrix().from_euler_angles_and_translation("xyz", expected_euler, np.zeros(4, ))
+        for i_frame in range(nb_frames):
+            fake_functional_trial[name][:, i_frame] = np.reshape(rt_this_marker @ (markers[name].reshape(4, ) + np.random.random((4,)) * 0.1 - 0.05), (4, ))
+    mock_functional_data = DictData(fake_functional_trial)
+
+    # Rigidify the markers with a static trial
+    rigidified_rt = SegmentCoordinateSystemUtils.rigidify(
+        functional_data=mock_functional_data,
+        static_data=mock_static_data,
     )
-    # Rigidify the markers
-    rigidified_markers = SegmentCoordinateSystemUtils.rigidify(data=markers, reference_data=markers)
+
+    # Check the translation
+    centroid_functional_marker_position = np.mean(mock_functional_data.markers_center_position(mock_functional_data.marker_names), axis=1)
+    centroid_static_marker_position = mock_static_data.markers_center_position(mock_static_data.marker_names).reshape(4, )
+    # There are differences due to the random noise added, but they should be small
+    assert np.all(np.abs(np.reshape(rt_this_marker.inverse @ centroid_functional_marker_position, (4, )) - centroid_static_marker_position) < 0.01)
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().translation - centroid_functional_marker_position[:3]) < 0.0001)
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().translation - np.reshape(rt_this_marker @ centroid_static_marker_position, (4, ))[:3]) < 0.01)
+
+    # Check the rotation (the sign of the Euler angles is inverted)
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - -expected_euler) < 0.02)
 
 
 # ------- Mesh ------- #
