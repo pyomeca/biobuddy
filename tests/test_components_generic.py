@@ -1131,6 +1131,130 @@ def test_rigidify():
     assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - -expected_euler) < 0.02)
 
 
+def test_mean_markers():
+    # Create mock marker data
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Test mean_markers with a single marker
+    mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV"])
+    result = mean_func(mock_data, mock_model)
+    
+    # Should return the mean position of HV marker
+    expected = np.mean(mock_data.get_position(["HV"]), axis=2)[:, 0]
+    npt.assert_almost_equal(result, expected)
+
+    # Test mean_markers with multiple markers
+    mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV", "STR", "SUP"])
+    result = mean_func(mock_data, mock_model)
+    
+    # Should return the mean position of all three markers
+    expected = np.nanmean(mock_data.markers_center_position(["HV", "STR", "SUP"]), axis=1)
+    npt.assert_almost_equal(result, expected)
+
+
+def test_score():
+    # Create mock marker data for parent and child segments
+    np.random.seed(42)
+    nb_frames = 50
+    
+    # Create parent markers (relatively stationary)
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+    
+    # Create child markers (moving relative to parent)
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+        "child3": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.4], [0.5], [0.6], [1.0]]),
+    }
+    
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+    
+    # Create static data (first frame)
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+    
+    # Create score function
+    score_func = SegmentCoordinateSystemUtils.score(
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        visualize=False,
+    )
+    
+    # Call the score function
+    mock_model = BiomechanicalModelReal()
+    result = score_func(static_data, mock_model)
+    
+    # TODO: Add expected values once you have reference data
+    # The result should be a 4-element array representing the center of rotation
+    assert result.shape == (4,)
+    assert result[3] == 1.0  # Homogeneous coordinate should be 1
+    
+    # Test that calling twice returns the same result (caching)
+    result2 = score_func(static_data, mock_model)
+    npt.assert_array_equal(result, result2)
+
+
+def test_sara():
+    # Create mock marker data for parent and child segments
+    np.random.seed(42)
+    nb_frames = 50
+    
+    # Create parent markers (relatively stationary)
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+    
+    # Create child markers (moving relative to parent)
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+        "child3": np.random.randn(4, nb_frames) * 0.02 + np.array([[0.4], [0.5], [0.6], [1.0]]),
+    }
+    
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+    
+    # Create static data (first frame)
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+    
+    # Create SARA axis
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.Z,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        visualize=False,
+    )
+    
+    # Verify it returns an Axis object
+    assert isinstance(sara_axis, Axis)
+    assert sara_axis.name == Axis.Name.Z
+    
+    # Convert to real axis
+    mock_model = BiomechanicalModelReal()
+    axis_real = sara_axis.to_axis(static_data, mock_model, MOCK_RT)
+    
+    # TODO: Add expected values once you have reference data
+    # The axis should have start and end points
+    assert axis_real.start_point.position.shape == (4,)
+    assert axis_real.end_point.position.shape == (4,)
+    assert axis_real.start_point.position[3] == 1.0
+    assert axis_real.end_point.position[3] == 1.0
+    
+    # The start and end should be different (defining an axis)
+    assert not np.allclose(axis_real.start_point.position, axis_real.end_point.position)
+
+
 # ------- Mesh ------- #
 def test_init_mesh():
     # Test initialization with string functions
