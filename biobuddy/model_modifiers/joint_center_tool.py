@@ -56,7 +56,7 @@ class RigidSegmentIdentification:
         """
 
         # Original attributes
-        self._data = functional_data
+        self._data = functional_trial
         self.parent_name = parent_name
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
