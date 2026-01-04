@@ -9,19 +9,9 @@ from .marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ....utils.marker_data import MarkerData
+from ....utils.marker_data import MarkerData, DictData
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 from ....model_modifiers.joint_center_tool import Score, Sara
-
-
-# TODO @charbie Inherit from Data when Data is moved to an abstract class
-class _InternalData:
-    """
-    Internal data class to store temporary data during the conversion from generic to real model
-    """
-
-    def __init__(self, values: dict[str, np.ndarray]):
-        self.values = values
 
 
 class SegmentCoordinateSystem:
@@ -177,15 +167,15 @@ class SegmentCoordinateSystem:
 
 class SegmentCoordinateSystemUtils:
     @staticmethod
-    def rigidify(data: MarkerData, reference_data: MarkerData = None) -> RotoTransMatrixTimeSeries:
+    def rigidify(functional_data: MarkerData, static_data: MarkerData = None) -> RotoTransMatrixTimeSeries:
         """
         Compute the rigid body transformation matrices from a set of markers
 
         Parameters
         ----------
-        data
+        functional_data
             The data containing the markers
-        reference_data
+        static_data
             The static data containing the markers, only the first frame is considered.
             If None is provided, the first frame of data is used as reference. Please note, the resulting rt won't
             correspond to another trial with a different initial pose.
@@ -195,26 +185,24 @@ class SegmentCoordinateSystemUtils:
         The rigid body transformation matrices as a RotoTransMatrixTimeSeries (4x4xT)
         """
         # Determine a static
-        marker_names = list(data.values.keys())
         static_markers = (
-            np.array([reference_data[name] for name in marker_names])[:, :, 0:1]
-            if reference_data is not None
-            else np.array(list(data.values.values()))[:, :, 0:1]
+            static_data.get_position(functional_data.marker_names)[:, :, 0:1]
+            if static_data is not None
+            else functional_data.get_position(functional_data.marker_names)[:, :, 0:1]
         )
 
-        reference_pts = static_markers[:, :3, 0].T  # 3 x N at frame 0
+        reference_pts = static_markers[:3, :, 0]  # 3 x N at frame 0
         reference_centroid = np.mean(reference_pts, axis=1, keepdims=True)
         reference_pts_centered = reference_pts - reference_centroid
 
-        markers = np.array(list(data.values.values()))
-        frame_count = markers.shape[2]
-        rt_matrices = RotoTransMatrixTimeSeries(frame_count)
-        for i_frame in range(frame_count):
-            pts = markers[:, :3, i_frame].T
+        markers = functional_data.all_marker_positions
+        rt_matrices = RotoTransMatrixTimeSeries(functional_data.nb_frames)
+        for i_frame in range(functional_data.nb_frames):
+            pts = markers[:3, :, i_frame]
             centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
             pts_centered = pts - centroid
 
-            h = reference_pts_centered @ pts_centered.T
+            h = pts_centered @ reference_pts_centered.T
             try:
                 u, _, vh = np.linalg.svd(h, full_matrices=False)
             except np.linalg.LinAlgError as e:
@@ -245,6 +233,7 @@ class SegmentCoordinateSystemUtils:
         Returns
         -------
         A lambda function that can be called during the to_real process
+        TODO: Move in MarkerData class
         """
 
         return lambda m, bio: np.nanmean(m.markers_center_position(marker_names), axis=1)
@@ -275,7 +264,7 @@ class SegmentCoordinateSystemUtils:
 
         score_cache = {}  # We only need to perform score once. So we store the result here.
 
-        def collapse(static_markers: dict[str, np.ndarray], _: BiomechanicalModelReal, visualize: bool) -> np.ndarray:
+        def collapse(static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool) -> np.ndarray:
             static_markers_hash = _markers_fingerprint(static_markers)
 
             is_in_cache = static_markers_hash in score_cache
@@ -287,18 +276,21 @@ class SegmentCoordinateSystemUtils:
                         raise RuntimeError(f"The marker {name} is not present in the static markers.")
 
                 # Rigidify the parent segment at static markers
+                parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
                 rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: static_markers[name] for name in parent_marker_names})
+                    functional_data=parent_static_marker_data,
                 )
 
                 # Rigidify functional data
+                parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
-                    reference_data=static_markers,
+                    functional_data=parent_functional_marker_data,
+                    static_data=static_markers,
                 )
+                child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in child_marker_names}),
-                    reference_data=static_markers,
+                    functional_data=child_functional_marker_data,
+                    static_data=static_markers,
                 )
 
                 # Compute the SCoRE point
@@ -315,10 +307,10 @@ class SegmentCoordinateSystemUtils:
                 cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
-                rt_child_static = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: static_markers[name] for name in child_marker_names})
-                )
-                _visualize_score(_InternalData(static_markers), rt_parent_static, rt_child_static, cor_static)
+                # rt_child_static = SegmentCoordinateSystemUtils.rigidify(
+                #     _InternalData({name: static_markers[name] for name in child_marker_names})
+                # )
+                _visualize_score(static_markers, rt_parent_static, rt_child_static, cor_static)
 
                 rt_parent_func = score_cache[static_markers_hash][1]
                 rt_child_func = score_cache[static_markers_hash][2]
@@ -360,24 +352,27 @@ class SegmentCoordinateSystemUtils:
 
         sara_cache = {}  # We only need to perform SARA once. So we store the result here.
 
-        def collapse(static_markers: dict[str, np.ndarray], _: BiomechanicalModelReal, visualize: bool) -> np.ndarray:
+        def collapse(static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool) -> tuple[np.ndarray, np.ndarray]:
             static_markers_hash = _markers_fingerprint(static_markers)
 
             is_in_cache = static_markers_hash in sara_cache
             if not is_in_cache:
                 # Rigidify the parent segment at static markers
+                parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
                 rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: static_markers[name] for name in parent_marker_names})
+                    functional_data=parent_static_marker_data,
                 )
 
                 # Rigidify functional data
+                parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in parent_marker_names}),
-                    reference_data=static_markers,
+                    functional_data=parent_functional_marker_data,
+                    static_data=static_markers,
                 )
+                child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: functional_data.values[name] for name in child_marker_names}),
-                    reference_data=static_markers,
+                    functional_data=child_functional_marker_data,
+                    static_data=static_markers,
                 )
 
                 # Compute the SARA axis
@@ -403,11 +398,12 @@ class SegmentCoordinateSystemUtils:
                 start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
+                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
                 rt_child_static = SegmentCoordinateSystemUtils.rigidify(
-                    _InternalData({name: static_markers[name] for name in child_marker_names})
+                    functional_data=child_static_marker_data,
                 )
                 _visualize_score(
-                    _InternalData(static_markers), rt_parent_static, rt_child_static, [start_aor_static, end_aor_static]
+                    static_markers, rt_parent_static, rt_child_static, [start_aor_static, end_aor_static]
                 )
 
                 rt_parent_func = sara_cache[static_markers_hash][1]
@@ -438,7 +434,7 @@ def _visualize_score(
 ):
     import plotly.graph_objects as go
 
-    data_np = np.array(list(data.values.values()))
+    data_np = data.all_marker_positions
 
     frame_count = len(rt_parent)
     frame_data = []
@@ -550,12 +546,11 @@ def _visualize_score(
     fig.show()
 
 
-def _markers_fingerprint(markers: dict[str, np.ndarray]) -> str:
+def _markers_fingerprint(markers: MarkerData) -> str:
     h = hashlib.sha256()
 
-    marker_names = markers.keys()
-    for name in sorted(marker_names):  # order-independent
-        arr = markers[name]
+    for name in sorted(markers.marker_names):  # order-independent
+        arr = markers.get_position([name])
 
         h.update(name.encode("utf-8"))
         h.update(str(arr.shape).encode())

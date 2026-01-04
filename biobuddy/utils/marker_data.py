@@ -96,6 +96,16 @@ class MarkerData(ABC):
             raise RuntimeError(f"The marker position is empty (shape: {marker_position.shape}), cannot compute std.")
         return np.nanstd(marker_position, axis=2)
 
+    def get_partial_dict_data(self, marker_names: tuple[str] | list[str]) -> "DictData":
+        """
+        Get a new instance of DictData with only the data from the specified markers.
+        """
+        return DictData(
+            marker_dict={name: self.get_position((name,)).squeeze() for name in marker_names},
+            first_frame=0,
+            last_frame=self.nb_frames - 1,
+        )
+
 
 class C3dData(MarkerData):
     """
@@ -374,6 +384,11 @@ class DictData(MarkerData):
                 raise ValueError(
                     f"Data for marker '{marker_name}' should have shape (4, nb_frames), but has shape {data.shape}."
                 )
+            if len(data.shape) == 1:
+                # There is only one frame so we need another axis to get to (4, nb_frames)
+                data = data[:, np.newaxis]
+                self.marker_dict[marker_name] = data
+
             if total_nb_frames is None:
                 total_nb_frames = data.shape[1]
             elif data.shape[1] != total_nb_frames:
@@ -407,3 +422,4 @@ class DictData(MarkerData):
     def save(self, new_path: str):
         with open(new_path, "wb") as f:
             pickle.dump(self.marker_dict, f)
+
