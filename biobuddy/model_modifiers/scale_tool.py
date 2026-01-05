@@ -291,9 +291,13 @@ class ScaleTool:
                     segment_masses[segment_name] = 0
                 else:
                     # Keep the exact same inertia parameters as the original model
-                    segment_masses[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                    segment_masses[segment_name] = deepcopy(
+                        self.original_model.segments[segment_name].inertia_parameters.mass
+                    )
                     # Keep in memory that this segment cannot be touched
-                    segment_masses_from_original[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                    segment_masses_from_original[segment_name] = deepcopy(
+                        self.original_model.segments[segment_name].inertia_parameters.mass
+                    )
 
             total_scaled_mass += segment_masses[segment_name]
 
