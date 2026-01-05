@@ -495,15 +495,15 @@ def test_csv_data_get_partial_dict_data():
     csv_path = f"{current_path_file}/../examples/data/static.csv"
 
     marker_data = CsvData(csv_path=csv_path)
-    
+
     # Get partial data with subset of markers
     partial_data = marker_data.get_partial_dict_data(["WRA", "WRB", "ELB_M"])
-    
+
     assert isinstance(partial_data, DictData)
     assert partial_data.nb_markers == 3
     assert partial_data.nb_frames == 28
     assert partial_data.marker_names == ["WRA", "WRB", "ELB_M"]
-    
+
     # Verify the positions match
     for marker_name in ["WRA", "WRB", "ELB_M"]:
         original_pos = marker_data.get_position([marker_name])
@@ -2449,15 +2449,15 @@ def test_c3d_data_get_partial_dict_data():
     c3d_path = f"{current_path_file}/../examples/data/static.c3d"
 
     marker_data = C3dData(c3d_path=c3d_path)
-    
+
     # Get partial data with subset of markers
     partial_data = marker_data.get_partial_dict_data(["HV", "SEL", "LA"])
-    
+
     assert isinstance(partial_data, DictData)
     assert partial_data.nb_markers == 3
     assert partial_data.nb_frames == 138
     assert partial_data.marker_names == ["HV", "SEL", "LA"]
-    
+
     # Verify the positions match
     for marker_name in ["HV", "SEL", "LA"]:
         original_pos = marker_data.get_position([marker_name])

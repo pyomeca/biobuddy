@@ -633,7 +633,10 @@ def test_rototrans_matrix_time_series():
         )
 
     # Test the multiplication by another RotoTransMatrixTimeSeries
-    with pytest.raises(NotImplementedError, match=r"The multiplication of RotoTransMatrix with \<class 'biobuddy.utils.linear_algebra.RotoTransMatrixTimeSeries'\> is not implemented yet."):
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The multiplication of RotoTransMatrix with \<class 'biobuddy.utils.linear_algebra.RotoTransMatrixTimeSeries'\> is not implemented yet.",
+    ):
         _ = rt_series @ rt_series
 
     # Test error conditions

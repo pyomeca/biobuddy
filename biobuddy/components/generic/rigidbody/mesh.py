@@ -33,7 +33,7 @@ class Mesh:
         self.is_local = is_local
 
     def __len__(self) -> int:
-            return len(self.functions)
+        return len(self.functions)
 
     @property
     def functions(self) -> list[Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str]:
