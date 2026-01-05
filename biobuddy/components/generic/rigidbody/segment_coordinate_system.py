@@ -307,9 +307,8 @@ class SegmentCoordinateSystemUtils:
                 cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
-                # rt_child_static = SegmentCoordinateSystemUtils.rigidify(
-                #     _InternalData({name: static_markers[name] for name in child_marker_names})
-                # )
+                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
+                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
                 _visualize_score(static_markers, rt_parent_static, rt_child_static, cor_static)
 
                 rt_parent_func = score_cache[static_markers_hash][1]

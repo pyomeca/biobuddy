@@ -641,6 +641,41 @@ def test_model_creation_from_static_lower_body():
     )
 
 
+def test_create_rt_from_functional_trials():
+
+    from examples.create_rt_from_functional_trials import generate_lower_body_model
+
+    # Create the model
+    model_real = generate_lower_body_model(visualize=False)
+
+    # Check the new RT of the model
+    global_jcs = model_real.forward_kinematics()
+    npt.assert_almost_equal(
+        global_jcs["RThigh"][0].rt_matrix,
+        np.array(
+            [
+                [-0.79870373, -0.56919134, 0.19517575, 0.64856152],
+                [-0.23931813, 0.00288291, -0.97093693, 0.23050135],
+                [0.55208622, -0.82220004, -0.1385204, 0.44965951],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
+    npt.assert_almost_equal(
+        global_jcs["RShank"][0].rt_matrix,
+        np.array(
+            [
+                [-0.33864292, 0.72410707, 0.60082437, 1.09285155],
+                [-0.92296517, -0.37977282, -0.06251318, 0.65036959],
+                [0.18291053, -0.57570961, 0.79693298, 0.52724087],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
+
+
 def test_complex_model():
     from examples.create_model import complex_model_from_scratch
 

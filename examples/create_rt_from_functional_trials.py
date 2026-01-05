@@ -22,8 +22,10 @@ from biobuddy import (
 
 _logger = logging.getLogger(__name__)
 
+# TODO: The SCoRE/SARA seems weird ! This should be checked, but in the mean time this example is used ofr tests
 
-def generate_lower_body_model() -> BiomechanicalModelReal:
+
+def generate_lower_body_model(visualize: bool = True) -> BiomechanicalModelReal:
 
     # --- Load the c3d data --- #
     current_dir = Path(__file__).parent
@@ -72,7 +74,7 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
         functional_data=right_hip_data,
         parent_marker_names=["LPSIS", "RPSIS", "LASIS", "RASIS"],
         child_marker_names=["RLFE", "RMFE", "RTHI1", "RTHI2", "RTHI3"],
-        visualize=True,
+        visualize=visualize,
     )
     model.add_segment(
         Segment(
@@ -113,7 +115,7 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
         functional_data=right_knee_data,
         parent_marker_names=["RTHI1", "RTHI2", "RTHI3"],
         child_marker_names=["RLEG1", "RLEG2", "RLEG3", "RATT", "RLM", "RSPH"],
-        visualize=True,
+        visualize=visualize,
     )
     right_ankle_mid = SegmentCoordinateSystemUtils.mean_markers(["RLM", "RSPH"])
     model.add_segment(
@@ -154,7 +156,8 @@ def generate_lower_body_model() -> BiomechanicalModelReal:
     _logger.info("Collapsing the model to real...")
     model_real = model.to_real(static_data)
 
-    model_real.animate()
+    if visualize:
+        model_real.animate()
 
     return model_real
 
