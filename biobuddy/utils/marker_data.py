@@ -415,7 +415,7 @@ class DictData(MarkerData):
         i_marker = 0
         for name in self.marker_names:
             if name in marker_names:
-                values[:, i_marker, :] = self.marker_dict[name]
+                values[:, i_marker, :] = self.marker_dict[name][:, self.first_frame : self.last_frame + 1]
                 i_marker += 1
         return values
 
