@@ -445,6 +445,67 @@ def test_scaling_wholebody():
     remove_temporary_biomods()
 
 
+def test_scaling_of_only_some_segments():
+
+    np.random.seed(42)
+
+    # --- Paths --- #
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    cleaned_relative_path = "Geometry_cleaned"
+    osim_filepath = parent_path + "/examples/models/wholebody.osim"
+    xml_filepath = parent_path + "/examples/models/wholebody.xml"
+    scaled_biomod_filepath = parent_path + "/examples/models/wholebody_scaled.bioMod"
+    converted_scaled_osim_filepath = parent_path + "/examples/models/wholebody_converted_scaled.bioMod"
+    # Markers are rotated since OpenSim has Y-up and biorbd has Z-up
+    static_filepath = parent_path + "/examples/data/static_rotated.c3d"
+    c3d_data = C3dData(
+        c3d_path=static_filepath,
+        first_frame=0,
+        last_frame=136,
+    )
+
+    # --- Scale in BioBuddy --- #
+    original_model = BiomechanicalModelReal().from_osim(
+        filepath=osim_filepath,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir=cleaned_relative_path,
+    )
+    original_model.fix_via_points()
+    # Get the original masses
+    original_femur_mass = original_model.segments["femur_r"].inertia_parameters.mass
+    original_tibia_mass = original_model.segments["tibia_r"].inertia_parameters.mass
+
+    scale_tool = ScaleTool(original_model=original_model)
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="femur_r",
+            scaling_type=SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[["RASIS", "RLFE"]],
+            ),
+        )
+    )
+
+    scaled_model = scale_tool.scale(
+        static_trial=c3d_data,
+        mass=69.2,
+        q_regularization_weight=0.1,
+        make_static_pose_the_models_zero=False,
+        visualize_optimal_static_pose=False,
+    )
+
+    # Get the new femur mass
+    new_femur_mass = scaled_model.segments["femur_r"].inertia_parameters.mass
+    new_tibia_mass = scaled_model.segments["tibia_r"].inertia_parameters.mass
+    # Check that the femur was scaled but not the other segments
+    assert new_femur_mass != original_femur_mass
+    assert new_tibia_mass == original_tibia_mass
+
+    scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
+    remove_temporary_biomods()
+
+
 def test_translation_of_scaling_configuration():
 
     # Paths

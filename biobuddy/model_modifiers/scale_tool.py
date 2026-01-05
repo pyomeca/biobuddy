@@ -235,14 +235,6 @@ class ScaleTool:
 
     def check_segments(self):
 
-        # Check that all segments that bear mass are scaled.
-        for segment_name in self.original_model.segments.keys():
-            inertia = deepcopy(self.original_model.segments[segment_name].inertia_parameters)
-            if inertia is not None and inertia.mass > 0.1 and segment_name not in self.scaling_segments.keys():
-                raise RuntimeError(
-                    f"The segment {segment_name} has a positive mass of {self.original_model.segments[segment_name].inertia_parameters.mass}, but is not defined in the scaling configuration."
-                )
-
         # Check that all scaled segments exist in the original model.
         for segment_name in self.scaling_segments.keys():
             if segment_name not in self.original_model.segments.keys():
@@ -268,6 +260,7 @@ class ScaleTool:
 
         scaling_factors = {}
         segment_masses = {}
+        segment_masses_from_original = {}
         total_scaled_mass = 0
         for segment_name in self.original_model.segment_names:
             if segment_name in self.scaling_segments.keys():
@@ -297,16 +290,27 @@ class ScaleTool:
                 ):
                     segment_masses[segment_name] = 0
                 else:
-                    raise NotImplementedError(
-                        f"You have a segment {segment_name} which has a non-null inertial parameter (mass {self.original_model.segments[segment_name].inertia_parameters.mass} kg) but is not scaled. The interpretation of this case is unclear."
-                    )
-                    # segment_masses[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                    # Keep the exact same inertia parameters as the original model
+                    segment_masses[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
+                    # Keep in memory that this segment cannot be touched
+                    segment_masses_from_original[segment_name] = deepcopy(self.original_model.segments[segment_name].inertia_parameters.mass)
 
             total_scaled_mass += segment_masses[segment_name]
 
         # Renormalize segment's mass to make sure the total mass is the mass of the subject
+        if len(segment_masses_from_original) == 0:
+            # All segments with mass are part of the scaling, so we can renormalize all segments
+            mass_renormalization_ratio = mass / total_scaled_mass
+        else:
+            # Some segments have fixed mass, so we only renormalize the segments that are scaled
+            total_fixed_mass = 0
+            for segment_name in segment_masses_from_original.keys():
+                total_fixed_mass += segment_masses_from_original[segment_name]
+            mass_renormalization_ratio = (mass - total_fixed_mass) / (total_scaled_mass - total_fixed_mass)
+
+        # Perform the renormalization
         for segment_name in self.scaling_segments.keys():
-            segment_masses[segment_name] *= mass / total_scaled_mass
+            segment_masses[segment_name] *= mass_renormalization_ratio
 
         return scaling_factors, segment_masses
 
@@ -407,9 +411,15 @@ class ScaleTool:
                 muscle_name = muscle.name
                 muscle_group_name = deepcopy(muscle.muscle_group)
                 origin_parent_name = muscle_group.origin_parent_name
-                origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+                if origin_parent_name in self.scaling_segments.keys():
+                    origin_scale_factor = scaling_factors[origin_parent_name].to_vector()
+                else:
+                    origin_scale_factor = np.ones((4, 1))
                 insertion_parent_name = muscle_group.insertion_parent_name
-                insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+                if insertion_parent_name in self.scaling_segments.keys():
+                    insertion_scale_factor = scaling_factors[insertion_parent_name].to_vector()
+                else:
+                    insertion_scale_factor = np.ones((4, 1))
 
                 if (
                     origin_parent_name not in self.scaling_segments.keys()
@@ -425,9 +435,11 @@ class ScaleTool:
                 # Scale via points
                 for via_point in muscle.via_points:
 
-                    via_point_name = via_point.name
                     parent_name = deepcopy(via_point.parent_name)
-                    parent_scale_factor = scaling_factors[parent_name].to_vector()
+                    if parent_name in self.scaling_segments.keys():
+                        parent_scale_factor = scaling_factors[parent_name].to_vector()
+                    else:
+                        parent_scale_factor = np.ones((4, 1))
 
                     if parent_name not in self.scaling_segments.keys():
                         # If the via point is not attached to a segment that is scaled, do not scale the via point

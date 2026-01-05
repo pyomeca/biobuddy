@@ -348,7 +348,7 @@ class ModelDynamics:
         markers_real = marker_positions[:, marker_indices, :]
 
         marker_weights_reordered = np.ones((nb_markers,))
-        if marker_weights is not None:
+        if marker_weights is not None and not marker_weights.is_empty:
             for marker_name in marker_names_reordered:
                 if marker_name not in marker_weights.keys():
                     raise ValueError(
