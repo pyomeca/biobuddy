@@ -65,3 +65,7 @@ class NamedList(list[T]):
 
     def keys(self) -> list[str]:
         return [item.name for item in self]
+
+    @property
+    def is_empty(self) -> bool:
+        return len(self) == 0
