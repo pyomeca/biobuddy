@@ -320,6 +320,7 @@ class ModelDynamics:
             _logger.info(
                 f"Using slower Python code for the inverse kinematics as either biorbd is not installed or the model is not compatible with biorbd."
             )
+            raise NotImplementedError("Your model was not biomodable. This is not handled, yet.")
 
         nb_q = self.nb_q
         nb_markers = len(marker_names)

@@ -387,7 +387,7 @@ class ScaleTool:
                     self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
             else:
-                self.scaled_model.segments[segment_name] = deepcopy(self.original_model.segments[segment_name])
+                self.scaled_model.add_segment(deepcopy(self.original_model.segments[segment_name]))
 
             # Scale the meshes from all intermediary ghost segments
             if segment_name in scaling_factors.keys():
@@ -682,8 +682,8 @@ class ScaleTool:
         self.scaled_model.modify_model_static_pose(q_original)
 
     def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
-        if q.shape != (self.scaled_model.nb_q,):
-            raise RuntimeError(f"The shape of q must be (nb_q, ), you have {q.shape}.")
+        if q.shape != (model_to_use.nb_q,):
+            raise RuntimeError(f"The shape of q must be ({self.scaled_model.nb_q}, ), you have {q.shape}.")
 
         model_marker_names = self.scaled_model.marker_names
         jcs_in_global = model_to_use.forward_kinematics(q)
