@@ -145,8 +145,8 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 segment.dof_names = None
             if len(segment.dof_names) != segment.nb_q:
                 raise RuntimeError(
-                        f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
-                    )
+                    f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
+                )
             if segment.q_ranges is not None and (
                 len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q
             ):

@@ -387,9 +387,7 @@ class ScaleTool:
                     self.scaled_model.segments[segment_name].add_imu(self.scale_imu(imu, this_segment_scale_factor))
 
             else:
-                self.scaled_model.add_segment(
-                    deepcopy(self.original_model.segments[segment_name])
-                )
+                self.scaled_model.add_segment(deepcopy(self.original_model.segments[segment_name]))
 
             # Scale the meshes from all intermediary ghost segments
             if segment_name in scaling_factors.keys():
