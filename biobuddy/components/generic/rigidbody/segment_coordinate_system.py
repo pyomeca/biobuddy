@@ -544,7 +544,7 @@ def _visualize_score(
         title="Score Point Visualization",
     )
     fig.show()
-    
+
     return fig
 
 

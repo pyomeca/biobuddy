@@ -1362,7 +1362,7 @@ def test_visualize_score_with_point():
 
     # Check the first frame structure
     first_frame_data = figure.frames[0].data
-    
+
     # Should have:
     # - 3 parent RT axes (red, green, blue)
     # - 3 child RT axes (red, green, blue)
@@ -1372,22 +1372,46 @@ def test_visualize_score_with_point():
 
     # Check parent axes (first 3 traces)
     assert first_frame_data[0].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[0].x), np.array([0.1, 0.15]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].z), np.array([0.3, 0.3]))
     assert first_frame_data[1].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[1].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].y), np.array([0.2, 0.25]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].z), np.array([0.3, 0.3]))
     assert first_frame_data[2].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[2].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].z), np.array([0.3, 0.35]))
 
     # Check child axes (next 3 traces)
     assert first_frame_data[3].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[3].x), np.array([0.3, 0.35]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].z), np.array([0.5, 0.5]))
     assert first_frame_data[4].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[4].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].y), np.array([0.4, 0.45]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].z), np.array([0.5, 0.5]))
     assert first_frame_data[5].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[5].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].z), np.array([0.5, 0.55]))
 
     # Check markers scatter
     assert first_frame_data[6].mode == "markers"
     assert first_frame_data[6].marker.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.19536582, 0.31465649, 0.99398293]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.15738467, 0.25324084, 0.34520826, 1.00361396]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.29780328, 0.40097078, 0.48584629, 0.98081229]))
 
     # Check CoR point
     assert first_frame_data[7].mode == "markers"
     assert first_frame_data[7].marker.color == "red"
     assert first_frame_data[7].marker.size == 5
+    npt.assert_almost_equal(np.array(first_frame_data[7].x), np.array([0.1902531832977268]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].y), np.array([0.2911048557037448]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].z), np.array([0.4062566734776501]))
 
     # Check layout
     assert figure.layout.title.text == "Score Point Visualization"
@@ -1444,7 +1468,7 @@ def test_visualize_score_with_axis():
 
     # Check the first frame structure
     first_frame_data = figure.frames[0].data
-    
+
     # Should have:
     # - 3 parent RT axes (red, green, blue)
     # - 3 child RT axes (red, green, blue)
@@ -1454,22 +1478,46 @@ def test_visualize_score_with_axis():
 
     # Check parent axes (first 3 traces)
     assert first_frame_data[0].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[0].x), np.array([0.1, 0.15]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].z), np.array([0.3, 0.3]))
     assert first_frame_data[1].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[1].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].y), np.array([0.2, 0.25]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].z), np.array([0.3, 0.3]))
     assert first_frame_data[2].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[2].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].z), np.array([0.3, 0.35]))
 
     # Check child axes (next 3 traces)
     assert first_frame_data[3].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[3].x), np.array([0.3, 0.35]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].z), np.array([0.5, 0.5]))
     assert first_frame_data[4].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[4].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].y), np.array([0.4, 0.45]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].z), np.array([0.5, 0.5]))
     assert first_frame_data[5].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[5].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].z), np.array([0.5, 0.55]))
 
     # Check markers scatter
     assert first_frame_data[6].mode == "markers"
     assert first_frame_data[6].marker.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.19536582, 0.31465649, 0.99398293]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.15738467, 0.25324084, 0.34520826, 1.00361396]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.29780328, 0.40097078, 0.48584629, 0.98081229]))
 
     # Check AoR line
     assert first_frame_data[7].mode == "lines"
     assert first_frame_data[7].line.color == "red"
     assert first_frame_data[7].line.width == 5
+    npt.assert_almost_equal(np.array(first_frame_data[7].x), np.array([0.19025318, 0.30357787]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].y), np.array([0.29110486, 0.40570891]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].z), np.array([0.40625667, 0.52314659]))
 
     # Check layout
     assert figure.layout.title.text == "Score Point Visualization"
