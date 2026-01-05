@@ -544,6 +544,8 @@ def _visualize_score(
         title="Score Point Visualization",
     )
     fig.show()
+    
+    return fig
 
 
 def _markers_fingerprint(markers: MarkerData) -> str:
