@@ -4,8 +4,9 @@ import numpy.testing as npt
 from pathlib import Path
 import os
 import pandas as pd
+import pickle
 
-from biobuddy.utils.marker_data import MarkerData, CsvData, C3dData, ReferenceFrame
+from biobuddy.utils.marker_data import MarkerData, CsvData, C3dData, DictData, ReferenceFrame
 
 
 # ------- CsvData ------- #
@@ -487,6 +488,27 @@ def test_csv_data_save():
 
     if os.path.exists(tmp_path):
         os.remove(tmp_path)
+
+
+def test_csv_data_get_partial_dict_data():
+    current_path_file = Path(__file__).parent
+    csv_path = f"{current_path_file}/../examples/data/static.csv"
+
+    marker_data = CsvData(csv_path=csv_path)
+    
+    # Get partial data with subset of markers
+    partial_data = marker_data.get_partial_dict_data(["WRA", "WRB", "ELB_M"])
+    
+    assert isinstance(partial_data, DictData)
+    assert partial_data.nb_markers == 3
+    assert partial_data.nb_frames == 28
+    assert partial_data.marker_names == ["WRA", "WRB", "ELB_M"]
+    
+    # Verify the positions match
+    for marker_name in ["WRA", "WRB", "ELB_M"]:
+        original_pos = marker_data.get_position([marker_name])
+        partial_pos = partial_data.get_position([marker_name])
+        npt.assert_array_almost_equal(original_pos.squeeze(), partial_pos.squeeze())
 
 
 # ------- C3dData ------- #
@@ -2420,3 +2442,312 @@ def test_c3d_data_save():
 
     if os.path.exists(tmp_path):
         os.remove(tmp_path)
+
+
+def test_c3d_data_get_partial_dict_data():
+    current_path_file = Path(__file__).parent
+    c3d_path = f"{current_path_file}/../examples/data/static.c3d"
+
+    marker_data = C3dData(c3d_path=c3d_path)
+    
+    # Get partial data with subset of markers
+    partial_data = marker_data.get_partial_dict_data(["HV", "SEL", "LA"])
+    
+    assert isinstance(partial_data, DictData)
+    assert partial_data.nb_markers == 3
+    assert partial_data.nb_frames == 138
+    assert partial_data.marker_names == ["HV", "SEL", "LA"]
+    
+    # Verify the positions match
+    for marker_name in ["HV", "SEL", "LA"]:
+        original_pos = marker_data.get_position([marker_name])
+        partial_pos = partial_data.get_position([marker_name])
+        npt.assert_array_almost_equal(original_pos.squeeze(), partial_pos.squeeze())
+
+
+# ------- DictData ------- #
+def test_dict_data_initialization():
+    # Create a simple marker dictionary
+    marker_dict = {
+        "marker1": np.array([[1.0], [2.0], [3.0], [1.0]]),
+        "marker2": np.array([[4.0], [5.0], [6.0], [1.0]]),
+        "marker3": np.array([[7.0], [8.0], [9.0], [1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    assert marker_data.first_frame == 0
+    assert marker_data.last_frame == 0
+    assert marker_data.nb_frames == 1
+    assert marker_data.nb_markers == 3
+    assert len(marker_data.marker_names) == 3
+    assert marker_data.marker_names == ["marker1", "marker2", "marker3"]
+
+
+def test_dict_data_initialization_multiple_frames():
+    # Create marker dictionary with multiple frames
+    nb_frames = 10
+    marker_dict = {
+        "marker1": np.random.randn(4, nb_frames),
+        "marker2": np.random.randn(4, nb_frames),
+        "marker3": np.random.randn(4, nb_frames),
+    }
+    # Set last row to 1
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    assert marker_data.first_frame == 0
+    assert marker_data.last_frame == 9
+    assert marker_data.nb_frames == 10
+    assert marker_data.nb_markers == 3
+
+
+def test_dict_data_initialization_with_frame_range():
+    # Create marker dictionary with multiple frames
+    nb_frames = 20
+    marker_dict = {
+        "marker1": np.random.randn(4, nb_frames),
+        "marker2": np.random.randn(4, nb_frames),
+    }
+    # Set last row to 1
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict, first_frame=5, last_frame=15)
+
+    assert marker_data.first_frame == 5
+    assert marker_data.last_frame == 15
+    assert marker_data.nb_frames == 11
+
+
+def test_dict_data_initialization_wrong_shape():
+    # Test with wrong first dimension
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),  # Only 3 rows instead of 4
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=r"Data for marker 'marker1' should have shape \(4, nb_frames\), but has shape \(3, 2\).",
+    ):
+        DictData(marker_dict=marker_dict)
+
+
+def test_dict_data_initialization_inconsistent_frames():
+    # Test with inconsistent number of frames
+    marker_dict = {
+        "marker1": np.random.randn(4, 10),
+        "marker2": np.random.randn(4, 15),  # Different number of frames
+    }
+
+    with pytest.raises(
+        ValueError,
+        match=r"All markers should have the same number of frames. Marker 'marker2' has 15 frames, expected 10.",
+    ):
+        DictData(marker_dict=marker_dict)
+
+
+def test_dict_data_marker_index():
+    marker_dict = {
+        "marker1": np.random.randn(4, 5),
+        "marker2": np.random.randn(4, 5),
+        "marker3": np.random.randn(4, 5),
+    }
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    assert marker_data.marker_index("marker1") == 0
+    assert marker_data.marker_index("marker2") == 1
+    assert marker_data.marker_index("marker3") == 2
+
+
+def test_dict_data_marker_indices():
+    marker_dict = {
+        "marker1": np.random.randn(4, 5),
+        "marker2": np.random.randn(4, 5),
+        "marker3": np.random.randn(4, 5),
+    }
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    indices = marker_data.marker_indices(["marker1", "marker3"])
+    assert isinstance(indices, tuple)
+    assert len(indices) == 2
+    assert indices[0] == 0
+    assert indices[1] == 2
+
+
+def test_dict_data_get_position_single_marker():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
+        "marker2": np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0], [16.0, 17.0, 18.0], [1.0, 1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    position = marker_data.get_position(["marker1"])
+
+    assert position.shape == (4, 1, 3)
+    npt.assert_array_equal(position[:, 0, :], marker_dict["marker1"])
+
+
+def test_dict_data_get_position_multiple_markers():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [1.0, 1.0]]),
+        "marker2": np.array([[7.0, 8.0], [9.0, 10.0], [11.0, 12.0], [1.0, 1.0]]),
+        "marker3": np.array([[13.0, 14.0], [15.0, 16.0], [17.0, 18.0], [1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    position = marker_data.get_position(["marker1", "marker3"])
+
+    assert position.shape == (4, 2, 2)
+    npt.assert_array_equal(position[:, 0, :], marker_dict["marker1"])
+    npt.assert_array_equal(position[:, 1, :], marker_dict["marker3"])
+
+
+def test_dict_data_get_position_invalid_marker():
+    marker_dict = {
+        "marker1": np.random.randn(4, 5),
+        "marker2": np.random.randn(4, 5),
+    }
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    with pytest.raises(ValueError, match=r"Marker name 'invalid_marker' not found in the marker dictionary."):
+        marker_data.get_position(["invalid_marker"])
+
+
+def test_dict_data_all_marker_positions():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0], [1.0, 1.0]]),
+        "marker2": np.array([[7.0, 8.0], [9.0, 10.0], [11.0, 12.0], [1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    all_positions = marker_data.all_marker_positions
+
+    assert all_positions.shape == (4, 2, 2)
+    npt.assert_array_equal(all_positions[:, 0, :], marker_dict["marker1"])
+    npt.assert_array_equal(all_positions[:, 1, :], marker_dict["marker2"])
+
+
+def test_dict_data_markers_center_position():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
+        "marker2": np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0], [16.0, 17.0, 18.0], [1.0, 1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    center = marker_data.markers_center_position(["marker1", "marker2"])
+
+    expected_center = np.nanmean(marker_data.get_position(["marker1", "marker2"]), axis=1)
+    assert center.shape == (4, 3)
+    npt.assert_array_equal(center, expected_center)
+
+
+def test_dict_data_mean_marker_position():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    mean_pos = marker_data.mean_marker_position("marker1")
+
+    expected_mean = np.array([[2.0], [5.0], [8.0], [1.0]])
+    assert mean_pos.shape == (4, 1)
+    npt.assert_array_equal(mean_pos, expected_mean)
+
+
+def test_dict_data_std_marker_position():
+    marker_dict = {
+        "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+    std_pos = marker_data.std_marker_position("marker1")
+
+    expected_std = np.nanstd(marker_dict["marker1"], axis=1).reshape(4, 1)
+    assert std_pos.shape == (4, 1)
+    npt.assert_array_almost_equal(std_pos, expected_std)
+
+
+def test_dict_data_save():
+    marker_dict = {
+        "marker1": np.random.randn(4, 10),
+        "marker2": np.random.randn(4, 10),
+        "marker3": np.random.randn(4, 10),
+    }
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    # Save to a temporary file
+    tmp_path = "test_dict_data_temp.pkl"
+    marker_data.save(tmp_path)
+
+    # Load the saved file
+    with open(tmp_path, "rb") as f:
+        loaded_dict = pickle.load(f)
+
+    # Verify the loaded data matches
+    assert len(loaded_dict) == len(marker_dict)
+    for key in marker_dict:
+        npt.assert_array_equal(loaded_dict[key], marker_dict[key])
+
+    # Clean up
+    if os.path.exists(tmp_path):
+        os.remove(tmp_path)
+
+
+def test_dict_data_get_partial_dict_data():
+    marker_dict = {
+        "marker1": np.random.randn(4, 10),
+        "marker2": np.random.randn(4, 10),
+        "marker3": np.random.randn(4, 10),
+        "marker4": np.random.randn(4, 10),
+    }
+    for key in marker_dict:
+        marker_dict[key][3, :] = 1.0
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    # Get partial data with subset of markers
+    partial_data = marker_data.get_partial_dict_data(["marker1", "marker3"])
+
+    assert isinstance(partial_data, DictData)
+    assert partial_data.nb_markers == 2
+    assert partial_data.nb_frames == 10
+    assert partial_data.marker_names == ["marker1", "marker3"]
+
+    # Verify the positions match
+    for marker_name in ["marker1", "marker3"]:
+        original_pos = marker_data.get_position([marker_name])
+        partial_pos = partial_data.get_position([marker_name])
+        npt.assert_array_equal(original_pos.squeeze(), partial_pos.squeeze())
+
+
+def test_dict_data_single_frame_auto_expansion():
+    # Test that single frame data (1D arrays) are automatically expanded to 2D
+    marker_dict = {
+        "marker1": np.array([1.0, 2.0, 3.0, 1.0]),  # 1D array
+        "marker2": np.array([4.0, 5.0, 6.0, 1.0]),  # 1D array
+    }
+
+    marker_data = DictData(marker_dict=marker_dict)
+
+    assert marker_data.nb_frames == 1
+    assert marker_data.nb_markers == 2
+
+    # Verify the data was expanded correctly
+    position = marker_data.get_position(["marker1"])
+    assert position.shape == (4, 1, 1)
+    npt.assert_array_equal(position[:, 0, 0], np.array([1.0, 2.0, 3.0, 1.0]))
