@@ -27,6 +27,7 @@ from biobuddy import (
     BiomechanicalModelReal,
     RotoTransMatrixTimeSeries,
 )
+from biobuddy.components.generic.rigidbody.segment_coordinate_system import _visualize_score
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
 
@@ -1318,6 +1319,168 @@ def test_sara():
     npt.assert_array_equal(result_aor.start_point.position, result_aor2.start_point.position)
     npt.assert_array_equal(result_aor.end_point.position, result_aor2.end_point.position)
     npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
+
+
+def test_visualize_score_with_point():
+    """Test the structure of the _visualize_score plot with a point (SCoRE)"""
+    np.random.seed(42)
+    nb_frames = 10
+
+    # Create simple marker data
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+    }
+
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    data = DictData(all_markers)
+
+    # Create RT matrices
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+    for i in range(nb_frames):
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.1 * i, 0, 0]), np.array([0.1, 0.2, 0.3])
+        )
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.2 * i, 0, 0]), np.array([0.3, 0.4, 0.5])
+        )
+
+    # Create a center of rotation point
+    cor_global = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]])
+
+    # Call the visualization function
+    figure = _visualize_score(data, rt_parent, rt_child, cor_global)
+
+    # Check that we have frames
+    assert len(figure.frames) == nb_frames
+
+    # Check the first frame structure
+    first_frame_data = figure.frames[0].data
+    
+    # Should have:
+    # - 3 parent RT axes (red, green, blue)
+    # - 3 child RT axes (red, green, blue)
+    # - 1 marker scatter
+    # - 1 CoR point scatter
+    assert len(first_frame_data) == 8
+
+    # Check parent axes (first 3 traces)
+    assert first_frame_data[0].line.color == "red"
+    assert first_frame_data[1].line.color == "green"
+    assert first_frame_data[2].line.color == "blue"
+
+    # Check child axes (next 3 traces)
+    assert first_frame_data[3].line.color == "red"
+    assert first_frame_data[4].line.color == "green"
+    assert first_frame_data[5].line.color == "blue"
+
+    # Check markers scatter
+    assert first_frame_data[6].mode == "markers"
+    assert first_frame_data[6].marker.color == "blue"
+
+    # Check CoR point
+    assert first_frame_data[7].mode == "markers"
+    assert first_frame_data[7].marker.color == "red"
+    assert first_frame_data[7].marker.size == 5
+
+    # Check layout
+    assert figure.layout.title.text == "Score Point Visualization"
+    assert figure.layout.scene.xaxis.title.text == "X"
+    assert figure.layout.scene.yaxis.title.text == "Y"
+    assert figure.layout.scene.zaxis.title.text == "Z"
+    assert figure.layout.scene.aspectmode == "data"
+
+    # Check sliders
+    assert len(figure.layout.sliders) == 1
+    assert len(figure.layout.sliders[0].steps) == nb_frames
+
+
+def test_visualize_score_with_axis():
+    """Test the structure of the _visualize_score plot with an axis (SARA)"""
+    np.random.seed(42)
+    nb_frames = 10
+
+    # Create simple marker data
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+    }
+
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    data = DictData(all_markers)
+
+    # Create RT matrices
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+    for i in range(nb_frames):
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.1 * i, 0, 0]), np.array([0.1, 0.2, 0.3])
+        )
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.2 * i, 0, 0]), np.array([0.3, 0.4, 0.5])
+        )
+
+    # Create axis of rotation (start and end points)
+    start_aor = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]])
+    end_aor = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])
+    cor_global = [start_aor, end_aor]
+
+    # Call the visualization function
+    figure = _visualize_score(data, rt_parent, rt_child, cor_global)
+
+    # Check that we have frames
+    assert len(figure.frames) == nb_frames
+
+    # Check the first frame structure
+    first_frame_data = figure.frames[0].data
+    
+    # Should have:
+    # - 3 parent RT axes (red, green, blue)
+    # - 3 child RT axes (red, green, blue)
+    # - 1 marker scatter
+    # - 1 AoR line
+    assert len(first_frame_data) == 8
+
+    # Check parent axes (first 3 traces)
+    assert first_frame_data[0].line.color == "red"
+    assert first_frame_data[1].line.color == "green"
+    assert first_frame_data[2].line.color == "blue"
+
+    # Check child axes (next 3 traces)
+    assert first_frame_data[3].line.color == "red"
+    assert first_frame_data[4].line.color == "green"
+    assert first_frame_data[5].line.color == "blue"
+
+    # Check markers scatter
+    assert first_frame_data[6].mode == "markers"
+    assert first_frame_data[6].marker.color == "blue"
+
+    # Check AoR line
+    assert first_frame_data[7].mode == "lines"
+    assert first_frame_data[7].line.color == "red"
+    assert first_frame_data[7].line.width == 5
+
+    # Check layout
+    assert figure.layout.title.text == "Score Point Visualization"
+    assert figure.layout.scene.xaxis.title.text == "X"
+    assert figure.layout.scene.yaxis.title.text == "Y"
+    assert figure.layout.scene.zaxis.title.text == "Z"
+    assert figure.layout.scene.aspectmode == "data"
+
+    # Check sliders
+    assert len(figure.layout.sliders) == 1
+    assert len(figure.layout.sliders[0].steps) == nb_frames
 
 
 # ------- Mesh ------- #
