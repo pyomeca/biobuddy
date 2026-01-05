@@ -8,7 +8,6 @@ from ....utils.aliases import points_to_array
 from ...generic.rigidbody.marker import Marker
 
 if TYPE_CHECKING:
-    from ...generic.biomechanical_model import BiomechanicalModel
     from ...real.biomechanical_model_real import BiomechanicalModelReal
     from ...real.rigidbody.mesh_real import MeshReal
 
@@ -32,6 +31,9 @@ class Mesh:
         """
         self.functions = functions
         self.is_local = is_local
+
+    def __len__(self) -> int:
+            return len(self.functions)
 
     @property
     def functions(self) -> list[Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str]:

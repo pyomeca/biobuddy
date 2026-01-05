@@ -236,16 +236,14 @@ class RigidSegmentIdentification:
 
         # Meshes
         if original_model.segments[self.child_name].mesh is not None:
-            # TODO @pariterre Implement a len for meshes
             mesh = original_model.segments[self.child_name].mesh
-            mesh_count = mesh.positions.shape[1]
             new_model.segments[self.child_name].mesh.positions = np.concatenate(
                 [
                     new_child_jcs_in_global.inverse
                     @ point_from_local_to_global(
                         original_model.segments[self.child_name].mesh.positions[:, i], global_jcs
                     )
-                    for i in range(mesh_count)
+                    for i in range(len(mesh))
                 ],
                 axis=1,
             )
@@ -1157,7 +1155,7 @@ class JointCenterTool:
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
-        joint_model.to_biomod(temporary_model_path)  # TODO @charbie Is this for debug?
+        joint_model.to_biomod(temporary_model_path)
         return joint_model
 
     # TODO @pariterre revise the type hinting

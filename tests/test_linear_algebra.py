@@ -622,6 +622,20 @@ def test_rototrans_matrix_time_series():
         if i != 2:  # Skip the NaN frame
             npt.assert_almost_equal(rt_matrices_result[:, :, i], rt_series[i].rt_matrix)
 
+    # Test the multiplication by a vector
+    point_4D = np.random.randn(4, n_frames)
+    mult_res = rt_series @ point_4D
+    assert mult_res.shape == (4, n_frames)
+    for i_frame in range(n_frames):
+        npt.assert_almost_equal(
+            mult_res[:, i_frame],
+            rt_series[i_frame].rt_matrix @ point_4D[:, i_frame],
+        )
+
+    # Test the multiplication by another RotoTransMatrixTimeSeries
+    with pytest.raises(NotImplementedError, match=r"The multiplication of RotoTransMatrix with \<class 'biobuddy.utils.linear_algebra.RotoTransMatrixTimeSeries'\> is not implemented yet."):
+        _ = rt_series @ rt_series
+
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape"):
         RotoTransMatrixTimeSeries.from_rotation_matrix_and_translation(np.eye(3), np.array([1, 2, 3]))

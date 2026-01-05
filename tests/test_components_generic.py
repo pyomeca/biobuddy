@@ -1424,6 +1424,10 @@ def test_visualize_score_with_point():
     assert len(figure.layout.sliders) == 1
     assert len(figure.layout.sliders[0].steps) == nb_frames
 
+    # Test that plotting from cache works
+    figure_cached = _visualize_score(data, rt_parent, rt_child, cor_global)
+    assert figure_cached == figure
+
 
 def test_visualize_score_with_axis():
     """Test the structure of the _visualize_score plot with an axis (SARA)"""
@@ -1530,6 +1534,10 @@ def test_visualize_score_with_axis():
     assert len(figure.layout.sliders) == 1
     assert len(figure.layout.sliders[0].steps) == nb_frames
 
+    # Test that plotting from cache works
+    figure_cached = _visualize_score(data, rt_parent, rt_child, cor_global)
+    assert figure_cached == figure
+
 
 # ------- Mesh ------- #
 def test_init_mesh():
@@ -1546,6 +1554,9 @@ def test_init_mesh():
     # Test mixed initialization
     mesh = Mesh(functions=("marker1", func1))
     assert len(mesh.functions) == 2
+
+    # Test len
+    assert len(mesh) == 2
 
 
 def test_mesh_to_mesh_global():

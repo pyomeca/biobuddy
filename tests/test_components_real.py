@@ -485,6 +485,9 @@ def test_init_mesh_real():
     mesh = MeshReal(positions=positions)
     npt.assert_array_equal(mesh.positions, positions)
 
+    # Test len
+    assert len(mesh) == 4
+
 
 def test_mesh_real_add_positions():
     # Create a mesh with initial positions
