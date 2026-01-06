@@ -202,7 +202,7 @@ class SegmentCoordinateSystemUtils:
             centroid: np.ndarray = np.mean(pts, axis=1, keepdims=True)
             pts_centered = pts - centroid
 
-            h = pts_centered @ reference_pts_centered.T
+            h = reference_pts_centered @ pts_centered.T
             try:
                 u, _, vh = np.linalg.svd(h, full_matrices=False)
             except np.linalg.LinAlgError as e:
@@ -277,6 +277,7 @@ class SegmentCoordinateSystemUtils:
 
                 # Rigidify the parent segment at static markers
                 parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
+                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
                 rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=parent_static_marker_data,
                 )
@@ -285,12 +286,12 @@ class SegmentCoordinateSystemUtils:
                 parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=parent_functional_marker_data,
-                    static_data=static_markers,
+                    static_data=parent_static_marker_data,
                 )
                 child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=child_functional_marker_data,
-                    static_data=static_markers,
+                    static_data=child_static_marker_data,
                 )
 
                 # Compute the SCoRE point
@@ -360,6 +361,7 @@ class SegmentCoordinateSystemUtils:
             if not is_in_cache:
                 # Rigidify the parent segment at static markers
                 parent_static_marker_data = static_markers.get_partial_dict_data(parent_marker_names)
+                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
                 rt_parent_static = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=parent_static_marker_data,
                 )
@@ -368,12 +370,12 @@ class SegmentCoordinateSystemUtils:
                 parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
                 rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=parent_functional_marker_data,
-                    static_data=static_markers,
+                    static_data=parent_static_marker_data,
                 )
                 child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
                 rt_child_func = SegmentCoordinateSystemUtils.rigidify(
                     functional_data=child_functional_marker_data,
-                    static_data=static_markers,
+                    static_data=child_static_marker_data,
                 )
 
                 # Compute the SARA axis
@@ -490,9 +492,9 @@ def _visualize_score(
                     line=dict(color="blue", width=5),
                 ),
                 go.Scatter3d(
-                    x=data_np[:, 0, k],
-                    y=data_np[:, 1, k],
-                    z=data_np[:, 2, k],
+                    x=data_np[0, :, k],
+                    y=data_np[1, :, k],
+                    z=data_np[2, :, k],
                     mode="markers",
                     marker=dict(size=2, color="blue"),
                 ),
