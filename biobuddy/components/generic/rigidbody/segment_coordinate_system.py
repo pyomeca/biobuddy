@@ -295,7 +295,7 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SCoRE point
-                _, cor_parent_local, _, _, _ = Score.score_algorithm(rt_parent_func, rt_child_func)
+                _, cor_parent_local, _, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
                 score_cache[static_markers_hash] = [rt_parent_static, rt_parent_func, rt_child_func, cor_parent_local]
 
             rt_parent_static = score_cache[static_markers_hash][0]
@@ -379,7 +379,7 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
-                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.sara_algorithm(rt_parent_func, rt_child_func)
+                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(rt_parent_func, rt_child_func)
                 sara_cache[static_markers_hash] = [
                     rt_parent_static,
                     rt_parent_func,

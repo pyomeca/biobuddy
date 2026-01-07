@@ -293,7 +293,7 @@ class FakeData(MarkerData):
 
         super().__init__()
 
-    def set_marker_names(self) -> list[str]:
+    def init_marker_names(self) -> list[str]:
         return list(self.values.keys())
 
     def get_position(self, marker_names: tuple[str, ...] | list[str]):

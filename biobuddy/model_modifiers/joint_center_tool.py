@@ -577,7 +577,7 @@ class RigidSegmentIdentification:
 
 class Score(RigidSegmentIdentification):
     @staticmethod
-    def score_algorithm(
+    def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
         recursive_outlier_removal: bool = True,
@@ -654,7 +654,7 @@ class Score(RigidSegmentIdentification):
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-                return Score.score_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+                return Score.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -687,7 +687,7 @@ class Score(RigidSegmentIdentification):
             )
 
         # Identify center of rotation
-        _, cor_parent_local, _, _, _ = self.score_algorithm(
+        _, cor_parent_local, _, _, _ = self.perform_algorithm(
             rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
 
@@ -749,7 +749,7 @@ class Sara(RigidSegmentIdentification):
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
 
     @staticmethod
-    def sara_algorithm(
+    def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
         recursive_outlier_removal: bool = True,
@@ -851,7 +851,7 @@ class Sara(RigidSegmentIdentification):
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-                return Sara.sara_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+                return Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
@@ -1031,7 +1031,7 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.sara_algorithm(
+        aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
             rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
         # # TODO: @charbie Initially, aor_global was returning a 3xN matrix, but for sake of consistency with other methods,
