@@ -1163,8 +1163,8 @@ def test_rigidify():
         < 0.01
     )
 
-    # Check the rotation (the sign of the Euler angles is inverted)
-    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - -expected_euler) < 0.02)
+    # Check the rotation
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - expected_euler) < 0.02)
 
 
 def test_mean_markers():
@@ -1234,8 +1234,8 @@ def test_score():
     # Call the score function
     mock_model = BiomechanicalModelReal()
     result_cor = score_func(static_data, mock_model)
-    # CoR close to [0.35, 0.45, 0.55] + [0.2, 0.2, 0.2]
-    npt.assert_almost_equal(result_cor, np.array([0.56213852, 0.62106317, 0.73310333, 1.0]))
+    # CoR close to [0.35, 0.45, 0.55] - [0.2, 0.2, 0.2]
+    npt.assert_almost_equal(result_cor, np.array([0.13046024, 0.25395888, 0.34138363, 1.0]))
 
     # Test that calling twice returns the same result (caching)
     result_cor2 = score_func(static_data, mock_model)
@@ -1294,24 +1294,23 @@ def test_sara():
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
-    # TODO: @pariterre -> the AoR is suspicious ?
     npt.assert_almost_equal(
         result_aor.start_point.position.reshape(
             4,
         ),
-        np.array([0.4174604, 0.48005109, 0.55874133, 1.0]),
+        np.array([-0.01913936,  0.0550008 ,  0.0876632 ,  1.]),
     )
     npt.assert_almost_equal(
         result_aor.end_point.position.reshape(
             4,
         ),
-        np.array([0.81595683, 0.8115111, 0.82951004, 1.0]),
+        np.array([0.54143488, 0.79048037, 1.08662582, 1.]),
     )
     npt.assert_almost_equal(
         result_aor.axis().reshape(
             4,
         ),
-        np.array([0.39849643, 0.33146001, 0.27076872, 0.0]),
+        np.array([0.56057423, 0.73547957, 0.99896262, 0.        ]),
     )
 
     # Test that calling twice returns the same result (caching)
@@ -1401,9 +1400,9 @@ def test_visualize_score_with_point():
     # Check markers scatter
     assert first_frame_data[6].mode == "markers"
     assert first_frame_data[6].marker.color == "blue"
-    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.19536582, 0.31465649, 0.99398293]))
-    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.15738467, 0.25324084, 0.34520826, 1.00361396]))
-    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.29780328, 0.40097078, 0.48584629, 0.98081229]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.15738467, 0.29780328, 0.35791032]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.19536582, 0.25324084, 0.40097078, 0.43449337]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.31465649, 0.34520826, 0.48584629, 0.5522746]))
 
     # Check CoR point
     assert first_frame_data[7].mode == "markers"
@@ -1511,9 +1510,9 @@ def test_visualize_score_with_axis():
     # Check markers scatter
     assert first_frame_data[6].mode == "markers"
     assert first_frame_data[6].marker.color == "blue"
-    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.19536582, 0.31465649, 0.99398293]))
-    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.15738467, 0.25324084, 0.34520826, 1.00361396]))
-    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.29780328, 0.40097078, 0.48584629, 0.98081229]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.15738467, 0.29780328, 0.35791032]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.19536582, 0.25324084, 0.40097078, 0.43449337]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.31465649, 0.34520826, 0.48584629, 0.5522746]))
 
     # Check AoR line
     assert first_frame_data[7].mode == "lines"
