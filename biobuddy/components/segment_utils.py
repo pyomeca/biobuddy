@@ -1,6 +1,14 @@
+from typing import TYPE_CHECKING
+
 from .generic.rigidbody.range_of_motion import RangeOfMotion
-from ..utils.enums import Rotations, Translations
 from ..utils.named_list import NamedList
+from ..utils.enums import Rotations, Translations
+
+
+if TYPE_CHECKING:
+    from ..components.generic.rigidbody.marker import Marker
+    from ..components.generic.rigidbody.contact import Contact
+    from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystem
 
 
 class SegmentUtils:
@@ -12,9 +20,9 @@ class SegmentUtils:
         self.rotations = None
         self.q_ranges = None
         self.qdot_ranges = None
-        self.markers = NamedList()
-        self.contacts = NamedList()
-        self.imus = NamedList()
+        self.markers = NamedList["Marker"]()
+        self.contacts = NamedList["Contact"]()
+        self.imus = NamedList["SegmentCoordinateSystem"]()
         self.inertia_parameters = None
         self.mesh = None
         self.mesh_file = None

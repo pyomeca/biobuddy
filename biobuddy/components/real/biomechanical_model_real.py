@@ -1,11 +1,17 @@
 from copy import deepcopy
+from typing import TYPE_CHECKING
+
 import numpy as np
 
+from .model_dynamics import ModelDynamics
+from ..model_utils import ModelUtils
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
 from ...utils.named_list import NamedList
-from ..model_utils import ModelUtils
-from .model_dynamics import ModelDynamics
+
+if TYPE_CHECKING:
+    from .rigidbody.segment_real import SegmentReal
+    from .muscle.muscle_group_real import MuscleGroupReal
 
 
 class BiomechanicalModelReal(ModelDynamics, ModelUtils):
@@ -325,7 +331,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def from_biomod(
         self,
         filepath: str,
-    ) -> "Self":
+    ) -> "BiomechanicalModelReal":
         """
         Create a biomechanical model from a biorbd model
         """
@@ -341,7 +347,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
         mesh_dir: str = None,
         skip_virtual: bool = False,
-    ) -> "Self":
+    ) -> "BiomechanicalModelReal":
         """
         Read an osim file and create both a generic biomechanical model and a personalized model.
 
@@ -371,7 +377,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
-    def from_urdf(self, filepath: str) -> "Self":
+    def from_urdf(self, filepath: str) -> "BiomechanicalModelReal":
         """
         Create a biomechanical model from a urdf file
         """

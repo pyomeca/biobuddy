@@ -1,10 +1,15 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
 import numpy as np
 
+from ....utils.aliases import points_to_array
 from ....utils.marker_data import MarkerData
 from ....utils.checks import check_name
-from ....utils.aliases import points_to_array
 from ....utils.linear_algebra import RotoTransMatrix
+
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.muscle.via_point_real import ViaPointReal
 
 
 class ViaPoint:
@@ -14,7 +19,7 @@ class ViaPoint:
         parent_name: str = None,
         muscle_name: str = None,
         muscle_group: str = None,
-        position_function: Callable | str = None,
+        position_function: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str = None,
         is_local: bool = True,
     ):
         """
@@ -75,18 +80,29 @@ class ViaPoint:
         self._muscle_group = value
 
     @property
-    def position_function(self) -> Callable | str:
+    def position_function(self) -> Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str:
         return self._position_function
 
     @position_function.setter
-    def position_function(self, value: Callable | str) -> None:
-        if value is not None:
-            position_function = (lambda m, bio: m[value]) if isinstance(value, str) else value
-        else:
+    def position_function(self, value: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str) -> None:
+        if isinstance(value, str):
+            position_function = lambda m, bio: (
+                m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            )
+        elif callable(value):
+            position_function = value
+        elif value is None:
             position_function = None
+        else:
+            raise TypeError(
+                f"Expected a callable or a string, got {type(value)} instead. "
+                "Please provide a valid function or marker name."
+            )
         self._position_function = position_function
 
-    def to_via_point(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "ViaPointReal":
+    def to_via_point(
+        self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix = None
+    ) -> "ViaPointReal":
         """
         This constructs a ViaPointReal by evaluating the function that defines the contact to get an actual position
 
@@ -107,16 +123,17 @@ class ViaPoint:
             raise RuntimeError("You must provide a position function to evaluate the ViaPoint into a ViaPointReal.")
 
         if self.is_local:
+            # The scs has no effect (should be None)
             scs = RotoTransMatrix()
-        elif scs is None:
-            raise RuntimeError(
-                "If you want to provide a global mesh, you must provide the segment's coordinate system."
-            )
+        else:
+            # The scs must be provided when using global coordinates
+            if scs is None:
+                raise RuntimeError(
+                    "If you want to provide a global mesh, you must provide the segment's coordinate system."
+                )
 
         # Get the position of the contact points and do some sanity checks
-        p = np.nanmean(
-            points_to_array(points=self.position_function(data.values, model), name="via point function"), axis=1
-        )
+        p = points_to_array(points=self.position_function(data, model), name="via point function")
         position = scs.inverse @ p
         if np.isnan(position).all():
             raise RuntimeError(f"All the values for {self.position_function} returned nan which is not permitted")

@@ -268,28 +268,27 @@ class SegmentReal(SegmentUtils):
             raise RuntimeError(
                 f"The shape of the q vector is not correct: got local_q of size {local_q.shape} for the segment {self.name} with {self.nb_q} Dofs."
             )
-        rt = RotoTransMatrix()
 
-        if self.nb_q != 0:
-            q_counter = 0
-            translations = np.zeros((3,))
-            rotations = np.zeros((3,))
-            angle_sequence = "xyz"
-            if self.translations != Translations.NONE:
-                for i_trans, trans in enumerate(["X", "Y", "Z"]):
-                    if trans in self.translations.value.upper():
-                        translations[i_trans] = local_q[q_counter]
-                        q_counter += 1
+        if self.nb_q == 0:
+            return RotoTransMatrix()
 
-            if self.rotations != Rotations.NONE:
-                rotations = local_q[q_counter:]
-                angle_sequence = self.rotations.value
+        q_counter = 0
+        translations = np.zeros((3,))
+        rotations = np.zeros((3,))
+        angle_sequence = "xyz"
+        if self.translations != Translations.NONE:
+            for i_trans, trans in enumerate(["X", "Y", "Z"]):
+                if trans in self.translations.value.upper():
+                    translations[i_trans] = local_q[q_counter]
+                    q_counter += 1
 
-            rt.from_euler_angles_and_translation(
-                angle_sequence=angle_sequence, angles=rotations, translation=translations
-            )
+        if self.rotations != Rotations.NONE:
+            rotations = local_q[q_counter:]
+            angle_sequence = self.rotations.value
 
-        return rt
+        return RotoTransMatrix.from_euler_angles_and_translation(
+            angle_sequence=angle_sequence, angles=rotations, translation=translations
+        )
 
     def to_biomod(self, with_mesh: bool) -> str:
         """

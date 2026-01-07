@@ -11,7 +11,7 @@ from ..components.real.rigidbody.mesh_file_real import MeshFileReal
 from ..components.real.rigidbody.marker_real import MarkerReal
 from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
-from ..components.generic.rigidbody.range_of_motion import RangeOfMotion
+from ..components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from ..utils.named_list import NamedList
 from ..utils.linear_algebra import (
     RotoTransMatrix,
@@ -84,8 +84,22 @@ class ChangeFirstSegment:
             modified_translations = original_model.segments[current_parent].translations
             modified_rotations = original_model.segments[current_parent].rotations
             modified_dof_names = original_model.segments[current_parent].dof_names
-            modified_q_ranges = original_model.segments[current_parent].q_ranges
-            modified_qdot_ranges = original_model.segments[current_parent].qdot_ranges
+            if original_model.segments[current_parent].q_ranges is None:
+                modified_q_ranges = None
+            else:
+                modified_q_ranges = RangeOfMotion(
+                    range_type=Ranges.Q,
+                    min_bound=-original_model.segments[current_parent].q_ranges.max_bound,
+                    max_bound=-original_model.segments[current_parent].q_ranges.min_bound,
+                )
+            if original_model.segments[current_parent].qdot_ranges is None:
+                modified_qdot_ranges = None
+            else:
+                modified_qdot_ranges = RangeOfMotion(
+                    range_type=Ranges.Qdot,
+                    min_bound=-original_model.segments[current_parent].qdot_ranges.max_bound,
+                    max_bound=-original_model.segments[current_parent].qdot_ranges.min_bound,
+                )
         return modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges
 
     @staticmethod

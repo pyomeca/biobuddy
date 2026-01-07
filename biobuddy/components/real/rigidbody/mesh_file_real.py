@@ -114,8 +114,9 @@ class MeshFileReal:
 
     @property
     def mesh_rt(self):
-        mesh_rt = RotoTransMatrix()
-        mesh_rt.from_euler_angles_and_translation("xyz", self.mesh_rotation[:3, 0], self.mesh_translation[:3, 0])
+        mesh_rt = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", self.mesh_rotation[:3, 0], self.mesh_translation[:3, 0]
+        )
         return mesh_rt
 
     @mesh_rt.setter

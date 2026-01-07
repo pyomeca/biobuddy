@@ -1,10 +1,10 @@
 from copy import deepcopy
+
 from lxml import etree
 import numpy as np
 
 from ....utils.aliases import Point, Points
-from ....utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix
-from ....utils.linear_algebra import rot2eul
+from ....utils.linear_algebra import RotoTransMatrix, get_closest_rt_matrix, rot2eul
 
 
 class SegmentCoordinateSystemReal:
@@ -48,8 +48,9 @@ class SegmentCoordinateSystemReal:
     def is_in_local(self, value: bool):
         self._is_in_global = not value
 
-    @staticmethod
+    @classmethod
     def from_rt_matrix(
+        cls,
         rt_matrix: np.ndarray,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
@@ -63,12 +64,11 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
-        scs = RotoTransMatrix()
-        scs.from_rt_matrix(rt_matrix)
-        return SegmentCoordinateSystemReal(scs=scs, is_scs_local=is_scs_local)
+        return cls(scs=RotoTransMatrix.from_rt_matrix(rt_matrix), is_scs_local=is_scs_local)
 
-    @staticmethod
+    @classmethod
     def from_euler_and_translation(
+        cls,
         angles: Points,
         angle_sequence: str,
         translation: Point,
@@ -88,12 +88,15 @@ class SegmentCoordinateSystemReal:
         is_scs_local
             If the scs is already in local reference frame
         """
-        scs = RotoTransMatrix()
-        scs.from_euler_angles_and_translation(angles=angles, angle_sequence=angle_sequence, translation=translation)
-        return SegmentCoordinateSystemReal(scs=scs, is_scs_local=is_scs_local)
+        return cls(
+            scs=RotoTransMatrix.from_euler_angles_and_translation(
+                angles=angles, angle_sequence=angle_sequence, translation=translation
+            ),
+            is_scs_local=is_scs_local,
+        )
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "SegmentCoordinateSystemReal":
         out = deepcopy(self)
         out.scs = out.scs.inverse
         return out

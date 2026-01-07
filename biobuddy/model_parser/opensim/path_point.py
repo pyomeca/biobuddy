@@ -1,7 +1,13 @@
+from typing import TYPE_CHECKING
+
 from lxml import etree
 
-from ..utils_xml import find_in_tree, find_sub_elements_in_tree, match_tag
 from .functions import spline_from_element, piece_wise_linear_from_element
+from ..utils_xml import find_in_tree, find_sub_elements_in_tree, match_tag
+
+
+if TYPE_CHECKING:
+    from ...components.functions import Functions
 
 
 class PathPointCondition:
@@ -22,7 +28,7 @@ class PathPointCondition:
         self.range_max = float(range_max)
 
     @staticmethod
-    def from_element(element: etree.ElementTree) -> tuple["Self", str]:
+    def from_element(element: etree.ElementTree) -> tuple["PathPointCondition", str]:
         if len(find_in_tree(element, "socket_coordinate").split("/")) > 1:
             joint_name = find_in_tree(element, "socket_coordinate").split("/")[-2]
         else:
@@ -54,7 +60,7 @@ class PathPointMovement:
         self.locations = locations
 
     @staticmethod
-    def from_element(element: etree.ElementTree) -> tuple["Self", str]:
+    def from_element(element: etree.ElementTree) -> tuple["PathPointMovement", str]:
         warning = ""
         coordinate_elts = find_sub_elements_in_tree(
             element=element,
@@ -110,7 +116,7 @@ class PathPoint:
         self.movement = movement
 
     @staticmethod
-    def from_element(element: etree.ElementTree) -> "Self":
+    def from_element(element: etree.ElementTree) -> "PathPoint":
         return PathPoint(
             name=element.attrib["name"],
             muscle=None,  # is set in muscle.py

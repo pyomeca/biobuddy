@@ -14,7 +14,7 @@ class Coordinate:
     @staticmethod
     def from_element(
         element: etree.ElementTree, parent_name: str, ignore_fixed: bool = False, ignore_clamped: bool = False
-    ) -> "Self":
+    ) -> "Coordinate":
 
         if ignore_fixed:
             locked = False

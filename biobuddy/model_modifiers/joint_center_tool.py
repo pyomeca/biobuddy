@@ -1,7 +1,9 @@
 from copy import deepcopy
 import logging
-import numpy as np
+from typing import Tuple
 import os
+
+import numpy as np
 from scipy import optimize
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
@@ -54,7 +56,7 @@ class RigidSegmentIdentification:
         """
 
         # Original attributes
-        self.c3d_data = functional_trial
+        self._data = functional_trial
         self.parent_name = parent_name
         self.child_name = child_name
         self.parent_marker_names = parent_marker_names
@@ -91,13 +93,13 @@ class RigidSegmentIdentification:
         """
         Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
         """
-        self.marker_names = self.c3d_data.marker_names
-        self.marker_positions = self.c3d_data.all_marker_positions[:3, :, :]
+        self.marker_names = self._data.marker_names
+        self.marker_positions = self._data.all_marker_positions[:3, :, :]
 
         # Check that the markers move
         std = []
         for marker_name in self.parent_marker_names + self.child_marker_names:
-            std += [self.c3d_data.std_marker_position(marker_name)]
+            std += [self._data.std_marker_position(marker_name)]
         if len(std) == 0:
             raise RuntimeError("There are no markers in the functional trial. Please check the trial again.")
         if np.all(np.array(std) < 0.01):
@@ -118,8 +120,6 @@ class RigidSegmentIdentification:
             mesh_file = None
             if original_model.segments[segment_name].mesh_file is not None:
                 mesh_file = deepcopy(original_model.segments[segment_name].mesh_file)
-                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
-                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
             joint_model.add_segment(
                 SegmentReal(
                     name=segment_name,
@@ -159,7 +159,7 @@ class RigidSegmentIdentification:
         q = np.vstack((parent_trans, parent_rot, child_trans, child_rot))
 
         try:
-            import pyorerun
+            import pyorerun  # type: ignore
         except:
             raise ImportError("Please install pyorerun to visualize the segment reconstruction.")
 
@@ -203,19 +203,22 @@ class RigidSegmentIdentification:
         # Center of mass
         # CoM stays at the same place in the global reference frame
         com_position_global = original_model.segment_com_in_global(self.child_name)
-        new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
-            new_child_jcs_in_global.inverse @ com_position_global
-        )
+        if com_position_global is not None:
+            new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
+                new_child_jcs_in_global.inverse @ com_position_global
+            )
 
         # Inertia
         # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
         # change in length of the segments due to the displacement of the jcs.
-        inertia = original_model.segments[self.child_name].inertia_parameters.inertia[:3, :3]
-        rotation_transform = (
-            new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
-        )
-        new_inertia = rotation_transform @ inertia @ rotation_transform.T
-        new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
+        inertia_parameters = original_model.segments[self.child_name].inertia_parameters
+        if inertia_parameters is not None:
+            inertia = inertia_parameters.inertia[:3, :3]
+            rotation_transform = (
+                new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            )
+            new_inertia = rotation_transform @ inertia @ rotation_transform.T
+            new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
 
         # Next JCS position
         child_names = original_model.children_segment_names(self.child_name)
@@ -233,12 +236,16 @@ class RigidSegmentIdentification:
 
         # Meshes
         if original_model.segments[self.child_name].mesh is not None:
-            raise NotImplementedError(
-                "The transformation of meshes was not tested. Please try the code below and make a PR if it is fine."
-            )
-            new_model.segments[self.child_name].mesh.positions = (
-                new_child_jcs_in_global.inverse
-                @ point_from_local_to_global(original_model.segments[self.child_name].mesh.positions, global_jcs)
+            mesh = original_model.segments[self.child_name].mesh
+            new_model.segments[self.child_name].mesh.positions = np.concatenate(
+                [
+                    new_child_jcs_in_global.inverse
+                    @ point_from_local_to_global(
+                        original_model.segments[self.child_name].mesh.positions[:, i], global_jcs
+                    )
+                    for i in range(len(mesh))
+                ],
+                axis=1,
             )
 
         # Mesh files
@@ -265,8 +272,9 @@ class RigidSegmentIdentification:
                     else:
                         mesh_rotation = mesh_file.mesh_rotation
 
-                    mesh_rt = RotoTransMatrix()
-                    mesh_rt.from_euler_angles_and_translation("xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0])
+                    mesh_rt = RotoTransMatrix.from_euler_angles_and_translation(
+                        "xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0]
+                    )
                     new_rt = rotation_translation_transform @ mesh_rt
 
                     # Update mesh file's local rotation and translation
@@ -329,7 +337,7 @@ class RigidSegmentIdentification:
     @staticmethod
     def check_optimal_rt_inputs(
         markers: np.ndarray, static_markers: np.ndarray, marker_names: list[str]
-    ) -> tuple[int, int, np.ndarray] | None:
+    ) -> Tuple[int, int, np.ndarray] | None:
 
         nb_markers = markers.shape[1]
         nb_frames = markers.shape[2]
@@ -376,7 +384,7 @@ class RigidSegmentIdentification:
 
         if problematic_indices_parent.shape[0] > 0 or problematic_indices_child.shape[0] > 0:
             try:
-                from pyorerun import c3d
+                from pyorerun import c3d  # type: ignore
 
                 c3d(
                     self.filepath,
@@ -541,26 +549,26 @@ class RigidSegmentIdentification:
                 # Use the optimal rt of the previous frame
                 init = rt_optimal[:, :, i_frame]
 
-        output = RotoTransMatrixTimeSeries(rt_optimal.shape[2])
-        output.from_rt_matrix(rt_optimal)
-        return output
+        return RotoTransMatrixTimeSeries.from_rt_matrix(rt_optimal)
 
     def rt_from_trial(
-        self, parent_rt_init, child_rt_init
-    ) -> tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+        self,
+        parent_rt_init: RotoTransMatrixTimeSeries = None,
+        child_rt_init: RotoTransMatrixTimeSeries = None,
+    ) -> Tuple[RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
-        Estimate the rigid transformation matrices rt (4×4×N) that align local marker positions to global marker positions over time.
+        Estimate the rigid transformation matrices rt (4x4xN) that align local marker positions to global marker positions over time.
         """
         rt_parent_functional = self.scipy_optimal_rt(
             markers_in_global=self.parent_markers_global,
             static_markers_in_local=self.parent_static_markers_in_local,
-            rt_init=parent_rt_init,
+            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init,
             marker_names=self.parent_marker_names,
         )
         rt_child_functional = self.scipy_optimal_rt(
             markers_in_global=self.child_markers_global,
             static_markers_in_local=self.child_static_markers_in_local,
-            rt_init=child_rt_init,
+            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init,
             marker_names=self.child_marker_names,
         )
 
@@ -568,34 +576,39 @@ class RigidSegmentIdentification:
 
 
 class Score(RigidSegmentIdentification):
-
-    def _score_algorithm(
-        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+    @staticmethod
+    def perform_algorithm(
+        rt_parent: RotoTransMatrixTimeSeries,
+        rt_child: RotoTransMatrixTimeSeries,
+        recursive_outlier_removal: bool = True,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
         Parameters
         ----------
-        rt_parent : np.ndarray, shape (4, 4, N)
+        rt_parent : RotoTransMatrixTimeSeries
             Homogeneous transformations of the parent segment (e.g., pelvis)
-        rt_child : np.ndarray, shape (4, 4, N)
+        rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformations of the child segment (e.g., femur)
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the center.
 
         Returns
         -------
-        cor_global : np.ndarray, shape (3,)
+        cor_mean_global : np.ndarray, shape (3,)
             Estimated global position of the center of rotation.
         cor_parent_local : np.ndarray, shape (3,)
             Estimated position of the center of rotation in the parent segment's local frame.
         cor_child_local : np.ndarray, shape (3,)
             Estimated position of the center of rotation in the child segment's local frame.
-        rt_parent : np.ndarray, shape (4, 4, N)
+        rt_parent : RotoTransMatrixTimeSeries
             Homogeneous transformations of the parent segment after outlier removal.
+        rt_child : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the child segment after outlier removal.
         """
-        nb_frames = rt_parent.shape[2]
+
+        nb_frames = len(rt_parent)
 
         # Build linear system A x = b to solve for CoR positions in child and parent segment frames
         A = np.zeros((3 * nb_frames, 6))
@@ -604,14 +617,9 @@ class Score(RigidSegmentIdentification):
         b[:] = np.nan
 
         for i_frame in range(nb_frames):
-            parent_rot = rt_parent[:3, :3, i_frame]
-            child_rot = rt_child[:3, :3, i_frame]
-            parent_trans = rt_parent[:3, 3, i_frame]
-            child_trans = rt_child[:3, 3, i_frame]
-
-            A[3 * i_frame : 3 * (i_frame + 1), 0:3] = child_rot
-            A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -parent_rot
-            b[3 * i_frame : 3 * (i_frame + 1)] = parent_trans - child_trans
+            A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
+            A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+            b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
         # Remove nans
         valid_rows = ~np.isnan(np.sum(A, axis=1))
@@ -629,17 +637,24 @@ class Score(RigidSegmentIdentification):
         cor_parent_local = CoR[3:]
 
         # Compute transformed CoR positions in global frame
-        cor_parent_global = np.zeros((4, rt_parent.shape[2]))
-        cor_child_global = np.zeros((4, rt_child.shape[2]))
-        for i_frame in range(rt_parent.shape[2]):
-            cor_parent_global[:, i_frame] = rt_parent[:, :, i_frame] @ np.hstack((cor_parent_local, 1))
-            cor_child_global[:, i_frame] = rt_child[:, :, i_frame] @ np.hstack((cor_child_local, 1))
+        cor_parent_global = np.zeros((4, nb_frames))
+        cor_child_global = np.zeros((4, nb_frames))
+        for i_frame in range(nb_frames):
+            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1))).reshape(
+                4,
+            )
+            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1))).reshape(
+                4,
+            )
 
         residuals = np.linalg.norm(cor_parent_global[:3, :] - cor_child_global[:3, :], axis=0)
 
         if recursive_outlier_removal:
-            valid = self.get_good_frames(residuals, nb_frames)
-            return self._score_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
+            valid = Score.get_good_frames(residuals, nb_frames)
+            if not np.all(valid):
+                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                return Score.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
@@ -656,6 +671,10 @@ class Score(RigidSegmentIdentification):
         parent_rt_init: np.ndarray,
         child_rt_init: np.ndarray,
     ):
+        # TODO: @pariterre I feel this method should perform only what it is meant to do, which is computing the optimal
+        # rotation point between two segments. Returning these point could allow for utins Score in other contexts.
+        # TODO: This Score should agnostic of any model, that is passing a series of rt_parent and rt_child matrices
+        # and it returns the optimal point of rotation.
 
         # Reconstruct the trial to identify the orientation of the segments
         rt_parent_functional, rt_child_functional = self.rt_from_trial(parent_rt_init, child_rt_init)
@@ -668,8 +687,8 @@ class Score(RigidSegmentIdentification):
             )
 
         # Identify center of rotation
-        cor_mean_global, cor_parent_local, cor_child_local, rt_parent, rt_child = self._score_algorithm(
-            rt_parent_functional.get_rt_matrix(), rt_child_functional.get_rt_matrix(), recursive_outlier_removal=True
+        _, cor_parent_local, _, _, _ = self.perform_algorithm(
+            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
 
         scs_child_static = new_model.segments[self.child_name].segment_coordinate_system
@@ -729,81 +748,131 @@ class Sara(RigidSegmentIdentification):
         self.distal_markers = distal_markers
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
 
-    def _sara_algorithm(
-        self, rt_parent: np.ndarray, rt_child: np.ndarray, recursive_outlier_removal: bool = True
-    ) -> np.ndarray:
+    @staticmethod
+    def perform_algorithm(
+        rt_parent: RotoTransMatrixTimeSeries,
+        rt_child: RotoTransMatrixTimeSeries,
+        recursive_outlier_removal: bool = True,
+    ) -> Tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        RotoTransMatrixTimeSeries,
+        RotoTransMatrixTimeSeries,
+    ]:
         """
         Perform the SARA algorithm (Ehrig et al., 2007) to estimate the axis of rotation (AoR)
         between two segments over time using homogeneous transformation matrices.
 
         Parameters
         ----------
-        rt_parent : ndarray (4, 4, N)
+        rt_parent : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the parent segment.
-        rt_child : ndarray (4, 4, N)
+        rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
         Returns
         -------
-        aor_global : ndarray (3, N)
+        aor_global : ndarray (3,)
             Orientation of the axis of rotation expressed in the global frame at each frame.
+        aor_parent_local : ndarray (3,)
+            Orientation of the axis of rotation expressed in the parent segment's local frame.
+        aor_child_local : ndarray (3,)
+            Orientation of the axis of rotation expressed in the child segment's local frame.
+        cor_global : ndarray (3, N)
+            Position of the center of rotation expressed in the global frame at each frame.
+        cor_parent_local : ndarray (3,)
+            Position of the center of rotation expressed in the parent segment's local frame.
+        cor_child_local : ndarray (3,)
+            Position of the center of rotation expressed in the child segment's local frame.
+        rt_parent : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the parent segment after outlier removal.
+        rt_child : RotoTransMatrixTimeSeries
+            Homogeneous transformations of the child segment after outlier removal.
         """
+        # TODO: Unify the code with SCoRE algorithm as they are very similar
+        nb_frames = len(rt_parent)
+
+        # Build linear system A x = b to solve for CoR positions in child and parent segment frames
+        A = np.zeros((3 * nb_frames, 6))
+        b = np.zeros((3 * nb_frames,))
+        A[:, :] = np.nan
+        b[:] = np.nan
+
+        for i_frame in range(nb_frames):
+            A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
+            A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+            b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
         # Remove nans
-        valid_rows = ~(np.logical_or(np.isnan(rt_parent[0, 0, :]), np.isnan(rt_child[0, 0, :])))
-        rt_parent = rt_parent[:, :, valid_rows]
-        rt_child = rt_child[:, :, valid_rows]
+        valid_rows = ~np.isnan(np.sum(A, axis=1)) & ~np.isnan(b)
+        A_valid = A[valid_rows, :]
+        b_valid = b[valid_rows]
 
-        nb_frames = rt_parent.shape[2]
+        # Compute SVD
+        U, S, Vt = np.linalg.svd(A_valid, full_matrices=False)
+        V = Vt.T
 
-        # Build block matrix system R * [rCsi; rCsj] = (p_j - p_i)
-        rot = np.zeros((3 * nb_frames, 6))
-        trans = np.zeros((3 * nb_frames, 1))
+        # Extract AoR from the last column of V
+        aor = V[:, -1]
+        aor_parent_local = aor[3:]
+        aor_parent_local /= np.linalg.norm(aor_parent_local)
+        aor_child_local = aor[:3]
+        aor_child_local /= np.linalg.norm(aor_child_local)
 
+        # Compute pseudo-inverse solution
+        cor = V @ np.diag(1.0 / S) @ U.T @ b_valid
+        cor_parent_local = cor[3:]
+        cor_child_local = cor[:3]
+
+        # Compute transformed AoR positions in global frame
+        aor_parent_global = np.zeros((4, nb_frames))
+        aor_child_global = np.zeros((4, nb_frames))
+        cor_parent_global = np.zeros((4, nb_frames))
+        cor_child_global = np.zeros((4, nb_frames))
+        residuals = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
-            rotation_parent = rt_parent[:3, :3, i_frame]
-            rotation_child = rt_child[:3, :3, i_frame]
-            rot[3 * i_frame : 3 * i_frame + 3, :3] = rotation_parent
-            rot[3 * i_frame : 3 * i_frame + 3, 3:] = -rotation_child
-            trans[3 * i_frame : 3 * i_frame + 3, 0] = rt_child[:3, 3, i_frame] - rt_parent[:3, 3, i_frame]
-
-        # SVD of the block matrix
-        U, S, Vt = np.linalg.svd(rot, full_matrices=False)
-        V = Vt.T  # Align with MATLAB's V
-
-        # Axis orientations in local frames
-        aor_local_parent = V[:3, -1]
-        aor_local_child = V[3:, -1]
-        aor_local_parent /= np.linalg.norm(aor_local_parent)
-        aor_local_child /= np.linalg.norm(aor_local_child)
-
-        # Compute axis direction in global frame over time
-        a_parent_global = np.zeros((3, nb_frames))
-        a_child_global = np.zeros((3, nb_frames))
-        residual_angle = np.zeros((nb_frames,))
-        for i_frame in range(nb_frames):
-            a_parent_global[:, i_frame] = rt_parent[:3, :3, i_frame] @ aor_local_parent
-            a_child_global[:, i_frame] = rt_child[:3, :3, i_frame] @ aor_local_child
-            residual_angle[i_frame] = np.arccos(
-                np.dot(a_parent_global[:, i_frame], a_child_global[:, i_frame])
-                / (np.linalg.norm(a_parent_global[:, i_frame]) * np.linalg.norm(a_child_global[:, i_frame]))
+            aor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((aor_parent_local, 1)))[:, 0]
+            aor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((aor_child_local, 1)))[:, 0]
+            residuals[i_frame] = np.arccos(
+                np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
+                / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
             )
+            cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
+            cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
 
         if recursive_outlier_removal:
-            valid = self.get_good_frames(residual_angle, nb_frames)
-            return self._sara_algorithm(rt_parent[:, :, valid], rt_child[:, :, valid], recursive_outlier_removal=False)
+            valid = Sara.get_good_frames(residuals, nb_frames)
+            if not np.all(valid):
+                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                return Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
-        aor_global = 0.5 * (a_parent_global + a_child_global)
+        # Final output
+        aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
+        cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
         _logger.info(
-            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residual_angle)*180/np.pi} +- {np.nanstd(residual_angle)*180/np.pi} degrees."
+            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
         )
 
-        return aor_global, rt_parent, rt_child
+        return (
+            aor_mean_global,
+            aor_parent_local,
+            aor_child_local,
+            cor_mean_global,
+            cor_parent_local,
+            cor_child_local,
+            rt_parent,
+            rt_child,
+        )
 
-    def _longitudinal_axis(self, original_model: BiomechanicalModelReal) -> tuple[np.ndarray, np.ndarray]:
+    def _longitudinal_axis(self, original_model: BiomechanicalModelReal) -> Tuple[np.ndarray, np.ndarray]:
         """
         Estimate the longitudinal axis of the segment and the joint center.
         """
@@ -892,9 +961,7 @@ class Sara(RigidSegmentIdentification):
         scs_of_child_in_local[:3, 3] = joint_center_local[:3, 0]
         scs_of_child_in_local[3, 3] = 1
 
-        out = RotoTransMatrix()
-        out.from_rt_matrix(scs_of_child_in_local)
-        return out
+        return RotoTransMatrix.from_rt_matrix(scs_of_child_in_local)
 
     def _check_aor(self, original_model: BiomechanicalModelReal, aor_global: np.ndarray) -> np.ndarray:
 
@@ -941,8 +1008,7 @@ class Sara(RigidSegmentIdentification):
                 aor_in_local[:, i_frame] = np.nan
             else:
                 # Extract the axis of rotation in local frame
-                parent_rt = RotoTransMatrix()
-                parent_rt.from_rt_matrix(rt_parent_functional[:, :, i_frame])
+                parent_rt = RotoTransMatrix.from_rt_matrix(rt_parent_functional[:, :, i_frame])
                 aor_in_local[:3, i_frame] = parent_rt.inverse.rotation_matrix @ aor_global[:3, i_frame]
         mean_aor_in_local = mean_unit_vector(aor_in_local)
         return mean_aor_in_local
@@ -965,16 +1031,20 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
-        aor_global, rt_parent_valid_frames, rt_child_valid_frames = self._sara_algorithm(
-            rt_parent_functional.get_rt_matrix(), rt_child_functional.get_rt_matrix(), recursive_outlier_removal=True
+        aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
+            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
         )
-        aor_global = self._check_aor(original_model, aor_global)
-        aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
+        # # TODO: @charbie Initially, aor_global was returning a 3xN matrix, but for sake of consistency with other methods,
+        # # it now returns a 3x1 vector. However, the _check_aor and _get_aor_local methods expect a 3xN matrix.
+        # # More over, the output of _get_aor_local is now directly returned by SARA (now renamed aor_local_child).
+        # # I therefore commented the next block of lines, I think they could be removed entirely, but I am not 100% sure.
+        # aor_global = self._check_aor(original_model, aor_global)
+        # aor_local = self._get_aor_local(aor_global, rt_parent_valid_frames)
 
         # Extract the joint coordinate system
         mean_scs_of_child_in_local = self._extract_scs_from_axis(
             original_model=original_model,
-            aor_local=aor_local,
+            aor_local=aor_local_child,
             joint_center_local=joint_center_local,
             longitudinal_axis_local=longitudinal_axis_local,
         )
@@ -993,7 +1063,7 @@ class Sara(RigidSegmentIdentification):
 class JointCenterTool:
     def __init__(self, original_model: BiomechanicalModelReal, animate_reconstruction: bool = False):
 
-        # Make sure that the scs ar in local before starting
+        # Make sure that the scs are in local before starting
         for segment in original_model.segments:
             if segment.segment_coordinate_system.is_in_global:
                 segment.segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -1006,7 +1076,9 @@ class JointCenterTool:
         self.animate_reconstruction = animate_reconstruction
 
         # Extended attributes to be filled
-        self.joint_center_tasks = []  # Not a NamedList because nothing in BioBuddy refer to joints (only segments)
+        self.joint_center_tasks: list[RigidSegmentIdentification] = (
+            []
+        )  # Not a NamedList because RigidSegmentIdentification does not have .name property
         self.new_model = deepcopy(original_model)
 
     def add(self, jcs_identifier: Score | Sara):
@@ -1086,38 +1158,44 @@ class JointCenterTool:
         joint_model.to_biomod(temporary_model_path)
         return joint_model
 
-    def replace_joint_centers(self, marker_weights) -> BiomechanicalModelReal:
+    # TODO @pariterre revise the type hinting
+    def replace_joint_centers(self, marker_weights=None, reconstruct_whole_body: bool = True) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
         for task in self.joint_center_tasks:
 
             # if all model markers are present in the c3d, reconstruct whole body, else just the parent and child segments
-            reconstruct_whole_body = True
-            for marker in self.original_model.marker_names:
-                if marker not in task.c3d_data.marker_names:
-                    reconstruct_whole_body = False
-                    break
+            # TODO @charbie Why? Reconstructing the whole body exposes to less accurate results while increasing computation time
+            if reconstruct_whole_body:
+                # Make sure that all markers are present in the c3d, otherwise reconstruct_whole_body cannot be True
+                for marker in self.original_model.marker_names:
+                    if marker not in task._data.marker_names:
+                        reconstruct_whole_body = False
+                        break
 
             if reconstruct_whole_body:
                 marker_names = self.original_model.marker_names
                 model_for_initial_rt = deepcopy(self.original_model)
             else:
+                # TODO @charbie 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
                 marker_names = task.parent_marker_names + task.child_marker_names
                 model_for_initial_rt = self._setup_model_for_initial_rt(task)
 
             if task.initialize_whole_trial_reconstruction:
                 # Reconstruct the whole trial to get a good initial rt for each frame
-                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, :]
+                marker_positions = task._data.get_position(marker_names)[:3, :, :]
                 initial_rt_marker_weights = deepcopy(marker_weights)
             else:
                 # Reconstruct only the first frame to get an initial rt
-                marker_positions = task.c3d_data.get_position(marker_names)[:3, :, 0]
+                marker_positions = task._data.get_position(marker_names)[:3, :, 0]
                 initial_rt_marker_weights = None
 
             for marker in marker_names:
-                if marker not in task.c3d_data.marker_names:
+                if marker not in task._data.marker_names:
                     raise RuntimeError(f"The marker {marker} is present in the model but not in the c3d file.")
 
+            # TODO: @charbie Inverse kinematics may not be the right tool here as parallelisation is not possible while
+            # during the rigidifcation for the SCoRE algorithm each frame is technically independent
             q_init, _ = model_for_initial_rt.inverse_kinematics(
                 marker_positions=marker_positions,
                 marker_names=marker_names,
@@ -1129,6 +1207,7 @@ class JointCenterTool:
             child_rt_init = segment_rt_in_global[task.child_name]
 
             # Marker positions in the global from the static trial
+            # TODO: @charbie 'parent_marker_names' and 'child_marker_names' should actually solely be the technical
             task.parent_static_markers_in_global = static_markers_in_global[
                 :, self.original_model.markers_indices(task.parent_marker_names)
             ]
@@ -1149,8 +1228,8 @@ class JointCenterTool:
                 )
 
             # Marker positions in the global from this functional trial
-            task.parent_markers_global = task.c3d_data.get_position(task.parent_marker_names)
-            task.child_markers_global = task.c3d_data.get_position(task.child_marker_names)
+            task.parent_markers_global = task._data.get_position(task.parent_marker_names)
+            task.child_markers_global = task._data.get_position(task.child_marker_names)
             task.check_marker_labeling()
 
             if task.initialize_whole_trial_reconstruction and self.animate_reconstruction:

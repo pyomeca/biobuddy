@@ -1,6 +1,11 @@
+from typing import TYPE_CHECKING
+
 from lxml import etree
 
 from ..abstract_model_writer import AbstractModelWriter
+
+if TYPE_CHECKING:
+    from biobuddy.components.real.biomechanical_model_real import BiomechanicalModelReal
 
 
 class UrdfModelWriter(AbstractModelWriter):

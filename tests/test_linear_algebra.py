@@ -185,8 +185,7 @@ def test_to_euler():
     """Test conversion from rotation matrix to Euler angles."""
     # Test with known angles
     angles = np.array([0.1, 0.2, 0.3])
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation("xyz", angles, np.array([0, 0, 0]))
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation("xyz", angles, np.array([0, 0, 0]))
     rt = rt_matrix.rt_matrix
 
     # Check the rt matrix
@@ -505,8 +504,7 @@ def test_rototrans_matrix_class():
     rotation_matrix = rot_x_matrix(np.pi / 4)
     translation = np.array([1, 2, 3])
 
-    rt = RotoTransMatrix()
-    rt.from_rotation_matrix_and_translation(rotation_matrix, translation)
+    rt = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, translation)
 
     # Check properties
     npt.assert_almost_equal(rt.rotation_matrix, rotation_matrix)
@@ -522,8 +520,7 @@ def test_rototrans_matrix_class():
     angles = np.array([np.pi / 6, np.pi / 4, np.pi / 3])
     angle_sequence = "xyz"
 
-    rt2 = RotoTransMatrix()
-    rt2.from_euler_angles_and_translation(angle_sequence, angles, translation)
+    rt2 = RotoTransMatrix.from_euler_angles_and_translation(angle_sequence, angles, translation)
 
     # Check dimensions
     assert rt2.rt_matrix.shape == (4, 4)
@@ -534,8 +531,7 @@ def test_rototrans_matrix_class():
     rt_matrix[:3, :3] = rotation_matrix
     rt_matrix[:3, 3] = translation
 
-    rt3 = RotoTransMatrix()
-    rt3.from_rt_matrix(rt_matrix)
+    rt3 = RotoTransMatrix.from_rt_matrix(rt_matrix)
 
     npt.assert_almost_equal(rt3.rt_matrix, rt_matrix)
 
@@ -551,28 +547,27 @@ def test_rototrans_matrix_class():
 
     # Test the initialization with nan
     rt_matrix[0, 0] = np.nan
-    rt4 = RotoTransMatrix()
-    rt4.from_rt_matrix(rt_matrix)
+    rt4 = RotoTransMatrix.from_rt_matrix(rt_matrix)
     npt.assert_equal(rt4.rt_matrix, np.eye(4) * np.nan)
 
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape \\(3, 3\\)"):
-        rt.from_rotation_matrix_and_translation(np.eye(2), translation)
+        rt = RotoTransMatrix.from_rotation_matrix_and_translation(np.eye(2), translation)
 
     with pytest.raises(ValueError, match="should be of shape \\(3,\\)"):
-        rt.from_rotation_matrix_and_translation(rotation_matrix, np.array([1, 2]))
+        rt = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, np.array([1, 2]))
 
     with pytest.raises(ValueError, match="should be of shape \\(nb_angles, \\)"):
-        rt.from_euler_angles_and_translation("xyz", np.array([[1, 2, 3]]), translation)
+        rt = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([[1, 2, 3]]), translation)
 
     with pytest.raises(ValueError, match="should be of shape \\(3,\\)"):
-        rt.from_euler_angles_and_translation("xyz", angles, np.array([1, 2]))
+        rt = RotoTransMatrix.from_euler_angles_and_translation("xyz", angles, np.array([1, 2]))
 
     with pytest.raises(ValueError, match="must match"):
-        rt.from_euler_angles_and_translation("xyz", np.array([1, 2]), translation)
+        rt = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([1, 2]), translation)
 
     with pytest.raises(ValueError, match="should be of shape \\(4, 4\\)"):
-        rt.from_rt_matrix(np.eye(3))
+        rt = RotoTransMatrix.from_rt_matrix(np.eye(3))
 
 
 def test_rototrans_matrix_time_series():
@@ -588,8 +583,7 @@ def test_rototrans_matrix_time_series():
         translations[:, i] = np.array([i, 0, 0])
 
     # Test initialization
-    rt_series = RotoTransMatrixTimeSeries(n_frames)
-    rt_series.from_rotation_matrix_and_translation(rotation_matrices, translations)
+    rt_series = RotoTransMatrixTimeSeries.from_rotation_matrix_and_translation(rotation_matrices, translations)
 
     # Check that we can access individual frames
     for i in range(n_frames):
@@ -604,8 +598,7 @@ def test_rototrans_matrix_time_series():
         rt_matrices[:3, 3, i] = translations[:, i]
         rt_matrices[3, 3, i] = 1.0
 
-    rt_series2 = RotoTransMatrixTimeSeries(n_frames)
-    rt_series2.from_rt_matrix(rt_matrices)
+    rt_series2 = RotoTransMatrixTimeSeries.from_rt_matrix(rt_matrices)
 
     # Check that we get the same results
     for i in range(n_frames):
@@ -614,8 +607,7 @@ def test_rototrans_matrix_time_series():
 
     # Test the initialization with nan
     rt_matrices[0, 0, 2] = np.nan
-    rt_series3 = RotoTransMatrixTimeSeries(n_frames)
-    rt_series3.from_rt_matrix(rt_matrices)
+    rt_series3 = RotoTransMatrixTimeSeries.from_rt_matrix(rt_matrices)
     npt.assert_equal(rt_series3[2].rt_matrix, np.eye(4) * np.nan)
     npt.assert_equal(rt_series3[3].rt_matrix, rt_matrices[:, :, 3])
 
@@ -630,12 +622,29 @@ def test_rototrans_matrix_time_series():
         if i != 2:  # Skip the NaN frame
             npt.assert_almost_equal(rt_matrices_result[:, :, i], rt_series[i].rt_matrix)
 
+    # Test the multiplication by a vector
+    point_4D = np.random.randn(4, n_frames)
+    mult_res = rt_series @ point_4D
+    assert mult_res.shape == (4, n_frames)
+    for i_frame in range(n_frames):
+        npt.assert_almost_equal(
+            mult_res[:, i_frame],
+            rt_series[i_frame].rt_matrix @ point_4D[:, i_frame],
+        )
+
+    # Test the multiplication by another RotoTransMatrixTimeSeries
+    with pytest.raises(
+        NotImplementedError,
+        match=r"The multiplication of RotoTransMatrix with \<class 'biobuddy.utils.linear_algebra.RotoTransMatrixTimeSeries'\> is not implemented yet.",
+    ):
+        _ = rt_series @ rt_series
+
     # Test error conditions
     with pytest.raises(ValueError, match="should be of shape"):
-        rt_series.from_rotation_matrix_and_translation(np.eye(3), np.array([1, 2, 3]))
+        RotoTransMatrixTimeSeries.from_rotation_matrix_and_translation(np.eye(3), np.array([1, 2, 3]))
 
     with pytest.raises(ValueError, match="should be of shape"):
-        rt_series.from_rt_matrix(np.eye(4))
+        RotoTransMatrixTimeSeries.from_rt_matrix(np.eye(4))
 
 
 def test_rt():
@@ -648,8 +657,7 @@ def test_rt():
             angles = np.random.rand(nb_angles) * 2 * np.pi
             translations = np.random.rand(3)
 
-            rt_biobuddy = RotoTransMatrix()
-            rt_biobuddy.from_euler_angles_and_translation(
+            rt_biobuddy = RotoTransMatrix.from_euler_angles_and_translation(
                 angles=angles, angle_sequence=angle_sequence.value, translation=translations
             )
 
@@ -705,8 +713,7 @@ def test_rotation_matrix_class():
     """Test RotationMatrix class."""
     # Test initialization from rotation matrix
     rotation = rot_x_matrix(np.pi / 4)
-    rot_obj = RotationMatrix()
-    rot_obj.from_rotation_matrix(rotation)
+    rot_obj = RotationMatrix.from_rotation_matrix(rotation)
 
     # Check properties
     npt.assert_almost_equal(rot_obj.rotation_matrix, rotation)
@@ -715,8 +722,7 @@ def test_rotation_matrix_class():
     angles = np.array([np.pi / 6, np.pi / 4, np.pi / 3])
     angle_sequence = "xyz"
 
-    rot_obj2 = RotationMatrix()
-    rot_obj2.from_euler_angles(angle_sequence, angles)
+    rot_obj2 = RotationMatrix.from_euler_angles(angle_sequence, angles)
     npt.assert_almost_equal(
         rot_obj2.rotation_matrix,
         np.array(
@@ -770,8 +776,7 @@ def test_rotation_matrix_class():
 
 def test_point_from_global_to_local():
     point_in_global = np.array([0.1, 0.1, 0.1])
-    jcs_in_global = RotoTransMatrix()
-    jcs_in_global.from_rt_matrix(
+    jcs_in_global = RotoTransMatrix.from_rt_matrix(
         np.array([[1.0, 0.0, 0.0, 0.1], [0.0, 0.0, -1.0, 0.1], [0.0, 1.0, 0.0, 0.1], [0.0, 0.0, 0.0, 1.0]])
     )
 
@@ -837,8 +842,7 @@ def test_point_transformations():
     rotation = rot_z_matrix(angle)
     translation = np.array([1, 2, 3])
 
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_rotation_matrix_and_translation(rotation, translation)
+    rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation, translation)
 
     # Test point
     point_global = np.array([5, 6, 7])
@@ -868,14 +872,12 @@ def test_local_rt_between_global_rts():
     # Create parent RT in global
     parent_rotation = rot_x_matrix(np.pi / 6)
     parent_translation = np.array([1, 2, 3])
-    parent_rt = RotoTransMatrix()
-    parent_rt.from_rotation_matrix_and_translation(parent_rotation, parent_translation)
+    parent_rt = RotoTransMatrix.from_rotation_matrix_and_translation(parent_rotation, parent_translation)
 
     # Create child RT in global
     child_rotation = rot_z_matrix(np.pi / 4)
     child_translation = np.array([4, 5, 6])
-    child_rt = RotoTransMatrix()
-    child_rt.from_rotation_matrix_and_translation(child_rotation, child_translation)
+    child_rt = RotoTransMatrix.from_rotation_matrix_and_translation(child_rotation, child_translation)
 
     # Compute local RT
     local_rt = local_rt_between_global_rts(parent_rt, child_rt)
@@ -885,8 +887,7 @@ def test_local_rt_between_global_rts():
     npt.assert_almost_equal(computed_child_rt.rt_matrix, child_rt.rt_matrix)
 
     # Test with identity matrices
-    identity_rt = RotoTransMatrix()
-    identity_rt.from_rt_matrix(np.eye(4))
+    identity_rt = RotoTransMatrix.from_rt_matrix(np.eye(4))
 
     # Identity parent, arbitrary child
     local_rt1 = local_rt_between_global_rts(identity_rt, child_rt)
@@ -930,13 +931,11 @@ def test_roto_trans_matrix():
 
     # Test RotoTransMatrix with 3D rt matrix input
     rt_3d = np.eye(4).reshape(4, 4, 1)
-    rt_obj = RotoTransMatrix()
-    rt_obj.from_rt_matrix(rt_3d)
+    rt_obj = RotoTransMatrix.from_rt_matrix(rt_3d)
     npt.assert_almost_equal(rt_obj.rt_matrix, np.eye(4))
 
     # Test setters for RotoTransMatrix
-    rt_obj2 = RotoTransMatrix()
-    rt_obj2.from_rt_matrix(np.eye(4))
+    rt_obj2 = RotoTransMatrix.from_rt_matrix(np.eye(4))
 
     # Test translation setter
     new_translation = np.array([1, 2, 3])
@@ -985,10 +984,8 @@ def test_roto_trans_matrix():
     )
 
     # Test is_identity method
-    identity_rt = RotoTransMatrix()
-    identity_rt.from_rt_matrix(np.eye(4))
+    identity_rt = RotoTransMatrix.from_rt_matrix(np.eye(4))
     assert identity_rt.is_identity == True
 
-    non_identity_rt = RotoTransMatrix()
-    non_identity_rt.from_rt_matrix(rt_expected)
+    non_identity_rt = RotoTransMatrix.from_rt_matrix(rt_expected)
     assert non_identity_rt.is_identity == False

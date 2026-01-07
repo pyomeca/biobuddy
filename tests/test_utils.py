@@ -1,7 +1,4 @@
 import os
-import numpy as np
-import numpy.testing as npt
-from lxml import etree
 
 from biobuddy import (
     BiomechanicalModelReal,
@@ -24,6 +21,9 @@ from biobuddy import (
     Ranges,
     MeshReal,
 )
+from lxml import etree
+import numpy as np
+import numpy.testing as npt
 
 
 def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):
@@ -580,12 +580,6 @@ class MockC3dData(C3dData):
             c3d_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
 
         C3dData.__init__(self, c3d_path, first_frame=0, last_frame=9)
-
-        # Fix the seed for reproducibility
-        np.random.seed(42)
-
-        # Create marker positions for 10 frames
-        self.all_marker_positions = np.random.rand(4, 73, 10)
 
 
 def read_xml_str():

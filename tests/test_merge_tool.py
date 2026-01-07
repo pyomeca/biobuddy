@@ -1,9 +1,5 @@
-import pytest
-import numpy as np
-import numpy.testing as npt
-import biorbd
-from deepdiff import DeepDiff
 from copy import deepcopy
+from deepdiff import DeepDiff
 from pathlib import Path
 
 from biobuddy import (
@@ -15,6 +11,11 @@ from biobuddy import (
     RotoTransMatrix,
     Sex,
 )
+import biorbd
+import numpy as np
+import numpy.testing as npt
+import pytest
+
 from test_utils import create_simple_model, compare_models
 
 
@@ -92,6 +93,7 @@ def test_merge_segments_tool_merge_on_top():
     original_model.segments["child"].translations = Translations.NONE
     original_model.segments["child"].rotations = Rotations.NONE
     original_model.segments["child"].dof_names = []
+
     original_model.to_biomod("merged_model.bioMod")
     biorbd_merged = biorbd.Model("merged_model.bioMod")
     q_zeros = np.zeros((biorbd_merged.nbQ(),))
@@ -232,6 +234,7 @@ def test_merge_segments_tool_merge_on_top_second_segment():
     original_model.segments["child"].translations = Translations.NONE
     original_model.segments["child"].rotations = Rotations.Y
     original_model.segments["child"].dof_names = ["RotY"]
+
     original_model.to_biomod("merged_model.bioMod")
     biorbd_merged = biorbd.Model("merged_model.bioMod")
     q_zeros = np.zeros((biorbd_merged.nbQ(),))

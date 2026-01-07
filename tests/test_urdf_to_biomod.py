@@ -4,11 +4,12 @@ see https://github.com/MyoHub/myo_sim/blob/main/elbow/assets/myoelbow_2dof6muscl
 """
 
 import os
-import numpy as np
-import pytest
-import pinocchio as pin
 
 from biobuddy import BiomechanicalModelReal
+import numpy as np
+import pinocchio as pin
+import pytest
+
 from test_utils import compare_models
 
 

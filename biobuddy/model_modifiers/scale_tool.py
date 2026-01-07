@@ -1,10 +1,12 @@
-import os
 from copy import deepcopy
 from enum import Enum
 import logging
+from typing import TYPE_CHECKING
+import os
+
+import numpy as np
 import xml.etree.cElementTree as ET
 from xml.dom import minidom
-import numpy as np
 
 from .modifiers_utils import modify_muscle_parameters
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
@@ -25,6 +27,9 @@ from ..utils.marker_data import MarkerData
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
 from ..utils.aliases import Point
+
+if TYPE_CHECKING:
+    from ..components.real.rigidbody.segment_scaling import ScaleFactor
 
 _logger = logging.getLogger(__name__)
 
@@ -462,12 +467,8 @@ class ScaleTool:
     @staticmethod
     def scale_rt(rt: RotoTransMatrix, scale_factor: Point) -> RotoTransMatrix:
         rt_matrix = rt.rt_matrix
-        rt_matrix[:3, 3] *= scale_factor[:3].reshape(
-            3,
-        )
-        out = RotoTransMatrix()
-        out.from_rt_matrix(rt_matrix)
-        return out
+        rt_matrix[:3, 3] *= scale_factor[:3].reshape(3)
+        return RotoTransMatrix.from_rt_matrix(rt_matrix)
 
     def scale_segment(
         self,

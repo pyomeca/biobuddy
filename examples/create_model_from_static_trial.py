@@ -1,5 +1,5 @@
 """
-Example taken from biorbd.model_creation
+This example shows how to create a biomechanical model from a static trial to locate the markers.
 # TODO: This example should be replace with an actual biomechanics example.
 """
 

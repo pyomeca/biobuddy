@@ -513,10 +513,8 @@ class OsimModelParser(AbstractModelParser):
                         trans_dof_names, q_ranges_trans
                     )
 
-                    axis = RotationMatrix()
-                    axis.from_rotation_matrix(np.array(translations).T)
-                    axis_offset_rot_mat = RotationMatrix()
-                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
+                    axis = RotationMatrix.from_rotation_matrix(np.array(translations).T)
+                    axis_offset_rot_mat = RotationMatrix.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
                         axis=axis,
                         axis_offset=axis_offset_rot_mat,
@@ -539,10 +537,8 @@ class OsimModelParser(AbstractModelParser):
                         rot_dof_names, q_ranges_rot
                     )
                     body_name = body.name + "_rotation_transform"
-                    axis = RotationMatrix()
-                    axis.from_rotation_matrix(np.array(rotations).T)
-                    axis_offset_rot_mat = RotationMatrix()
-                    axis_offset_rot_mat.from_rotation_matrix(axis_offset)
+                    axis = RotationMatrix.from_rotation_matrix(np.array(rotations).T)
+                    axis_offset_rot_mat = RotationMatrix.from_rotation_matrix(axis_offset)
                     axis_offset = self.write_ortho_segment(
                         axis=axis,
                         axis_offset=axis_offset_rot_mat,

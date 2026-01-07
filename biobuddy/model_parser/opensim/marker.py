@@ -11,7 +11,7 @@ class Marker:
         self.fixed = fixed
 
     @staticmethod
-    def from_element(element: etree.ElementTree) -> "Self":
+    def from_element(element: etree.ElementTree) -> "Marker":
         return Marker(
             name=(element.attrib["name"]).split("/")[-1],
             parent=find_in_tree(element, "socket_parent_frame").split("/")[-1],

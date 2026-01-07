@@ -13,7 +13,7 @@ class SpatialTransform:
         self.function = function
 
     @staticmethod
-    def from_element(element: etree.ElementTree) -> "Self":
+    def from_element(element: etree.ElementTree) -> "SpatialTransform":
         function = False
         for elt in element[0]:
             if "Function" in elt.tag and len(elt.text) != 0:

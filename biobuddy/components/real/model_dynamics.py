@@ -1,16 +1,23 @@
-from enum import Enum
 from copy import deepcopy
+from functools import wraps
 import logging
+from typing import TYPE_CHECKING, Union
+
+
 import numpy as np
 from scipy import optimize
-from functools import wraps
 
-from ...utils.linear_algebra import (
-    RotoTransMatrix,
-    RotoTransMatrixTimeSeries,
-    point_from_local_to_global,
-)
-from ...utils.enums import ViewAs
+from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, point_from_local_to_global
+from ...utils.enums import ViewAs, ViewerType
+
+if TYPE_CHECKING:
+    try:
+        import biorbd  # type: ignore
+    except ImportError:
+        pass
+    from .biomechanical_model_real import BiomechanicalModelReal
+    from .rigidbody.marker_weight import MarkerWeight
+    from ...utils.named_list import NamedList
 
 _logger = logging.getLogger(__name__)
 
@@ -109,9 +116,7 @@ class ModelDynamics:
                     f"The segment {segment_name} does not have a parent offset, but is attached another ghost segments. If you run into this error, please notify the developers by opening an issue on GitHub."
                 )
             else:
-                out_rt = RotoTransMatrix()
-                out_rt.from_rt_matrix(np.identity(4))
-                return out_rt
+                return RotoTransMatrix()
         else:
             rt = self.segments[segment_name].segment_coordinate_system.scs @ RotoTransMatrix()
             while parent_name != parent_offset_name:
@@ -135,7 +140,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_residual(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q_regularization_weight: np.ndarray[float],
         qdot_regularization_weight: np.ndarray[float],
         q_target: np.ndarray,
@@ -192,7 +197,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_distance(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q: np.ndarray,
         marker_names: list[str],
         experimental_markers: np.ndarray,
@@ -219,7 +224,7 @@ class ModelDynamics:
 
     @staticmethod
     def _marker_jacobian(
-        model: "BiomechanicalModelReal" or "biorbd.Model",
+        model: Union["BiomechanicalModelReal", "biorbd.Model"],
         q_regularization_weight: np.ndarray[float],
         qdot_regularization_weight: np.ndarray[float],
         q: np.ndarray,
@@ -307,7 +312,7 @@ class ModelDynamics:
 
         try:
             # biorbd (in c++) is quicker than this custom Python code, which makes a large difference here
-            import biorbd
+            import biorbd  # type: ignore
 
             self.to_biomod("temporary.bioMod", with_mesh=False)
             with_biorbd = True
@@ -447,7 +452,7 @@ class ModelDynamics:
             else:
 
                 # Compare the result visually
-                import pyorerun
+                import pyorerun  # type: ignore
 
                 t = np.linspace(0, 1, optimal_q.shape[1])
                 viz = pyorerun.PhaseRerun(t)
@@ -779,26 +784,47 @@ class ModelDynamics:
 
         return muscle_tendon_length
 
-    def animate(self, view_as: ViewAs = ViewAs.BIORBD, model_path: str = None):
+    def animate(
+        self,
+        view_as: ViewAs = ViewAs.BIORBD,
+        viewer_type: ViewerType = ViewerType.PYORERUN,
+        model_path: str = None,
+    ):
 
         if view_as == ViewAs.BIORBD:
-            try:
-                import pyorerun
+            if model_path is None or not model_path.endswith(".bioMod"):
+                model_path = "temporary.bioMod"
+                if self.has_mesh_files:
+                    # TODO: match the mesh_file directory to allow seeing the mesh files too
+                    self.to_biomod(model_path, with_mesh=False)
+                else:
+                    # Allow to see the mesh points
+                    self.to_biomod(model_path, with_mesh=True)
 
-                if model_path is None or not model_path.endswith(".bioMod"):
-                    model_path = "temporary.bioMod"
-                    if self.has_mesh_files:
-                        # TODO: match the mesh_file directory to allow seeing the mesh files too
-                        self.to_biomod(model_path, with_mesh=False)
-                    else:
-                        # Allow to see the mesh points
-                        self.to_biomod(model_path, with_mesh=True)
+            if viewer_type == ViewerType.BIOVIZ:
+                try:
+                    import bioviz  # type: ignore
+                except ImportError:
+                    _logger.error("bioviz is not installed. Cannot animate the model with BIOVIZ.")
+                    return
+
+                viz = bioviz.Viz(model_path)
+                viz.exec()
+                return
+            elif viewer_type == ViewerType.PYORERUN:
+                try:
+                    import pyorerun  # type: ignore
+                except ImportError:
+                    _logger.error("pyorerun is not installed. Cannot animate the model.")
+                    return
 
                 animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
-            except ImportError:
-                _logger.error("pyorerun is not installed. Cannot animate the model.")
+                return
+
+            else:
+                raise RuntimeError(f"The viewer_type {viewer_type} is not recognized for model type {view_as}.")
 
         else:
             raise NotImplementedError(

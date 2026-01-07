@@ -1,7 +1,6 @@
-from .aliases import point_to_array, Point
-
 import numpy as np
 
+from .aliases import points_to_array, point_to_array, Point, Points
 
 # TODO: Charbie -> uniformization !!!! (angle_sequence: Rotations enum, RototransMatrix everywhere)
 
@@ -10,12 +9,11 @@ class RotationMatrix:
     def __init__(self):
         self._rotation_matrix = np.identity(3)
 
-    def __matmul__(self, other: "Self" | Point) -> "Self" | Point:
+    def __matmul__(self, other: "RotationMatrix" | Point) -> "RotationMatrix" | Point:
         if isinstance(other, RotationMatrix):
             # Matrix multiplication of two RotationMatrix objects gives a new RotationMatrix object
             mult_result = self._rotation_matrix @ other._rotation_matrix
-            out = RotationMatrix()
-            out.from_rotation_matrix(mult_result)
+            out = RotationMatrix.from_rotation_matrix(mult_result)
         elif isinstance(other, np.ndarray):
             # Matrix multiplication of a RotationMatrix with a Point (np.array vector) gives a Point (np.array vector)
             if other.shape == (3, 3):
@@ -29,14 +27,18 @@ class RotationMatrix:
             )
         return out
 
-    def from_rotation_matrix(self, rotation_matrix: np.ndarray):
+    @classmethod
+    def from_rotation_matrix(cls, rotation_matrix: np.ndarray):
         if rotation_matrix.shape != (3, 3):
             raise ValueError(
                 f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
-        self._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
+        instance = cls()
+        instance._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
+        return instance
 
-    def from_euler_angles(self, angle_sequence: str, angles: np.ndarray):
+    @classmethod
+    def from_euler_angles(cls, angle_sequence: str, angles: np.ndarray):
         if len(angles.shape) > 1:
             raise ValueError(
                 f"The angles used to initialize a RotationMatrix should be of shape (nb_angles, ). You have {angles.shape}"
@@ -55,7 +57,9 @@ class RotationMatrix:
         rotation_matrix = np.identity(3)
         for angle, axis in zip(angles, angle_sequence):
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
-        self._rotation_matrix = rotation_matrix
+        instance = cls()
+        instance._rotation_matrix = rotation_matrix
+        return instance
 
     @property
     def rotation_matrix(self) -> np.ndarray:
@@ -73,10 +77,9 @@ class RotationMatrix:
         return to_euler(self.rotation_matrix, angle_sequence)
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "RotationMatrix":
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
-        out_inverse = RotationMatrix()
-        out_inverse.from_rotation_matrix(inverse_rotation_matrix)
+        out_inverse = RotationMatrix.from_rotation_matrix(inverse_rotation_matrix)
         return out_inverse
 
 
@@ -84,26 +87,26 @@ class RotoTransMatrix:
     def __init__(self):
         self._rt = np.identity(4)
 
-    def __matmul__(self, other: "Self" | Point) -> "Self" | Point:
+    def __matmul__(self, other: "RotationMatrix" | Point) -> "RotationMatrix" | Point:
         if isinstance(other, RotoTransMatrix):
             # Matrix multiplication of two RotoTransMatrix objects gives a new RotoTransMatrix object
             mult_result = self.rt_matrix @ other.rt_matrix
-            out = RotoTransMatrix()
-            out.from_rt_matrix(mult_result)
+            out = RotoTransMatrix.from_rt_matrix(mult_result)
         elif isinstance(other, np.ndarray):
             # Matrix multiplication of a RotoTransMatrix with a Point (np.array vector) gives a Point (np.array vector)
             if other.shape == (4, 4):
                 raise ValueError(
                     "You seem to be trying to multiply two RotoTransMatrix objects. Please use RotoTransMatrix @ RotoTransMatrix instead."
                 )
-            out = self.rt_matrix @ point_to_array(point=other)
+            out = self.rt_matrix @ points_to_array(points=other)
         else:
             raise NotImplementedError(
                 f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
             )
         return out
 
-    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray | RotationMatrix, translation: Point):
+    @classmethod
+    def from_rotation_matrix_and_translation(cls, rotation_matrix: np.ndarray | RotationMatrix, translation: Point):
         if isinstance(rotation_matrix, np.ndarray):
             if rotation_matrix.shape != (3, 3):
                 raise ValueError(
@@ -124,29 +127,38 @@ class RotoTransMatrix:
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
         rt_matrix[:3, 3] = translation[:3]
         rt_matrix[3, 3] = 1.0
-        self._rt = rt_matrix
 
-    def from_euler_angles_and_translation(self, angle_sequence: str, angles: np.ndarray, translation: np.ndarray):
+        roto_trans_matrix = cls()
+        roto_trans_matrix._rt = rt_matrix
+        return roto_trans_matrix
+
+    @classmethod
+    def from_euler_angles_and_translation(cls, angle_sequence: str, angles: np.ndarray, translation: np.ndarray):
         if translation.shape != (3,) and translation.shape != (4,):
             raise ValueError(
                 f"The translation used to initialize a RotoTransMatrix should be of shape (3,) or (4, ). You have {translation.shape}"
             )
 
         rt_matrix = np.identity(4)
-        rotation_matrix = RotationMatrix()
-        rotation_matrix.from_euler_angles(angle_sequence=angle_sequence, angles=angles)
+        rotation_matrix = RotationMatrix.from_euler_angles(angle_sequence=angle_sequence, angles=angles)
         rt_matrix[:3, :3] = rotation_matrix.rotation_matrix
         rt_matrix[:3, 3] = translation[:3]
-        self._rt = rt_matrix
 
-    def from_rt_matrix(self, rt: np.ndarray):
+        roto_trans_matrix = cls()
+        roto_trans_matrix._rt = rt_matrix
+        return roto_trans_matrix
+
+    @classmethod
+    def from_rt_matrix(cls, rt: np.ndarray):
         if rt.shape == (4, 4, 1):
             rt = rt[:, :, 0]
         elif rt.shape != (4, 4):
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
-        self._rt = get_closest_rt_matrix(rt)
+        roto_trans_matrix = cls()
+        roto_trans_matrix._rt = get_closest_rt_matrix(rt)
+        return roto_trans_matrix
 
     @property
     def rt_matrix(self) -> np.ndarray:
@@ -158,9 +170,7 @@ class RotoTransMatrix:
 
     @translation.setter
     def translation(self, trans: np.ndarray):
-        self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(
-            3,
-        )
+        self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(3)
 
     @property
     def rotation_matrix(self) -> np.ndarray:
@@ -181,20 +191,17 @@ class RotoTransMatrix:
         return to_euler(self.rotation_matrix, angle_sequence)
 
     @property
-    def inverse(self) -> "Self":
+    def inverse(self) -> "RotationMatrix":
 
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
         inverse_translation = -inverse_rotation_matrix.reshape(3, 3) @ self.translation
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = inverse_rotation_matrix.reshape(3, 3)
-        rt_matrix[:3, 3] = inverse_translation.reshape(
-            3,
-        )
+        rt_matrix[:3, 3] = inverse_translation.reshape(3)
         rt_matrix[3, 3] = 1.0
 
-        out_inverse = RotoTransMatrix()
-        out_inverse.from_rt_matrix(rt_matrix)
+        out_inverse = RotoTransMatrix.from_rt_matrix(rt_matrix)
         return out_inverse
 
     @property
@@ -214,6 +221,7 @@ class RotoTransMatrixTimeSeries:
     """
 
     def __init__(self, nb_frames: int):
+        self.nb_frames = nb_frames
         self._rt_time_series = [RotoTransMatrix() for _ in range(nb_frames)]
 
     def __getitem__(self, index: int):
@@ -225,41 +233,51 @@ class RotoTransMatrixTimeSeries:
     def __len__(self):
         return len(self._rt_time_series)
 
-    def from_rotation_matrix_and_translation(self, rotation_matrix: np.ndarray, translation: np.ndarray):
+    def __matmul__(self, other: Points) -> Points:
+        if isinstance(other, np.ndarray):
+            # Matrix multiplication of a RotoTransMatrixTimeSeries with Points (np.array vector) gives Points (np.array vector)
+            if other.shape != (4, self.nb_frames) and other.shape != (3, self.nb_frames):
+                raise ValueError(
+                    f"The multiplication of RotoTransMatrixTimeSeries is only possible with np.array of shape (3, nb_frames) or (4, nb_frames)."
+                    f"Expected {self.nb_frames}, got shape {other.shape}."
+                )
+            out = np.zeros((4, self.nb_frames))
+            points_array = points_to_array(points=other)
+            for i_frame in range(self.nb_frames):
+                out[:, i_frame] = self[i_frame].rt_matrix @ points_array[:, i_frame]
+        else:
+            raise NotImplementedError(
+                f"The multiplication of RotoTransMatrix with {type(other)} is not implemented yet."
+            )
+        return out
+
+    @classmethod
+    def from_rotation_matrix_and_translation(cls, rotation_matrix: np.ndarray, translation: np.ndarray):
         if len(rotation_matrix.shape) != 3 or len(translation) != 3:
             raise ValueError(
                 f"The rotation_matrix and translation used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rotation_matrix.shape} and {translation.shape}"
             )
-        if rotation_matrix.shape[2] != len(self):
-            raise ValueError(
-                f"You must provide as many rotation matrices as the number of frames ({len(self)}). You have {rotation_matrix.shape[2]} rotation matrices."
+
+        rts = cls(nb_frames=rotation_matrix.shape[2])
+
+        rts._rt_time_series = [
+            RotoTransMatrix.from_rotation_matrix_and_translation(
+                rotation_matrix[:, :, i_frame], translation[:, i_frame]
             )
+            for i_frame in range(rotation_matrix.shape[2])
+        ]
+        return rts
 
-        rt_time_series = []
-        for i_frame in range(rotation_matrix.shape[2]):
-            rt_matrix = RotoTransMatrix()
-            rt_matrix.from_rotation_matrix_and_translation(rotation_matrix[:, :, i_frame], translation[:, i_frame])
-            rt_time_series += [rt_matrix]
-
-        self._rt_time_series = rt_time_series
-
-    def from_rt_matrix(self, rt: np.ndarray):
+    @classmethod
+    def from_rt_matrix(cls, rt: np.ndarray):
         if len(rt.shape) != 3:
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rt.shape}"
             )
-        if rt.shape[2] != len(self):
-            raise ValueError(
-                f"You must provide as many rt matrices as the number of frames ({len(self)}). You have {rt.shape[2]} rotation matrices."
-            )
 
-        rt_time_series = []
-        for i_frame in range(rt.shape[2]):
-            rt_matrix = RotoTransMatrix()
-            rt_matrix.from_rt_matrix(rt[:, :, i_frame])
-            rt_time_series += [rt_matrix]
-
-        self._rt_time_series = rt_time_series
+        rts = cls(nb_frames=rt.shape[2])
+        rts._rt_time_series = [RotoTransMatrix.from_rt_matrix(rt[:, :, i_frame]) for i_frame in range(rt.shape[2])]
+        return rts
 
     def mean_homogenous_matrix(self) -> RotoTransMatrix:
         """
@@ -273,15 +291,20 @@ class RotoTransMatrixTimeSeries:
         for i_frame, rt in enumerate(self._rt_time_series):
             matrices[:, :, i_frame] = rt.rt_matrix
         mean_rt = mean_homogenous_matrix(matrices)
-        out_rt = RotoTransMatrix()
-        out_rt.from_rt_matrix(mean_rt)
-        return out_rt
+        return RotoTransMatrix.from_rt_matrix(mean_rt)
+
+    def to_numpy(self) -> np.ndarray:
+        """
+        Returns the RotoTransMatrix as a 3D numpy array of shape (4, 4, nb_frames)
+        """
+        return self.get_rt_matrix()
 
     def get_rt_matrix(self) -> np.ndarray:
         """
         Returns the RotoTransMatrix as a 3D numpy array of shape (4, 4, nb_frames)
         """
-        rt_matrices = np.zeros((4, 4, len(self._rt_time_series)))
+        # TODO @charbie: use "to_numpy" instead?
+        rt_matrices = np.eye(4)[:, :, None].repeat(len(self), axis=2)
         for i_frame, rt in enumerate(self._rt_time_series):
             rt_matrices[:, :, i_frame] = rt.rt_matrix
         return rt_matrices
@@ -634,11 +657,11 @@ def get_rt_aligning_markers_in_global(
 
 
 def point_from_global_to_local(point_in_global: Point, jcs_in_global: RotoTransMatrix) -> Point:
-    return jcs_in_global.inverse @ point_to_array(point=point_in_global)
+    return jcs_in_global.inverse @ points_to_array(points=point_in_global)
 
 
 def point_from_local_to_global(point_in_local: Point, jcs_in_global: RotoTransMatrix) -> Point:
-    return jcs_in_global @ point_to_array(point=point_in_local)
+    return jcs_in_global @ points_to_array(points=point_in_local)
 
 
 def local_rt_between_global_rts(

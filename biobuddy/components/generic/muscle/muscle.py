@@ -1,10 +1,14 @@
-from typing import Callable, Any
+from typing import Callable, Any, TYPE_CHECKING
 
 from ..muscle.via_point import ViaPoint
 from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 from ....utils.marker_data import MarkerData
 from ....utils.named_list import NamedList
 from ....utils.linear_algebra import RotoTransMatrix
+
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.muscle.muscle_real import MuscleReal
 
 
 class Muscle(MuscleUtils):
@@ -253,10 +257,10 @@ class Muscle(MuscleUtils):
             self.muscle_group,
             origin_position,
             insertion_position,
-            optimal_length=self.optimal_length_function(model, data.values),
-            maximal_force=self.maximal_force_function(model, data.values),
-            tendon_slack_length=self.tendon_slack_length_function(model, data.values),
-            pennation_angle=self.pennation_angle_function(model, data.values),
+            optimal_length=self.optimal_length_function(model, data),
+            maximal_force=self.maximal_force_function(model, data),
+            tendon_slack_length=self.tendon_slack_length_function(model, data),
+            pennation_angle=self.pennation_angle_function(model, data),
             maximal_excitation=self.maximal_excitation,
         )
 

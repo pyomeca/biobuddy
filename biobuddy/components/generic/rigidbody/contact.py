@@ -1,4 +1,5 @@
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
+
 import numpy as np
 
 from ....utils.marker_data import MarkerData
@@ -7,12 +8,16 @@ from ....utils.checks import check_name
 from ....utils.linear_algebra import RotoTransMatrix
 from ....utils.aliases import points_to_array
 
+if TYPE_CHECKING:
+    from ...real.biomechanical_model_real import BiomechanicalModelReal
+    from ...real.rigidbody.contact_real import ContactReal
+
 
 class Contact:
     def __init__(
         self,
         name: str,
-        function: Callable | str = None,
+        function: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str = None,
         parent_name: str = None,
         axis: Translations = None,
         is_local: bool = False,
@@ -57,15 +62,26 @@ class Contact:
         self._parent_name = value
 
     @property
-    def function(self) -> Callable | str:
+    def function(self) -> Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str:
         return self._function
 
     @function.setter
-    def function(self, value: Callable | str) -> None:
+    def function(self, value: Callable[[MarkerData, "BiomechanicalModelReal"], np.ndarray] | str) -> None:
         if value is None:
             # Set the function to the name of the marker, so it can be used as a default
             value = self.name
-        self._function = (lambda m, bio: np.nanmean(m[value], axis=1)) if isinstance(value, str) else value
+
+        if isinstance(value, str):
+            self._function = lambda m, bio: (
+                m.get_position([value]) if len(m.get_position([value]).shape) == 1 else m.mean_marker_position(value)
+            )
+        elif callable(value):
+            self._function = value
+        else:
+            raise TypeError(
+                f"Expected a callable or a string, got {type(value)} instead. "
+                "Please provide a valid function or marker name."
+            )
 
     @property
     def axis(self) -> Translations:
@@ -102,7 +118,7 @@ class Contact:
             )
 
         # Get the position of the contact points and do some sanity checks
-        p = np.nanmean(points_to_array(points=self.function(data.values, model), name="contact real function"), axis=1)
+        p = np.nanmean(points_to_array(points=self.function(data, model), name="contact real function"), axis=1)
         projected_p = scs.inverse @ p
         if np.isnan(projected_p).all():
             raise RuntimeError(f"All the values for {self.function} returned nan which is not permitted")

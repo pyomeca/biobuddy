@@ -1,8 +1,10 @@
 from time import strftime
+
 from lxml import etree
+
+from ..abstract_model_writer import AbstractModelWriter
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...utils.enums import Translations, Rotations
-from ..abstract_model_writer import AbstractModelWriter
 
 
 class OpensimModelWriter(AbstractModelWriter):

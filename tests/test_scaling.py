@@ -417,7 +417,7 @@ def test_scaling_wholebody():
             @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
         )
         if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
-            # TODO: fix -> There is still a problem with the fingers in BioBuddy
+            # TODO: fix -> There is still a problem with the fingers in BioBuddy (should be fixed)
             decimal = 2
         else:
             decimal = 5
@@ -923,8 +923,7 @@ def test_scaling_factors_and_masses_bodywise():
 
 def test_scale_rt():
     """Test scaling of rotation-translation matrix"""
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_rt_matrix(
+    rt_matrix = RotoTransMatrix.from_rt_matrix(
         np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
 
@@ -943,8 +942,7 @@ def test_scale_rt():
 def test_scale_imu():
     """Test scaling of imu"""
     simple_model = create_simple_model()
-    imu_matrix = RotoTransMatrix()
-    imu_matrix.from_rt_matrix(
+    imu_matrix = RotoTransMatrix.from_rt_matrix(
         np.array([[1.0, 0.0, 0.0, 1.0], [0.0, 0.0, -1.0, 2.0], [0.0, 1.0, 0.0, 3.0], [0.0, 0.0, 0.0, 1.0]])
     )
     original_imu = InertialMeasurementUnitReal(

@@ -1,10 +1,11 @@
 from enum import Enum
+
 from lxml import etree
 import numpy as np
 
 from .coordinate import Coordinate
-from ..utils_xml import find_in_tree
 from .spatial_transform import SpatialTransform
+from ..utils_xml import find_in_tree
 from ...utils.linear_algebra import compute_matrix_rotation, rot2eul
 
 
@@ -65,7 +66,7 @@ class Joint:
         self.function = function
 
     @staticmethod
-    def from_element(element: etree.ElementTree, ignore_fixed: bool, ignore_clamped: bool) -> "Self":
+    def from_element(element: etree.ElementTree, ignore_fixed: bool, ignore_clamped: bool) -> "Joint":
         tag = element.tag
         if tag not in [e.value for e in JointType]:
             joint_types_str = ""

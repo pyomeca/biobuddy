@@ -319,8 +319,7 @@ def test_init_segment_coordinate_system_real():
     assert scs.is_in_local is False
 
     # Test initialization with custom values
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation(
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="xyz", angles=np.array([0.1, 0.2, 0.3]), translation=np.array([1.0, 2.0, 3.0])
     )
 
@@ -486,6 +485,9 @@ def test_init_mesh_real():
     mesh = MeshReal(positions=positions)
     npt.assert_array_equal(mesh.positions, positions)
 
+    # Test len
+    assert len(mesh) == 4
+
 
 def test_mesh_real_add_positions():
     # Create a mesh with initial positions
@@ -533,8 +535,7 @@ def test_init_inertial_measurement_unit_real():
     assert imu.is_anatomical is False
 
     # Test initialization with all parameters
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation(
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="xyz", angles=np.array([0.1, 0.2, 0.3]), translation=np.array([1.0, 2.0, 3.0])
     )
 
@@ -551,8 +552,7 @@ def test_init_inertial_measurement_unit_real():
 
 def test_inertial_measurement_unit_real_to_biomod():
     # Create an IMU
-    rt_matrix = RotoTransMatrix()
-    rt_matrix.from_euler_angles_and_translation(
+    rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="xyz", angles=np.array([0.1, 0.2, 0.3]), translation=np.array([1.0, 2.0, 3.0])
     )
 

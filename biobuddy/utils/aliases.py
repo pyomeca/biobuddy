@@ -50,7 +50,7 @@ def point_to_array(point: Point, name: str = "unknown") -> np.ndarray:
     return point
 
 
-def points_to_array(points: Points, name: str) -> np.ndarray:
+def points_to_array(points: Points, name: str = "unknown") -> np.ndarray:
     """
     Convert a list of points to a numpy array
 

@@ -22,13 +22,17 @@ from biobuddy import (
     Translations,
     Rotations,
     RotoTransMatrix,
+    SegmentCoordinateSystemUtils,
+    DictData,
+    BiomechanicalModelReal,
+    RotoTransMatrixTimeSeries,
 )
+from biobuddy.components.generic.rigidbody.segment_coordinate_system import _visualize_score
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
 
 
-MOCK_RT = RotoTransMatrix()
-MOCK_RT.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
+MOCK_RT = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
 
 
 # ------- Via Point ------- #
@@ -50,21 +54,26 @@ def test_init_via_points():
     # Test with string position function
     via_point = ViaPoint(name="test_via_point", position_function="marker1")
     # Call the position function with a mock marker dictionary
-    markers = {"marker1": np.array([1, 2, 3])}
-    result = via_point.position_function(markers, None)
-    np.testing.assert_array_equal(result, np.array([1, 2, 3]))
+    mock_markers_data = DictData({"marker1": np.array([1, 2, 3, 1]).reshape(4, 1)})
+    result = via_point.position_function(mock_markers_data, None)
+    np.testing.assert_array_equal(
+        result.reshape(
+            4,
+        ),
+        np.array([1, 2, 3, 1]),
+    )
 
     # Test with callable position function
-    custom_func = lambda m, bio: np.array([4, 5, 6])
+    custom_func = lambda m, bio: np.array([4, 5, 6, 1])
     via_point = ViaPoint(name="test_via_point", position_function=custom_func)
     result = via_point.position_function(None, None)
-    np.testing.assert_array_equal(result, np.array([4, 5, 6]))
+    np.testing.assert_array_equal(result, np.array([4, 5, 6, 1]))
 
 
 def test_to_via_point_local():
     # Mock the ViaPointReal class
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Crete a via point
     via_point = ViaPoint(
@@ -78,31 +87,44 @@ def test_to_via_point_local():
     with pytest.raises(
         RuntimeError, match="You must provide a position function to evaluate the ViaPoint into a ViaPointReal."
     ):
-        via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+        via_point_real = via_point.to_via_point(mock_data, mock_model)
 
     # Set the function
-    via_point.position_function = lambda m, bio: m["HV"]
-
-    # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
+    expected_position = np.array([0.5758053, 0.60425486, 1.67896849, 1.0])
     npt.assert_almost_equal(
-        np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
+        np.mean(mock_data.get_position(["HV"]), axis=2).reshape(
             4,
         ),
-        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+        expected_position,
+    )
+    npt.assert_almost_equal(
+        np.mean(mock_data.values["HV"], axis=1).reshape(
+            4,
+        ),
+        expected_position,
+    )
+
+    # Call to_via_point
+    via_point_real = via_point.to_via_point(mock_data, mock_model)
+    npt.assert_almost_equal(
+        via_point.position_function(mock_data, mock_model).reshape(
+            4,
+        ),
+        expected_position,
     )
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+        expected_position,
     )
 
     # Set the marker name
     via_point.position_function = "HV"
 
     # Call to_via_point
-    via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    via_point_real = via_point.to_via_point(mock_data, mock_model)
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
@@ -114,7 +136,7 @@ def test_to_via_point_local():
 def test_to_via_point_global():
     # Mock the ViaPointReal class
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Crete a via point
     via_point = ViaPoint(
@@ -131,21 +153,31 @@ def test_to_via_point_global():
         via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
 
     # Set the function
-    via_point.position_function = lambda m, bio: m["HV"]
+    via_point.position_function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
+    expected_position = np.array([-0.65174504, 0.60837317, 0.78210787, 1.0])
+    npt.assert_almost_equal(
+        np.linalg.inv(MOCK_RT.rt_matrix)
+        @ np.mean(mock_data.get_position(["HV"]), axis=2).reshape(
+            4,
+        ),
+        expected_position,
+    )
 
     # Call to_via_point
     via_point_real = via_point.to_via_point(mock_data, mock_model, MOCK_RT)
+    # Make sure the position_function is in global coordinates
     npt.assert_almost_equal(
-        np.mean(via_point.position_function(mock_data.values, mock_model), axis=1).reshape(
+        np.mean(via_point.position_function(mock_data, mock_model), axis=1).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
     )
+    # And the via point real position is in local
     npt.assert_almost_equal(
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+        expected_position,
     )
 
     # Set the marker name
@@ -157,7 +189,7 @@ def test_to_via_point_global():
         np.mean(via_point_real.position, axis=1).reshape(
             4,
         ),
-        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+        expected_position,
     )
 
 
@@ -353,7 +385,7 @@ def test_muscle_to_muscle_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -413,7 +445,7 @@ def test_muscle_to_muscle_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -473,7 +505,7 @@ def test_muscle_functions():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Call to_muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -691,7 +723,7 @@ def test_muscle_group_with_via_points():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real muscle
     muscle_real = muscle.to_muscle(mock_data, mock_model, MOCK_RT)
@@ -827,9 +859,14 @@ def test_init_marker():
     # Test with string function
     marker = Marker(name="test_marker", function="HV")
     # Call the function with a mock marker dictionary
-    markers = {"HV": np.array([1, 2, 3, 1])[:, np.newaxis]}
-    result = marker.function(markers, None)
-    npt.assert_array_equal(result, np.array([1, 2, 3, 1]))
+    mock_markers_data = DictData({"HV": np.array([1, 2, 3, 1]).reshape(4, 1)})
+    result = marker.function(mock_markers_data, None)
+    npt.assert_array_equal(
+        result.reshape(
+            4,
+        ),
+        np.array([1, 2, 3, 1]),
+    )
 
 
 def test_marker_to_marker_local():
@@ -838,7 +875,7 @@ def test_marker_to_marker_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Marker without a position function is by default its name in the c3d
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
@@ -850,12 +887,12 @@ def test_marker_to_marker_local():
     )
 
     # Set the function
-    marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
+    marker.function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
 
-    # Call to_via_point
+    # Call to_via_marker
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
-        marker.function(mock_data.values, mock_model).reshape(
+        marker.function(mock_data, mock_model).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
@@ -876,7 +913,7 @@ def test_marker_to_marker_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Marker without a position function is by default its name in the c3d
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
@@ -888,12 +925,12 @@ def test_marker_to_marker_global():
     )
 
     # Set the function
-    marker.function = lambda m, bio: np.mean(m["HV"], axis=1)
+    marker.function = lambda m, bio: np.mean(m.get_position(["HV"]), axis=2)
 
     # Call to_via_point
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
     npt.assert_almost_equal(
-        marker.function(mock_data.values, mock_model).reshape(
+        marker.function(mock_data, mock_model).reshape(
             4,
         ),
         np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
@@ -928,7 +965,7 @@ def test_axis_to_axis_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real axis
     axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
@@ -959,7 +996,7 @@ def test_axis_to_axis_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real axis
     axis_real = axis.to_axis(mock_data, mock_model, MOCK_RT)
@@ -1009,7 +1046,7 @@ def test_segment_coordinate_system_to_scs_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     result = scs.to_scs(mock_data, mock_model, MOCK_RT)
 
@@ -1038,7 +1075,7 @@ def test_segment_coordinate_system_to_scs_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     result = scs.to_scs(mock_data, mock_model, MOCK_RT)
 
@@ -1053,6 +1090,452 @@ def test_segment_coordinate_system_to_scs_local():
             ]
         ),
     )
+
+
+# ------- SegmentCoordinateSystemUtils ------- #
+def test_rigidify():
+    np.random.seed(0)
+    nb_frames = 100
+    markers = {
+        "marker1": np.array([0.05, 0.12, -0.19, 1]),
+        "marker2": np.array([0.04, 0.01, 0.16, 1]),
+        "marker3": np.array([0.01, -0.02, 0.04, 1]),
+        "marker4": np.array([-0.05, 0.10, -0.09, 1]),
+        "marker5": np.array([0.15, 0.15, 0.03, 1]),
+        "marker6": np.array([-0.001, 0.07, 0.10, 1]),
+    }
+
+    # Define a set of markers
+    mock_static_data = DictData(markers)
+    expected_euler = np.array([1.0, 0.0, 0.0])
+    fake_functional_trial = {name: np.ones((4, nb_frames)) for name in markers.keys()}
+    for name in markers.keys():
+        rt_this_marker = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz",
+            expected_euler,
+            np.zeros(
+                4,
+            ),
+        )
+        for i_frame in range(nb_frames):
+            fake_functional_trial[name][:, i_frame] = np.reshape(
+                rt_this_marker
+                @ (
+                    markers[name].reshape(
+                        4,
+                    )
+                    + np.random.random((4,)) * 0.1
+                    - 0.05
+                ),
+                (4,),
+            )
+    mock_functional_data = DictData(fake_functional_trial)
+
+    # Rigidify the markers with a static trial
+    rigidified_rt = SegmentCoordinateSystemUtils.rigidify(
+        functional_data=mock_functional_data,
+        static_data=mock_static_data,
+    )
+
+    # Check the translation
+    centroid_functional_marker_position = np.mean(
+        mock_functional_data.markers_center_position(mock_functional_data.marker_names), axis=1
+    )
+    centroid_static_marker_position = mock_static_data.markers_center_position(mock_static_data.marker_names).reshape(
+        4,
+    )
+    # There are differences due to the random noise added, but they should be small
+    assert np.all(
+        np.abs(
+            np.reshape(rt_this_marker.inverse @ centroid_functional_marker_position, (4,))
+            - centroid_static_marker_position
+        )
+        < 0.01
+    )
+    assert np.all(
+        np.abs(rigidified_rt.mean_homogenous_matrix().translation - centroid_functional_marker_position[:3]) < 0.0001
+    )
+    assert np.all(
+        np.abs(
+            rigidified_rt.mean_homogenous_matrix().translation
+            - np.reshape(rt_this_marker @ centroid_static_marker_position, (4,))[:3]
+        )
+        < 0.01
+    )
+
+    # Check the rotation
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - expected_euler) < 0.02)
+
+
+def test_mean_markers():
+    # Create mock marker data
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Test mean_markers with a single marker
+    mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV"])
+    result = mean_func(mock_data, mock_model)
+
+    # Should return the mean position of HV marker
+    expected = np.mean(mock_data.get_position(["HV"]), axis=2)[:, 0]
+    npt.assert_almost_equal(result, expected)
+
+    # Test mean_markers with multiple markers
+    mean_func = SegmentCoordinateSystemUtils.mean_markers(["HV", "STR", "SUP"])
+    result = mean_func(mock_data, mock_model)
+
+    # Should return the mean position of all three markers
+    expected = np.nanmean(mock_data.markers_center_position(["HV", "STR", "SUP"]), axis=1)
+    npt.assert_almost_equal(result, expected)
+
+
+def test_score():
+    # Create mock marker data for parent and child segments
+    np.random.seed(42)
+    nb_frames = 50
+
+    # Create parent markers (relatively stationary)
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+
+    # Create child markers (moving relative to rt)
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.01, 0, i_frame * 0.02]), np.array([0.2, 0.2, 0.2])
+        )
+    child_markers = {
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+
+    # Create static data (first frame)
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+
+    # Create score function
+    score_func = SegmentCoordinateSystemUtils.score(
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        visualize=False,
+    )
+
+    # Call the score function
+    mock_model = BiomechanicalModelReal()
+    result_cor = score_func(static_data, mock_model)
+    # CoR close to [0.35, 0.45, 0.55] - [0.2, 0.2, 0.2]
+    npt.assert_almost_equal(result_cor, np.array([0.13046024, 0.25395888, 0.34138363, 1.0]))
+
+    # Test that calling twice returns the same result (caching)
+    result_cor2 = score_func(static_data, mock_model)
+    npt.assert_array_equal(result_cor, result_cor2)
+
+
+def test_sara():
+    # Create mock marker data for parent and child segments
+    np.random.seed(42)
+    nb_frames = 50
+
+    # Create parent markers (relatively stationary)
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+
+    # Create child markers (moving relative to rt)
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        # Only rotate on the X-axis (with a little something on the Z-axis)
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.05, 0, i_frame * 0.0001]), np.array([0.2, 0.2, 0.2])
+        )
+    child_markers = {
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+
+    # Create static data (first frame)
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+
+    # Create SARA axis
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        visualize=False,
+    )
+
+    # Verify it returns an Axis object
+    assert isinstance(sara_axis, Axis)
+    assert sara_axis.name == Axis.Name.X
+
+    # Evaluate the sara function
+    mock_model = BiomechanicalModelReal()
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    npt.assert_almost_equal(
+        result_aor.start_point.position.reshape(
+            4,
+        ),
+        np.array([-0.01913936, 0.0550008, 0.0876632, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.end_point.position.reshape(
+            4,
+        ),
+        np.array([0.54143488, 0.79048037, 1.08662582, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.axis().reshape(
+            4,
+        ),
+        np.array([0.56057423, 0.73547957, 0.99896262, 0.0]),
+    )
+
+    # Test that calling twice returns the same result (caching)
+    result_aor2 = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+    npt.assert_array_equal(result_aor.start_point.position, result_aor2.start_point.position)
+    npt.assert_array_equal(result_aor.end_point.position, result_aor2.end_point.position)
+    npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
+
+
+def test_visualize_score_with_point():
+    """Test the structure of the _visualize_score plot with a point (SCoRE)"""
+    np.random.seed(42)
+    nb_frames = 10
+
+    # Create simple marker data
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+    }
+
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    data = DictData(all_markers)
+
+    # Create RT matrices
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+    for i in range(nb_frames):
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.1 * i, 0, 0]), np.array([0.1, 0.2, 0.3])
+        )
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.2 * i, 0, 0]), np.array([0.3, 0.4, 0.5])
+        )
+
+    # Create a center of rotation point
+    cor_global = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]])
+
+    # Call the visualization function
+    figure = _visualize_score(data, rt_parent, rt_child, cor_global)
+
+    # Check that we have frames
+    assert len(figure.frames) == nb_frames
+
+    # Check the first frame structure
+    first_frame_data = figure.frames[0].data
+
+    # Should have:
+    # - 3 parent RT axes (red, green, blue)
+    # - 3 child RT axes (red, green, blue)
+    # - 1 marker scatter
+    # - 1 CoR point scatter
+    assert len(first_frame_data) == 8
+
+    # Check parent axes (first 3 traces)
+    assert first_frame_data[0].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[0].x), np.array([0.1, 0.15]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].z), np.array([0.3, 0.3]))
+    assert first_frame_data[1].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[1].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].y), np.array([0.2, 0.25]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].z), np.array([0.3, 0.3]))
+    assert first_frame_data[2].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[2].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].z), np.array([0.3, 0.35]))
+
+    # Check child axes (next 3 traces)
+    assert first_frame_data[3].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[3].x), np.array([0.3, 0.35]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].z), np.array([0.5, 0.5]))
+    assert first_frame_data[4].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[4].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].y), np.array([0.4, 0.45]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].z), np.array([0.5, 0.5]))
+    assert first_frame_data[5].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[5].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].z), np.array([0.5, 0.55]))
+
+    # Check markers scatter
+    assert first_frame_data[6].mode == "markers"
+    assert first_frame_data[6].marker.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.15738467, 0.29780328, 0.35791032]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.19536582, 0.25324084, 0.40097078, 0.43449337]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.31465649, 0.34520826, 0.48584629, 0.5522746]))
+
+    # Check CoR point
+    assert first_frame_data[7].mode == "markers"
+    assert first_frame_data[7].marker.color == "red"
+    assert first_frame_data[7].marker.size == 5
+    npt.assert_almost_equal(np.array(first_frame_data[7].x), np.array([0.1902531832977268]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].y), np.array([0.2911048557037448]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].z), np.array([0.4062566734776501]))
+
+    # Check layout
+    assert figure.layout.title.text == "Score Point Visualization"
+    assert figure.layout.scene.xaxis.title.text == "X"
+    assert figure.layout.scene.yaxis.title.text == "Y"
+    assert figure.layout.scene.zaxis.title.text == "Z"
+    assert figure.layout.scene.aspectmode == "data"
+
+    # Check sliders
+    assert len(figure.layout.sliders) == 1
+    assert len(figure.layout.sliders[0].steps) == nb_frames
+
+    # Test that plotting from cache works
+    figure_cached = _visualize_score(data, rt_parent, rt_child, cor_global)
+    assert figure_cached == figure
+
+
+def test_visualize_score_with_axis():
+    """Test the structure of the _visualize_score plot with an axis (SARA)"""
+    np.random.seed(42)
+    nb_frames = 10
+
+    # Create simple marker data
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+    }
+
+    child_markers = {
+        "child1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]]),
+        "child2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]]),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    data = DictData(all_markers)
+
+    # Create RT matrices
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+    for i in range(nb_frames):
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.1 * i, 0, 0]), np.array([0.1, 0.2, 0.3])
+        )
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0.2 * i, 0, 0]), np.array([0.3, 0.4, 0.5])
+        )
+
+    # Create axis of rotation (start and end points)
+    start_aor = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]])
+    end_aor = np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])
+    cor_global = [start_aor, end_aor]
+
+    # Call the visualization function
+    figure = _visualize_score(data, rt_parent, rt_child, cor_global)
+
+    # Check that we have frames
+    assert len(figure.frames) == nb_frames
+
+    # Check the first frame structure
+    first_frame_data = figure.frames[0].data
+
+    # Should have:
+    # - 3 parent RT axes (red, green, blue)
+    # - 3 child RT axes (red, green, blue)
+    # - 1 marker scatter
+    # - 1 AoR line
+    assert len(first_frame_data) == 8
+
+    # Check parent axes (first 3 traces)
+    assert first_frame_data[0].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[0].x), np.array([0.1, 0.15]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[0].z), np.array([0.3, 0.3]))
+    assert first_frame_data[1].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[1].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].y), np.array([0.2, 0.25]))
+    npt.assert_almost_equal(np.array(first_frame_data[1].z), np.array([0.3, 0.3]))
+    assert first_frame_data[2].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[2].x), np.array([0.1, 0.1]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].y), np.array([0.2, 0.2]))
+    npt.assert_almost_equal(np.array(first_frame_data[2].z), np.array([0.3, 0.35]))
+
+    # Check child axes (next 3 traces)
+    assert first_frame_data[3].line.color == "red"
+    npt.assert_almost_equal(np.array(first_frame_data[3].x), np.array([0.3, 0.35]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[3].z), np.array([0.5, 0.5]))
+    assert first_frame_data[4].line.color == "green"
+    npt.assert_almost_equal(np.array(first_frame_data[4].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].y), np.array([0.4, 0.45]))
+    npt.assert_almost_equal(np.array(first_frame_data[4].z), np.array([0.5, 0.5]))
+    assert first_frame_data[5].line.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[5].x), np.array([0.3, 0.3]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].y), np.array([0.4, 0.4]))
+    npt.assert_almost_equal(np.array(first_frame_data[5].z), np.array([0.5, 0.55]))
+
+    # Check markers scatter
+    assert first_frame_data[6].mode == "markers"
+    assert first_frame_data[6].marker.color == "blue"
+    npt.assert_almost_equal(np.array(first_frame_data[6].x), np.array([0.10496714, 0.15738467, 0.29780328, 0.35791032]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].y), np.array([0.19536582, 0.25324084, 0.40097078, 0.43449337]))
+    npt.assert_almost_equal(np.array(first_frame_data[6].z), np.array([0.31465649, 0.34520826, 0.48584629, 0.5522746]))
+
+    # Check AoR line
+    assert first_frame_data[7].mode == "lines"
+    assert first_frame_data[7].line.color == "red"
+    assert first_frame_data[7].line.width == 5
+    npt.assert_almost_equal(np.array(first_frame_data[7].x), np.array([0.19025318, 0.30357787]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].y), np.array([0.29110486, 0.40570891]))
+    npt.assert_almost_equal(np.array(first_frame_data[7].z), np.array([0.40625667, 0.52314659]))
+
+    # Check layout
+    assert figure.layout.title.text == "Score Point Visualization"
+    assert figure.layout.scene.xaxis.title.text == "X"
+    assert figure.layout.scene.yaxis.title.text == "Y"
+    assert figure.layout.scene.zaxis.title.text == "Z"
+    assert figure.layout.scene.aspectmode == "data"
+
+    # Check sliders
+    assert len(figure.layout.sliders) == 1
+    assert len(figure.layout.sliders[0].steps) == nb_frames
+
+    # Test that plotting from cache works
+    figure_cached = _visualize_score(data, rt_parent, rt_child, cor_global)
+    assert figure_cached == figure
 
 
 # ------- Mesh ------- #
@@ -1071,6 +1554,9 @@ def test_init_mesh():
     mesh = Mesh(functions=("marker1", func1))
     assert len(mesh.functions) == 2
 
+    # Test len
+    assert len(mesh) == 2
+
 
 def test_mesh_to_mesh_global():
     # Create a mesh with marker functions
@@ -1078,7 +1564,7 @@ def test_mesh_to_mesh_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
@@ -1102,7 +1588,7 @@ def test_mesh_to_mesh_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh.to_mesh(mock_data, mock_model, MOCK_RT)
@@ -1171,7 +1657,7 @@ def test_mesh_file_to_mesh_file_real():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real mesh
     mesh_real = mesh_file.to_mesh_file(mock_data, mock_model)
@@ -1226,7 +1712,7 @@ def test_inertia_parameters_to_inertia_global():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real inertia parameters
     inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
@@ -1254,7 +1740,7 @@ def test_inertia_parameters_to_inertia_local():
 
     # Mock data and model
     mock_data = MockC3dData()
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
 
     # Convert to real inertia parameters
     inertia_real = inertia_params.to_inertia(mock_data, mock_model, MOCK_RT)
@@ -1317,7 +1803,7 @@ def test_init_contact():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1")
     # Call the function with a mock marker dictionary
     mock_data = MockC3dData()
-    result = contact.function(mock_data.values, None)
+    result = contact.function(mock_data, None)
     npt.assert_almost_equal(
         result.reshape(
             4,
@@ -1331,7 +1817,7 @@ def test_contact_to_contact_global():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1")
 
     # Mock data
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
     mock_data = MockC3dData()
 
     # Convert to real contact
@@ -1355,7 +1841,7 @@ def test_contact_to_contact_local():
     contact = Contact(name="test_contact", function="HV", parent_name="segment1", is_local=True)
 
     # Mock data
-    mock_model = None
+    mock_model = BiomechanicalModelReal()
     mock_data = MockC3dData()
 
     # Convert to real contact

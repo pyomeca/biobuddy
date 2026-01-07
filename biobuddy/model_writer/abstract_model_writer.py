@@ -1,4 +1,8 @@
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 
 
 class AbstractModelWriter(ABC):

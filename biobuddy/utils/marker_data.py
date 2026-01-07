@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 import numpy as np
 import pandas as pd
 from copy import deepcopy
+import pickle
 
 from ..utils.aliases import Points
 
@@ -21,7 +22,7 @@ class MarkerData(ABC):
     Abstract class to handle marker data.
     """
 
-    def __init__(self, first_frame: int | None, last_frame: int | None, total_nb_frames: int):
+    def __init__(self, first_frame: int | None = None, last_frame: int | None = None, total_nb_frames: int = 1):
 
         # Fix the value of the first and last frames for easy accessing
         if first_frame is None:
@@ -34,39 +35,115 @@ class MarkerData(ABC):
         else:
             self.last_frame = last_frame
 
-        self.marker_names = self.set_marker_names()
-        self.nb_frames = self.set_nb_frames()
-        self.nb_markers = self.set_nb_markers()
+        self.marker_names = self.init_marker_names()
+        self.nb_frames = self.init_nb_frames()
+        self.nb_markers = self.init_nb_markers()
 
     @abstractmethod
-    def set_marker_names(self) -> list[str]:
+    def init_marker_names(self) -> list[str]:
+        """
+        Initialize the marker names list based on the experimental data structure.
+        """
         pass
 
     @abstractmethod
-    def set_nb_markers(self) -> int:
+    def get_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
+        """
+        Get the position over time of the specified markers.
+
+        Parameters
+        ----------
+        marker_names : tuple[str, ...] | list[str]
+            The names of the markers to retrieve positions for.
+        Returns
+        -------
+        positions: np.ndarray
+            The positions of the specified markers with shape (4, nb_markers, nb_frames).
+        """
         pass
 
-    def set_nb_frames(self) -> int:
+    @abstractmethod
+    def save(self, new_path: str) -> None:
+        """
+        Save the experimental data to a file. Useful if the data has been modified.
+
+        Parameters
+        ----------
+        new_path : str
+            The path to save the modified data.
+        """
+        pass
+
+    def init_nb_frames(self) -> int:
+        """
+        Initialize the number of frames based on the first and last frame indices.
+
+        Returns
+        -------
+        nb_frames : int
+            The number of frames in the data segment.
+        """
         return self.last_frame + 1 - self.first_frame
 
+    def init_nb_markers(self) -> int:
+        """
+        Initialize the number of markers based on the marker names list.
+
+        Returns
+        -------
+        nb_markers : int
+            The number of markers in the data.
+        """
+        return len(self.marker_names)
+
     def set_values(self) -> dict[str, Points]:
+        """
+        Set the values dictionary with marker names as keys and their positions as values.
+        # TODO: to be removed if possible
+        """
         values = {}
         for marker_name in self.marker_names:
-            values[marker_name] = self.get_position((marker_name,)).squeeze()
+            values[marker_name] = self.get_position([marker_name]).squeeze()
         return values
 
     def marker_index(self, from_markers: str) -> int:
+        """
+        Get the index of a marker given its name.
+        """
         return self.marker_names.index(from_markers)
 
     def marker_indices(self, from_markers: tuple[str, ...] | list[str]) -> tuple[int, ...]:
+        """
+        Get the indices of markers given their names.
+        """
         return tuple(self.marker_names.index(n) for n in from_markers)
 
     @property
     def all_marker_positions(self) -> np.ndarray:
+        """
+        Get the position of all markers in order.
+
+        Returns
+        -------
+        positions: np.ndarray
+            The positions of all markers with shape (4, nb_markers, nb_frames).
+        """
         return self.get_position(marker_names=self.marker_names)
 
     def markers_center_position(self, marker_names: tuple[str, ...] | list[str]) -> np.ndarray:
-        """Get the geometrical center position between markers"""
+        """
+        Get the geometrical center position between the given markers
+
+        Parameters
+        ----------
+        marker_names : tuple[str, ...] | list[str]
+            The names of the markers to compute the center position for.
+
+        Returns
+        -------
+        center_position: np.ndarray
+            The center position of the specified markers with shape (4, nb_frames).
+        """
         marker_position = self.get_position(marker_names)
         if marker_position.size == 0:
             raise RuntimeError(
@@ -75,26 +152,43 @@ class MarkerData(ABC):
         return np.nanmean(marker_position, axis=1)
 
     def mean_marker_position(self, marker_name: str) -> np.ndarray:
-        """Get the mean position of a marker"""
+        """
+        Get the average position of a marker across time
+        # TODO: change the name for clarity
+
+        Returns
+        -------
+        mean_position: np.ndarray
+            The mean position of the specified marker with shape (4, nb_frames).
+        """
         marker_position = self.get_position((marker_name,))
         if marker_position.size == 0:
             raise RuntimeError(f"The marker position is empty (shape: {marker_position.shape}), cannot compute mean.")
         return np.nanmean(marker_position, axis=2)
 
     def std_marker_position(self, marker_name: str) -> np.ndarray:
-        """Get the std from the position of a marker"""
+        """
+        Get the std from the position of a marker across time
+
+        Returns
+        -------
+        std_position: np.ndarray
+            The std position of the specified marker with shape (4, nb_frames).
+        """
         marker_position = self.get_position((marker_name,))
         if marker_position.size == 0:
             raise RuntimeError(f"The marker position is empty (shape: {marker_position.shape}), cannot compute std.")
         return np.nanstd(marker_position, axis=2)
 
-    @abstractmethod
-    def get_position(self, marker_names: tuple[str, ...] | list[str]):
-        pass
-
-    @abstractmethod
-    def save(self, new_path: str):
-        pass
+    def get_partial_dict_data(self, marker_names: tuple[str] | list[str]) -> "DictData":
+        """
+        Get a new instance of DictData with only the data from the specified markers.
+        """
+        return DictData(
+            marker_dict={name: self.get_position((name,)).squeeze() for name in marker_names},
+            first_frame=0,
+            last_frame=self.nb_frames - 1,
+        )
 
 
 class C3dData(MarkerData):
@@ -119,11 +213,8 @@ class C3dData(MarkerData):
 
         self.values = MarkerData.set_values(self)
 
-    def set_marker_names(self) -> list[str]:
+    def init_marker_names(self) -> list[str]:
         return self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"]
-
-    def set_nb_markers(self) -> int:
-        return self.ezc3d_data["data"]["points"].shape[1]
 
     @property
     def all_marker_positions(self) -> np.ndarray:
@@ -203,7 +294,7 @@ class C3dData(MarkerData):
 
 class CsvData(MarkerData):
     """
-    Handles .c3d files.
+    Handles .csv files.
     """
 
     def __init__(self, csv_path: str, first_frame: int | None = None, last_frame: int | None = None):
@@ -221,6 +312,13 @@ class CsvData(MarkerData):
         self.values = MarkerData.set_values(self)
 
     def finalize_marker_data(self):
+
+        # Sanity check
+        if self.csv_array.shape[1] % 3 != 0:
+            raise RuntimeError(
+                f"The .csv file should contain nb_markers x 3 component rows. "
+                f"You have {self.csv_array.shape[1]} rows, which is not divisible by 3."
+            )
 
         csv_data = np.ones((4, self.nb_markers, self.nb_frames))  # This shape mocks a c3d point field
         axes = ["X", "Y", "Z"]
@@ -249,19 +347,11 @@ class CsvData(MarkerData):
 
         return csv_data
 
-    def set_marker_names(self) -> list[str]:
+    def init_marker_names(self) -> list[str]:
         marker_names = []
         for marker in self.column_titles[0::3]:
             marker_names += [marker.strip()]
         return marker_names
-
-    def set_nb_markers(self) -> int:
-        if self.csv_array.shape[1] % 3 != 0:
-            raise RuntimeError(
-                f"The .csv file should contain nb_markers x 3 component rows. "
-                f"You have {self.csv_array.shape[1]} rows, which is not divisible by 3."
-            )
-        return int(self.csv_array.shape[1] / 3)
 
     @property
     def all_marker_positions(self) -> np.ndarray:
@@ -359,3 +449,62 @@ class CsvData(MarkerData):
 
         # Save the output file
         pd_csv_data.to_csv(new_path, index=False)
+
+
+class DictData(MarkerData):
+    """
+    Handles marker data from a dictionary.
+    The dictionary should have marker names as keys and numpy arrays of shape (4, nb_frames) as values.
+    """
+
+    def __init__(
+        self, marker_dict: dict[str, np.ndarray], first_frame: int | None = None, last_frame: int | None = None
+    ):
+
+        self.marker_dict = marker_dict
+        total_nb_frames = None
+        for marker_name, data in marker_dict.items():
+            if data.shape[0] != 4:
+                raise ValueError(
+                    f"Data for marker '{marker_name}' should have shape (4, nb_frames), but has shape {data.shape}."
+                )
+            if len(data.shape) == 1:
+                # There is only one frame so we need another axis to get to (4, nb_frames)
+                data = data[:, np.newaxis]
+                self.marker_dict[marker_name] = data
+
+            if total_nb_frames is None:
+                total_nb_frames = data.shape[1]
+            elif data.shape[1] != total_nb_frames:
+                raise ValueError(
+                    f"All markers should have the same number of frames. "
+                    f"Marker '{marker_name}' has {data.shape[1]} frames, expected {total_nb_frames}."
+                )
+
+        super().__init__(first_frame, last_frame, total_nb_frames)
+
+        self.values = MarkerData.set_values(self)
+
+    def init_marker_names(self) -> list[str]:
+        return list(self.marker_dict.keys())
+
+    def get_position(self, marker_names: tuple[str, ...] | list[str]):
+        # Chack that the marker_names are in the dictionary
+        for name in marker_names:
+            if name not in self.marker_names:
+                raise ValueError(f"Marker name '{name}' not found in the marker dictionary.")
+
+        values = np.zeros((4, len(marker_names), self.nb_frames))
+        i_marker = 0
+        for name in self.marker_names:
+            if name in marker_names:
+                values[:, i_marker, :] = self.marker_dict[name][:, self.first_frame : self.last_frame + 1]
+                i_marker += 1
+        return values
+
+    def save(self, new_path: str):
+        """
+        Saves the dictionary to a pickle file.
+        """
+        with open(new_path, "wb") as f:
+            pickle.dump(self.marker_dict, f)

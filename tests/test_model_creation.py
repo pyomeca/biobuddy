@@ -1,5 +1,4 @@
 import os
-import pytest
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +25,7 @@ from biobuddy import (
     Sex,
     SegmentName,
     C3dData,
+    MarkerData,
 )
 from test_utils import destroy_model
 
@@ -34,7 +34,6 @@ def test_model_creation_from_static_func(remove_temporary: bool = True):
     """
     Produces a model from real data
     """
-
     kinematic_model_filepath = "temporary.bioMod"
 
     # Create a model holder
@@ -276,16 +275,38 @@ def test_model_creation_from_static_func(remove_temporary: bool = True):
         os.remove(kinematic_model_filepath)
 
 
-class FakeData:
+class FakeData(MarkerData):
     def __init__(self, model):
+
         q = np.zeros(model.nbQ())
         marker_positions = np.array(tuple(m.to_array() for m in model.markers(q))).T[:, :, np.newaxis]
-        self.values = {m.to_string(): marker_positions[:, i, :] for i, m in enumerate(model.markerNames())}
-        self.values["HIP_LEFT"] = np.array([[0], [0], [0]])
-        self.values["HIP_RIGHT"] = np.array([[0], [0], [0]])
-        self.values["SHOULDER_LEFT"] = np.array([[0], [0], [0.53]])
-        self.values["SHOULDER_RIGHT"] = np.array([[0], [0], [0.53]])
-        self.nb_frames = 1
+        self.values = {
+            m.to_string(): np.vstack((marker_positions[:, i, :], np.array([1]))).reshape(
+                4,
+            )
+            for i, m in enumerate(model.markerNames())
+        }
+        self.values["HIP_LEFT"] = np.array([0, 0, 0, 1])
+        self.values["HIP_RIGHT"] = np.array([0, 0, 0, 1])
+        self.values["SHOULDER_LEFT"] = np.array([0, 0, 0.53, 1])
+        self.values["SHOULDER_RIGHT"] = np.array([0, 0, 0.53, 1])
+
+        super().__init__()
+
+    def init_marker_names(self) -> list[str]:
+        return list(self.values.keys())
+
+    def get_position(self, marker_names: tuple[str, ...] | list[str]):
+        values = np.zeros((4, len(marker_names), self.nb_frames))
+        i_marker = 0
+        for name in self.marker_names:
+            if name in marker_names:
+                values[:, i_marker, 0] = self.values[name]
+                i_marker += 1
+        return values
+
+    def save(self, new_path: str):
+        pass
 
 
 def test_model_creation_from_static():
@@ -620,6 +641,41 @@ def test_model_creation_from_static_lower_body():
     )
 
 
+def test_create_rt_from_functional_trials():
+
+    from examples.create_rt_from_functional_trials import generate_lower_body_model
+
+    # Create the model
+    model_real = generate_lower_body_model(visualize=False)
+
+    # Check the new RT of the model
+    global_jcs = model_real.forward_kinematics()
+    npt.assert_almost_equal(
+        global_jcs["RThigh"][0].rt_matrix,
+        np.array(
+            [
+                [0.01109401, 0.99820721, 0.05881565, 0.64131107],
+                [-0.99656838, 0.01586252, -0.08123943, 0.35108347],
+                [-0.08202675, -0.05771255, 0.99495772, 0.86935607],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
+    npt.assert_almost_equal(
+        global_jcs["RShank"][0].rt_matrix,
+        np.array(
+            [
+                [-0.23127955, 0.96125827, 0.14997436, 0.62300093],
+                [-0.94215766, -0.25973511, 0.21184101, 0.43476784],
+                [0.24258753, -0.092305, 0.96572826, 0.46414972],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
+        decimal=5,
+    )
+
+
 def test_complex_model():
     from examples.create_model import complex_model_from_scratch
 
@@ -653,30 +709,20 @@ def test_complex_model():
     assert real_model.segments["PENDULUM"].qdot_ranges.min_bound == [-10, -10, -10, -np.pi * 10]
     assert real_model.segments["PENDULUM"].qdot_ranges.max_bound == [10, 10, 10, np.pi * 10]
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_scale.reshape(4),
         np.array([1.0, 1.0, 10.0, 1.0]),
     )
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_rotation.reshape(4),
         np.array([np.pi / 2, 0.0, 0.0, 1.0]),
     )
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].mesh_file.mesh_translation.reshape(4),
         np.array([0.1, 0.0, 0.0, 1.0]),
     )
 
     npt.assert_almost_equal(
-        real_model.segments["PENDULUM"]
-        .contacts["PENDULUM_CONTACT"]
-        .position.reshape(
-            4,
-        ),
+        real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].position.reshape(4),
         np.array([0.0, 0.0, 0.0, 1.0]),
     )
     assert real_model.segments["PENDULUM"].contacts["PENDULUM_CONTACT"].axis == Translations.XYZ
