@@ -38,6 +38,8 @@ class MarkerData(ABC):
         self.nb_frames = self.set_nb_frames()
         self.nb_markers = self.set_nb_markers()
 
+        self.values = self.set_values()
+
     @abstractmethod
     def set_marker_names(self) -> list[str]:
         pass
@@ -116,8 +118,6 @@ class C3dData(MarkerData):
         total_nb_frames = self.ezc3d_data["data"]["points"].shape[2]
 
         super().__init__(first_frame, last_frame, total_nb_frames)
-
-        self.values = MarkerData.set_values(self)
 
     def set_marker_names(self) -> list[str]:
         return self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"]
@@ -218,7 +218,6 @@ class CsvData(MarkerData):
         super().__init__(first_frame, last_frame, total_nb_frames)
 
         self.csv_data = self.finalize_marker_data()
-        self.values = MarkerData.set_values(self)
 
     def finalize_marker_data(self):
 
