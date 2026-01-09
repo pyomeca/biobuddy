@@ -1,5 +1,6 @@
 from math import ceil
 from typing import TYPE_CHECKING
+import os
 
 import numpy as np
 
@@ -35,18 +36,27 @@ class MuscleValidator:
 
         # Check that the model is correct
         try:
-            self.model.to_biomod("temporary.bioMod", with_mesh=False)
+            current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+            temporary_model_path = current_path + "/temporary.bioMod"
+            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            if os.path.exists(current_path + "/" + mesh_relative_path):
+                model.change_mesh_directories(mesh_relative_path)
+                model.to_biomod(temporary_model_path)
+            else:
+                model.to_biomod(temporary_model_path, with_mesh=False)
+
         except Exception as e:
             raise NotImplementedError(
                 f"Only biorbd is supported as a backend for now. If you need other dynamics "
                 f"engines, please contact the developers. "
                 f"The model provided is not biomodable: {e}."
             )
-        if model.nb_q == 0:
+
+        if self.model.nb_q == 0:
             raise ValueError(
                 "Your model has no degrees of freedom. Please provide a model with at least one degree of freedom."
             )
-        if model.nb_muscles == 0:
+        if self.model.nb_muscles == 0:
             raise ValueError("Your model has no muscles. Please provide a model with at least one muscle.")
 
         # Initialize the quantities that will be needed for the plots
@@ -109,7 +119,9 @@ class MuscleValidator:
         nb_dof = self.model.nb_q
 
         # TODO: change this to allow for other dynamics engines
-        biorbd_model = biorbd.Model("temporary.bioMod")
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary.bioMod"
+        biorbd_model = biorbd.Model(temporary_model_path)
 
         muscle_states = biorbd_model.stateSet()
         model_max_force = np.ndarray((nb_muscles, self.nb_states))
@@ -143,7 +155,9 @@ class MuscleValidator:
         import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
-        biorbd_model = biorbd.Model("temporary.bioMod")
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary.bioMod"
+        biorbd_model = biorbd.Model(temporary_model_path)
 
         muscle_length = np.zeros((self.model.nb_muscles, self.nb_states))
         for i_frame in range(self.nb_states):
@@ -182,7 +196,9 @@ class MuscleValidator:
         import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
-        biorbd_model = biorbd.Model("temporary.bioMod")
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary.bioMod"
+        biorbd_model = biorbd.Model(temporary_model_path)
 
         muscle_moment_arm = np.ndarray((self.model.nb_q, self.model.nb_muscles, self.nb_states))
         for i in range(self.nb_states):
@@ -206,7 +222,9 @@ class MuscleValidator:
         import biorbd  # type: ignore
 
         # TODO: change this to allow for other dynamics engines
-        biorbd_model = biorbd.Model("temporary.bioMod")
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary.bioMod"
+        biorbd_model = biorbd.Model(temporary_model_path)
 
         muscle_states = biorbd_model.stateSet()
         qdot = np.zeros((self.model.nb_q,))  # TODO: add quaternion handling

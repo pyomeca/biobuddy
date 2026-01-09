@@ -635,11 +635,16 @@ class ScaleTool:
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
 
-            debugging_model_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "../../examples/models/temporary.bioMod")
-            )
-            model_to_use.to_biomod(debugging_model_path)
-            viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
+            current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+            temporary_model_path = current_path + "/temporary.bioMod"
+            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            if os.path.exists(current_path + "/" + mesh_relative_path):
+                model_to_use.change_mesh_directories(mesh_relative_path)
+                model_to_use.to_biomod(temporary_model_path)
+            else:
+                model_to_use.to_biomod(temporary_model_path, with_mesh=False)
+
+            viz_biomod_model = pyorerun.BiorbdModel(temporary_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
             viz_biomod_model.options.show_marker_labels = False
