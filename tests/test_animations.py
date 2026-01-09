@@ -182,3 +182,17 @@ def test_scaling_animation():
             make_static_pose_the_models_zero=True,
             visualize_optimal_static_pose=True,
         )
+
+
+def test_that_temporary_folder_is_accessible():
+
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+
+    current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/biobuddy/temporary_models"
+    temporary_model_path = current_path + "/temporary.bioMod"
+
+    scaled_model = BiomechanicalModelReal().from_biomod(
+        filepath=leg_model_filepath,
+    )
+    scaled_model.to_biomod(temporary_model_path)
