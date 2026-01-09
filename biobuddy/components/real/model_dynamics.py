@@ -2,7 +2,8 @@ from copy import deepcopy
 from functools import wraps
 import logging
 from typing import TYPE_CHECKING, Union
-
+import os
+from pathlib import Path
 
 import numpy as np
 from scipy import optimize
@@ -314,9 +315,17 @@ class ModelDynamics:
             # biorbd (in c++) is quicker than this custom Python code, which makes a large difference here
             import biorbd  # type: ignore
 
-            self.to_biomod("temporary.bioMod", with_mesh=False)
+            current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/../temporary_models"
+            temporary_model_path = current_path + "/temporary_rt.bioMod"
+            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            if os.path.exists(current_path + "/" + mesh_relative_path):
+                self.change_mesh_directories(mesh_relative_path)
+                self.to_biomod(temporary_model_path)
+            else:
+                self.to_biomod(temporary_model_path, with_mesh=False)
+
             with_biorbd = True
-            model_to_use = biorbd.Model("temporary.bioMod")
+            model_to_use = biorbd.Model(temporary_model_path)
 
             _logger.info(f"Using biorbd for the inverse kinematics as it is faster")
         except:
@@ -459,7 +468,7 @@ class ModelDynamics:
 
                 # Add the experimental markers from the static trial
                 pyomarkers = pyorerun.PyoMarkers(data=markers_real, channels=marker_names_reordered, show_labels=False)
-                viz_scaled_model = pyorerun.BiorbdModel("temporary.bioMod")
+                viz_scaled_model = pyorerun.BiorbdModel(temporary_model_path)
                 viz_scaled_model.options.transparent_mesh = False
                 viz_scaled_model.options.show_gravity = True
                 viz_scaled_model.options.show_marker_labels = False
@@ -793,7 +802,8 @@ class ModelDynamics:
 
         if view_as == ViewAs.BIORBD:
             if model_path is None or not model_path.endswith(".bioMod"):
-                model_path = "temporary.bioMod"
+                current_path_file = Path(__file__).parent
+                model_path = f"{current_path_file}/../../temporary_models/temporary.bioMod"
                 if self.has_mesh_files:
                     # TODO: match the mesh_file directory to allow seeing the mesh files too
                     self.to_biomod(model_path, with_mesh=False)

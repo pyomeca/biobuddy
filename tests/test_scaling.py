@@ -446,7 +446,8 @@ def test_scaling_wholebody():
     remove_temporary_biomods()
 
 
-def test_scaling_of_only_some_segments():
+@pytest.mark.parametrize("make_static_pose_the_models_zero", [True, False])
+def test_scaling_of_only_some_segments(make_static_pose_the_models_zero):
 
     np.random.seed(42)
 
@@ -508,7 +509,7 @@ def test_scaling_of_only_some_segments():
         static_trial=csv_data,
         mass=69.2,
         q_regularization_weight=0.1,
-        make_static_pose_the_models_zero=False,
+        make_static_pose_the_models_zero=make_static_pose_the_models_zero,
         visualize_optimal_static_pose=False,
     )
 
@@ -519,8 +520,99 @@ def test_scaling_of_only_some_segments():
     assert new_arm_mass != original_arm_mass
     assert new_hand_mass == original_hand_mass
 
+    if make_static_pose_the_models_zero:
+        # Make sure that the root RT matrix was changed
+        npt.assert_almost_equal(
+            scaled_model.segments["root"].segment_coordinate_system.scs.rt_matrix,
+            np.array(
+                [
+                    [0.91764816, 0.04355098, -0.39500021, 0.76275233],
+                    [0.06676965, 0.96294907, 0.26128702, 3.31555407],
+                    [0.39174439, -0.26614358, 0.88074056, 1.61114257],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+            decimal=5,
+        )
+    else:
+        # Make sure that the root RT matrix was not changed
+        npt.assert_almost_equal(
+            scaled_model.segments["root"].segment_coordinate_system.scs.rt_matrix,
+            np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+            decimal=5,
+        )
+
     scaled_model.to_biomod(biomod_filepath.replace(".bioMod", "_partly_scaled.bioMod"), with_mesh=False)
     remove_temporary_biomods()
+
+
+def test_scaling_with_dofs_on_root_error():
+
+    np.random.seed(42)
+
+    # --- Paths --- #
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Static trial
+    static_filepath = parent_path + "/examples/data/static.csv"
+    csv_data = CsvData(
+        csv_path=static_filepath,
+    )
+
+    # Original model
+    biomod_filepath = parent_path + "/examples/models/arm_project.bioMod"
+    original_model = BiomechanicalModelReal().from_biomod(
+        filepath=biomod_filepath,
+    )
+    original_model.segments["root"].translations = Translations.XYZ  # This is the problematic portion
+
+    scale_tool = ScaleTool(original_model=original_model)
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="Arm",
+            scaling_type=SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[
+                    ["SA_3", "ELB_M"],
+                ],
+            ),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="LowerArm1",
+            scaling_type=SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[
+                    ["WRB", "ELB_M"],
+                ],
+            ),
+        )
+    )
+    scale_tool.add_scaling_segment(
+        SegmentScaling(
+            name="LowerArm2",
+            scaling_type=SegmentWiseScaling(
+                axis=Translations.XYZ,
+                marker_pairs=[
+                    ["WRA", "ELB_M"],
+                ],
+            ),
+        )
+    )
+
+    # Test that with DoFs on the root it crashes
+    with pytest.raises(
+        NotImplementedError,
+        match="Degrees of freedom were added to the model, but the root segments already had dofs, which is not implemented yet. If you encounter this issue, please notify the developers by opening an issue on GitHub.",
+    ):
+        scaled_model = scale_tool.scale(
+            static_trial=csv_data,
+            mass=69.2,
+            q_regularization_weight=0.1,
+            make_static_pose_the_models_zero=True,  # This problem only happens when the optimal Q are used as the zero
+            visualize_optimal_static_pose=False,
+        )
 
 
 def test_translation_of_scaling_configuration():

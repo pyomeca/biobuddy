@@ -602,7 +602,8 @@ class OsimModelParser(AbstractModelParser):
             q_ranges_rot=effective_rot_ranges,
             trans_dof_names=effective_trans_dof_names,
             rot_dof_names=effective_rot_dof_names,
-            mesh_file=f"{mesh_dir}/{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
+            mesh_dir=mesh_dir if body.mesh[0] and mesh_dir is not None else None,
+            mesh_file=f"{body.mesh[0]}" if body.mesh[0] and mesh_dir is not None else None,
             mesh_color=body.mesh_color[0] if body.mesh[0] and mesh_dir is not None else None,
             mesh_scale=body.mesh_scale_factor[0] if body.mesh[0] and mesh_dir is not None else None,
             rt_in_matrix=False,
@@ -723,6 +724,7 @@ class OsimModelParser(AbstractModelParser):
         q_ranges_rot: list[str] = None,
         trans_dof_names: list[str] = None,
         rot_dof_names: list[str] = None,
+        mesh_dir=None,
         mesh_file=None,
         mesh_scale=None,
         mesh_color=None,
@@ -776,7 +778,7 @@ class OsimModelParser(AbstractModelParser):
                 mesh_file=(
                     MeshFileReal(
                         mesh_file_name=mesh_file,
-                        mesh_file_directory=".",  # There is no mesh_file_directory in the mesh_file element
+                        mesh_file_directory=mesh_dir,
                         mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
                         mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
                     )
@@ -795,6 +797,7 @@ class OsimModelParser(AbstractModelParser):
         rt_in_matrix: bool = False,
         trans_dof: str = "",  # ex: 'xyz'
         rot_dof: str = "",  # ex: 'xyz'
+        mesh_dir: str = None,
         mesh_file: str = None,
         mesh_color: list[str] = None,  # ex: [0, 0, 0]
         mesh_scale: list[str] = None,  # ex: [1, 1, 1]
@@ -824,7 +827,7 @@ class OsimModelParser(AbstractModelParser):
                 mesh_file=(
                     MeshFileReal(
                         mesh_file_name=mesh_file,
-                        mesh_file_directory=".",  # There is no mesh file directory in the mesh_file element
+                        mesh_file_directory=mesh_dir,
                         mesh_color=tuple(map(float, mesh_color.split())) if mesh_color else None,
                         mesh_scale=tuple(map(float, mesh_scale.split())) if mesh_scale else None,
                     )
@@ -847,7 +850,8 @@ class OsimModelParser(AbstractModelParser):
                 name=body_name,
                 parent_name=parent,
                 frame_offset=body.mesh_offset[i],
-                mesh_file=f"{mesh_dir}/{body.mesh[i]}" if mesh_dir is not None else None,
+                mesh_dir=mesh_dir if mesh_dir is not None else None,
+                mesh_file=f"{body.mesh[i]}" if mesh_dir is not None else None,
                 mesh_color=body.mesh_color[i] if mesh_dir is not None else None,
                 mesh_scale=body.mesh_scale_factor[i] if mesh_dir is not None else None,
                 rt_in_matrix=True,

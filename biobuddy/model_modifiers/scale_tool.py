@@ -635,11 +635,16 @@ class ScaleTool:
             t = np.linspace(0, 1, marker_positions.shape[2])
             viz = pyorerun.PhaseRerun(t)
 
-            debugging_model_path = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "../../examples/models/temporary.bioMod")
-            )
-            model_to_use.to_biomod(debugging_model_path)
-            viz_biomod_model = pyorerun.BiorbdModel(debugging_model_path)
+            current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+            temporary_model_path = current_path + "/temporary.bioMod"
+            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            if os.path.exists(current_path + "/" + mesh_relative_path):
+                model_to_use.change_mesh_directories(mesh_relative_path)
+                model_to_use.to_biomod(temporary_model_path)
+            else:
+                model_to_use.to_biomod(temporary_model_path, with_mesh=False)
+
+            viz_biomod_model = pyorerun.BiorbdModel(temporary_model_path)
             viz_biomod_model.options.transparent_mesh = False
             viz_biomod_model.options.show_gravity = True
             viz_biomod_model.options.show_marker_labels = False
@@ -664,22 +669,45 @@ class ScaleTool:
 
         return q_static, model_to_use
 
-    def make_static_pose_the_zero(self, q_static: np.ndarray):
-        if q_static.shape != (self.scaled_model.nb_q,):
-            raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
-
+    def make_static_pose_the_zero(self, q_static: np.ndarray, model_to_use: BiomechanicalModelReal):
         # Remove the fake root degrees of freedom if needed
         if self.scaled_model.root_segment.nb_q == 6 or self.scaled_model.dofs[:2] == [
             Translations.XYZ,
             Rotations.XYZ,
         ]:
+            # The model had a free-floating base so we used the original
             q_original = q_static
-        elif self.scaled_model.root_segment.nb_q == 0:
-            q_original = q_static[6:]
         else:
-            raise NotImplementedError(
-                "Your model has between 1 and 5 degrees of freedom in the root segment. This is not implemented yet."
+            # The model did not have a free-floating base so we need to remove the dofs we added
+            if (
+                model_to_use.root_segment.name == "root"
+                and model_to_use.segments["root"].nb_q == 6
+                and self.scaled_model.segments["root"].nb_q == 0
+            ):
+
+                # Remove these dofs from the optimal q
+                q_original = q_static[6:]
+
+                # Fix the root orientation so that it matches the optimal pose
+                self.scaled_model.segments["root"].segment_coordinate_system.scs = (
+                    RotoTransMatrix.from_euler_angles_and_translation(
+                        angle_sequence=Rotations.XYZ.value,
+                        angles=q_static[3:6],
+                        translation=q_static[:3],
+                    )
+                )
+
+            else:
+                raise NotImplementedError(
+                    "Degrees of freedom were added to the model, but the root segments already had dofs, which is not implemented yet. "
+                    "If you encounter this issue, please notify the developers by opening an issue on GitHub."
+                )
+
+        if q_original.shape != (self.scaled_model.nb_q,):
+            raise RuntimeError(
+                f"The shape of q_static must be ({self.scaled_model.nb_q}, ), you have {q_original.shape}."
             )
+
         self.scaled_model.modify_model_static_pose(q_original)
 
     def replace_markers_on_segments_local_scs(self, q: np.ndarray, model_to_use: BiomechanicalModelReal):
@@ -721,7 +749,7 @@ class ScaleTool:
         )
 
         if make_static_pose_the_models_zero:
-            self.make_static_pose_the_zero(q_static)
+            self.make_static_pose_the_zero(q_static, model_to_use=model_to_use)
             self.replace_markers_on_segments_local_scs(
                 q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
             )

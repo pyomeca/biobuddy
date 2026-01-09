@@ -2,6 +2,7 @@ from copy import deepcopy
 import logging
 from typing import Tuple
 import os
+from pathlib import Path
 
 import numpy as np
 from scipy import optimize
@@ -174,9 +175,14 @@ class RigidSegmentIdentification:
                 show_labels=False,
             )
 
-        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        temporary_model_path = current_path + "/../examples/models/temporary_rt.bioMod"
-        joint_model.to_biomod(temporary_model_path)
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary_rt.bioMod"
+        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        if os.path.exists(current_path + "/" + mesh_relative_path):
+            joint_model.change_mesh_directories(mesh_relative_path)
+            joint_model.to_biomod(temporary_model_path)
+        else:
+            joint_model.to_biomod(temporary_model_path, with_mesh=False)
 
         viz_biomod_model = pyorerun.BiorbdModel(temporary_model_path)
         viz_biomod_model.options.transparent_mesh = False
@@ -1153,9 +1159,15 @@ class JointCenterTool:
                 other_segment.mesh_file = mesh_file
                 joint_model.add_segment(other_segment)
 
-        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        temporary_model_path = current_path + "/../examples/models/temporary.bioMod"
-        joint_model.to_biomod(temporary_model_path)
+        current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
+        temporary_model_path = current_path + "/temporary_rt.bioMod"
+        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        if os.path.exists(current_path + "/" + mesh_relative_path):
+            joint_model.change_mesh_directories(mesh_relative_path)
+            joint_model.to_biomod(temporary_model_path)
+        else:
+            joint_model.to_biomod(temporary_model_path, with_mesh=False)
+
         return joint_model
 
     # TODO @pariterre revise the type hinting
