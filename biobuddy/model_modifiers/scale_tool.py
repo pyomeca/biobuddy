@@ -679,18 +679,22 @@ class ScaleTool:
             q_original = q_static
         else:
             # The model did not have a free-floating base so we need to remove the dofs we added
-            if (model_to_use.root_segment.name == "root" and
-                    model_to_use.segments["root"].nb_q == 6 and
-                    self.scaled_model.segments["root"].nb_q == 0):
+            if (
+                model_to_use.root_segment.name == "root"
+                and model_to_use.segments["root"].nb_q == 6
+                and self.scaled_model.segments["root"].nb_q == 0
+            ):
 
                 # Remove these dofs from the optimal q
                 q_original = q_static[6:]
 
                 # Fix the root orientation so that it matches the optimal pose
-                self.scaled_model.segments["root"].segment_coordinate_system.scs = RotoTransMatrix.from_euler_angles_and_translation(
-                    angle_sequence=Rotations.XYZ.value,
-                    angles=q_static[3:6],
-                    translation=q_static[:3],
+                self.scaled_model.segments["root"].segment_coordinate_system.scs = (
+                    RotoTransMatrix.from_euler_angles_and_translation(
+                        angle_sequence=Rotations.XYZ.value,
+                        angles=q_static[3:6],
+                        translation=q_static[:3],
+                    )
                 )
 
             else:
@@ -700,7 +704,9 @@ class ScaleTool:
                 )
 
         if q_original.shape != (self.scaled_model.nb_q,):
-            raise RuntimeError(f"The shape of q_static must be ({self.scaled_model.nb_q}, ), you have {q_original.shape}.")
+            raise RuntimeError(
+                f"The shape of q_static must be ({self.scaled_model.nb_q}, ), you have {q_original.shape}."
+            )
 
         self.scaled_model.modify_model_static_pose(q_original)
 

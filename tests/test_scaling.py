@@ -524,20 +524,21 @@ def test_scaling_of_only_some_segments(make_static_pose_the_models_zero):
         # Make sure that the root RT matrix was changed
         npt.assert_almost_equal(
             scaled_model.segments["root"].segment_coordinate_system.scs.rt_matrix,
-            np.array([[ 0.91764816,  0.04355098, -0.39500021,  0.76275233],
-                   [ 0.06676965,  0.96294907,  0.26128702,  3.31555407],
-                   [ 0.39174439, -0.26614358,  0.88074056,  1.61114257],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.91764816, 0.04355098, -0.39500021, 0.76275233],
+                    [0.06676965, 0.96294907, 0.26128702, 3.31555407],
+                    [0.39174439, -0.26614358, 0.88074056, 1.61114257],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
     else:
         # Make sure that the root RT matrix was not changed
         npt.assert_almost_equal(
             scaled_model.segments["root"].segment_coordinate_system.scs.rt_matrix,
-            np.array([[1., 0., 0., 0.],
-                   [0., 1., 0., 0.],
-                   [0., 0., 1., 0.],
-                   [0., 0., 0., 1.]]),
+            np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
             decimal=5,
         )
 

@@ -19,6 +19,7 @@ from biobuddy.utils.named_list import NamedList
 RUN_GUI = False  # Put this to true if you want to see the GUI while debugging
 # Otherwise, leave it to False for automated testing (which does nothing...)
 
+
 def test_model_animate():
     """Test the animate method."""
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -30,6 +31,7 @@ def test_model_animate():
     if RUN_GUI:
         leg_model.animate()
 
+
 def test_inverse_kinematics_animate():
     """Test the inverse_kinematics method."""
 
@@ -39,9 +41,7 @@ def test_inverse_kinematics_animate():
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
     hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
-    hip_c3d = C3dData(
-        hip_functional_trial_path, first_frame=1, last_frame=49
-    )
+    hip_c3d = C3dData(hip_functional_trial_path, first_frame=1, last_frame=49)
 
     # Read the .bioMod file
     scaled_model = BiomechanicalModelReal().from_biomod(
@@ -91,9 +91,7 @@ def test_animate_joint_center_tool():
 
     hip_functional_trial_path = parent_path + "/examples/data/functional_trials/right_hip.c3d"
     knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
-    hip_c3d = C3dData(
-        hip_functional_trial_path, first_frame=1, last_frame=49
-    )
+    hip_c3d = C3dData(hip_functional_trial_path, first_frame=1, last_frame=49)
     knee_c3d = C3dData(knee_functional_trial_path, first_frame=30, last_frame=82)
 
     # Read the .bioMod file
