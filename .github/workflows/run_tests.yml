@@ -100,3 +100,6 @@ jobs:
           cd
           python -c "import biobuddy"
           cd $BASE_FOLDER
+
+      - name: List conda packages
+        run: conda list
