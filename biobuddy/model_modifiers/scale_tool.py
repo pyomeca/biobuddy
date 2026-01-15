@@ -44,7 +44,7 @@ class ScaleTool:
         original_model: BiomechanicalModelReal,
         personalize_mass_distribution: bool = True,
         max_marker_movement: float = 0.1,
-        static_markers: bool = True,
+        static_markers: bool = False,
     ):
         """
         Initialize the scale tool.
