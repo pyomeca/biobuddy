@@ -68,6 +68,9 @@ jobs:
           conda install -c conda-forge deepdiff pinocchio pandas
           conda install -c opensim-org opensim=4.5.1
 
+      - name: List conda packages
+        run: conda list
+
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests
 
@@ -100,6 +103,3 @@ jobs:
           cd
           python -c "import biobuddy"
           cd $BASE_FOLDER
-
-      - name: List conda packages
-        run: conda list
