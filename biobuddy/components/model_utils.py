@@ -104,6 +104,17 @@ class ModelUtils:
                 return True
         return False
 
+    def segment_has_ghost_parents(self, segment_name: str) -> bool:
+        """
+        Check if the segment has ghost parents.
+        A ghost parent is a segment that does not hold inertia, but is used to define the segment's coordinate system.
+        """
+        ghost_keys = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        for key in ghost_keys:
+            if segment_name + key in self.segments.keys():
+                return True
+        return False
+
     def children_segment_names(self, parent_name: str):
         children = []
         for segment_name in self.segments.keys():
