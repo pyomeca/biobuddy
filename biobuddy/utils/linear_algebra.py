@@ -112,8 +112,8 @@ class RotoTransMatrix:
                 raise ValueError(
                     f"The rotation_matrix used to initialize a RotoTransMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
                 )
-            elif isinstance(rotation_matrix, RotationMatrix):
-                rotation_matrix = rotation_matrix.rotation_matrix
+        elif isinstance(rotation_matrix, RotationMatrix):
+            rotation_matrix = rotation_matrix.rotation_matrix
         if translation.shape != (3,) and translation.shape != (4,):
             raise ValueError(
                 f"The translation used to initialize a RotoTransMatrix should be of shape (3,) or (4,). You have {translation.shape}"

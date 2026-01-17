@@ -23,8 +23,9 @@ from biobuddy import (
     SegmentName,
     ViewAs,
     SegmentCoordinateSystemUtils,
-    RotoTransMatrix,
     RotationMatrix,
+    RotoTransMatrix,
+    JointCoordinateModifier,
 )
 
 
@@ -259,8 +260,10 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
     model_real = reduced_model.to_real(static_trial)
 
     # If you'd like the RTs to all be aligned, you can use the following step on the real model
-    global_rt_to_align_with = RotationMatrix()  # Identity
-    model_real.align_segment_coordinate_systems()
+    joint_center_modifier = JointCoordinateModifier(model_real)
+    # In this case, the global reference frame is rotated of 90 degrees around the z axis
+    rotation_to_align_with = RotationMatrix.from_euler_angles("z", np.array([np.pi/2]))
+    model_real = joint_center_modifier.align_all_scs(rotation_to_align_with)
 
     model_real.to_biomod(output_model_filepath)
 

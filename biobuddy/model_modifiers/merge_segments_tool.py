@@ -167,9 +167,9 @@ class MergeSegmentsTool:
         """
         inertia = np.identity(4)
 
-        a = com_distance[0]
-        b = com_distance[1]
-        c = com_distance[2]
+        a = com_distance.reshape(-1, )[0]
+        b = com_distance.reshape(-1, )[1]
+        c = com_distance.reshape(-1, )[2]
 
         inertia[0, 0] = mass * (b**2 + c**2)
         inertia[0, 1] = mass * (-a * b)
