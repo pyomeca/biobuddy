@@ -166,7 +166,7 @@ class OsimConfigurationParser:
 
                 elif match_tag(element, "apply"):
                     if match_text(element, "False"):
-                        self.scale_tool.static_markers = True
+                        self.scale_tool.replace_markers_to_fit_static = False
 
                 elif match_tag(element, "max_marker_movement"):
                     max_marker_movement = float(element.text)

@@ -44,7 +44,7 @@ class ScaleTool:
         original_model: BiomechanicalModelReal,
         personalize_mass_distribution: bool = True,
         max_marker_movement: float = 0.1,
-        static_markers: bool = False,
+        replace_markers_to_fit_static: bool = True,
     ):
         """
         Initialize the scale tool.
@@ -54,18 +54,21 @@ class ScaleTool:
         original_model
             The original model to scale
         personalize_mass_distribution
-            If True, the mass distribution of the mass across segments will be personalized based on the marker positions. Otherwise, the mass distribution across segments will be the same as the original model.
+            If True, the mass distribution of the mass across segments will be personalized based on the marker
+            positions. Otherwise, the mass distribution across segments will be the same as the original model.
         max_marker_movement
             The maximum acceptable marker movement in the static trial to consider it "static".
-        static_markers
-            If true disable marker movements during scaling to better match the static reference position
+        replace_markers_to_fit_static
+            If true, the markers from the output model a moved in the local reference frame so that, in the global, the
+            markers are placed at the same place as in the static trial. This option is highly recommended if your static
+            trial is real experimental data.
         """
 
         # Original attributes
         self.original_model = original_model
         self.personalize_mass_distribution = personalize_mass_distribution
         self.max_marker_movement = max_marker_movement
-        self.static_markers = static_markers
+        self.replace_markers_to_fit_static = replace_markers_to_fit_static
 
         # Extended attributes to be filled
         self.scaled_model = BiomechanicalModelReal()
@@ -754,12 +757,12 @@ class ScaleTool:
 
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static, model_to_use=model_to_use)
-            if not self.static_markers:
+            if self.static_markers:
                 self.replace_markers_on_segments_local_scs(
                     q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
                 )
         else:
-            if not self.static_markers:
+            if self.static_markers:
                 self.replace_markers_on_segments_local_scs(q_static, model_to_use)
 
     def from_biomod(
