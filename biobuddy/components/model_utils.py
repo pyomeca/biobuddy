@@ -162,6 +162,12 @@ class ModelUtils:
                 )
         return segment_list
 
+    def get_real_parent_name(self, segment_name: str) -> str:
+        current_parent = self.segments[segment_name].parent_name
+        while self.segment_has_ghost_parents(current_parent):
+            current_parent = self.segments[current_parent].parent_name
+        return current_parent
+
     @property
     def nb_segments(self) -> int:
         return len(self.segments)
