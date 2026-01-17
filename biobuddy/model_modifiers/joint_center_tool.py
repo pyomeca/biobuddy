@@ -2,12 +2,13 @@ from copy import deepcopy
 import logging
 from typing import Tuple
 import os
-from pathlib import Path
+from abc import ABC, abstractmethod
 
 import numpy as np
 from scipy import optimize
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
+from ..components.real.rigidbody.marker_weight import MarkerWeight
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ..utils.enums import Translations
@@ -22,11 +23,330 @@ from ..utils.linear_algebra import (
     get_sequence_from_rotation_vector,
     rot2eul,
 )
+from ..utils.named_list import NamedList
 
 _logger = logging.getLogger(__name__)
 
 
-class RigidSegmentIdentification:
+class JointCenterModifier:
+    def __init__(
+            self,
+            original_model: BiomechanicalModelReal,
+    ):
+        self.original_model = original_model
+        self.new_model = deepcopy(original_model)
+
+    def set_new_model(self, new_model: BiomechanicalModelReal):
+        """
+        This is only useful when performing multiple SCoRE/SARA tasks.
+        """
+        self.new_model = new_model
+
+    def replace_components_in_new_jcs(
+            self,
+            segment_name: str,
+            new_rt_in_global: RotoTransMatrix,
+    ) -> BiomechanicalModelReal:
+
+        original_child_jcs_in_global = self.original_model.segment_coordinate_system_in_global(segment_name)
+
+        # Center of mass
+        # CoM stays at the same place in the global reference frame
+        com_position_global = self.original_model.segment_com_in_global(segment_name)
+        if com_position_global is not None:
+            self.new_model.segments[segment_name].inertia_parameters.center_of_mass = (
+                    new_rt_in_global.inverse @ com_position_global
+            )
+
+        # Inertia
+        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
+        # change in length of the segments due to the displacement of the jcs.
+        inertia_parameters = self.original_model.segments[segment_name].inertia_parameters
+        if inertia_parameters is not None:
+            inertia = inertia_parameters.inertia[:3, :3]
+            rotation_transform = (
+                    new_rt_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            )
+            new_inertia = rotation_transform @ inertia @ rotation_transform.T
+            self.new_model.segments[segment_name].inertia_parameters.inertia = new_inertia
+
+        # Next JCS position
+        child_names = self.original_model.children_segment_names(segment_name)
+        if len(child_names) > 0:
+            next_child_name = child_names[0]
+            self.new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=self.original_model.segment_coordinate_system_in_global(next_child_name),
+                is_scs_local=False,
+            )
+
+        if self.original_model.segments[segment_name].segment_coordinate_system.is_in_local:
+            global_jcs = self.original_model.segment_coordinate_system_in_global(segment_name)
+        else:
+            global_jcs = self.original_model.segments[segment_name].segment_coordinate_system.scs
+
+        # Meshes
+        if self.original_model.segments[segment_name].mesh is not None:
+            mesh = self.original_model.segments[segment_name].mesh
+            self.new_model.segments[segment_name].mesh.positions = np.concatenate(
+                [
+                    new_rt_in_global.inverse
+                    @ point_from_local_to_global(
+                        self.original_model.segments[segment_name].mesh.positions[:, i], global_jcs
+                    )
+                    for i in range(len(mesh))
+                ],
+                axis=1,
+            )
+
+        # Mesh files
+        rotation_translation_transform = new_rt_in_global.inverse @ original_child_jcs_in_global
+
+        real_parent = self.original_model.get_real_parent_name(segment_name)
+        segment_list = self.original_model.get_chain_between_segments(real_parent, segment_name)[1:]
+        for segment_name in segment_list:
+
+            if not segment_name.startswith(segment_name):
+                # There is another segment between the parent and the child segment, so we do not change it's position
+                continue
+            else:
+
+                if self.original_model.segments[segment_name].mesh_file is not None:
+                    mesh_file = self.original_model.segments[segment_name].mesh_file
+
+                    if mesh_file.mesh_translation is None:
+                        mesh_translation = np.zeros((3,))
+                    else:
+                        mesh_translation = mesh_file.mesh_translation
+
+                    if mesh_file.mesh_rotation is None:
+                        mesh_rotation = np.zeros((4, 1))
+                    else:
+                        mesh_rotation = mesh_file.mesh_rotation
+
+                    mesh_rt = RotoTransMatrix.from_euler_angles_and_translation(
+                        "xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0]
+                    )
+                    new_rt = rotation_translation_transform @ mesh_rt
+
+                    # Update mesh file's local rotation and translation
+                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt.rotation_matrix)
+                    self.new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
+
+        # Markers
+        marker_positions = self.original_model.markers_in_global()
+        for marker in self.new_model.segments[segment_name].markers:
+            marker_index = self.original_model.markers_indices([marker.name])
+            marker.position = new_rt_in_global.inverse @ marker_positions[:, marker_index, 0]
+
+        # Contacts
+        contact_positions = self.original_model.contacts_in_global()
+        for contact in self.new_model.segments[segment_name].contacts:
+            contact_index = self.original_model.contact_indices([contact.name])
+            contact.position = new_rt_in_global.inverse @ contact_positions[:, contact_index, 0]
+
+        # IMUs
+        for imu in self.new_model.segments[segment_name].imus:
+            raise NotImplementedError(
+                "The transformation of imu was not tested. Please try the code below and make a PR if it is fine."
+            )
+            imu.scs = rotation_translation_transform.rt_matrix @ imu.scs
+
+        # Muscles (origin and insertion)
+        for muscle_group in self.new_model.muscle_groups:
+            # If the muscle is attached to the child segment, we update its origin and insertion positions
+            if muscle_group.origin_parent_name == segment_name:
+                for muscle in muscle_group.muscles:
+                    muscle.origin_position.position = new_rt_in_global.inverse @ point_from_local_to_global(
+                        self.original_model.muscle_groups[muscle_group.name].muscles[
+                            muscle.name].origin_position.position,
+                        global_jcs,
+                    )
+            if muscle_group.insertion_parent_name == segment_name:
+                for muscle in muscle_group.muscles:
+                    muscle.insertion_position.position = new_rt_in_global.inverse @ point_from_local_to_global(
+                        self.original_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .insertion_position.position,
+                        global_jcs,
+                    )
+
+        # Via points
+        for muscle_group in self.new_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name == segment_name:
+                        muscle.via_points[via_point.name].position = (
+                                new_rt_in_global.inverse
+                                @ point_from_local_to_global(
+                            self.original_model.muscle_groups[muscle_group.name]
+                            .muscles[muscle.name]
+                            .via_points[via_point.name]
+                            .position,
+                            global_jcs,
+                        )
+                        )
+
+        return self.new_model
+
+    def align_all_scs_with_rt(
+            self,
+            rt_matrix: RotoTransMatrix,
+    ):
+        for segment_name in self.original_model.segment_names:
+            self.new_model = self.replace_components_in_new_jcs(segment_name, rt_matrix)
+
+        return self.new_model
+
+
+    def replace_components_in_new_jcs_old(
+            self,
+            original_model: BiomechanicalModelReal,
+            new_model: BiomechanicalModelReal
+    ):
+        """
+        Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
+        """
+
+        original_child_jcs_in_global = original_model.segment_coordinate_system_in_global(self.child_name)
+        new_child_jcs_in_global = new_model.segment_coordinate_system_in_global(self.child_name)
+
+        # Center of mass
+        # CoM stays at the same place in the global reference frame
+        com_position_global = original_model.segment_com_in_global(self.child_name)
+        if com_position_global is not None:
+            new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
+                    new_child_jcs_in_global.inverse @ com_position_global
+            )
+
+        # Inertia
+        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
+        # change in length of the segments due to the displacement of the jcs.
+        inertia_parameters = original_model.segments[self.child_name].inertia_parameters
+        if inertia_parameters is not None:
+            inertia = inertia_parameters.inertia[:3, :3]
+            rotation_transform = (
+                    new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            )
+            new_inertia = rotation_transform @ inertia @ rotation_transform.T
+            new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
+
+        # Next JCS position
+        child_names = original_model.children_segment_names(self.child_name)
+        if len(child_names) > 0:
+            next_child_name = child_names[0]
+            new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                scs=original_model.segment_coordinate_system_in_global(next_child_name),
+                is_scs_local=False,
+            )
+
+        if original_model.segments[self.child_name].segment_coordinate_system.is_in_local:
+            global_jcs = original_model.segment_coordinate_system_in_global(self.child_name)
+        else:
+            global_jcs = original_model.segments[self.child_name].segment_coordinate_system.scs
+
+        # Meshes
+        if original_model.segments[self.child_name].mesh is not None:
+            mesh = original_model.segments[self.child_name].mesh
+            new_model.segments[self.child_name].mesh.positions = np.concatenate(
+                [
+                    new_child_jcs_in_global.inverse
+                    @ point_from_local_to_global(
+                        original_model.segments[self.child_name].mesh.positions[:, i], global_jcs
+                    )
+                    for i in range(len(mesh))
+                ],
+                axis=1,
+            )
+
+        # Mesh files
+        rotation_translation_transform = new_child_jcs_in_global.inverse @ original_child_jcs_in_global
+
+        segment_list = original_model.get_chain_between_segments(self.parent_name, self.child_name)[1:]
+        for segment_name in segment_list:
+
+            if not segment_name.startswith(self.child_name):
+                # There is another segment between the parent and the child segment, so we do not change it's position
+                continue
+            else:
+
+                if original_model.segments[segment_name].mesh_file is not None:
+                    mesh_file = original_model.segments[segment_name].mesh_file
+
+                    if mesh_file.mesh_translation is None:
+                        mesh_translation = np.zeros((3,))
+                    else:
+                        mesh_translation = mesh_file.mesh_translation
+
+                    if mesh_file.mesh_rotation is None:
+                        mesh_rotation = np.zeros((4, 1))
+                    else:
+                        mesh_rotation = mesh_file.mesh_rotation
+
+                    mesh_rt = RotoTransMatrix.from_euler_angles_and_translation(
+                        "xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0]
+                    )
+                    new_rt = rotation_translation_transform @ mesh_rt
+
+                    # Update mesh file's local rotation and translation
+                    new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt.rotation_matrix)
+                    new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
+
+        # Markers
+        marker_positions = original_model.markers_in_global()
+        for marker in new_model.segments[self.child_name].markers:
+            marker_index = original_model.markers_indices([marker.name])
+            marker.position = new_child_jcs_in_global.inverse @ marker_positions[:, marker_index, 0]
+
+        # Contacts
+        contact_positions = original_model.contacts_in_global()
+        for contact in new_model.segments[self.child_name].contacts:
+            contact_index = original_model.contact_indices([contact.name])
+            contact.position = new_child_jcs_in_global.inverse @ contact_positions[:, contact_index, 0]
+
+        # IMUs
+        for imu in new_model.segments[self.child_name].imus:
+            raise NotImplementedError(
+                "The transformation of imu was not tested. Please try the code below and make a PR if it is fine."
+            )
+            imu.scs = rotation_translation_transform.rt_matrix @ imu.scs
+
+        # Muscles (origin and insertion)
+        for muscle_group in new_model.muscle_groups:
+            # If the muscle is attached to the child segment, we update its origin and insertion positions
+            if muscle_group.origin_parent_name == self.child_name:
+                for muscle in muscle_group.muscles:
+                    muscle.origin_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name].muscles[
+                            muscle.name].origin_position.position,
+                        global_jcs,
+                    )
+            if muscle_group.insertion_parent_name == self.child_name:
+                for muscle in muscle_group.muscles:
+                    muscle.insertion_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
+                        original_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .insertion_position.position,
+                        global_jcs,
+                    )
+
+        # Via points
+        for muscle_group in new_model.muscle_groups:
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    if via_point.parent_name == self.child_name:
+                        muscle.via_points[via_point.name].position = (
+                                new_child_jcs_in_global.inverse
+                                @ point_from_local_to_global(
+                            original_model.muscle_groups[muscle_group.name]
+                            .muscles[muscle.name]
+                            .via_points[via_point.name]
+                            .position,
+                            global_jcs,
+                        )
+                        )
+
+
+class RigidSegmentIdentification(ABC):
     def __init__(
         self,
         functional_trial: MarkerData,
@@ -206,149 +526,6 @@ class RigidSegmentIdentification:
         else:
             viz.add_animated_model(viz_biomod_model, q)
         viz.rerun_by_frame("Segment RT animation")
-
-    def replace_components_in_new_jcs(self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal):
-        """
-        Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
-        TODO: Verify that this also works with non orthonormal rotation axes.
-        """
-
-        original_child_jcs_in_global = original_model.segment_coordinate_system_in_global(self.child_name)
-        new_child_jcs_in_global = new_model.segment_coordinate_system_in_global(self.child_name)
-
-        # Center of mass
-        # CoM stays at the same place in the global reference frame
-        com_position_global = original_model.segment_com_in_global(self.child_name)
-        if com_position_global is not None:
-            new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
-                new_child_jcs_in_global.inverse @ com_position_global
-            )
-
-        # Inertia
-        # Please note that the moment of inertia matrix is rotated, but not translated and not adjusted to reflect a
-        # change in length of the segments due to the displacement of the jcs.
-        inertia_parameters = original_model.segments[self.child_name].inertia_parameters
-        if inertia_parameters is not None:
-            inertia = inertia_parameters.inertia[:3, :3]
-            rotation_transform = (
-                new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
-            )
-            new_inertia = rotation_transform @ inertia @ rotation_transform.T
-            new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
-
-        # Next JCS position
-        child_names = original_model.children_segment_names(self.child_name)
-        if len(child_names) > 0:
-            next_child_name = child_names[0]
-            new_model.segments[next_child_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                scs=original_model.segment_coordinate_system_in_global(next_child_name),
-                is_scs_local=False,
-            )
-
-        if original_model.segments[self.child_name].segment_coordinate_system.is_in_local:
-            global_jcs = original_model.segment_coordinate_system_in_global(self.child_name)
-        else:
-            global_jcs = original_model.segments[self.child_name].segment_coordinate_system.scs
-
-        # Meshes
-        if original_model.segments[self.child_name].mesh is not None:
-            mesh = original_model.segments[self.child_name].mesh
-            new_model.segments[self.child_name].mesh.positions = np.concatenate(
-                [
-                    new_child_jcs_in_global.inverse
-                    @ point_from_local_to_global(
-                        original_model.segments[self.child_name].mesh.positions[:, i], global_jcs
-                    )
-                    for i in range(len(mesh))
-                ],
-                axis=1,
-            )
-
-        # Mesh files
-        rotation_translation_transform = new_child_jcs_in_global.inverse @ original_child_jcs_in_global
-
-        segment_list = original_model.get_chain_between_segments(self.parent_name, self.child_name)[1:]
-        for segment_name in segment_list:
-
-            if not segment_name.startswith(self.child_name):
-                # There is another segment between the parent and the child segment, so we do not change it's position
-                continue
-            else:
-
-                if original_model.segments[segment_name].mesh_file is not None:
-                    mesh_file = original_model.segments[segment_name].mesh_file
-
-                    if mesh_file.mesh_translation is None:
-                        mesh_translation = np.zeros((3,))
-                    else:
-                        mesh_translation = mesh_file.mesh_translation
-
-                    if mesh_file.mesh_rotation is None:
-                        mesh_rotation = np.zeros((4, 1))
-                    else:
-                        mesh_rotation = mesh_file.mesh_rotation
-
-                    mesh_rt = RotoTransMatrix.from_euler_angles_and_translation(
-                        "xyz", mesh_rotation[:3, 0], mesh_translation[:3, 0]
-                    )
-                    new_rt = rotation_translation_transform @ mesh_rt
-
-                    # Update mesh file's local rotation and translation
-                    new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt.rotation_matrix)
-                    new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
-
-        # Markers
-        marker_positions = original_model.markers_in_global()
-        for marker in new_model.segments[self.child_name].markers:
-            marker_index = original_model.markers_indices([marker.name])
-            marker.position = new_child_jcs_in_global.inverse @ marker_positions[:, marker_index, 0]
-
-        # Contacts
-        contact_positions = original_model.contacts_in_global()
-        for contact in new_model.segments[self.child_name].contacts:
-            contact_index = original_model.contact_indices([contact.name])
-            contact.position = new_child_jcs_in_global.inverse @ contact_positions[:, contact_index, 0]
-
-        # IMUs
-        for imu in new_model.segments[self.child_name].imus:
-            raise NotImplementedError(
-                "The transformation of imu was not tested. Please try the code below and make a PR if it is fine."
-            )
-            imu.scs = rotation_translation_transform.rt_matrix @ imu.scs
-
-        # Muscles (origin and insertion)
-        for muscle_group in new_model.muscle_groups:
-            # If the muscle is attached to the child segment, we update its origin and insertion positions
-            if muscle_group.origin_parent_name == self.child_name:
-                for muscle in muscle_group.muscles:
-                    muscle.origin_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
-                        original_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position,
-                        global_jcs,
-                    )
-            if muscle_group.insertion_parent_name == self.child_name:
-                for muscle in muscle_group.muscles:
-                    muscle.insertion_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
-                        original_model.muscle_groups[muscle_group.name]
-                        .muscles[muscle.name]
-                        .insertion_position.position,
-                        global_jcs,
-                    )
-
-        # Via points
-        for muscle_group in new_model.muscle_groups:
-            for muscle in muscle_group.muscles:
-                for via_point in muscle.via_points:
-                    if via_point.parent_name == self.child_name:
-                        muscle.via_points[via_point.name].position = (
-                            new_child_jcs_in_global.inverse
-                            @ point_from_local_to_global(
-                                original_model.muscle_groups[muscle_group.name]
-                                .muscles[muscle.name]
-                                .via_points[via_point.name]
-                                .position,
-                                global_jcs,
-                            )
-                        )
 
     @staticmethod
     def check_optimal_rt_inputs(
