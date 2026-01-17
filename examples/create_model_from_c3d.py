@@ -259,9 +259,8 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
     model_real = reduced_model.to_real(static_trial)
 
     # If you'd like the RTs to all be aligned, you can use the following step on the real model
-    global_rt_to_align_with = RotationMatrix() # Identity
-    model_real.align_segment_coordinate_systems(
-    )
+    global_rt_to_align_with = RotationMatrix()  # Identity
+    model_real.align_segment_coordinate_systems()
 
     model_real.to_biomod(output_model_filepath)
 

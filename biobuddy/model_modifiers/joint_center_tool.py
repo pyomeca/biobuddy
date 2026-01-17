@@ -30,8 +30,8 @@ _logger = logging.getLogger(__name__)
 
 class JointCenterModifier:
     def __init__(
-            self,
-            original_model: BiomechanicalModelReal,
+        self,
+        original_model: BiomechanicalModelReal,
     ):
         self.original_model = original_model
         self.new_model = deepcopy(original_model)
@@ -43,9 +43,9 @@ class JointCenterModifier:
         self.new_model = new_model
 
     def replace_components_in_new_jcs(
-            self,
-            segment_name: str,
-            new_rt_in_global: RotoTransMatrix,
+        self,
+        segment_name: str,
+        new_rt_in_global: RotoTransMatrix,
     ) -> BiomechanicalModelReal:
 
         original_child_jcs_in_global = self.original_model.segment_coordinate_system_in_global(segment_name)
@@ -55,7 +55,7 @@ class JointCenterModifier:
         com_position_global = self.original_model.segment_com_in_global(segment_name)
         if com_position_global is not None:
             self.new_model.segments[segment_name].inertia_parameters.center_of_mass = (
-                    new_rt_in_global.inverse @ com_position_global
+                new_rt_in_global.inverse @ com_position_global
             )
 
         # Inertia
@@ -64,9 +64,7 @@ class JointCenterModifier:
         inertia_parameters = self.original_model.segments[segment_name].inertia_parameters
         if inertia_parameters is not None:
             inertia = inertia_parameters.inertia[:3, :3]
-            rotation_transform = (
-                    new_rt_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
-            )
+            rotation_transform = new_rt_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
             new_inertia = rotation_transform @ inertia @ rotation_transform.T
             self.new_model.segments[segment_name].inertia_parameters.inertia = new_inertia
 
@@ -157,8 +155,9 @@ class JointCenterModifier:
             if muscle_group.origin_parent_name == segment_name:
                 for muscle in muscle_group.muscles:
                     muscle.origin_position.position = new_rt_in_global.inverse @ point_from_local_to_global(
-                        self.original_model.muscle_groups[muscle_group.name].muscles[
-                            muscle.name].origin_position.position,
+                        self.original_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .origin_position.position,
                         global_jcs,
                     )
             if muscle_group.insertion_parent_name == segment_name:
@@ -176,32 +175,29 @@ class JointCenterModifier:
                 for via_point in muscle.via_points:
                     if via_point.parent_name == segment_name:
                         muscle.via_points[via_point.name].position = (
-                                new_rt_in_global.inverse
-                                @ point_from_local_to_global(
-                            self.original_model.muscle_groups[muscle_group.name]
-                            .muscles[muscle.name]
-                            .via_points[via_point.name]
-                            .position,
-                            global_jcs,
-                        )
+                            new_rt_in_global.inverse
+                            @ point_from_local_to_global(
+                                self.original_model.muscle_groups[muscle_group.name]
+                                .muscles[muscle.name]
+                                .via_points[via_point.name]
+                                .position,
+                                global_jcs,
+                            )
                         )
 
         return self.new_model
 
     def align_all_scs_with_rt(
-            self,
-            rt_matrix: RotoTransMatrix,
+        self,
+        rt_matrix: RotoTransMatrix,
     ):
         for segment_name in self.original_model.segment_names:
             self.new_model = self.replace_components_in_new_jcs(segment_name, rt_matrix)
 
         return self.new_model
 
-
     def replace_components_in_new_jcs_old(
-            self,
-            original_model: BiomechanicalModelReal,
-            new_model: BiomechanicalModelReal
+        self, original_model: BiomechanicalModelReal, new_model: BiomechanicalModelReal
     ):
         """
         Ather the SCS has been replaced in the model, the components from this segment must be replaced in the new JCS.
@@ -215,7 +211,7 @@ class JointCenterModifier:
         com_position_global = original_model.segment_com_in_global(self.child_name)
         if com_position_global is not None:
             new_model.segments[self.child_name].inertia_parameters.center_of_mass = (
-                    new_child_jcs_in_global.inverse @ com_position_global
+                new_child_jcs_in_global.inverse @ com_position_global
             )
 
         # Inertia
@@ -225,7 +221,7 @@ class JointCenterModifier:
         if inertia_parameters is not None:
             inertia = inertia_parameters.inertia[:3, :3]
             rotation_transform = (
-                    new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+                new_child_jcs_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
             )
             new_inertia = rotation_transform @ inertia @ rotation_transform.T
             new_model.segments[self.child_name].inertia_parameters.inertia = new_inertia
@@ -316,8 +312,7 @@ class JointCenterModifier:
             if muscle_group.origin_parent_name == self.child_name:
                 for muscle in muscle_group.muscles:
                     muscle.origin_position.position = new_child_jcs_in_global.inverse @ point_from_local_to_global(
-                        original_model.muscle_groups[muscle_group.name].muscles[
-                            muscle.name].origin_position.position,
+                        original_model.muscle_groups[muscle_group.name].muscles[muscle.name].origin_position.position,
                         global_jcs,
                     )
             if muscle_group.insertion_parent_name == self.child_name:
@@ -335,14 +330,14 @@ class JointCenterModifier:
                 for via_point in muscle.via_points:
                     if via_point.parent_name == self.child_name:
                         muscle.via_points[via_point.name].position = (
-                                new_child_jcs_in_global.inverse
-                                @ point_from_local_to_global(
-                            original_model.muscle_groups[muscle_group.name]
-                            .muscles[muscle.name]
-                            .via_points[via_point.name]
-                            .position,
-                            global_jcs,
-                        )
+                            new_child_jcs_in_global.inverse
+                            @ point_from_local_to_global(
+                                original_model.muscle_groups[muscle_group.name]
+                                .muscles[muscle.name]
+                                .via_points[via_point.name]
+                                .position,
+                                global_jcs,
+                            )
                         )
 
 
@@ -767,9 +762,10 @@ class RigidSegmentIdentification(ABC):
 
         return rt_parent_functional, rt_child_functional
 
+
 def get_svd(
-        rt_parent: RotoTransMatrixTimeSeries,
-        rt_child: RotoTransMatrixTimeSeries,
+    rt_parent: RotoTransMatrixTimeSeries,
+    rt_child: RotoTransMatrixTimeSeries,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
     nb_frames = len(rt_parent)
@@ -781,9 +777,9 @@ def get_svd(
     b[:] = np.nan
 
     for i_frame in range(nb_frames):
-        A[3 * i_frame: 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
-        A[3 * i_frame: 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
-        b[3 * i_frame: 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
+        A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
+        A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+        b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
     # Remove nans
     valid_rows = ~np.isnan(np.sum(A, axis=1))
@@ -794,6 +790,7 @@ def get_svd(
     U, S, Vt = np.linalg.svd(A_valid, full_matrices=False)
 
     return U, S, Vt.T, b_valid
+
 
 class Score(RigidSegmentIdentification):
 
@@ -910,6 +907,7 @@ class Score(RigidSegmentIdentification):
             new_rt_in_local = scs_of_cor_in_local
 
         return new_rt_in_local
+
 
 class Sara(RigidSegmentIdentification):
     def __init__(
@@ -1136,11 +1134,11 @@ class Sara(RigidSegmentIdentification):
         return RotoTransMatrix.from_rt_matrix(scs_of_child_in_local)
 
     def perform_task(
-            self,
-            original_model: BiomechanicalModelReal,
-            new_model: BiomechanicalModelReal,
-            parent_rt_init: RotoTransMatrixTimeSeries,
-            child_rt_init: RotoTransMatrixTimeSeries,
+        self,
+        original_model: BiomechanicalModelReal,
+        new_model: BiomechanicalModelReal,
+        parent_rt_init: RotoTransMatrixTimeSeries,
+        child_rt_init: RotoTransMatrixTimeSeries,
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
@@ -1171,11 +1169,12 @@ class Sara(RigidSegmentIdentification):
 
         return mean_scs_of_child_in_local
 
+
 class JointCenterTool:
     def __init__(
-            self,
-            original_model: BiomechanicalModelReal,
-            animate_reconstruction: bool = False,
+        self,
+        original_model: BiomechanicalModelReal,
+        animate_reconstruction: bool = False,
     ):
 
         # Make sure that the scs are in local before starting
@@ -1281,9 +1280,9 @@ class JointCenterTool:
 
     @staticmethod
     def _check_aor(
-            original_model: BiomechanicalModelReal,
-            aor_global: np.ndarray,
-            task,
+        original_model: BiomechanicalModelReal,
+        aor_global: np.ndarray,
+        task,
     ) -> np.ndarray:
         """
         Make sure that the optimal axis of rotation is not too far from the original axis of rotation.
@@ -1322,9 +1321,9 @@ class JointCenterTool:
         return aor_global
 
     def replace_joint_centers(
-            self,
-            marker_weights: NamedList[MarkerWeight] = None,
-            reconstruct_whole_body: bool = True,
+        self,
+        marker_weights: NamedList[MarkerWeight] = None,
+        reconstruct_whole_body: bool = True,
     ) -> BiomechanicalModelReal:
 
         static_markers_in_global = self.original_model.markers_in_global(np.zeros((self.original_model.nb_q,)))
