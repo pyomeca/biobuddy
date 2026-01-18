@@ -166,9 +166,7 @@ class OsimConfigurationParser:
 
                 elif match_tag(element, "apply"):
                     if match_text(element, "False"):
-                        raise NotImplementedError(
-                            "The 'MarkerPlacer' tag is set to False. Biobuddy considers that markers should be replaced on the scale model to match the experimental position of the marker on the subject's segments."
-                        )
+                        self.scale_tool.replace_markers_to_fit_static = False
 
                 elif match_tag(element, "max_marker_movement"):
                     max_marker_movement = float(element.text)

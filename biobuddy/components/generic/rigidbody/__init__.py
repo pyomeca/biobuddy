@@ -8,7 +8,6 @@ from ..rigidbody.range_of_motion import RangeOfMotion, Ranges
 from .segment_coordinate_system import SegmentCoordinateSystem, SegmentCoordinateSystemUtils
 from .segment import Segment
 
-
 __all__ = [
     Axis.__name__,
     Contact.__name__,

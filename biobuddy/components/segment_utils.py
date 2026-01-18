@@ -4,7 +4,6 @@ from .generic.rigidbody.range_of_motion import RangeOfMotion
 from ..utils.named_list import NamedList
 from ..utils.enums import Rotations, Translations
 
-
 if TYPE_CHECKING:
     from ..components.generic.rigidbody.marker import Marker
     from ..components.generic.rigidbody.contact import Contact

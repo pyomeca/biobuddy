@@ -2,7 +2,6 @@ from .biomechanical_model import BiomechanicalModel
 from .muscle import *
 from .rigidbody import *
 
-
 __all__ = (
     [
         BiomechanicalModel.__name__,

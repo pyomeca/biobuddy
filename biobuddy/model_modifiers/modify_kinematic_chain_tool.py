@@ -23,7 +23,6 @@ from ..utils.linear_algebra import (
 from ..utils.enums import Translations, Rotations
 from ..utils.aliases import points_to_array, Point
 
-
 _logger = logging.getLogger(__name__)
 
 # TODO: add the possibility to choose the position of the  new root in the segment's coordinate system
@@ -435,7 +434,7 @@ class ChangeFirstSegment:
             # Remove them from the model
             modified_model.remove_segment(segment.name)
 
-            (modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges) = (
+            modified_translations, modified_rotations, modified_dof_names, modified_q_ranges, modified_qdot_ranges = (
                 self.get_modified_dofs(original_model, current_parent)
             )
 
