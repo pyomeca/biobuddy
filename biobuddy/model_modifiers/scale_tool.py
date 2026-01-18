@@ -757,12 +757,12 @@ class ScaleTool:
 
         if make_static_pose_the_models_zero:
             self.make_static_pose_the_zero(q_static, model_to_use=model_to_use)
-            if self.static_markers:
+            if self.replace_markers_to_fit_static:
                 self.replace_markers_on_segments_local_scs(
                     q=np.zeros((self.scaled_model.nb_q,)), model_to_use=self.scaled_model
                 )
         else:
-            if self.static_markers:
+            if self.replace_markers_to_fit_static:
                 self.replace_markers_on_segments_local_scs(q_static, model_to_use)
 
     def from_biomod(
