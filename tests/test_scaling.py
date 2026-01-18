@@ -287,7 +287,6 @@ def test_scaling_wholebody(replace_markers_to_fit_static, make_static_pose_the_m
             else:
                 npt.assert_array_less(original_mass, mass_biobuddy * 1.1)
 
-
     # Marker positions
     if replace_markers_to_fit_static:
         if make_static_pose_the_models_zero:
@@ -296,8 +295,12 @@ def test_scaling_wholebody(replace_markers_to_fit_static, make_static_pose_the_m
             model_markers = scaled_model.markers_in_global()
             for i_marker, marker_name in enumerate(marker_names):
                 npt.assert_almost_equal(
-                    c3d_data.mean_marker_position(marker_name)[:3].reshape(3, ),
-                    model_markers[:3, i_marker].reshape(3, ),
+                    c3d_data.mean_marker_position(marker_name)[:3].reshape(
+                        3,
+                    ),
+                    model_markers[:3, i_marker].reshape(
+                        3,
+                    ),
                     decimal=5,
                 )
         else:
@@ -310,15 +313,26 @@ def test_scaling_wholebody(replace_markers_to_fit_static, make_static_pose_the_m
         # The markers position is scaled
         for segment_name in original_model.segment_names:
             if segment_name in scale_tool.scaling_segments:
-                scaling_factor = scale_tool.scaling_segments[segment_name].compute_scaling_factors(
-                    original_model, marker_positions, marker_names
-                ).to_vector()[0, 0]
+                scaling_factor = (
+                    scale_tool.scaling_segments[segment_name]
+                    .compute_scaling_factors(original_model, marker_positions, marker_names)
+                    .to_vector()[0, 0]
+                )
                 for marker in original_model.segments[segment_name].markers:
-                    marker_position = marker.position[:3].reshape(3, )
+                    marker_position = marker.position[:3].reshape(
+                        3,
+                    )
                     scaled_marker_position = scaling_factor * marker_position
                     npt.assert_almost_equal(
-                        scaled_marker_position[:3].reshape(3, ),
-                        scaled_model.segments[segment_name].markers[marker.name].position[:3].reshape(3, ),
+                        scaled_marker_position[:3].reshape(
+                            3,
+                        ),
+                        scaled_model.segments[segment_name]
+                        .markers[marker.name]
+                        .position[:3]
+                        .reshape(
+                            3,
+                        ),
                         decimal=5,
                     )
 
@@ -408,8 +422,12 @@ def test_scaling_wholebody(replace_markers_to_fit_static, make_static_pose_the_m
                     # TODO: This could be tested if MultiplierFunction was implemented
                     continue
                 print(muscle.name)
-                biobuddy_optimal_length = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
-                osim_optimal_length = osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+                biobuddy_optimal_length = (
+                    scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+                )
+                osim_optimal_length = (
+                    osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+                )
                 npt.assert_almost_equal(biobuddy_optimal_length, osim_optimal_length, decimal=5)
                 biobuddy_tendon_slack_length = (
                     scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
