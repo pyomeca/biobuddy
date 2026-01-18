@@ -761,6 +761,7 @@ def test_init():
     assert isinstance(scale_tool.scaling_segments, NamedList)
     assert isinstance(scale_tool.marker_weights, NamedList)
     assert scale_tool.warnings == ""
+    assert scale_tool.replace_markers_to_fit_static == True
 
 
 def test_add_and_remove_marker_weight():
