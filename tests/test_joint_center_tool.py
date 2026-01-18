@@ -618,7 +618,7 @@ def test_init_rigid_segment_identification():
     child_name = "tibia_r"
     parent_marker_names = ["RGT", "RTHI1", "RTHI2", "RTHI3"]
     child_marker_names = ["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"]
-    rsi = RigidSegmentIdentification(
+    rsi = Score(
         c3d_data,
         parent_name,
         child_name,
@@ -634,7 +634,7 @@ def test_init_rigid_segment_identification():
         RuntimeError,
         match="The names _reset_axis are not allowed in the parent or child names. Please change the segment named parent_reset_axis from the Score configuration.",
     ):
-        RigidSegmentIdentification(
+        Score(
             c3d_data,
             "parent_reset_axis",
             child_name,
@@ -646,7 +646,7 @@ def test_init_rigid_segment_identification():
         RuntimeError,
         match="The names _translation are not allowed in the parent or child names. Please change the segment named child_translation from the Score configuration.",
     ):
-        RigidSegmentIdentification(
+        Score(
             c3d_data,
             parent_name,
             "child_translation",
@@ -659,7 +659,7 @@ def test_init_rigid_segment_identification():
 
     # Test with no markers
     with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
-        rsi_no_markers = RigidSegmentIdentification(
+        rsi_no_markers = Score(
             MockEmptyC3dData(),
             parent_name,
             child_name,
@@ -673,7 +673,7 @@ def test_init_rigid_segment_identification():
         RuntimeError,
         match=r"The markers \['RGT', 'RTHI1', 'RTHI2', 'RTHI3', 'RATT', 'RLM', 'RSPH', 'RLEG1', 'RLEG2', 'RLEG3'\] are not moving in the functional trial ",
     ):
-        rsi = RigidSegmentIdentification(
+        rsi = Score(
             c3d_data,
             parent_name,
             child_name,
@@ -694,7 +694,7 @@ def test_marker_residual():
     child_name = "tibia_r"
     parent_marker_names = ["RGT", "RTHI1", "RTHI2", "RTHI3"]
     child_marker_names = ["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"]
-    rsi = RigidSegmentIdentification(
+    rsi = Score(
         c3d_data,
         parent_name,
         child_name,

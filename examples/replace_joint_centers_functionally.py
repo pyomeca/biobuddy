@@ -84,7 +84,7 @@ def main(visualization):
     scaled_model = scale_tool.scale(
         static_trial=static_trial,
         mass=mass,
-        q_regularization_weight=0.01,
+        q_regularization_weight=1,
         make_static_pose_the_models_zero=True,
         visualize_optimal_static_pose=False,
     )

@@ -23,11 +23,15 @@ from biobuddy import (
     SegmentName,
     ViewAs,
     SegmentCoordinateSystemUtils,
+    RotationMatrix,
     RotoTransMatrix,
+    JointCoordinateModifier,
 )
 
 
-def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: bool = True, animate_model: bool = True):
+def model_creation_from_measured_data(
+    static_trial: C3dData, align_scs: bool = False, remove_temporary: bool = True, animate_model: bool = True
+):
 
     total_mass = 66
     total_height = 1.70
@@ -256,6 +260,14 @@ def model_creation_from_measured_data(static_trial: C3dData, remove_temporary: b
 
     # Put the model together, print it and print it to a bioMod file
     model_real = reduced_model.to_real(static_trial)
+
+    if align_scs:
+        # If you'd like the RTs to all be aligned, you can use the following step on the real model
+        joint_center_modifier = JointCoordinateModifier(model_real)
+        # In this case, the global reference frame is rotated of 90 degrees around the z axis
+        rotation_to_align_with = RotationMatrix.from_euler_angles("z", np.array([np.pi / 2]))
+        model_real = joint_center_modifier.align_all_scs(rotation_to_align_with)
+
     model_real.to_biomod(output_model_filepath)
 
     if animate_model:

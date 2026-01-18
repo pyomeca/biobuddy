@@ -103,6 +103,17 @@ class ModelUtils:
                 return True
         return False
 
+    def segment_has_ghost_parents(self, segment_name: str) -> bool:
+        """
+        Check if the segment has ghost parents.
+        A ghost parent is a segment that does not hold inertia, but is used to define the segment's coordinate system.
+        """
+        ghost_keys = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        for key in ghost_keys:
+            if segment_name + key in self.segments.keys():
+                return True
+        return False
+
     def children_segment_names(self, parent_name: str):
         children = []
         for segment_name in self.segments.keys():
@@ -149,6 +160,12 @@ class ModelUtils:
                     f"The segments in the model are not in the correct order to get the full segment chain for {segment_name}."
                 )
         return segment_list
+
+    def get_real_parent_name(self, segment_name: str) -> str:
+        current_parent = self.segments[segment_name].parent_name
+        while self.segment_has_ghost_parents(current_parent):
+            current_parent = self.segments[current_parent].parent_name
+        return current_parent
 
     @property
     def nb_segments(self) -> int:

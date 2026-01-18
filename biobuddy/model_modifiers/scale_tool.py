@@ -34,10 +34,6 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 
-class InertialCharacteristics(Enum):
-    DE_LEVA = "de_leva"  # TODO
-
-
 class ScaleTool:
     def __init__(
         self,
