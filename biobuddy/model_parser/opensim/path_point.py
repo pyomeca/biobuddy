@@ -5,7 +5,6 @@ from lxml import etree
 from .functions import spline_from_element, piece_wise_linear_from_element
 from ..utils_xml import find_in_tree, find_sub_elements_in_tree, match_tag
 
-
 if TYPE_CHECKING:
     from ...components.functions import Functions
 

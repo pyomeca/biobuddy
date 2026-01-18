@@ -11,7 +11,6 @@ from .segment_coordinate_system_real import SegmentCoordinateSystemReal
 from .segment_scaling import SegmentScaling, ScaleFactor, SegmentWiseScaling, AxisWiseScaling, BodyWiseScaling
 from .marker_weight import MarkerWeight
 
-
 __all__ = [
     AxisReal.__name__,
     ContactReal.__name__,

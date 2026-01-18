@@ -16,7 +16,6 @@ from ..utils.linear_algebra import RotoTransMatrix, point_from_global_to_local, 
 from ..utils.enums import Translations, Rotations
 from ..utils.aliases import points_to_array
 
-
 _logger = logging.getLogger(__name__)
 
 
@@ -582,7 +581,7 @@ class MergeSegmentsTool:
             self.merged_model.remove_segment(merge_task.second_segment_name)
 
             merged_parent_name = self.get_merged_parent(first_segment, second_segment, merge_task.merged_origin_name)
-            (merged_translations, merged_rotations, merged_dof_names, merged_q_range, merged_qdot_range) = (
+            merged_translations, merged_rotations, merged_dof_names, merged_q_range, merged_qdot_range = (
                 self.get_merged_dofs(first_segment, second_segment, merge_task.merged_origin_name)
             )
             merged_scs_local = self.get_merged_scs(first_segment, second_segment, merge_task.merged_origin_name)

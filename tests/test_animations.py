@@ -15,7 +15,6 @@ from biobuddy import (
 
 from biobuddy.utils.named_list import NamedList
 
-
 RUN_GUI = False  # Put this to true if you want to see the GUI while debugging
 # Otherwise, leave it to False for automated testing (which does nothing...)
 
