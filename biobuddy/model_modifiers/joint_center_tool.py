@@ -195,43 +195,19 @@ class JointCoordinateModifier:
         self,
         rotation_matrix: RotationMatrix,
     ):
+
         original_jcs = deepcopy(self.original_model).forward_kinematics()
         for segment in deepcopy(self.original_model.segments):
-            if segment.parent_name != "base":
-                # Modify the parent segment JCS
-                parent_translation = original_jcs[segment.parent_name][0].translation
-                parent_rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, parent_translation)
-                self.new_model.segments[segment.parent_name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                        scs=parent_rt_matrix,
-                        is_scs_local=False,
-                    )
+            # Modify the parent segment JCS
+            translation = original_jcs[segment.name][0].translation
+            rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, translation)
+            self.new_model.segments[segment.name].segment_coordinate_system = SegmentCoordinateSystemReal(
+                    scs=rt_matrix,
+                    is_scs_local=False,
+                )
 
-                # Replace all the components following RT modification
-                # jcs_modifier = JointCoordinateModifier(self.original_model)
-                # jcs_modifier.set_new_model(self.new_model)
-                new_child_jcs_in_global = self.new_model.segment_coordinate_system_in_global(segment.name)
-                self.new_model = self.replace_components_in_new_jcs(segment.name, new_child_jcs_in_global)
-
-
-
-            #
-            # if segment.parent_name != "base":
-            #     # Replace the parent
-            #     parent_name = segment.parent_name
-            #     parent_translation = original_jcs[parent_name][0].translation
-            #     parent_rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, parent_translation)
-            #     self.new_model.segments[parent_name].segment_coordinate_syayem = SegmentCoordinateSystemReal(
-            #                                                                         scs=parent_rt_matrix,
-            #                                                                         is_scs_local=False,
-            #                                                                     )
-            #     # Look for the chid
-            #     child_translation = original_jcs[segment.name][0].translation
-            #     child_rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, child_translation)
-            #     modified_model = self.replace_components_in_new_jcs(segment.name, child_rt_matrix)
-
-                # # Reinitialize
-                # self.original_model = deepcopy(modified_model)
-                # self.new_model = deepcopy(modified_model)
+            # Replace all the components following RT modification
+            self.new_model = self.replace_components_in_new_jcs(segment.name, rt_matrix)
 
         return self.new_model
 

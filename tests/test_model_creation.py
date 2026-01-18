@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import pytest
 
 import numpy as np
 import numpy.testing as npt
@@ -26,6 +27,7 @@ from biobuddy import (
     SegmentName,
     C3dData,
     MarkerData,
+    RotoTransMatrix,
 )
 from test_utils import destroy_model
 
@@ -502,8 +504,8 @@ def test_model_creation_from_static():
     if os.path.exists(kinematic_model_filepath):
         os.remove(kinematic_model_filepath)
 
-
-def test_model_creation_from_static_lower_body():
+@pytest.mark.parametrize("align_scs", [False, True])
+def test_model_creation_from_static_lower_body(align_scs):
 
     from examples.create_model_from_c3d import model_creation_from_measured_data
 
@@ -517,7 +519,10 @@ def test_model_creation_from_static_lower_body():
 
     # Create the model
     model_real = model_creation_from_measured_data(
-        static_trial=static_trial, remove_temporary=True, animate_model=False
+        static_trial=static_trial,
+        align_scs=align_scs,
+        remove_temporary=True,
+        animate_model=False
     )
 
     # Check some values of the model
@@ -533,63 +538,134 @@ def test_model_creation_from_static_lower_body():
     assert segment.rotations == Rotations.XYZ
     assert segment.nb_q == 6
     npt.assert_almost_equal(segment.inertia_parameters.mass, 28.096200000000003)
-    npt.assert_almost_equal(
-        segment.inertia_parameters.center_of_mass.reshape(
-            4,
-        ),
-        np.array([0.0, 0.0, 0.22295421, 1.0]),
-    )
-    npt.assert_almost_equal(
-        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.51902017, 0.46954064, 0.11899868])
-    )
-    npt.assert_almost_equal(
-        segment.segment_coordinate_system.scs.rt_matrix,
-        np.array(
-            [
-                [-0.06364053, 0.99797289, 0.0, 0.24594278],
-                [-0.99797289, -0.06364053, 0.0, 0.53419547],
-                [0.0, 0.0, 1.0, 0.97607442],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
-    )
-    npt.assert_almost_equal(
-        segment.mesh.positions,
-        np.array(
-            [
-                [-0.04585975, 0.04703374, 0.10769938, -0.10887336, -0.04585975],
-                [-0.10007909, -0.09855995, 0.09855995, 0.10007909, -0.10007909],
-                [0.01530446, 0.01463813, -0.00959209, -0.02035051, 0.01530446],
-                [1.0, 1.0, 1.0, 1.0, 1.0],
-            ]
-        ),
-    )
 
-    # Test markers
-    npt.assert_almost_equal(
-        segment.markers["LPSIS"].position.reshape(
-            4,
-        ),
-        np.array([-0.04585975, -0.10007909, 0.01530446, 1.0]),
-    )
-    npt.assert_almost_equal(
-        segment.markers["RPSIS"].position.reshape(
-            4,
-        ),
-        np.array([0.04703374, -0.09855995, 0.01463813, 1.0]),
-    )
-    npt.assert_almost_equal(
-        segment.markers["LASIS"].position.reshape(
-            4,
-        ),
-        np.array([-0.10887336, 0.10007909, -0.02035051, 1.0]),
-    )
-    npt.assert_almost_equal(
-        segment.markers["RA"].position.reshape(
-            4,
-        ),
-        np.array([0.17473068, -0.00946185, 0.44572759, 1.0]),
-    )
+    if align_scs:
+        npt.assert_almost_equal(
+            segment.inertia_parameters.center_of_mass.reshape(
+                4,
+            ),
+            np.array([0.0, 0.0, 0.22295421, 1.0]),
+        )
+        npt.assert_almost_equal(
+            np.diag(segment.inertia_parameters.inertia)[:3],
+            np.array([0.51881977, 0.46974104, 0.11899868])
+        )
+        npt.assert_almost_equal(
+            segment.segment_coordinate_system.scs.rt_matrix,
+            np.array(
+                [
+                    [1., 0., 0., 0.53419547],
+                    [0., 1., 0., -0.24594278],
+                    [0., 0., 1., 0.97607442],
+                    [0., 0., 0., 1.],
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            segment.mesh.positions,
+            np.array(
+                [
+                    [0.05213587, -0.04066599, -0.11375346, 0.10228358, 0.05213587],
+                    [0.09695768, 0.10135341, -0.09150611, -0.10680497, 0.09695768],
+                    [0.01530446, 0.01463813, -0.00959209, -0.02035051, 0.01530446],
+                    [1., 1., 1., 1., 1.],
+                ]
+            ),
+        )
+
+        # Test markers
+        npt.assert_almost_equal(
+            segment.markers["LPSIS"].position.reshape(
+                4,
+            ),
+            np.array([0.05213587, 0.09695768, 0.01530446, 1.]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["RPSIS"].position.reshape(
+                4,
+            ),
+            np.array([-0.04066599,  0.10135341,  0.01463813,  1.]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["LASIS"].position.reshape(
+                4,
+            ),
+            np.array([0.10228358, -0.10680497, -0.02035051,  1.]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["RA"].position.reshape(
+                4,
+            ),
+            np.array([-0.17377432,  0.02056262,  0.44572759,  1.]),
+            decimal=5,
+        )
+
+
+    else:
+        npt.assert_almost_equal(
+            segment.inertia_parameters.center_of_mass.reshape(
+                4,
+            ),
+            np.array([0.0, 0.0, 0.22295421, 1.0]),
+        )
+        npt.assert_almost_equal(
+            np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.51902017, 0.46954064, 0.11899868])
+        )
+        npt.assert_almost_equal(
+            segment.segment_coordinate_system.scs.rt_matrix,
+            np.array(
+                [
+                    [-0.06364053, 0.99797289, 0.0, 0.24594278],
+                    [-0.99797289, -0.06364053, 0.0, 0.53419547],
+                    [0.0, 0.0, 1.0, 0.97607442],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            segment.mesh.positions,
+            np.array(
+                [
+                    [-0.04585975, 0.04703374, 0.10769938, -0.10887336, -0.04585975],
+                    [-0.10007909, -0.09855995, 0.09855995, 0.10007909, -0.10007909],
+                    [0.01530446, 0.01463813, -0.00959209, -0.02035051, 0.01530446],
+                    [1.0, 1.0, 1.0, 1.0, 1.0],
+                ]
+            ),
+        )
+
+        # Test markers
+        npt.assert_almost_equal(
+            segment.markers["LPSIS"].position.reshape(
+                4,
+            ),
+            np.array([-0.04585975, -0.10007909, 0.01530446, 1.0]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["RPSIS"].position.reshape(
+                4,
+            ),
+            np.array([0.04703374, -0.09855995, 0.01463813, 1.0]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["LASIS"].position.reshape(
+                4,
+            ),
+            np.array([-0.10887336, 0.10007909, -0.02035051, 1.0]),
+            decimal=5,
+        )
+        npt.assert_almost_equal(
+            segment.markers["RA"].position.reshape(
+                4,
+            ),
+            np.array([0.17473068, -0.00946185, 0.44572759, 1.0]),
+            decimal=5,
+        )
 
     # Test segment
     segment = model_real.segments["RFoot"]
@@ -600,45 +676,175 @@ def test_model_creation_from_static_lower_body():
     assert segment.nb_q == 1
     assert segment.nb_markers == 1
     npt.assert_almost_equal(segment.inertia_parameters.mass, 0.8514)
+    if align_scs:
+        npt.assert_almost_equal(
+            segment.inertia_parameters.center_of_mass.reshape(
+                4,
+            ),
+            np.array([-0.01782952, -0.03786004, -0.01572073,  1.]),
+        )
+        npt.assert_almost_equal(
+            np.diag(segment.inertia_parameters.inertia)[:3],
+            np.array([0.00857036, 0.00214148, 0.00726176])
+        )
+        npt.assert_almost_equal(
+            segment.segment_coordinate_system.scs.rt_matrix,
+            np.array(
+                [
+                    [1., 0., 0., -0.0389863],
+                    [0., 1., 0., 0.04916711],
+                    [0., 0., 1., -0.3884914],
+                    [0., 0., 0., 1.],
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            segment.mesh.positions,
+            np.array(
+                [
+                    [-0.04047899, -0.02336437, 0.04047899, -0.04047899],
+                    [0.00394408, -0.12881202, -0.00394408, 0.00394408],
+                    [-0.0032855, -0.03467158, 0.0032855, -0.0032855],
+                    [1., 1., 1., 1.],
+                ]
+            ),
+        )
+
+        # Test markers
+        npt.assert_almost_equal(
+            segment.markers["RTT2"].position.reshape(4, ),
+            np.array([-0.02336437, -0.12881202, -0.03467158,  1.]),
+        )
+
+    else:
+        npt.assert_almost_equal(
+            segment.inertia_parameters.center_of_mass.reshape(
+                4,
+            ),
+            np.array([0.01104557, 0.00422068, 0.04311145, 1.0]),
+        )
+        npt.assert_almost_equal(
+            np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.00879901, 0.00766125, 0.00151333])
+        )
+        npt.assert_almost_equal(
+            segment.segment_coordinate_system.scs.rt_matrix,
+            np.array(
+                [
+                    [9.79470459e-01, -1.88107239e-01, 7.24795638e-02, 5.55111512e-17],
+                    [-9.89117223e-02, -1.35164447e-01, 9.85873746e-01, -2.77555756e-17],
+                    [-1.75653328e-01, -9.72803289e-01, -1.50995594e-01, -3.93526241e-01],
+                    [0.00000000e00, 0.00000000e00, 0.00000000e00, 1.00000000e00],
+                ]
+            ),
+        )
+        npt.assert_almost_equal(
+            segment.mesh.positions,
+            np.array(
+                [
+                    [4.05993515e-02, -4.16333634e-17, -4.05993515e-02, 4.05993515e-02],
+                    [1.38777878e-17, 0.00000000e00, 1.38777878e-17, 1.38777878e-17],
+                    [4.07329215e-03, 1.35427279e-01, -4.07329215e-03, 4.07329215e-03],
+                    [1.00000000e00, 1.00000000e00, 1.00000000e00, 1.00000000e00],
+                ]
+            ),
+        )
+
+        # Test markers
+        npt.assert_almost_equal(
+            segment.markers["RTT2"].position.reshape(4, ),
+            np.array([-4.16333634e-17, 0.00000000e00, 1.35427279e-01, 1.00000000e00]),
+        )
+
+    # Test that the markers and CoM are at the same place in the global reference frame
+    markers = model_real.markers_in_global()
     npt.assert_almost_equal(
-        segment.inertia_parameters.center_of_mass.reshape(
-            4,
-        ),
-        np.array([0.01104557, 0.00422068, 0.04311145, 1.0]),
+        markers,
+        np.array([[[0.1489851 ],
+        [0.14458937],
+        [0.35274776],
+        [0.33744889],
+        [0.22538016],
+        [0.22005044],
+        [0.24599459],
+        [0.23439866],
+        [0.18708544],
+        [0.1949736 ],
+        [0.31984153],
+        [0.24376077],
+        [0.24572599],
+        [0.18178928],
+        [0.19646891],
+        [0.31846345]],
+       [[0.58633135],
+        [0.49352948],
+        [0.63647905],
+        [0.42044201],
+        [0.36042115],
+        [0.70762798],
+        [0.37086159],
+        [0.47770362],
+        [0.34481731],
+        [0.4257753 ],
+        [0.36193193],
+        [0.69657054],
+        [0.59634415],
+        [0.71902636],
+        [0.63842531],
+        [0.69138788]],
+       [[0.99137889],
+        [0.99071256],
+        [0.95572392],
+        [0.96648234],
+        [1.42180202],
+        [1.41578848],
+        [0.46980771],
+        [0.45430179],
+        [0.07027785],
+        [0.07684886],
+        [0.03889177],
+        [0.47372655],
+        [0.46024884],
+        [0.07366009],
+        [0.0707941 ],
+        [0.03909038]],
+       [[1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ],
+        [1.        ]]]),
+        decimal=5,
     )
+    com_segment = model_real.segment_com_in_global("RFemur")
     npt.assert_almost_equal(
-        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.00879901, 0.00766125, 0.00151333])
+        com_segment.reshape(4, ),
+        np.array([0.2407255 , 0.44531086, 0.70919387, 1.]),
+        decimal=5,
     )
+    com_segment = model_real.segment_com_in_global("LTibia")
     npt.assert_almost_equal(
-        segment.segment_coordinate_system.scs.rt_matrix,
-        np.array(
-            [
-                [9.79470459e-01, -1.88107239e-01, 7.24795638e-02, 5.55111512e-17],
-                [-9.89117223e-02, -1.35164447e-01, 9.85873746e-01, -2.77555756e-17],
-                [-1.75653328e-01, -9.72803289e-01, -1.50995594e-01, -3.93526241e-01],
-                [0.00000000e00, 0.00000000e00, 0.00000000e00, 1.00000000e00],
-            ]
-        ),
+        com_segment.reshape(4, ),
+        np.array([0.22069602, 0.6604101 , 0.29629501, 1. ]),
+        decimal=5,
     )
+    com = model_real.total_com_in_global()
     npt.assert_almost_equal(
-        segment.mesh.positions,
-        np.array(
-            [
-                [4.05993515e-02, -4.16333634e-17, -4.05993515e-02, 4.05993515e-02],
-                [1.38777878e-17, 0.00000000e00, 1.38777878e-17, 1.38777878e-17],
-                [4.07329215e-03, 1.35427279e-01, -4.07329215e-03, 4.07329215e-03],
-                [1.00000000e00, 1.00000000e00, 1.00000000e00, 1.00000000e00],
-            ]
-        ),
+        com.reshape(4, ),
+        np.array([0.24200662, 0.53389101, 0.88827382, 1.]),
+        decimal=5,
     )
 
-    # Test markers
-    npt.assert_almost_equal(
-        segment.markers["RTT2"].position.reshape(
-            4,
-        ),
-        np.array([-4.16333634e-17, 0.00000000e00, 1.35427279e-01, 1.00000000e00]),
-    )
+
 
 
 def test_create_rt_from_functional_trials():

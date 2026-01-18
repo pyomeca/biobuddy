@@ -19,7 +19,7 @@ class MeshReal:
         self.positions = positions
 
     def __len__(self) -> int:
-        return len(self.positions)
+        return self.positions.shape[1]
 
     @property
     def positions(self) -> np.ndarray:
