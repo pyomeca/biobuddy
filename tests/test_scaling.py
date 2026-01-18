@@ -138,7 +138,9 @@ def visualize_model_scaling_output(scaled_model, osim_model_scaled, q, marker_na
     os.remove(osim_path)
 
 
-def test_scaling_wholebody():
+@pytest.mark.parametrize("make_static_pose_the_models_zero", [True, False])
+@pytest.mark.parametrize("replace_markers_to_fit_static", [True, False])
+def test_scaling_wholebody(replace_markers_to_fit_static, make_static_pose_the_models_zero):
 
     np.random.seed(42)
 
@@ -208,13 +210,16 @@ def test_scaling_wholebody():
 
     original_model.fix_via_points()
     scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
+    scale_tool.replace_markers_to_fit_static = replace_markers_to_fit_static
+
     scaled_model = scale_tool.scale(
         static_trial=c3d_data,
         mass=69.2,
         q_regularization_weight=0.1,
-        make_static_pose_the_models_zero=False,
+        make_static_pose_the_models_zero=make_static_pose_the_models_zero,
         visualize_optimal_static_pose=False,
     )
+
     scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
     scaled_biorbd_model = biorbd.Model(scaled_biomod_filepath)
 
@@ -282,168 +287,200 @@ def test_scaling_wholebody():
             else:
                 npt.assert_array_less(original_mass, mass_biobuddy * 1.1)
 
-    # CoM
-    for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
-        print(segment_name)
-        if "finger" in segment_name:
-            continue
-        if scaled_model.segments[segment_name].inertia_parameters is not None:
-            # Zero
-            com_biobuddy_0 = (
-                scaled_model.segments[segment_name]
-                .inertia_parameters.center_of_mass[:3]
-                .reshape(
-                    3,
-                )
-            ) + scaled_model.segment_coordinate_system_in_global(segment_name).translation
-            com_to_biorbd_0 = scaled_biorbd_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
-            com_osim_0 = scaled_osim_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
-            npt.assert_almost_equal(com_to_biorbd_0, com_biobuddy_0, decimal=2)
-            npt.assert_almost_equal(com_osim_0, com_biobuddy_0, decimal=2)
-            npt.assert_almost_equal(com_to_biorbd_0, com_osim_0, decimal=2)
-            # Random
-            com_biobuddy_rand = scaled_biorbd_model.CoMbySegment(q_random, i_segment).to_array()
-            com_osim_rand = scaled_osim_model.CoMbySegment(q_random, i_segment).to_array()
-            npt.assert_almost_equal(com_osim_rand, com_biobuddy_rand, decimal=2)
-
-    # Inertia
-    for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
-        print(segment_name)
-        if "finger" in segment_name:
-            continue
-        if scaled_model.segments[segment_name].inertia_parameters is not None:
-            inertia_biobuddy = scaled_model.segments[segment_name].inertia_parameters.inertia[:3, :3]
-            mass_to_biorbd = scaled_biorbd_model.segment(i_segment).characteristics().inertia().to_array()
-            inertia_osim = scaled_osim_model.segment(i_segment).characteristics().inertia().to_array()
-            # Large tolerance since the difference in scaling factor affects largely this value
-            npt.assert_almost_equal(mass_to_biorbd, inertia_biobuddy, decimal=5)
-            npt.assert_almost_equal(inertia_osim, inertia_biobuddy, decimal=1)
-            npt.assert_almost_equal(mass_to_biorbd, inertia_osim, decimal=1)
 
     # Marker positions
-    for i_marker in range(scaled_biorbd_model.nbMarkers()):
-        biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros[:, 0])[i_marker].to_array()
-        osim_scaled_marker = scaled_osim_model.markers(q_zeros[:, 0])[i_marker].to_array()
-        # TODO: The tolerance is large since the markers are already replaced based on the static trial.
-        npt.assert_almost_equal(osim_scaled_marker, biobuddy_scaled_marker, decimal=1)
-
-    # Via point positions
-    for muscle_group in original_model.muscle_groups:
-        if muscle_group.name in ["femur_r_to_tibia_r", "femur_l_to_tibia_l"]:
-            # These muscle groups have a moving insertion (vas_med_r and vas_med_l), which is not supported yet
-            continue
-
-        for muscle in muscle_group.muscles:
-            for via_point in muscle.via_points:
-                biobuddy_scaled_via_point = (
-                    scaled_model.muscle_groups[muscle_group.name]
-                    .muscles[muscle.name]
-                    .via_points[via_point.name]
-                    .position[:3]
+    if replace_markers_to_fit_static:
+        if make_static_pose_the_models_zero:
+            # Check that the markers are at the mean experimental position
+            marker_names = scaled_model.marker_names
+            model_markers = scaled_model.markers_in_global()
+            for i_marker, marker_name in enumerate(marker_names):
+                npt.assert_almost_equal(
+                    c3d_data.mean_marker_position(marker_name)[:3].reshape(3, ),
+                    model_markers[:3, i_marker].reshape(3, ),
+                    decimal=5,
                 )
-                osim_scaled_via_point = (
-                    osim_model_scaled.muscle_groups[muscle_group.name]
-                    .muscles[muscle.name]
-                    .via_points[via_point.name]
-                    .position[:3]
-                )
-                npt.assert_almost_equal(biobuddy_scaled_via_point, osim_scaled_via_point, decimal=5)
-
-            # Muscle properties
-            if (
-                muscle.name
-                in [
-                    "semiten_r",
-                    "vas_med_r",
-                    "vas_lat_r",
-                    "med_gas_r",
-                    "lat_gas_r",
-                    "semiten_l",
-                    "vas_med_l",
-                    "vas_lat_l",
-                    "med_gas_l",
-                    "lat_gas_l",
-                ]
-                or "stern_mast" in muscle.name
-            ):
-                # Skipping muscles with ConditionalPathPoints and MovingPathPoints
-                # Skipping the head since there is a difference in scaling
-                # TODO: This could be tested if MultiplierFunction was implemented
-                continue
-            print(muscle.name)
-            biobuddy_optimal_length = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
-            osim_optimal_length = osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
-            npt.assert_almost_equal(biobuddy_optimal_length, osim_optimal_length, decimal=5)
-            biobuddy_tendon_slack_length = (
-                scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
-            )
-            osim_tendon_slack_length = (
-                osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
-            )
-            npt.assert_almost_equal(biobuddy_tendon_slack_length, osim_tendon_slack_length, decimal=5)
-
-    # Make sure the experimental markers are at the same position as the model's ones in static pose
-    scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
-    scaled_model = scale_tool.scale(
-        static_trial=c3d_data,
-        mass=69.2,
-        q_regularization_weight=0.1,
-        make_static_pose_the_models_zero=True,
-    )
-    scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
-
-    # Seems like we loose some precision with the RT transformations
-    jcs_in_global = scaled_model.forward_kinematics(q_zeros[:, 0])
-
-    marker_parent = []
-    marker_positions = np.zeros((4, scaled_model.nb_markers, c3d_data.nb_frames))
-    for i_marker, marker_name in enumerate(scaled_model.marker_names):
-        for segment in scaled_model.segments:
-            if marker_name in segment.marker_names:
-                marker_parent += [segment.name]
-                break
-        marker_index = c3d_data.marker_names.index(marker_name)
-        marker_positions[:, i_marker, :] = c3d_data.all_marker_positions[:, marker_index, :]
-
-    exp_markers = scale_tool.mean_experimental_markers
-    biobuddy_markers = scaled_model.markers_in_global(q_zeros[:, 0])
-    for i_marker in range(scaled_model.nb_markers):
-        theoretical_position_from_exp = np.nanmean(marker_positions[:, i_marker, :], axis=1)
-        marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(
-            scaled_model.marker_names[i_marker]
-        )
-        theoretical_position_from_local = (
-            jcs_in_global[marker_parent[i_marker]][0]
-            @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
-        )
-        if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
-            # TODO: fix -> There is still a problem with the fingers in BioBuddy (should be fixed)
-            decimal = 2
         else:
-            decimal = 5
-        npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_markers[:, i_marker, 0], decimal=decimal)
-        npt.assert_almost_equal(
-            exp_markers[:, i_marker],
-            theoretical_position_from_exp.reshape(
-                4,
-            ),
-            decimal=decimal,
-        )
-        npt.assert_almost_equal(
-            exp_markers[:, i_marker],
-            theoretical_position_from_local.reshape(
-                4,
-            ),
-            decimal=decimal,
-        )
+            for i_marker in range(scaled_biorbd_model.nbMarkers()):
+                biobuddy_scaled_marker = scaled_biorbd_model.markers(q_zeros[:, 0])[i_marker].to_array()
+                osim_scaled_marker = scaled_osim_model.markers(q_zeros[:, 0])[i_marker].to_array()
+                # TODO: The tolerance is large since the markers are already replaced based on the static trial.
+                npt.assert_almost_equal(osim_scaled_marker, biobuddy_scaled_marker, decimal=1)
+    else:
+        # The markers position is scaled
+        for segment_name in original_model.segment_names:
+            if segment_name in scale_tool.scaling_segments:
+                scaling_factor = scale_tool.scaling_segments[segment_name].compute_scaling_factors(
+                    original_model, marker_positions, marker_names
+                ).to_vector()[0, 0]
+                for marker in original_model.segments[segment_name].markers:
+                    marker_position = marker.position[:3].reshape(3, )
+                    scaled_marker_position = scaling_factor * marker_position
+                    npt.assert_almost_equal(
+                        scaled_marker_position[:3].reshape(3, ),
+                        scaled_model.segments[segment_name].markers[marker.name].position[:3].reshape(3, ),
+                        decimal=5,
+                    )
 
-    os.remove(scaled_biomod_filepath)
-    os.remove(converted_scaled_osim_filepath)
-    os.remove(parent_path + "/examples/models/static.trc")
-    os.remove("wholebody.xml")
-    os.remove("wholebody.osim")
-    os.remove(parent_path + "/examples/models/scaled.osim")
-    remove_temporary_biomods()
+    if make_static_pose_the_models_zero:
+        # TODO: make the OpenSim version with this option set to True
+        return
+    else:
+        # CoM
+        for i_segment, segment_name in enumerate(scaled_model.segments.keys()):
+            print(segment_name)
+            if "finger" in segment_name:
+                continue
+            if scaled_model.segments[segment_name].inertia_parameters is not None:
+                # Zero
+                com_biobuddy_0 = (
+                    scaled_model.segments[segment_name]
+                    .inertia_parameters.center_of_mass[:3]
+                    .reshape(
+                        3,
+                    )
+                ) + scaled_model.segment_coordinate_system_in_global(segment_name).translation
+                com_to_biorbd_0 = scaled_biorbd_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
+                com_osim_0 = scaled_osim_model.CoMbySegment(q_zeros[:, 0], i_segment).to_array()
+                npt.assert_almost_equal(com_to_biorbd_0, com_biobuddy_0, decimal=2)
+                npt.assert_almost_equal(com_osim_0, com_biobuddy_0, decimal=2)
+                npt.assert_almost_equal(com_to_biorbd_0, com_osim_0, decimal=2)
+                # Random
+                com_biobuddy_rand = scaled_biorbd_model.CoMbySegment(q_random, i_segment).to_array()
+                com_osim_rand = scaled_osim_model.CoMbySegment(q_random, i_segment).to_array()
+                npt.assert_almost_equal(com_osim_rand, com_biobuddy_rand, decimal=2)
+
+        # Inertia
+        for i_segment, segment_name in enumerate(scaled_model.segment_names):
+            print(segment_name)
+            if "finger" in segment_name:
+                continue
+            if scaled_model.segments[segment_name].inertia_parameters is not None:
+                inertia_biobuddy = scaled_model.segments[segment_name].inertia_parameters.inertia[:3, :3]
+                mass_to_biorbd = scaled_biorbd_model.segment(i_segment).characteristics().inertia().to_array()
+                inertia_osim = scaled_osim_model.segment(i_segment).characteristics().inertia().to_array()
+                # Large tolerance since the difference in scaling factor affects largely this value
+                npt.assert_almost_equal(mass_to_biorbd, inertia_biobuddy, decimal=5)
+                npt.assert_almost_equal(inertia_osim, inertia_biobuddy, decimal=1)
+                npt.assert_almost_equal(mass_to_biorbd, inertia_osim, decimal=1)
+
+        # Via point positions
+        for muscle_group in original_model.muscle_groups:
+            if muscle_group.name in ["femur_r_to_tibia_r", "femur_l_to_tibia_l"]:
+                # These muscle groups have a moving insertion (vas_med_r and vas_med_l), which is not supported yet
+                continue
+
+            for muscle in muscle_group.muscles:
+                for via_point in muscle.via_points:
+                    biobuddy_scaled_via_point = (
+                        scaled_model.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .via_points[via_point.name]
+                        .position[:3]
+                    )
+                    osim_scaled_via_point = (
+                        osim_model_scaled.muscle_groups[muscle_group.name]
+                        .muscles[muscle.name]
+                        .via_points[via_point.name]
+                        .position[:3]
+                    )
+                    npt.assert_almost_equal(biobuddy_scaled_via_point, osim_scaled_via_point, decimal=5)
+
+                # Muscle properties
+                if (
+                    muscle.name
+                    in [
+                        "semiten_r",
+                        "vas_med_r",
+                        "vas_lat_r",
+                        "med_gas_r",
+                        "lat_gas_r",
+                        "semiten_l",
+                        "vas_med_l",
+                        "vas_lat_l",
+                        "med_gas_l",
+                        "lat_gas_l",
+                    ]
+                    or "stern_mast" in muscle.name
+                ):
+                    # Skipping muscles with ConditionalPathPoints and MovingPathPoints
+                    # Skipping the head since there is a difference in scaling
+                    # TODO: This could be tested if MultiplierFunction was implemented
+                    continue
+                print(muscle.name)
+                biobuddy_optimal_length = scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+                osim_optimal_length = osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].optimal_length
+                npt.assert_almost_equal(biobuddy_optimal_length, osim_optimal_length, decimal=5)
+                biobuddy_tendon_slack_length = (
+                    scaled_model.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
+                )
+                osim_tendon_slack_length = (
+                    osim_model_scaled.muscle_groups[muscle_group.name].muscles[muscle.name].tendon_slack_length
+                )
+                npt.assert_almost_equal(biobuddy_tendon_slack_length, osim_tendon_slack_length, decimal=5)
+
+        # Make sure the experimental markers are at the same position as the model's ones in static pose
+        scale_tool = ScaleTool(original_model=original_model).from_xml(filepath=xml_filepath)
+        scaled_model = scale_tool.scale(
+            static_trial=c3d_data,
+            mass=69.2,
+            q_regularization_weight=0.1,
+            make_static_pose_the_models_zero=True,
+        )
+        scaled_model.to_biomod(scaled_biomod_filepath, with_mesh=False)
+
+        # Seems like we loose some precision with the RT transformations
+        jcs_in_global = scaled_model.forward_kinematics(q_zeros[:, 0])
+
+        marker_parent = []
+        marker_positions = np.zeros((4, scaled_model.nb_markers, c3d_data.nb_frames))
+        for i_marker, marker_name in enumerate(scaled_model.marker_names):
+            for segment in scaled_model.segments:
+                if marker_name in segment.marker_names:
+                    marker_parent += [segment.name]
+                    break
+            marker_index = c3d_data.marker_names.index(marker_name)
+            marker_positions[:, i_marker, :] = c3d_data.all_marker_positions[:, marker_index, :]
+
+        exp_markers = scale_tool.mean_experimental_markers
+        biobuddy_markers = scaled_model.markers_in_global(q_zeros[:, 0])
+        for i_marker in range(scaled_model.nb_markers):
+            theoretical_position_from_exp = np.nanmean(marker_positions[:, i_marker, :], axis=1)
+            marker_index = scaled_model.segments[marker_parent[i_marker]].marker_names.index(
+                scaled_model.marker_names[i_marker]
+            )
+            theoretical_position_from_local = (
+                jcs_in_global[marker_parent[i_marker]][0]
+                @ scaled_model.segments[marker_parent[i_marker]].markers[marker_index].position
+            )
+            if marker_parent[i_marker] in ["hand_r", "hand_l", "fingers_r", "fingers_l"]:
+                # TODO: fix -> There is still a problem with the fingers in BioBuddy (should be fixed)
+                decimal = 2
+            else:
+                decimal = 5
+            npt.assert_almost_equal(exp_markers[:, i_marker], biobuddy_markers[:, i_marker, 0], decimal=decimal)
+            npt.assert_almost_equal(
+                exp_markers[:, i_marker],
+                theoretical_position_from_exp.reshape(
+                    4,
+                ),
+                decimal=decimal,
+            )
+            npt.assert_almost_equal(
+                exp_markers[:, i_marker],
+                theoretical_position_from_local.reshape(
+                    4,
+                ),
+                decimal=decimal,
+            )
+
+        os.remove(scaled_biomod_filepath)
+        os.remove(converted_scaled_osim_filepath)
+        os.remove(parent_path + "/examples/models/static.trc")
+        os.remove("wholebody.xml")
+        os.remove("wholebody.osim")
+        os.remove(parent_path + "/examples/models/scaled.osim")
+        remove_temporary_biomods()
 
 
 @pytest.mark.parametrize("make_static_pose_the_models_zero", [True, False])
