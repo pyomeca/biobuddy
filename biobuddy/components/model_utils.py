@@ -4,7 +4,6 @@ import numpy as np
 
 from ..utils.enums import Translations, Rotations
 
-
 if TYPE_CHECKING:
     from .real.rigidbody.segment_real import SegmentReal
 

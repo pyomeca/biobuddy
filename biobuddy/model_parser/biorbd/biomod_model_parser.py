@@ -32,7 +32,6 @@ from .utils import (
 )
 from ...utils.enums import Translations
 
-
 # TODO: when we update to biorbd=1.12.0, we need to parse the mesh file dir and ubdate the mesh_file_directory
 #  in MeshFileReal
 

@@ -3,7 +3,6 @@ from .opensim import *
 from .urdf import *
 from .abstract_model_parser import AbstractModelParser
 
-
 __all__ = (
     [
         AbstractModelParser.__name__,

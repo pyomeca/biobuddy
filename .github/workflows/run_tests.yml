@@ -59,7 +59,7 @@ jobs:
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
-          pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d matplotlib plotly
+          pip install scipy==1.17.0 numpy==2.4.1 lxml ezc3d matplotlib plotly
           conda install biorbd=1.11.2=py311h9439bbc_1 -cconda-forge
 
       - name: Install test dependencies
@@ -67,6 +67,9 @@ jobs:
           pip install pytest pytest-cov codecov
           conda install -c conda-forge deepdiff pinocchio pandas
           conda install -c opensim-org opensim=4.5.1
+
+      - name: List conda packages
+        run: conda list
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests

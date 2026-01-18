@@ -8,7 +8,6 @@ from ...components.real.muscle.via_point_real import ViaPointReal
 from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.muscle_utils import MuscleType, MuscleStateType
 
-
 OPENSIM_MUSCLE_TYPE = {
     "Thelen2003Muscle": MuscleType.HILL_THELEN,
     "Millard2012EquilibriumMuscle": None,  # Not implemented

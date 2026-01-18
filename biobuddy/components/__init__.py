@@ -4,7 +4,6 @@ from .functions import SimmSpline, PiecewiseLinearFunction
 from .muscle_utils import MuscleType, MuscleStateType
 from .via_point_utils import PathPointCondition, PathPointMovement
 
-
 __all__ = (
     generic.__all__
     + real.__all__
