@@ -202,14 +202,15 @@ class JointCoordinateModifier:
             translation = original_jcs[segment.name][0].translation
             rt_matrix = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, translation)
             self.new_model.segments[segment.name].segment_coordinate_system = SegmentCoordinateSystemReal(
-                    scs=rt_matrix,
-                    is_scs_local=False,
-                )
+                scs=rt_matrix,
+                is_scs_local=False,
+            )
 
             # Replace all the components following RT modification
             self.new_model = self.replace_components_in_new_jcs(segment.name, rt_matrix)
 
         return self.new_model
+
 
 class RigidSegmentIdentification(ABC):
     def __init__(
