@@ -479,6 +479,7 @@ def test_init_mesh_real():
     # Test initialization with no positions
     mesh = MeshReal()
     assert mesh.positions.shape == (4, 0)
+    assert len(mesh) == 0
 
     # Test initialization with positions
     positions = np.array([[1.0, 2.0, 3.0], [2.0, 3.0, 4.0], [3.0, 4.0, 5.0], [1.0, 1.0, 1.0]])
@@ -486,7 +487,7 @@ def test_init_mesh_real():
     npt.assert_array_equal(mesh.positions, positions)
 
     # Test len
-    assert len(mesh) == 0
+    assert len(mesh) == 3
 
 
 def test_mesh_real_add_positions():
