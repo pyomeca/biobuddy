@@ -41,7 +41,7 @@ class MeshFileReal:
 
     @property
     def mesh_file_name(self) -> str:
-        return self._mesh_file_name
+        return self._mesh_file_name.lower()
 
     @mesh_file_name.setter
     def mesh_file_name(self, value: str):
