@@ -990,6 +990,8 @@ def test_complex_model():
         np.array([0.0, 0.0, 0.5, 1.0]),
     )
 
+    assert real_model.segments["PENDULUM"].mesh_file.mesh_file_name == "pendulum.stl"
+
     destroy_model(real_model)
 
     if os.path.exists(kinematic_model_filepath):
