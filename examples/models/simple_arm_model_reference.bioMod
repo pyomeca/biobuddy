@@ -1,7 +1,7 @@
 version 4
 
 
-// File extracted from /Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/MOBL_ARMS_41.osim on the 2025-09-28 15:00
+// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/applied_examples/../models/MOBL_ARMS_41.osim on the 2026-02-03 18:33
 
 // Original file publication : Comp Meth Biomech Biomed Eng 2014
 
@@ -64,7 +64,7 @@ segment	humerus
 		0.012278	-0.000347	-0.000233
 		-0.000347	0.002551	0.001229
 		-0.000233	0.001229	0.012579
-	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/humerus.vtp
+	meshfile	/home/charbie/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/humerus.vtp
 	meshcolor	1.0	1.0	1.0
 	meshscale	1.0	1.0	1.0
 	meshrt	0.15	0.0	0.0	xyz	0.0	0.0	0.0
@@ -99,7 +99,7 @@ segment	ulna
 		0.005413	0.000317	-0.000076
 		0.000317	0.001153	0.001092
 		-0.000076	0.001092	0.004944
-	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/ulna.vtp
+	meshfile	/home/charbie/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/ulna.vtp
 	meshcolor	1.0	1.0	1.0
 	meshscale	1.0	1.0	1.0
 	meshrt	0.25	0.0	0.0	xyz	0.0	0.0	0.0
@@ -123,7 +123,7 @@ segment	radius
 	parent	radius_parent_offset
 	RTinMatrix	1
 	RT
-		1.000000	-0.000000	0.000000	-0.000000
+		1.000000	-0.000000	0.000000	0.000000
 		-0.000000	1.000000	0.000000	0.000000
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
@@ -133,7 +133,7 @@ segment	radius
 		0.000439	0.000030	-0.000004
 		0.000030	0.000089	0.000064
 		-0.000004	0.000064	0.000403
-	meshfile	/Users/evecharbonneau/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/radius.vtp
+	meshfile	/home/charbie/Documents/Programmation/biobuddy/examples/applied_examples/../models/Geometry_cleaned/radius.vtp
 	meshcolor	1.0	1.0	1.0
 	meshscale	1.0	1.0	1.0
 	meshrt	0.25	0.0	0.0	xyz	0.0	0.0	0.0
@@ -327,9 +327,9 @@ muscle	BIClong
 	musclegroup	scapula_to_radius
 	originposition	-0.0312	-0.0235	0.0
 	insertionposition	-0.002	-0.0375	0.0
-	optimallength	0.1136
+	optimallength	0.1134
 	maximalforce	525.1000
-	tendonslacklength	0.2674
+	tendonslacklength	0.2668
 	pennationangle	0.0000
 	maxvelocity	10.0000
 	maxexcitation	1.0000
@@ -398,7 +398,7 @@ viapoint	default
 	parent	radius
 	muscle	BIClong
 	musclegroup	scapula_to_radius
-	position	0.0	0.0	0.0
+	position	0.002723	0.0	0.0
 endviapoint
 
 
@@ -408,9 +408,9 @@ muscle	BICshort
 	musclegroup	scapula_to_radius
 	originposition	0.0127	-0.0393	0.0
 	insertionposition	-0.002	-0.0375	0.0
-	optimallength	0.1306
+	optimallength	0.1302
 	maximalforce	316.8000
-	tendonslacklength	0.1901
+	tendonslacklength	0.1895
 	pennationangle	0.0000
 	maxvelocity	10.0000
 	maxexcitation	1.0000
@@ -455,7 +455,7 @@ viapoint	default
 	parent	radius
 	muscle	BICshort
 	musclegroup	scapula_to_radius
-	position	0.0	0.0	0.0
+	position	0.002723	0.0	0.0
 endviapoint
 
 
