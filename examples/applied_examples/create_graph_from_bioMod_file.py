@@ -19,8 +19,6 @@ base_name = "arm26_allbiceps_1dof"
 model = BiomechanicalModelReal().from_biomod(biomod_path)
 path = os.path.join("examples/data", base_name)
 
-model.write_graphviz(
-    path, ghost_segments=True, dof_segments=True, via_points=True, markers=True
-)
+model.write_graphviz(path, ghost_segments=True, dof_segments=True, via_points=True, markers=True)
 
 model.convert_dot_to_png(path)
