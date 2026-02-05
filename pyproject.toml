@@ -24,7 +24,7 @@ dependencies = [
     "numpy",
     "ezc3d",
     "lxml",
-    "scipy",
+    "scipy", 
     "pandas",
 ]
 
