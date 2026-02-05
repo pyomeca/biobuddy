@@ -1,6 +1,8 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+from pathlib import Path
+import subprocess
 
 from ..utils.enums import Translations, Rotations
 
@@ -108,7 +110,12 @@ class ModelUtils:
         Check if the segment has ghost parents.
         A ghost parent is a segment that does not hold inertia, but is used to define the segment's coordinate system.
         """
-        ghost_keys = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        ghost_keys = [
+            "_parent_offset",
+            "_translation",
+            "_rotation_transform",
+            "_reset_axis",
+        ]
         for key in ghost_keys:
             if segment_name + key in self.segments.keys():
                 return True
@@ -310,6 +317,20 @@ class ModelUtils:
                 dofs.append(segment.rotations)
         return dofs
 
+    @property
+    def muscle_group_origin_parent_names(self):
+        muscle_group_origins = []
+        for mg in self.muscle_groups:
+            muscle_group_origins.append(mg.origin_parent_name)
+        return muscle_group_origins
+
+    @property
+    def muscle_group_insertion_parent_names(self):
+        muscle_group_origins = []
+        for mg in self.muscle_groups:
+            muscle_group_origins.append(mg.insertion_parent_name)
+        return muscle_group_origins
+
     def remove_dofs(self, dofs_to_remove: list[str]):
         """
         Remove the degrees of freedom from the model
@@ -376,7 +397,9 @@ class ModelUtils:
                 self.remove_segment(segment.name)
 
     def modify_model_static_pose(self, q_static: np.ndarray):
-        from .real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+        from .real.rigidbody.segment_coordinate_system_real import (
+            SegmentCoordinateSystemReal,
+        )
 
         if q_static.shape != (self.nb_q,):
             raise RuntimeError(f"The shape of q_static must be (nb_q, ), you have {q_static.shape}.")
@@ -419,3 +442,166 @@ class ModelUtils:
         for segment in self.segments:
             if segment.mesh_file is not None:
                 segment.mesh_file.mesh_file_directory = new_directory
+
+    def write_graphviz(
+        self,
+        out_path: str,
+        ghost_segments: bool = True,
+        dof_segments: bool = True,
+        via_points: bool = True,
+        markers: bool = True,
+    ):
+        """
+        Write a graphviz .dot file representing the biomechanical model structure
+
+        Parameters
+        ----------
+        out_path
+            path to save the .dot file
+        ghost_segments
+            whether to include segments without inertia parameters or markers as "ghost" segments (empty boxes)
+        dof_segments
+            whether to include segments with DOFs as "dof" segments (boxes with diagonals)
+        via_points
+            whether to include via points in the graph
+        markers
+            whether to include markers in the graph
+        """
+        out_path = Path(out_path)
+
+        if out_path.suffix != ".dot":
+            out_path = out_path.with_suffix(".dot")
+
+        with open(out_path, "w") as f:
+            f.write("digraph biomech {\n")
+            f.write("  rankdir=TB;\n")
+            f.write('  node [fontname="Helvetica"];\n\n')
+
+            # -------- SEGMENTS --------
+            # TODO : add specific box for segments with contact points
+            f.write("  // Segments\n")
+            true_segments = []
+            for s in self.segments:
+                if dof_segments and s.dof_names:
+                    label = f"{s.name}\\n(DOF T: {s.translations.name.lower()} | R: {s.rotations.name.lower()})"
+                    f.write(
+                        f'  "{s.name}" [shape=box, style="filled,diagonals", fillcolor=lightyellow, label="{label}"];\n'
+                    )
+                    true_segments.append(s.name)
+                elif (
+                    s.inertia_parameters
+                    or s.markers
+                    or s.name in self.muscle_group_origin_parent_names
+                    or s.name in self.muscle_group_insertion_parent_names
+                ):
+                    f.write(f'  "{s.name}" [shape=box, style="filled,bold", fillcolor=lightgray];\n')
+                    true_segments.append(s.name)
+
+                elif ghost_segments:
+                    f.write(f'  "{s.name}" [shape=box, style=rounded];\n')
+
+                else:
+                    continue
+
+            f.write("\n  // Segment hierarchy\n")
+
+            if ghost_segments:
+                for s_name in self.segment_names:
+                    for children_name in self.children_segment_names(s_name):
+                        f.write(f'  "{s_name}" -> "{children_name}";\n')
+            else:
+                for s_name in true_segments[::-1]:
+                    s_parent_name = self.segments[s_name].parent_name
+                    if s_parent_name == "root":
+                        break
+                    while True:
+                        # if (
+                        #     self.segments[s_parent_name].inertia_parameters
+                        #     or self.segments[s_parent_name].markers
+                        # ):
+                        if s_parent_name in true_segments:
+                            f.write(f'  "{s_parent_name}" -> "{s_name}";\n')
+                            break
+                        else:
+                            if s_parent_name == "base":
+                                break
+                            s_parent_name = self.segments[s_parent_name].parent_name
+                            if s_parent_name == "root":
+                                break
+
+            # -------- MARKERS --------
+            if markers:
+                f.write("\n  // Markers\n")
+                for marker_name in self.marker_names:
+                    f.write(f'  "{marker_name}" [shape=octagon, style=filled, fillcolor=lightgreen];\n')
+
+                for s in self.segments:
+                    for marker in s.markers:
+                        f.write(f'  "{s.name}" -> "{marker.name}";\n')
+
+            # # -------- MUSCLE GROUPS --------
+            f.write("\n  // Muscle groups\n")
+            for mg in self.muscle_groups:
+                origin = mg.origin_parent_name
+                insertion = mg.insertion_parent_name
+
+                label = f"{mg.name}\\n({origin} → {insertion})"
+                f.write(f'  "{mg.name}" [shape=parallelogram, style=filled, fillcolor=lightblue, label="{label}"];\n')
+                # origin ---> insertion
+                if origin:
+                    f.write(f'  "{origin}" -> "{mg.name}" [label="origin"];\n')
+                if insertion:
+                    f.write(f'  "{mg.name}" -> "{insertion}" [label="insertion"];\n')
+
+            # # -------- MUSCLES --------
+            f.write("\n  // Muscles\n")
+            for mg in self.muscle_groups:
+                for m_name in mg.muscles.keys():
+                    f.write(f'  "{m_name}" [shape=diamond, style=filled, fillcolor=lightcoral];\n')
+                    f.write(f'  "{mg.name}" -> "{m_name}";\n')
+
+            if via_points:
+                # # -------- VIAPOINTS --------
+                f.write("\n  // Via points\n")
+                for vp_name in self.via_point_names:
+                    f.write(f'  "{vp_name}" [shape=ellipse, style=filled, fillcolor=orange];\n')
+
+                # # -------- MUSCLE --> VIAPOINT CHAINS --------
+                f.write("\n  // Muscle paths\n")
+
+                for mg in self.muscle_groups:
+                    for m in mg.muscles:
+                        if not m.via_points:
+                            continue
+                        # muscle -> first VP
+                        f.write(f'  "{m.name}" -> "{m.via_points[0].name}" [label="via"];\n')
+
+                        # other VP
+                        for i in range(len(m.via_points) - 1):
+                            f.write(f'  "{m.via_points[i].name}" -> "{m.via_points[i+1].name}" [label="via"];\n')
+
+                    # # last VP -> parent segment
+                    # last_vp = vps[-1]
+                    # if last_vp["parent"]:
+                    #     f.write(
+                    #         f'  "{last_vp["name"]}" -> "{last_vp["parent"]}" [label="attach"];\n'
+                    #     )
+
+            f.write("\n}\n")
+
+        print(f"A graph have been created for the model here : {out_path}")
+
+    def convert_dot_to_png(self, path_dot_file):
+        path_dot_file = Path(path_dot_file)
+
+        if path_dot_file.suffix != ".dot":
+            path_dot_file = path_dot_file.with_suffix(".dot")
+
+        if not path_dot_file.exists():
+            raise FileNotFoundError(f"DOT file not found: {path_dot_file}")
+
+        png_file = path_dot_file.with_suffix(".png")
+
+        subprocess.run(["dot", "-Tpng", str(path_dot_file), "-o", str(png_file)], check=True)
+
+        print(f"A graph has been created here: {png_file}")
