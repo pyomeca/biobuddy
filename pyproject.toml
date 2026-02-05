@@ -24,7 +24,8 @@ dependencies = [
     "numpy",
     "ezc3d",
     "lxml",
-    "scipy",
+    "scipy", 
+    "pandas",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +38,6 @@ test = [
     "pyorerun",
     "bioviz", 
     "plotly",
-    "pandas",
 ]
 
 [project.urls]
