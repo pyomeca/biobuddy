@@ -446,11 +446,11 @@ class ModelUtils:
     def write_graphviz(
         self,
         out_path: str,
-        ghost_segments: bool = True,
-        dof_segments: bool = True,
-        via_points: bool = True,
-        markers: bool = True,
-    ):
+        include_ghost_segments: bool = True,
+        include_dof_segments: bool = True,
+        include_via_points: bool = True,
+        include_markers: bool = True,
+    ) -> None:
         """
         Write a graphviz .dot file representing the biomechanical model structure
 
@@ -458,15 +458,33 @@ class ModelUtils:
         ----------
         out_path
             path to save the .dot file
-        ghost_segments
+        include_ghost_segments
             whether to include segments without inertia parameters or markers as "ghost" segments (empty boxes)
-        dof_segments
+        include_dof_segments
             whether to include segments with DOFs as "dof" segments (boxes with diagonals)
-        via_points
+        include_via_points
             whether to include via points in the graph
-        markers
+        include_markers
             whether to include markers in the graph
         """
+
+        def convert_dot_to_png(path_dot_file: Path | str) -> None:
+            path_dot_file = Path(path_dot_file)
+
+            if path_dot_file.suffix != ".dot":
+                path_dot_file = path_dot_file.with_suffix(".dot")
+
+            if not path_dot_file.exists():
+                raise FileNotFoundError(f"DOT file not found: {path_dot_file}")
+
+            png_file = path_dot_file.with_suffix(".png")
+
+            subprocess.run(["dot", "-Tpng", str(path_dot_file), "-o", str(png_file)], check=True)
+
+            print(f"A graph has been created here: {png_file}")
+
+            return
+
         out_path = Path(out_path)
 
         if out_path.suffix != ".dot":
@@ -482,7 +500,7 @@ class ModelUtils:
             f.write("  // Segments\n")
             true_segments = []
             for s in self.segments:
-                if dof_segments and s.dof_names:
+                if include_dof_segments and s.dof_names:
                     label = f"{s.name}\\n(DOF T: {s.translations.name.lower()} | R: {s.rotations.name.lower()})"
                     f.write(
                         f'  "{s.name}" [shape=box, style="filled,diagonals", fillcolor=lightyellow, label="{label}"];\n'
@@ -497,7 +515,7 @@ class ModelUtils:
                     f.write(f'  "{s.name}" [shape=box, style="filled,bold", fillcolor=lightgray];\n')
                     true_segments.append(s.name)
 
-                elif ghost_segments:
+                elif include_ghost_segments:
                     f.write(f'  "{s.name}" [shape=box, style=rounded];\n')
 
                 else:
@@ -505,7 +523,7 @@ class ModelUtils:
 
             f.write("\n  // Segment hierarchy\n")
 
-            if ghost_segments:
+            if include_ghost_segments:
                 for s_name in self.segment_names:
                     for children_name in self.children_segment_names(s_name):
                         f.write(f'  "{s_name}" -> "{children_name}";\n')
@@ -515,10 +533,6 @@ class ModelUtils:
                     if s_parent_name == "root":
                         break
                     while True:
-                        # if (
-                        #     self.segments[s_parent_name].inertia_parameters
-                        #     or self.segments[s_parent_name].markers
-                        # ):
                         if s_parent_name in true_segments:
                             f.write(f'  "{s_parent_name}" -> "{s_name}";\n')
                             break
@@ -530,7 +544,7 @@ class ModelUtils:
                                 break
 
             # -------- MARKERS --------
-            if markers:
+            if include_markers:
                 f.write("\n  // Markers\n")
                 for marker_name in self.marker_names:
                     f.write(f'  "{marker_name}" [shape=octagon, style=filled, fillcolor=lightgreen];\n')
@@ -560,7 +574,7 @@ class ModelUtils:
                     f.write(f'  "{m_name}" [shape=diamond, style=filled, fillcolor=lightcoral];\n')
                     f.write(f'  "{mg.name}" -> "{m_name}";\n')
 
-            if via_points:
+            if include_via_points:
                 # # -------- VIAPOINTS --------
                 f.write("\n  // Via points\n")
                 for vp_name in self.via_point_names:
@@ -580,28 +594,8 @@ class ModelUtils:
                         for i in range(len(m.via_points) - 1):
                             f.write(f'  "{m.via_points[i].name}" -> "{m.via_points[i+1].name}" [label="via"];\n')
 
-                    # # last VP -> parent segment
-                    # last_vp = vps[-1]
-                    # if last_vp["parent"]:
-                    #     f.write(
-                    #         f'  "{last_vp["name"]}" -> "{last_vp["parent"]}" [label="attach"];\n'
-                    #     )
-
             f.write("\n}\n")
 
         print(f"A graph have been created for the model here : {out_path}")
 
-    def convert_dot_to_png(self, path_dot_file):
-        path_dot_file = Path(path_dot_file)
-
-        if path_dot_file.suffix != ".dot":
-            path_dot_file = path_dot_file.with_suffix(".dot")
-
-        if not path_dot_file.exists():
-            raise FileNotFoundError(f"DOT file not found: {path_dot_file}")
-
-        png_file = path_dot_file.with_suffix(".png")
-
-        subprocess.run(["dot", "-Tpng", str(path_dot_file), "-o", str(png_file)], check=True)
-
-        print(f"A graph has been created here: {png_file}")
+        convert_dot_to_png(out_path)

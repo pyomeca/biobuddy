@@ -10,15 +10,27 @@ The output includes visualization of segments, degrees of freedom, via points, a
 """
 
 from biobuddy import BiomechanicalModelReal
-import os
+from pathlib import Path
 
 
-# Get the model
-biomod_path = "examples/models/arm26_allbiceps_1dof.bioMod"
-base_name = "arm26_allbiceps_1dof"
-model = BiomechanicalModelReal().from_biomod(biomod_path)
-path = os.path.join("examples/data", base_name)
+def create_graph_from_biomod_file():
+    # Get the model
+    current_path_file = Path(__file__).parent
+    base_name = "arm26_allbiceps_1dof"
+    biomod_path = f"{current_path_file}/models/{base_name}.bioMod"
+    output_path = f"{current_path_file}/data/{base_name}"
 
-model.write_graphviz(path, ghost_segments=True, dof_segments=True, via_points=True, markers=True)
+    # Load the model from the .bioMod file
+    model = BiomechanicalModelReal().from_biomod(biomod_path)
 
-model.convert_dot_to_png(path)
+    # Write the graph visualization to a dot and PNG file
+    model.write_graphviz(
+        output_path,
+        include_ghost_segments=True,
+        include_dof_segments=True,
+        include_via_points=True,
+        include_markers=True,
+    )
+
+if __name__ == "__main__":
+    create_graph_from_biomod_file()
