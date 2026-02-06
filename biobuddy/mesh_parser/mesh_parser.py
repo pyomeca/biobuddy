@@ -72,6 +72,6 @@ class MeshParser:
             if mesh is not None:
                 _logger.info(f"Writing - \t{filepath.name}.")
                 if format is MeshFormat.VTP:
-                    mesh.to_vtp(filepath=Path(folder) / filepath.name)
+                    mesh.to_vtp(filepath=Path(folder) / filepath.name.lower())
                 else:
                     raise ValueError(f"Unsupported format {format}")
