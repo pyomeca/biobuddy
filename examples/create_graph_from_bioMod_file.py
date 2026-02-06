@@ -32,5 +32,6 @@ def create_graph_from_biomod_file():
         include_markers=True,
     )
 
+
 if __name__ == "__main__":
     create_graph_from_biomod_file()

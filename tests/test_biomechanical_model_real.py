@@ -462,6 +462,7 @@ def test_has_mesh_file():
     model.segments["parent"].mesh_file = MeshFileReal(mesh_file_name="parent_mesh.obj", mesh_file_directory="geometry")
     assert model.has_mesh_files
 
+
 def test_write_graphviz():
     from examples.create_graph_from_bioMod_file import create_graph_from_biomod_file
 
@@ -483,5 +484,3 @@ def test_write_graphviz():
         output_dot = f.read()
 
     assert reference_dot == output_dot
-
-
