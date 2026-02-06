@@ -1,0 +1,78 @@
+digraph biomech {
+  rankdir=TB;
+  node [fontname="Helvetica"];
+
+  // Segments
+  "root" [shape=box, style=rounded];
+  "base" [shape=box, style="filled,bold", fillcolor=lightgray];
+  "r_humerus_translation" [shape=box, style=rounded];
+  "r_humerus_rotation1" [shape=box, style=rounded];
+  "r_humerus_rotation3" [shape=box, style=rounded];
+  "r_humerus" [shape=box, style="filled,bold", fillcolor=lightgray];
+  "r_ulna_radius_hand_translation" [shape=box, style=rounded];
+  "r_ulna_radius_hand_rotation1" [shape=box, style="filled,diagonals", fillcolor=lightyellow, label="r_ulna_radius_hand_rotation1\n(DOF T: none | R: z)"];
+  "r_ulna_radius_hand_rotation3" [shape=box, style=rounded];
+  "r_ulna_radius_hand" [shape=box, style="filled,bold", fillcolor=lightgray];
+
+  // Segment hierarchy
+  "root" -> "base";
+  "base" -> "root";
+  "base" -> "r_humerus_translation";
+  "r_humerus_translation" -> "r_humerus_rotation1";
+  "r_humerus_rotation1" -> "r_humerus_rotation3";
+  "r_humerus_rotation3" -> "r_humerus";
+  "r_humerus" -> "r_ulna_radius_hand_translation";
+  "r_ulna_radius_hand_translation" -> "r_ulna_radius_hand_rotation1";
+  "r_ulna_radius_hand_rotation1" -> "r_ulna_radius_hand_rotation3";
+  "r_ulna_radius_hand_rotation3" -> "r_ulna_radius_hand";
+
+  // Markers
+  "humerus_head" [shape=octagon, style=filled, fillcolor=lightgreen];
+  "lateral_epicondyle" [shape=octagon, style=filled, fillcolor=lightgreen];
+  "medial_epicondyle" [shape=octagon, style=filled, fillcolor=lightgreen];
+  "rwrb" [shape=octagon, style=filled, fillcolor=lightgreen];
+  "rwra" [shape=octagon, style=filled, fillcolor=lightgreen];
+  "r_humerus" -> "humerus_head";
+  "r_humerus" -> "lateral_epicondyle";
+  "r_humerus" -> "medial_epicondyle";
+  "r_ulna_radius_hand" -> "rwrb";
+  "r_ulna_radius_hand" -> "rwra";
+
+  // Muscle groups
+  "base_to_r_ulna_radius_hand" [shape=parallelogram, style=filled, fillcolor=lightblue, label="base_to_r_ulna_radius_hand\n(base → r_ulna_radius_hand)"];
+  "base" -> "base_to_r_ulna_radius_hand" [label="origin"];
+  "base_to_r_ulna_radius_hand" -> "r_ulna_radius_hand" [label="insertion"];
+
+  // Muscles
+  "BIClong" [shape=diamond, style=filled, fillcolor=lightcoral];
+  "base_to_r_ulna_radius_hand" -> "BIClong";
+  "BICshort" [shape=diamond, style=filled, fillcolor=lightcoral];
+  "base_to_r_ulna_radius_hand" -> "BICshort";
+
+  // Via points
+  "BIClong-P2" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P3" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P4" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P5" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P6" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P7" [shape=ellipse, style=filled, fillcolor=orange];
+  "BIClong-P8" [shape=ellipse, style=filled, fillcolor=orange];
+  "BICshort-P2" [shape=ellipse, style=filled, fillcolor=orange];
+  "BICshort-P3" [shape=ellipse, style=filled, fillcolor=orange];
+  "BICshort-P4" [shape=ellipse, style=filled, fillcolor=orange];
+  "BICshort-P5" [shape=ellipse, style=filled, fillcolor=orange];
+
+  // Muscle paths
+  "BIClong" -> "BIClong-P2" [label="via"];
+  "BIClong-P2" -> "BIClong-P3" [label="via"];
+  "BIClong-P3" -> "BIClong-P4" [label="via"];
+  "BIClong-P4" -> "BIClong-P5" [label="via"];
+  "BIClong-P5" -> "BIClong-P6" [label="via"];
+  "BIClong-P6" -> "BIClong-P7" [label="via"];
+  "BIClong-P7" -> "BIClong-P8" [label="via"];
+  "BICshort" -> "BICshort-P2" [label="via"];
+  "BICshort-P2" -> "BICshort-P3" [label="via"];
+  "BICshort-P3" -> "BICshort-P4" [label="via"];
+  "BICshort-P4" -> "BICshort-P5" [label="via"];
+
+}
