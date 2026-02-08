@@ -26,6 +26,7 @@ dependencies = [
     "lxml",
     "scipy", 
     "pandas",
+    "graphviz",
 ]
 
 [project.optional-dependencies]

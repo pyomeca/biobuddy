@@ -1,6 +1,8 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
+from pathlib import Path
+import os
 
 from biobuddy import (
     ViaPointReal,
@@ -459,3 +461,26 @@ def test_has_mesh_file():
     # Add a mesh file to one segment
     model.segments["parent"].mesh_file = MeshFileReal(mesh_file_name="parent_mesh.obj", mesh_file_directory="geometry")
     assert model.has_mesh_files
+
+
+def test_write_graphviz():
+    from examples.create_graph_from_bioMod_file import create_graph_from_biomod_file
+
+    # Create the dot and png
+    create_graph_from_biomod_file()
+
+    # Check that the files have been created
+    current_path_file = Path(__file__).parent
+    base_name = "arm26_allbiceps_1dof"
+    output_path = f"{current_path_file}/../examples/data/{base_name}"
+    assert os.path.isfile(f"{output_path}.dot")
+    assert os.path.isfile(f"{output_path}.png")
+
+    # Check that the dot is the same as the reference
+    with open(f"{output_path}_reference.dot", "r") as f:
+        reference_dot = f.read()
+
+    with open(f"{output_path}.dot", "r") as f:
+        output_dot = f.read()
+
+    assert reference_dot == output_dot

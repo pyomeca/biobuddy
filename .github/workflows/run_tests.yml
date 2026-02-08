@@ -60,7 +60,7 @@ jobs:
         run: | 
           pip install . && pip uninstall -y biobuddy
           pip install scipy==1.17.0 numpy==2.4.1 lxml ezc3d matplotlib plotly
-          conda install biorbd=1.11.2=py311h9439bbc_1 -cconda-forge
+          conda install biorbd=1.11.2=py311h9439bbc_1 graphviz -cconda-forge
 
       - name: Install test dependencies
         run: |

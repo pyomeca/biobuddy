@@ -27,6 +27,7 @@
       - [Merging segments](#merging-segments)
       - [Modifying the kinematic chain](#modifying-the-kinematic-chain)
       - [Flattening the model](#flattening-the-model)
+  - [Model visualization](#model-visualization)
 - [Note](#note)
 - [How to cite](#how-to-cite)
 - [How to contribute](#how-to-contribute)
@@ -39,7 +40,7 @@
 If you are a user, you can set up your environment with minimal dependencies.
 ```bash
 conda install -c conda-forge python=3.11.11 pip
-pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d plotly
+pip install scipy==1.15.1 numpy==1.25.2 lxml ezc3d plotly pandas graphviz
 ```
 Note: On mac, you might need to add `conda install conda-forge::libcxx`
 
@@ -327,6 +328,28 @@ symmetry_tool = FlatteningTool(model, axis=Translations.Z)
 model = symmetry_tool.flatten()
 ```
 See the example [simplify_an_arm_model.py](examples/applied_examples/simplify_an_arm_model.py) for more details.
+
+
+## Model visualization
+BioBuddy allows you to visualize your model though a graph or an animation.
+```python3
+# Visualize the model as a graph
+model.write_graphviz(
+    output_graph_path,
+    include_ghost_segments=True,
+    include_dof_segments=True,
+    include_via_points=True,
+    include_markers=True,
+)
+
+# Visualize the model as an animation
+model.animate(
+    view_as=ViewAs.BIORBD,
+    viewer_type=ViewerType.PYORERUN,
+    model_path=model_path,
+)
+```
+![model_graph](docs/images/model_graph.png)
 
 
 ## Other useful features
