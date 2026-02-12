@@ -2,17 +2,20 @@ digraph biomech {
   rankdir=TB;
   node [fontname="Helvetica"];
 
+  labelloc="t";
+  label=<<B><FONT POINT-SIZE="28">BioMod Model Graph - arm26_allbiceps_1dof</FONT></B>>;
+
   // Segments
   "root" [shape=box, style=rounded];
-  "base" [shape=box, style="filled,bold", fillcolor=lightgray];
+  "base" [shape=box, style="filled,bold", fillcolor=lightgray, label="base"];
   "r_humerus_translation" [shape=box, style=rounded];
   "r_humerus_rotation1" [shape=box, style=rounded];
   "r_humerus_rotation3" [shape=box, style=rounded];
-  "r_humerus" [shape=box, style="filled,bold", fillcolor=lightgray];
+  "r_humerus" [shape=box, style="filled,bold", fillcolor=lightgray, label="r_humerus\n(inertia)"];
   "r_ulna_radius_hand_translation" [shape=box, style=rounded];
   "r_ulna_radius_hand_rotation1" [shape=box, style="filled,diagonals", fillcolor=lightyellow, label="r_ulna_radius_hand_rotation1\n(DOF T: none | R: z)"];
   "r_ulna_radius_hand_rotation3" [shape=box, style=rounded];
-  "r_ulna_radius_hand" [shape=box, style="filled,bold", fillcolor=lightgray];
+  "r_ulna_radius_hand" [shape=box, style="filled,bold", fillcolor=lightgray, label="r_ulna_radius_hand\n(inertia)"];
 
   // Segment hierarchy
   "root" -> "base";
@@ -75,4 +78,20 @@ digraph biomech {
   "BICshort-P3" -> "BICshort-P4" [label="via"];
   "BICshort-P4" -> "BICshort-P5" [label="via"];
 
+  // Legend
+  subgraph cluster_legend {
+    label="Legend";
+    fontsize=16;
+    style="rounded,dashed";
+    key_segment [label="Segment", shape=box, style="filled,bold", fillcolor=lightgray]
+    key_segment_dof   [label="DOF segment \n(DOF T: (x,y,z) | R: (x,y,z))", shape=box, style="filled,diagonals", fillcolor=lightyellow];
+    key_segment_ghost [label="Ghost segment", shape=box, style=rounded]
+    key_marker    [label="Marker", shape=octagon, style=filled, fillcolor=lightgreen];
+    key_muscle_groups   [label="Muscle group\n(origin → insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];
+    key_muscles   [label="Muscle", shape=diamond, style=filled, fillcolor=lightcoral];
+    key_via_point   [label="Via point", shape=ellipse, style=filled, fillcolor=orange]; 
+    { rank=same; key_segment key_segment_dof key_segment_ghost key_marker }
+    { rank=same; key_muscle_groups key_muscles key_via_point }
+    key_segment -> key_muscle_groups [style=invis];
+  }
 }

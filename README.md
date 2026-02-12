@@ -340,6 +340,7 @@ model.write_graphviz(
     include_dof_segments=True,
     include_via_points=True,
     include_markers=True,
+    include_legend=True,
 )
 
 # Visualize the model as an animation
