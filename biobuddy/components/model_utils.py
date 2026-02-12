@@ -450,6 +450,7 @@ class ModelUtils:
         include_dof_segments: bool = True,
         include_via_points: bool = True,
         include_markers: bool = True,
+        include_legend: bool = True,
     ) -> None:
         """
         Write a graphviz .dot file representing the biomechanical model structure
@@ -466,6 +467,8 @@ class ModelUtils:
             whether to include via points in the graph
         include_markers
             whether to include markers in the graph
+        include_legend
+            whether to include legend in the graph
         """
 
         def convert_dot_to_png(path_dot_file: Path | str) -> None:
@@ -495,6 +498,11 @@ class ModelUtils:
             f.write("  rankdir=TB;\n")
             f.write('  node [fontname="Helvetica"];\n\n')
 
+            # title
+            title = Path(out_path).stem
+            f.write('  labelloc="t";\n')
+            f.write(f'  label=<<B><FONT POINT-SIZE="28">BioMod Model Graph - {title}</FONT></B>>;\n\n')
+
             # -------- SEGMENTS --------
             # TODO : add specific box for segments with contact points
             f.write("  // Segments\n")
@@ -508,11 +516,15 @@ class ModelUtils:
                     true_segments.append(s.name)
                 elif (
                     s.inertia_parameters
-                    or s.markers
+                    or (s.markers and include_markers)
                     or s.name in self.muscle_group_origin_parent_names
                     or s.name in self.muscle_group_insertion_parent_names
                 ):
-                    f.write(f'  "{s.name}" [shape=box, style="filled,bold", fillcolor=lightgray];\n')
+                    label = s.name
+                    if s.inertia_parameters:
+                        label += r"\n(inertia)"
+
+                    f.write(f'  "{s.name}" [shape=box, style="filled,bold", fillcolor=lightgray, label="{label}"];\n')
                     true_segments.append(s.name)
 
                 elif include_ghost_segments:
@@ -553,7 +565,7 @@ class ModelUtils:
                     for marker in s.markers:
                         f.write(f'  "{s.name}" -> "{marker.name}";\n')
 
-            # # -------- MUSCLE GROUPS --------
+            # -------- MUSCLE GROUPS --------
             f.write("\n  // Muscle groups\n")
             for mg in self.muscle_groups:
                 origin = mg.origin_parent_name
@@ -567,7 +579,7 @@ class ModelUtils:
                 if insertion:
                     f.write(f'  "{mg.name}" -> "{insertion}" [label="insertion"];\n')
 
-            # # -------- MUSCLES --------
+            # -------- MUSCLES --------
             f.write("\n  // Muscles\n")
             for mg in self.muscle_groups:
                 for m_name in mg.muscles.keys():
@@ -575,12 +587,12 @@ class ModelUtils:
                     f.write(f'  "{mg.name}" -> "{m_name}";\n')
 
             if include_via_points:
-                # # -------- VIAPOINTS --------
+                # -------- VIAPOINTS --------
                 f.write("\n  // Via points\n")
                 for vp_name in self.via_point_names:
                     f.write(f'  "{vp_name}" [shape=ellipse, style=filled, fillcolor=orange];\n')
 
-                # # -------- MUSCLE --> VIAPOINT CHAINS --------
+                # -------- MUSCLE --> VIAPOINT CHAINS --------
                 f.write("\n  // Muscle paths\n")
 
                 for mg in self.muscle_groups:
@@ -593,6 +605,53 @@ class ModelUtils:
                         # other VP
                         for i in range(len(m.via_points) - 1):
                             f.write(f'  "{m.via_points[i].name}" -> "{m.via_points[i+1].name}" [label="via"];\n')
+
+            if include_legend:
+                # -------- LEGENDS --------
+                f.write("\n  // Legend\n")
+                keys = []
+                f.write(
+                    '  subgraph cluster_legend {\n    label="Legend";\n    fontsize=16;\n    style="rounded,dashed";'
+                )
+
+                f.write('\n    key_segment [label="Segment", shape=box, style="filled,bold", fillcolor=lightgray]')
+                keys.append("key_segment")
+
+                if include_dof_segments:
+                    f.write(
+                        '\n    key_segment_dof   [label="DOF segment \\n(DOF T: (x,y,z) | R: (x,y,z))", shape=box, style="filled,diagonals", fillcolor=lightyellow];'
+                    )
+                    keys.append("key_segment_dof")
+
+                if include_ghost_segments:
+                    f.write('\n    key_segment_ghost [label="Ghost segment", shape=box, style=rounded]')
+                    keys.append("key_segment_ghost")
+
+                if include_markers:
+                    f.write('\n    key_marker    [label="Marker", shape=octagon, style=filled, fillcolor=lightgreen];')
+                    keys.append("key_marker")
+
+                f.write(
+                    '\n    key_muscle_groups   [label="Muscle group\\n(origin → insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];'
+                )
+                keys.append("key_muscle_groups")
+                nb_column = len(keys) - 1
+
+                f.write('\n    key_muscles   [label="Muscle", shape=diamond, style=filled, fillcolor=lightcoral];')
+                keys.append("key_muscles")
+                if include_via_points:
+                    f.write(
+                        '\n    key_via_point   [label="Via point", shape=ellipse, style=filled, fillcolor=orange]; '
+                    )
+                    keys.append("key_via_point")
+
+                # -----------------
+                f.write("\n    { rank=same; " + " ".join(keys[:nb_column]) + " }")
+                f.write("\n    { rank=same; " + " ".join(keys[nb_column:]) + " }")
+
+                f.write(f"\n    key_segment -> key_muscle_groups [style=invis];")
+
+                f.write("\n  }")
 
             f.write("\n}\n")
 
