@@ -30,6 +30,7 @@ def create_graph_from_biomod_file():
         include_dof_segments=True,
         include_via_points=True,
         include_markers=True,
+        include_legend=True,
     )
 
 
