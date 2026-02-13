@@ -1,3 +1,4 @@
+from .force.ligament import Ligament
 from .force.muscle_group import MuscleGroup
 from .rigidbody.segment import Segment
 from ..model_utils import ModelUtils
@@ -13,6 +14,7 @@ class BiomechanicalModel(ModelUtils):
         super().__init__()
         self.segments = NamedList[Segment]()
         self.muscle_groups = NamedList[MuscleGroup]()
+        self.ligaments = NamedList[Ligament]()
 
     def add_segment(self, segment: Segment):
         """

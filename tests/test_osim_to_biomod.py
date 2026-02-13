@@ -9,7 +9,7 @@ import pytest
 import numpy.testing as npt
 import lxml
 
-from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
+from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal, LigamentType
 from test_utils import compare_models
 
 
@@ -706,8 +706,8 @@ def test_osim_to_biomod_with_ligament():
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     root_path = parent_path + "/examples/models"
-    osim_filepath = f"{root_path}/MOBL_ARM_41.osim"
-    biomod_filepath = f"{root_path}/MOBL_ARM_41.bioMod"
+    osim_filepath = f"{root_path}/MOBL_ARMS_41.osim"
+    biomod_filepath = f"{root_path}/MOBL_ARMS_41.bioMod"
 
     # Convert osim to biomod
     model = BiomechanicalModelReal().from_osim(
@@ -724,6 +724,7 @@ def test_osim_to_biomod_with_ligament():
     nb_q = biomod_model.nbQ()
     nb_markers = biomod_model.nbMarkers()
     nb_muscles = biomod_model.nbMuscles()
+    nb_ligaments = biomod_model.nbLigaments()
 
     # Test the components
     model_evaluation = ModelEvaluation(biomod=biomod_filepath, osim_model=osim_filepath)
@@ -745,7 +746,7 @@ def test_osim_to_biomod_with_ligament():
         np.testing.assert_array_less(np.median(muscle_error), 0.003)
 
     # Test the ligament error
-    if nb_muscles > 0:
+    if nb_ligaments > 0:
         ligament_test = LigamentTest(biomod=biomod_filepath, osim_model=osim_filepath)
         ligament_error = ligament_test.from_markers(
             markers=np.random.rand(3, nb_markers, 1), plot=False
@@ -763,6 +764,7 @@ def test_osim_to_biomod_with_ligament():
         filepath=translated_osim_filepath,
         muscle_type=MuscleType.HILL_DE_GROOTE,
         muscle_state_type=MuscleStateType.DEGROOTE,
+        ligament_type=LigamentType.LINEAR_SPRING,
         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
     )
     compare_osim_translated_model(model, model_from_osim_2, decimal=4)

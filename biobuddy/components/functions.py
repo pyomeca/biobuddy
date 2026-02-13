@@ -1,6 +1,7 @@
 from typing import TypeAlias
 from abc import ABC, abstractmethod
 
+from lxml import etree
 import numpy as np
 
 
@@ -70,6 +71,11 @@ class InterpolationFunction(ABC):
         order
             The order of the derivative (1 or 2)
         """
+        pass
+
+    @abstractmethod
+    def to_osim(self):
+        """Generate OpenSim XML representation of the function."""
         pass
 
 
@@ -297,6 +303,20 @@ class SimmSpline(InterpolationFunction):
         else:
             # Second derivative: 2*c + 6*d*dx
             return 2.0 * self.c[k] + 6.0 * dx * self.d[k]
+
+    def to_osim(self, name: str = None) -> etree.Element:
+        """Generate OpenSim XML representation of the function."""
+
+        name = name if name is not None else "spline_function"
+        function_elem = etree.Element("SimmSpline", name=name)
+
+        x_elem = etree.SubElement(function_elem, "x")
+        x_elem.text = "\t".join(f"{x:.8f}" for x in self.x_points)
+
+        y_elem = etree.SubElement(function_elem, "x")
+        y_elem.text = "\t".join(f"{y:.8f}" for y in self.y_points)
+
+        return function_elem
 
 
 class PiecewiseLinearFunction(InterpolationFunction):

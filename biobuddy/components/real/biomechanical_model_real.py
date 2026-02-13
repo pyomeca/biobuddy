@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .model_dynamics import ModelDynamics
+from ..ligament_utils import LigamentType
 from ..model_utils import ModelUtils
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
@@ -18,6 +19,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def __init__(self, gravity: Point = None):
 
         # Imported here to prevent from circular imports
+        from .force.ligament_real import LigamentReal
         from .force.muscle_group_real import MuscleGroupReal
         from .rigidbody.segment_real import SegmentReal
 
@@ -30,6 +32,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.gravity = gravity
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroupReal]()
+        self.ligaments = NamedList[LigamentReal]()
         self.warnings = ""
 
         # Meta-data
@@ -345,6 +348,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         filepath: str,
         muscle_type: MuscleType = MuscleType.HILL_DE_GROOTE,
         muscle_state_type: MuscleStateType = MuscleStateType.DEGROOTE,
+        ligament_type: LigamentType = LigamentType.LINEAR_SPRING,
         mesh_dir: str = None,
         skip_virtual: bool = False,
     ) -> "BiomechanicalModelReal":

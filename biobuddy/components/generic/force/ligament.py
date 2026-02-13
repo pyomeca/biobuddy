@@ -8,7 +8,7 @@ from ....utils.linear_algebra import RotoTransMatrix
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
-    from ...real.muscle.ligament_real import LigamentReal
+    from ...real.force.ligament_real import LigamentReal
 
 
 class Ligament:
@@ -18,7 +18,7 @@ class Ligament:
         ligament_type: LigamentType,
         origin_position: ViaPoint,
         insertion_position: ViaPoint,
-        maximal_force_function: Callable[[dict[str, Any], Any], float],
+        stiffness_function: Callable[[dict[str, Any], Any], float],
         ligament_slack_length_function: Callable[[dict[str, Any], Any], float],
         damping_function: Callable[[dict[str, Any], Any], float],
     ):
@@ -33,7 +33,7 @@ class Ligament:
             The origin position of the ligament in the local reference frame of the origin segment
         insertion_position
             The insertion position of the ligament the local reference frame of the insertion segment
-        maximal_force_function
+        stiffness_function
             The function giving the maximal force of the ligament can reach
         ligament_slack_length_function
             The function giving the length of the ligament at rest
@@ -46,7 +46,7 @@ class Ligament:
         self.ligament_type = ligament_type
         self.origin_position = origin_position
         self.insertion_position = insertion_position
-        self.maximal_force_function = maximal_force_function
+        self.stiffness_function = stiffness_function
         self.ligament_slack_length_function = ligament_slack_length_function
         self.damping_function = damping_function
 
@@ -91,12 +91,12 @@ class Ligament:
             self._insertion_position = value
 
     @property
-    def maximal_force_function(self) -> Callable[[dict[str, Any], Any], float]:
-        return self._maximal_force_function
+    def stiffness_function(self) -> Callable[[dict[str, Any], Any], float]:
+        return self._stiffness_function
 
-    @maximal_force_function.setter
-    def maximal_force_function(self, value: Callable[[dict[str, Any], Any], float]):
-        self._maximal_force_function = value
+    @stiffness_function.setter
+    def stiffness_function(self, value: Callable[[dict[str, Any], Any], float]):
+        self._stiffness_function = value
 
     @property
     def ligament_slack_length_function(self) -> Callable[[dict[str, Any], Any], float]:
@@ -129,7 +129,7 @@ class Ligament:
             The segment coordinate system in which the force is defined. This is useful for the origin and insertion
             positions to be transformed correctly.
         """
-        from ...real.muscle.ligament_real import LigamentReal
+        from ...real.force.ligament_real import LigamentReal
 
         origin_position = self.origin_position.to_via_point(data, model, scs)
         insertion_position = self.insertion_position.to_via_point(data, model, scs)
@@ -138,7 +138,7 @@ class Ligament:
             self.ligament_type,
             origin_position,
             insertion_position,
-            maximal_force=self.maximal_force_function(model, data),
+            stiffness=self.stiffness_function(model, data),
             ligament_slack_length=self.tendon_slack_length_function(model, data),
             damping=self.damping_function(model, data),
         )

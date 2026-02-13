@@ -6,6 +6,6 @@ __all__ = (
     [
         BiomechanicalModel.__name__,
     ]
-    + muscle.__all__
+    + force.__all__
     + rigidbody.__all__
 )

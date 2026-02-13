@@ -326,6 +326,8 @@ class MuscleReal(MuscleUtils):
         if origin_elem is not None:
             origin_elem.set("name", f"{self.name}_origin")
             path_objects.append(origin_elem)
+        else:
+            raise ValueError(f"The origin position of the muscle {self.name} has to be defined.")
 
         # Via points
         for via_point in self.via_points:
@@ -338,5 +340,7 @@ class MuscleReal(MuscleUtils):
         if insertion_elem is not None:
             insertion_elem.set("name", f"{self.name}_insertion")
             path_objects.append(insertion_elem)
+        else:
+            raise ValueError(f"The insertion position of the muscle {self.name} has to be defined.")
 
         return muscle_elem

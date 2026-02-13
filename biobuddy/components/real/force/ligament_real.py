@@ -2,8 +2,8 @@ import numpy as np
 from lxml import etree
 
 from .via_point_real import ViaPointReal
-from ....utils.named_list import NamedList
 from ...ligament_utils import LigamentType
+from ...functions import InterpolationFunction
 
 
 class LigamentReal:
@@ -13,9 +13,11 @@ class LigamentReal:
         ligament_type: LigamentType,
         origin_position: ViaPointReal,
         insertion_position: ViaPointReal,
-        maximal_force: float = None,
-        ligament_slack_length: float = None,
+        ligament_slack_length: float,
+        stiffness: float = None,
         damping: float = None,
+        force_length_function: InterpolationFunction = None,
+        pcsa: float = None,
     ):
         """
         Parameters
@@ -24,77 +26,45 @@ class LigamentReal:
             The name of the new contact
         ligament_type
             The type of the force
-        state_type
-            The state type of the force
-        muscle_group
-            The force group the force belongs to
         origin_position
             The origin position of the force in the local reference frame of the origin segment
         insertion_position
             The insertion position of the force the local reference frame of the insertion segment
-        optimal_length
-            The optimal length of the force
-        maximal_force
-            The maximal force of the force can reach
-        tendon_slack_length
-            The length of the tendon at rest
-        pennation_angle
-            The pennation angle of the force
-        maximal_velocity
-            The maximal contraction velocity of the force (a common value is 10 m/s)
-        maximal_excitation
-            The maximal excitation of the force (usually 1.0, since it is normalized)
+        ligament_slack_length
+            The length of the ligament at rest
+        stiffness
+            The stiffness of the sping representing the ligament, if ligament_type is LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, or LigamentType.QUADRATIC_SPRING
+        damping
+            The damping of the ligament, if ligament_type is LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, or LigamentType.QUADRATIC_SPRING
+        force_length_function
+            The function giving the force-length relationship of the ligament, if ligament_type is LigamentType.FUNCTION
+        pcsa
+            The physiological cross-sectional area of the ligament, if ligament_type is LigamentType.FUNCTION
         """
         super().__init__()
 
+        if ligament_type == LigamentType.FUNCTION:
+            # You are using an OpenSim-like ligament
+            if force_length_function is None:
+                raise ValueError("The force-length function of the ligament must be provided for ligaments of type FUNCTION.")
+            if pcsa is None:
+                raise ValueError("The physiological cross-sectional area of the ligament must be provided for ligaments of type FUNCTION.")
+        elif ligament_type in [LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, LigamentType.QUADRATIC_SPRING]:
+            # You are using a biorbd-like ligament
+            if stiffness is None:
+                raise ValueError("The stiffness of the ligament must be provided for ligaments of type CONSTANT, LINEAR_SPRING, or QUADRATIC_SPRING.")
+            if damping is None:
+                damping = 0.0
+
         self.name = name
-        self.muscle_type = muscle_type
-        self.state_type = state_type
-        self.muscle_group = muscle_group
+        self.ligament_type = ligament_type
         self.origin_position = origin_position
         self.insertion_position = insertion_position
-        self.optimal_length = optimal_length
-        self.maximal_force = maximal_force
-        self.tendon_slack_length = tendon_slack_length
-        self.pennation_angle = pennation_angle
-        self.maximal_velocity = maximal_velocity
-        self.maximal_excitation = maximal_excitation
-        # TODO: missing PCSA and
-
-        self.via_points = NamedList[ViaPointReal]()
-
-    def add_via_point(self, via_point: ViaPointReal) -> None:
-        """
-        Add a via point to the model
-
-        Parameters
-        ----------
-        via_point
-            The via point to add
-        """
-        if via_point.muscle_name is not None and via_point.muscle_name != self.name:
-            raise ValueError(
-                f"The via points's force {via_point.muscle_name} should be the same as the force's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
-            )
-        if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
-            raise ValueError(
-                f"The via points's force group {via_point.muscle_group} should be the same as the force's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
-            )
-
-        via_point.muscle_name = self.name
-        via_point.muscle_group = self.muscle_group
-        self.via_points._append(via_point)
-
-    def remove_via_point(self, via_point_name: str) -> None:
-        """
-        Remove a via point from the model
-
-        Parameters
-        ----------
-        via_point_name
-            The name of the via point to remove
-        """
-        self.via_points._remove(via_point_name)
+        self.stiffness = stiffness
+        self.ligament_slack_length = ligament_slack_length
+        self.damping = damping
+        self.force_length_function = force_length_function
+        self.pcsa = pcsa
 
     @property
     def name(self) -> str:
@@ -105,32 +75,14 @@ class LigamentReal:
         self._name = value
 
     @property
-    def muscle_type(self) -> MuscleType:
-        return self._muscle_type
+    def ligament_type(self) -> LigamentType:
+        return self._ligament_type
 
-    @muscle_type.setter
-    def muscle_type(self, value: MuscleType | str):
+    @ligament_type.setter
+    def ligament_type(self, value: LigamentType | str):
         if isinstance(value, str):
-            value = MuscleType(value)
-        self._muscle_type = value
-
-    @property
-    def state_type(self) -> MuscleStateType:
-        return self._state_type
-
-    @state_type.setter
-    def state_type(self, value: MuscleStateType | str):
-        if isinstance(value, str):
-            value = MuscleStateType(value)
-        self._state_type = value
-
-    @property
-    def muscle_group(self) -> str:
-        return self._muscle_group
-
-    @muscle_group.setter
-    def muscle_group(self, value: str):
-        self._muscle_group = value
+            value = LigamentType(value)
+        self._ligament_type = value
 
     @property
     def origin_position(self) -> ViaPointReal:
@@ -141,16 +93,6 @@ class LigamentReal:
         if value is None:
             self._origin_position = None
         else:
-            if value.muscle_name is not None and value.muscle_name != self.name:
-                raise ValueError(
-                    f"The origin's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
-                )
-            value.muscle_name = self.name
-            if value.muscle_group is not None and value.muscle_group != self.muscle_group:
-                raise ValueError(
-                    f"The origin's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
-                )
-            value.muscle_group = self.muscle_group
             self._origin_position = value
 
     @property
@@ -162,39 +104,14 @@ class LigamentReal:
         if value is None:
             self._insertion_position = None
         else:
-            if value.muscle_name is not None and value.muscle_name != self.name:
-                raise ValueError(
-                    f"The insertion's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
-                )
-            value.muscle_name = self.name
-            if value.muscle_group is not None and value.muscle_group != self.muscle_group:
-                raise ValueError(
-                    f"The insertion's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
-                )
-            value.muscle_group = self.muscle_group
             self._insertion_position = value
 
     @property
-    def optimal_length(self) -> float:
-        return self._optimal_length
+    def stiffness(self) -> float:
+        return self._stiffness
 
-    @optimal_length.setter
-    def optimal_length(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The optimal length of the force must be greater than 0.")
-        if isinstance(value, np.ndarray):
-            if value.shape == (1,):
-                value = value[0]
-            else:
-                raise ValueError("The optimal length must be a float.")
-        self._optimal_length = value
-
-    @property
-    def maximal_force(self) -> float:
-        return self._maximal_force
-
-    @maximal_force.setter
-    def maximal_force(self, value: float):
+    @stiffness.setter
+    def stiffness(self, value: float):
         if value is not None and value <= 0:
             raise ValueError("The maximal force of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
@@ -202,117 +119,103 @@ class LigamentReal:
                 value = value[0]
             else:
                 raise ValueError("The maximal force must be a float.")
-        self._maximal_force = value
+        self._stiffness = value
 
     @property
-    def tendon_slack_length(self) -> float:
-        return self._tendon_slack_length
+    def ligament_slack_length(self) -> float:
+        return self._ligament_slack_length
 
-    @tendon_slack_length.setter
-    def tendon_slack_length(self, value: float):
+    @ligament_slack_length.setter
+    def ligament_slack_length(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The tendon slack length of the force must be greater than 0.")
+            raise ValueError("The ligament slack length of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
-                raise ValueError("The tendon slack length must be a float.")
-        self._tendon_slack_length = value
+                raise ValueError("The ligament slack length must be a float.")
+        self._ligament_slack_length = value
 
     @property
-    def pennation_angle(self) -> float:
-        return self._pennation_angle
+    def damping(self) -> float:
+        return self._damping
 
-    @pennation_angle.setter
-    def pennation_angle(self, value: float):
-        if isinstance(value, np.ndarray):
-            if value.shape == (1,):
-                value = value[0]
-            else:
-                raise ValueError("The optimal length must be a float.")
-        self._pennation_angle = value
-
-    @property
-    def maximal_velocity(self) -> float:
-        return self._maximal_velocity
-
-    @maximal_velocity.setter
-    def maximal_velocity(self, value: float):
+    @damping.setter
+    def damping(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal contraction velocity of the force must be greater than 0.")
+            raise ValueError("The damping of the ligament must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
-                raise ValueError("The maximal velocity must be a float.")
-        self._maximal_velocity = value
+                raise ValueError("The damping must be a float.")
+        self._damping = value
 
     @property
-    def maximal_excitation(self) -> float:
-        return self._maximal_excitation
+    def force_length_function(self) -> float:
+        return self._force_length_function
 
-    @maximal_excitation.setter
-    def maximal_excitation(self, value: float):
+    @force_length_function.setter
+    def force_length_function(self, value: InterpolationFunction):
+        if not isinstance(value, InterpolationFunction):
+            raise ValueError("The force_length_function of the ligament must be an InterpolationFunction.")
+        self._force_length_function = value
+
+    @property
+    def pcsa(self) -> float:
+        return self._pcsa
+
+    @pcsa.setter
+    def pcsa(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal excitation of the force must be greater than 0.")
+            raise ValueError("The pcsa of the ligament must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
-                raise ValueError("The maximal excitation must be a float.")
-        self._maximal_excitation = value
+                raise ValueError("The pcsa must be a float.")
+        self._pcsa = value
 
-    def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
-        out_string = f"force\t{self.name}\n"
-        out_string += f"\ttype\t{self.muscle_type.value}\n"
-        out_string += f"\tstatetype\t{self.state_type.value}\n"
-        out_string += f"\tmusclegroup\t{self.muscle_group}\n"
+    def to_biomod(self) -> str:
+        """
+        Define the print function, so it automatically formats things in the .bioMod file properly
+        """
+
+        if self.ligament_type == LigamentType.FUNCTION:
+            raise NotImplementedError("The to_biomod method is not implemented for ligaments of type FUNCTION."
+                                      "Please use model.approximate_ligaments(ligament_type, damping), with ligament_type in LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, or LigamentType.QUADRATIC_SPRING.")
+
+        out_string = f"ligament\t{self.name}\n"
+        out_string += f"\ttype\t{self.ligament_type.value}\n"
         out_string += f"\toriginposition\t{np.round(self.origin_position.position[0, 0], 4)}\t{np.round(self.origin_position.position[1, 0], 4)}\t{np.round(self.origin_position.position[2, 0], 4)}\n"
         out_string += f"\tinsertionposition\t{np.round(self.insertion_position.position[0, 0], 4)}\t{np.round(self.insertion_position.position[1, 0], 4)}\t{np.round(self.insertion_position.position[2, 0], 4)}\n"
-        if isinstance(self.optimal_length, (float, int)):
-            out_string += f"\toptimallength\t{self.optimal_length:0.4f}\n"
-        out_string += f"\tmaximalforce\t{self.maximal_force:0.4f}\n"
-        if isinstance(self.tendon_slack_length, (float, int)):
-            out_string += f"\ttendonslacklength\t{self.tendon_slack_length:0.4f}\n"
-        if isinstance(self.pennation_angle, (float, int)):
-            out_string += f"\tpennationangle\t{self.pennation_angle:0.4f}\n"
-        if isinstance(self.maximal_velocity, (float, int)):
-            out_string += f"\tmaxvelocity\t{self.maximal_velocity:0.4f}\n"
-        if isinstance(self.maximal_excitation, (float, int)):
-            out_string += f"\tmaxexcitation\t{self.maximal_excitation:0.4f}\n"
-        out_string += "endmuscle\n"
+        out_string += f"\tstiffness\t{self.stiffness:0.4f}\n"
+        out_string += f"\tligamentslacklength\t{self.ligament_slack_length:0.4f}\n"
+        out_string += f"\tdamping\t{self.damping:0.4f}\n"
+        out_string += "endligament\n"
         out_string += "\n\n"
-
-        out_string += "\n // ------ VIA POINTS ------\n"
-        for via_point in self.via_points:
-            out_string += via_point.to_biomod()
 
         return out_string
 
-    def to_osim(self):
-        """Generate OpenSim XML representation of the force"""
+    def to_osim(self) -> etree.Element:
+        """
+        Generate OpenSim XML representation of the ligament
+        """
 
-        # TODO: handle different force types than DeGrooteFregly2016Muscle
-        muscle_elem = etree.Element("DeGrooteFregly2016Muscle", name=self.name)
+        if self.ligament_type in [LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, LigamentType.QUADRATIC_SPRING]:
+            raise NotImplementedError("The to_osim method is not implemented for ligaments of types LigamentType.CONSTANT, LigamentType.LINEAR_SPRING, LigamentType.QUADRATIC_SPRING."
+                                      "Please use model.approximate_ligaments(ligament_type=LigamentType.FUNCTION).")
 
-        max_iso_force = etree.SubElement(muscle_elem, "max_isometric_force")
-        max_iso_force.text = f"{self.maximal_force:.8f}" if self.maximal_force else "1000.0"
+        ligament_elem = etree.Element("Ligament", name=self.name)
 
-        opt_fiber_length = etree.SubElement(muscle_elem, "optimal_fiber_length")
-        opt_fiber_length.text = f"{self.optimal_length:.8f}" if self.optimal_length else "0.1"
+        resting_length = etree.SubElement(ligament_elem, "resting_length")
+        resting_length.text = f"{self.ligament_slack_length:.8f}"
 
-        tendon_slack = etree.SubElement(muscle_elem, "tendon_slack_length")
-        tendon_slack.text = f"{self.tendon_slack_length:.8f}" if self.tendon_slack_length else "0.2"
-
-        pennation = etree.SubElement(muscle_elem, "pennation_angle_at_optimal")
-        pennation.text = f"{self.pennation_angle:.8f}" if self.pennation_angle else "0"
-
-        max_velocity = etree.SubElement(muscle_elem, "max_contraction_velocity")
-        max_velocity.text = f"{self.maximal_velocity:.8f}" if self.maximal_velocity else "10"
+        pcsa_force = etree.SubElement(ligament_elem, "pcsa_force")
+        pcsa_force.text = f"{self.ligament_slack_length:.8f}"
 
         # Geometry path
-        geometry_path = etree.SubElement(muscle_elem, "GeometryPath", name="path")
+        geometry_path = etree.SubElement(ligament_elem, "GeometryPath", name="path")
         path_point_set = etree.SubElement(geometry_path, "PathPointSet")
         path_objects = etree.SubElement(path_point_set, "objects")
 
@@ -321,17 +224,23 @@ class LigamentReal:
         if origin_elem is not None:
             origin_elem.set("name", f"{self.name}_origin")
             path_objects.append(origin_elem)
-
-        # Via points
-        for via_point in self.via_points:
-            via_elem = via_point.to_osim()
-            if via_elem is not None:
-                path_objects.append(via_elem)
+        else:
+            raise ValueError(f"The origin position of the ligament {self.name} has to be defined.")
 
         # Insertion
         insertion_elem = self.insertion_position.to_osim()
         if insertion_elem is not None:
             insertion_elem.set("name", f"{self.name}_insertion")
             path_objects.append(insertion_elem)
+        else:
+            raise ValueError(f"The insertion position of the ligament {self.name} has to be defined.")
 
-        return muscle_elem
+        # Force length curve
+        force_length_curve = self.force_length_function.to_osim()
+        if force_length_curve is not None:
+            force_length_curve.set("name", f"force_length_curve")
+            path_objects.append(force_length_curve)
+        else:
+            raise ValueError(f"The force length curve of the ligament {self.name} has to be defined.")
+
+        return ligament_elem

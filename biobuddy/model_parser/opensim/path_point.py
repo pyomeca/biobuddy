@@ -99,15 +99,18 @@ class PathPoint:
     def __init__(
         self,
         name: str,
-        muscle: str,
+        muscle: str | None,
+        ligament: str | None,
         body: str,
-        muscle_group: str,
+        muscle_group: str | None,
         position: list,
         condition: PathPointCondition | None = None,
         movement: PathPointMovement | None = None,
     ):
+
         self.name = name
         self.muscle = muscle
+        self.ligament = ligament
         self.body = body
         self.muscle_group = muscle_group
         self.position = position
@@ -119,6 +122,7 @@ class PathPoint:
         return PathPoint(
             name=element.attrib["name"],
             muscle=None,  # is set in muscle.py
+            ligament=None,  # is set in ligament.py
             body=find_in_tree(element, "socket_parent_frame").split("/")[-1],
             muscle_group=None,  # is set in muscle.py
             position=find_in_tree(element, "location"),
