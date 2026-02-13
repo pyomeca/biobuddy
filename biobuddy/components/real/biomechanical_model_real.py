@@ -11,14 +11,14 @@ from ...utils.named_list import NamedList
 
 if TYPE_CHECKING:
     from .rigidbody.segment_real import SegmentReal
-    from .muscle.muscle_group_real import MuscleGroupReal
+    from .force.muscle_group_real import MuscleGroupReal
 
 
 class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def __init__(self, gravity: Point = None):
 
         # Imported here to prevent from circular imports
-        from .muscle.muscle_group_real import MuscleGroupReal
+        from .force.muscle_group_real import MuscleGroupReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)

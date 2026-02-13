@@ -1,5 +1,5 @@
 from .biomechanical_model import BiomechanicalModel
-from .muscle import *
+from .force import *
 from .rigidbody import *
 
 __all__ = (

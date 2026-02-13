@@ -1,4 +1,4 @@
-from .muscle.muscle_group import MuscleGroup
+from .force.muscle_group import MuscleGroup
 from .rigidbody.segment import Segment
 from ..model_utils import ModelUtils
 from ..real.biomechanical_model_real import BiomechanicalModelReal
@@ -78,7 +78,7 @@ class BiomechanicalModel(ModelUtils):
         data
             The data to collapse the model from
         """
-        from ..real.muscle.muscle_group_real import MuscleGroupReal
+        from ..real.force.muscle_group_real import MuscleGroupReal
         from ..real.rigidbody.segment_real import SegmentReal
         from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 

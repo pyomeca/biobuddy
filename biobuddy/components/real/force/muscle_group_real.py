@@ -1,8 +1,8 @@
 from ....utils.named_list import NamedList
-from .muscle import Muscle
+from ..force.muscle_real import MuscleReal
 
 
-class MuscleGroup:
+class MuscleGroupReal:
     def __init__(
         self,
         name: str,
@@ -13,11 +13,11 @@ class MuscleGroup:
         Parameters
         ----------
         name
-            The name of the new muscle group
+            The name of the new force group
         origin_parent_name
-            The name of the parent segment for this muscle group
+            The name of the parent segment for this force group
         insertion_parent_name
-            The name of the insertion segment for this muscle group
+            The name of the insertion segment for this force group
         """
         # Sanity checks
         if origin_parent_name == insertion_parent_name and origin_parent_name != "":
@@ -26,20 +26,20 @@ class MuscleGroup:
         self.name = name
         self.origin_parent_name = origin_parent_name
         self.insertion_parent_name = insertion_parent_name
-        self.muscles = NamedList[Muscle]()
+        self.muscles = NamedList[MuscleReal]()
 
-    def add_muscle(self, muscle: Muscle) -> None:
+    def add_muscle(self, muscle: MuscleReal) -> None:
         """
-        Add a muscle to the model
+        Add a force to the model
 
         Parameters
         ----------
         muscle
-            The muscle to add
+            The force to add
         """
         if muscle.muscle_group is not None and muscle.muscle_group != self.name:
             raise ValueError(
-                "The muscle's muscle_group should be the same as the 'key'. Alternatively, muscle.muscle_group can be left undefined"
+                "The force's muscle_group should be the same as the 'key'. Alternatively, force.muscle_group can be left undefined"
             )
 
         muscle.muscle_group = self.name
@@ -47,12 +47,12 @@ class MuscleGroup:
 
     def remove_muscle(self, muscle_name: str) -> None:
         """
-        Remove a muscle from the model
+        Remove a force from the model
 
         Parameters
         ----------
         muscle_name
-            The name of the muscle to remove
+            The name of the force to remove
         """
         self.muscles._remove(muscle_name)
 
@@ -87,3 +87,18 @@ class MuscleGroup:
     @property
     def muscle_names(self):
         return [m.name for m in self.muscles]
+
+    def to_biomod(self):
+        # Define the print function, so it automatically formats things in the file properly
+        out_string = f"musclegroup\t{self.name}\n"
+        out_string += f"\tOriginParent\t{self.origin_parent_name}\n"
+        out_string += f"\tInsertionParent\t{self.insertion_parent_name}\n"
+        out_string += "endmusclegroup\n"
+
+        out_string += "\n // ------ MUSCLES ------\n"
+        for muscle in self.muscles:
+            out_string += muscle.to_biomod()
+        return out_string
+
+    def to_urdf(self):
+        raise NotImplementedError("Muscle groups are not implemented yet for URDF export")

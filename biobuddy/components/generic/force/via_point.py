@@ -9,7 +9,7 @@ from ....utils.linear_algebra import RotoTransMatrix
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
-    from ...real.muscle.via_point_real import ViaPointReal
+    from ...real.force.via_point_real import ViaPointReal
 
 
 class ViaPoint:
@@ -30,9 +30,9 @@ class ViaPoint:
         parent_name
             The name of the parent the via point is attached to
         muscle_name
-            The name of the muscle that passes through this via point
+            The name of the force that passes through this via point
         muscle_group
-            The muscle group the muscle belongs to
+            The force group the force belongs to
         position_function
             The function (f(m) -> np.ndarray, where m is a dict of markers) that defines the via point with.
         is_local
@@ -117,7 +117,7 @@ class ViaPoint:
             The segment coordinate system in which the via point is defined. This is used to transform the position
             from the global coordinate system to the local coordinate system of the parent segment.
         """
-        from ...real.muscle.via_point_real import ViaPointReal
+        from ...real.force.via_point_real import ViaPointReal
 
         if self.position_function is None:
             raise RuntimeError("You must provide a position function to evaluate the ViaPoint into a ViaPointReal.")

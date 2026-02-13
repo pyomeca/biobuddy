@@ -1,6 +1,6 @@
 from typing import Callable, Any, TYPE_CHECKING
 
-from ..muscle.via_point import ViaPoint
+from ..force.via_point import ViaPoint
 from ...ligament_utils import LigamentType
 from ....utils.marker_data import MarkerData
 from ....utils.named_list import NamedList
@@ -8,10 +8,10 @@ from ....utils.linear_algebra import RotoTransMatrix
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
-    from ...real.muscle.muscle_real import MuscleReal
+    from ...real.muscle.ligament_real import LigamentReal
 
 
-class Muscle:
+class Ligament:
     def __init__(
         self,
         name: str,
@@ -126,7 +126,7 @@ class Muscle:
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
         scs
-            The segment coordinate system in which the muscle is defined. This is useful for the origin and insertion
+            The segment coordinate system in which the force is defined. This is useful for the origin and insertion
             positions to be transformed correctly.
         """
         from ...real.muscle.ligament_real import LigamentReal

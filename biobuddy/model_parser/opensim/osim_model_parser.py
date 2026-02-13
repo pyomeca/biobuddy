@@ -19,10 +19,10 @@ from .muscle import get_muscle_from_element
 from ..utils_xml import is_element_empty, match_tag
 from ..abstract_model_parser import AbstractModelParser
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.muscle.muscle_group_real import MuscleGroupReal
+from ...components.real.force.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.real.muscle.via_point_real import ViaPointReal, PathPointMovement, PathPointCondition
+from ...components.real.force.muscle_real import MuscleReal
+from ...components.real.force.via_point_real import ViaPointReal, PathPointMovement, PathPointCondition
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal

@@ -15,11 +15,11 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
     ContactReal,
 )
-from ...components.real.muscle.muscle_real import MuscleReal
+from ...components.real.force.muscle_real import MuscleReal
 from ...components.muscle_utils import MuscleType, MuscleStateType
-from ...components.real.muscle.muscle_group_real import MuscleGroupReal
+from ...components.real.force.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
-from ...components.real.muscle.via_point_real import ViaPointReal
+from ...components.real.force.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
 from .utils import (
     tokenize_biomod,

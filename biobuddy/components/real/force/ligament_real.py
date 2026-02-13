@@ -23,27 +23,27 @@ class LigamentReal:
         name
             The name of the new contact
         ligament_type
-            The type of the muscle
+            The type of the force
         state_type
-            The state type of the muscle
+            The state type of the force
         muscle_group
-            The muscle group the muscle belongs to
+            The force group the force belongs to
         origin_position
-            The origin position of the muscle in the local reference frame of the origin segment
+            The origin position of the force in the local reference frame of the origin segment
         insertion_position
-            The insertion position of the muscle the local reference frame of the insertion segment
+            The insertion position of the force the local reference frame of the insertion segment
         optimal_length
-            The optimal length of the muscle
+            The optimal length of the force
         maximal_force
-            The maximal force of the muscle can reach
+            The maximal force of the force can reach
         tendon_slack_length
             The length of the tendon at rest
         pennation_angle
-            The pennation angle of the muscle
+            The pennation angle of the force
         maximal_velocity
-            The maximal contraction velocity of the muscle (a common value is 10 m/s)
+            The maximal contraction velocity of the force (a common value is 10 m/s)
         maximal_excitation
-            The maximal excitation of the muscle (usually 1.0, since it is normalized)
+            The maximal excitation of the force (usually 1.0, since it is normalized)
         """
         super().__init__()
 
@@ -74,11 +74,11 @@ class LigamentReal:
         """
         if via_point.muscle_name is not None and via_point.muscle_name != self.name:
             raise ValueError(
-                f"The via points's muscle {via_point.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
+                f"The via points's force {via_point.muscle_name} should be the same as the force's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
             )
         if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
             raise ValueError(
-                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+                f"The via points's force group {via_point.muscle_group} should be the same as the force's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
             )
 
         via_point.muscle_name = self.name
@@ -143,12 +143,12 @@ class LigamentReal:
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
+                    f"The origin's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+                    f"The origin's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._origin_position = value
@@ -164,12 +164,12 @@ class LigamentReal:
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
+                    f"The insertion's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
+                    f"The insertion's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._insertion_position = value
@@ -181,7 +181,7 @@ class LigamentReal:
     @optimal_length.setter
     def optimal_length(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The optimal length of the muscle must be greater than 0.")
+            raise ValueError("The optimal length of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
@@ -196,7 +196,7 @@ class LigamentReal:
     @maximal_force.setter
     def maximal_force(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal force of the muscle must be greater than 0.")
+            raise ValueError("The maximal force of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
@@ -211,7 +211,7 @@ class LigamentReal:
     @tendon_slack_length.setter
     def tendon_slack_length(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The tendon slack length of the muscle must be greater than 0.")
+            raise ValueError("The tendon slack length of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
@@ -239,7 +239,7 @@ class LigamentReal:
     @maximal_velocity.setter
     def maximal_velocity(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal contraction velocity of the muscle must be greater than 0.")
+            raise ValueError("The maximal contraction velocity of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
@@ -254,7 +254,7 @@ class LigamentReal:
     @maximal_excitation.setter
     def maximal_excitation(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal excitation of the muscle must be greater than 0.")
+            raise ValueError("The maximal excitation of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
@@ -264,7 +264,7 @@ class LigamentReal:
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
-        out_string = f"muscle\t{self.name}\n"
+        out_string = f"force\t{self.name}\n"
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
@@ -291,9 +291,9 @@ class LigamentReal:
         return out_string
 
     def to_osim(self):
-        """Generate OpenSim XML representation of the muscle"""
+        """Generate OpenSim XML representation of the force"""
 
-        # TODO: handle different muscle types than DeGrooteFregly2016Muscle
+        # TODO: handle different force types than DeGrooteFregly2016Muscle
         muscle_elem = etree.Element("DeGrooteFregly2016Muscle", name=self.name)
 
         max_iso_force = etree.SubElement(muscle_elem, "max_isometric_force")
