@@ -951,6 +951,17 @@ class OsimModelParser(AbstractModelParser):
                     if len(warnings) > 0:
                         self.warnings.append(warnings)
 
+                elif "Ligament" in element.tag:
+                    muscle_group, muscle, ligament, warnings = get_ligament_from_element(
+                        element, self.ignore_ligament_applied_tag, self.ligament_type
+                    )
+                    if muscle_group is not None:
+                        self.muscle_groups.append(muscle_group)
+                    if ligament is not None:
+                        self.muscles.append(muscle)
+                    if len(warnings) > 0:
+                        self.warnings.append(warnings)
+
                 elif "Force" in element.tag or "Actuator" in element.tag:
                     self.warnings.append(
                         f"Some {element.tag} were present in the original file force set. "
