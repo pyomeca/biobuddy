@@ -15,10 +15,12 @@ from ...components.real.rigidbody.segment_real import (
     MarkerReal,
     ContactReal,
 )
-from ...components.real.force.muscle_real import MuscleReal
-from ...components.muscle_utils import MuscleType, MuscleStateType
-from ...components.real.force.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import Ranges, RangeOfMotion
+from ...components.ligament_utils import LigamentType
+from ...components.muscle_utils import MuscleType, MuscleStateType
+from ...components.real.force.ligament_real import LigamentReal
+from ...components.real.force.muscle_real import MuscleReal
+from ...components.real.force.muscle_group_real import MuscleGroupReal
 from ...components.real.force.via_point_real import ViaPointReal
 from ...utils.named_list import NamedList
 from .utils import (
@@ -32,7 +34,7 @@ from .utils import (
 )
 from ...utils.enums import Translations
 
-# TODO: when we update to biorbd=1.12.0, we need to parse the mesh file dir and ubdate the mesh_file_directory
+# TODO: when we update to biorbd=1.12.0, we need to parse the mesh file dir and update the mesh_file_directory
 #  in MeshFileReal
 
 
@@ -56,6 +58,7 @@ class BiomodModelParser(AbstractModelParser):
         self.gravity = None
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroupReal]()
+        self.ligaments = NamedList[LigamentReal]()
         self.warnings = ""
 
         def next_token():
@@ -144,6 +147,22 @@ class BiomodModelParser(AbstractModelParser):
                             muscle_name="",
                             muscle_group="",
                             position=None,
+                        )
+                    elif token.lower() == "ligament":
+                        check_if_version_defined(biomod_version)
+                        name = read_str(next_token=next_token)
+                        current_component = LigamentReal(
+                            name=name,
+                            ligament_type=None,
+                            origin_position=ViaPointReal(
+                                name=f"origin_{name}",
+                                parent_name="", # Will be set later
+                            ),
+                            insertion_position=ViaPointReal(
+                                name=f"insertion_{name}",
+                                parent_name="", # Will be set later
+                            ),
+                            ligament_slack_length=0.0,
                         )
                     elif token in TOKENS_TO_IGNORE_NO_COMPONENTS:
                         continue
@@ -375,6 +394,36 @@ class BiomodModelParser(AbstractModelParser):
                         current_component.muscle_group = read_str(next_token=next_token)
                     elif token.lower() == "position":
                         current_component.position = read_float_vector(next_token=next_token, length=3)
+
+                elif isinstance(current_component, LigamentReal):
+                    if token.lower() == "endligament":
+                        if current_component.ligament_type is None:
+                            raise ValueError(f"Ligament type not found in ligament {current_component.name}")
+                        if current_component.origin_position.parent_name == "":
+                            raise ValueError(f"Origin position not found in ligament {current_component.name}")
+                        if current_component.insertion_position.parent_name == "":
+                            raise ValueError(f"Insertion position not found in ligament {current_component.name}")
+                        if current_component.ligament_slack_length == 0.0:
+                            raise ValueError(f"Ligament slack length not found in ligament {current_component.name}")
+                        self.ligaments.append(current_component)
+                        current_component = None
+                    elif token.lower() == "type":
+                        current_component.ligament_type = LigamentType(read_str(next_token=next_token))
+                    elif token.lower() == "origin":
+                        current_component.origin_position.parent_name = read_str(next_token=next_token)
+                    elif token.lower() == "insertion":
+                        current_component.insertion_position.parent_name = read_str(next_token=next_token)
+                    elif token.lower() == "originposition":
+                        current_component.origin_position.position = read_float_vector(next_token=next_token, length=3)
+                    elif token.lower() == "insertionposition":
+                        current_component.insertion_position.position = read_float_vector(next_token=next_token, length=3)
+                    elif token.lower() == "ligamentslacklength":
+                        current_component.ligament_slack_length = read_float(next_token=next_token)
+                    elif token.lower() == "stiffness":
+                        current_component.stiffness = read_float(next_token=next_token)
+                    elif token.lower() == "damping":
+                        current_component.damping = read_float(next_token=next_token)
+
                 else:
                     raise ValueError(f"Unknown component : {type(current_component)}")
         except EndOfFileReached:
@@ -390,6 +439,10 @@ class BiomodModelParser(AbstractModelParser):
         # Add the muscle groups
         for muscle_group in self.muscle_groups:
             model.add_muscle_group(deepcopy(muscle_group))
+
+        # Add the ligaments
+        for ligament in self.ligaments:
+            model.add_ligament(deepcopy(ligament))
 
         model.warnings = self.warnings
 

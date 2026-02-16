@@ -170,7 +170,7 @@ def test_fix_moving_via_points():
     assert model.muscle_groups["parent_to_child"].muscles["muscle1"].via_points["via_point1"].movement is None
     expected_value = SimmSpline(
         x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])
-    ).evaluate(0.15)
+    ).evaluate(0.15)[0]
     npt.assert_almost_equal(expected_value, 0.25)
     npt.assert_almost_equal(
         model.muscle_groups["parent_to_child"]
@@ -216,7 +216,7 @@ def test_fix_moving_origin():
     assert model.muscle_groups["parent_to_child"].muscles["muscle1"].origin_position.movement is None
     expected_value = SimmSpline(
         x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])
-    ).evaluate(0.15)
+    ).evaluate(0.15)[0]
     npt.assert_almost_equal(expected_value, 0.25)
     npt.assert_almost_equal(
         model.muscle_groups["parent_to_child"]
@@ -261,7 +261,7 @@ def test_fix_moving_insertion():
     assert model.muscle_groups["parent_to_child"].muscles["muscle1"].insertion_position.movement is None
     expected_value = SimmSpline(
         x_points=np.array([0.1, 0.2, 0.3, 0.4, 0.5]), y_points=np.array([0.2, 0.3, 0.4, 0.5, 0.6])
-    ).evaluate(0.15)
+    ).evaluate(0.15)[0]
     npt.assert_almost_equal(expected_value, 0.25)
     npt.assert_almost_equal(
         model.muscle_groups["parent_to_child"]

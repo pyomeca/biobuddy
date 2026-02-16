@@ -42,6 +42,7 @@ class ModelDynamics:
         # Attributes that will be filled by BiomechanicalModelReal
         self.segments = None
         self.muscle_groups = None
+        self.ligaments = None
 
     # TODO: The two following functions should be handled differently
     @requires_initialization
@@ -781,6 +782,93 @@ class ModelDynamics:
             muscle_tendon_length[i_frame] = muscle_norm
 
         return muscle_tendon_length
+
+    @requires_initialization
+    def ligament_length(self, ligament_name: str, q: np.ndarray = None) -> np.ndarray:
+        """
+        Computes the length of the ligaments.
+        Please note that (for now) we do not consider any via points or wrapping objects in the ligaments, so they are a straight line between their origin and insertion.
+        """
+        if q is None:
+            q = np.zeros((self.nb_q, 1))
+        elif len(q.shape) == 1:
+            q = q[:, np.newaxis]
+        elif len(q.shape) > 2:
+            raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
+
+        nb_frames = q.shape[1]
+        ligament_length = np.zeros((nb_frames,))
+        global_jcs = self.forward_kinematics(q)
+
+        ligament_origin = self.ligaments[ligament_name].origin_position.position
+        ligament_origin_parent_name = self.ligaments[ligament_name].origin_position.parent_name
+        ligament_insertion = self.ligaments[ligament_name].insertion_position.position
+        ligament_insertion_parent_name = self.ligaments[ligament_name].insertion_position.parent_name
+
+        for i_frame in range(nb_frames):
+            origin_position = global_jcs[ligament_origin_parent_name][i_frame] @ ligament_origin
+            insertion_position = global_jcs[ligament_insertion_parent_name][i_frame] @ ligament_insertion
+            ligament_length[i_frame] = np.linalg.norm(insertion_position[:3] - origin_position[:3])
+
+        return ligament_length
+
+    @requires_initialization
+    def get_ligament_length_ranges(self):
+        """
+        Get the range of length of each ligament in the model. This is useful to get an idea of the range of length that the ligaments will have over the range of motion used.
+        """
+        ligament_length_ranges = {}
+
+        # Find the DoF RoM that affect the ligament lengths
+        dof_ranges = []
+        for ligament in self.ligaments:
+
+            origin_parent = ligament.origin_parent_name
+            insertion_parent = ligament.insertion_parent_name
+            if len(self.get_chain_between_segments(insertion_parent, origin_parent)) > 0:
+                # origin -> insertion
+                this_parent_name = origin_parent
+                end_of_the_chain_name = insertion_parent
+            elif len(self.get_chain_between_segments(insertion_parent, origin_parent)) > 0:
+                # insertion -> origin
+                this_parent_name = insertion_parent
+                end_of_the_chain_name = origin_parent
+            else:
+                raise NotImplementedError(
+                    f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers.")
+
+            while this_parent_name != end_of_the_chain_name:
+                if this_parent_name == "base":
+                    raise NotImplementedError(f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers.")
+                if self.segments[this_parent_name].nb_q > 0:
+                    dof_indices = self.dof_indices(this_parent_name)
+                    dof_min = self.segments[this_parent_name].q_ranges.min_bound
+                    dof_max = self.segments[this_parent_name].q_ranges.max_bound
+                    dof_ranges += [(dof_index, dof_min[i], dof_max[i]) for i, dof_index in enumerate(dof_indices)]
+                this_parent_name = self.segments[this_parent_name].parent_name
+
+            q_min = np.zeros((self.nb_q, 1))
+            q_max = np.zeros((self.nb_q, 1))
+            for dof_index, dof_min, dof_max in dof_ranges:
+                q_min[dof_index] = dof_min
+                q_max[dof_index] = dof_max
+
+            length_q_min = self.ligament_length(ligament.name, q_min)
+            length_q_max = self.ligament_length(ligament.name, q_max)
+            if length_q_min < ligament.ligament_slack_length:
+                _logger.warning(
+                    f"The ligament {ligament.name} is slack at the minimum of the DoF range."
+                )
+            if length_q_max < ligament.ligament_slack_length:
+                _logger.warning(
+                    f"The ligament {ligament.name} is slack at the maximum of the DoF range."
+                )
+            ligament_length_ranges[ligament.name] = (
+                min(length_q_min, length_q_max, ligament.ligament_slack_length), # Should be slack length
+                max(length_q_min, length_q_max),
+            )
+
+        return ligament_length_ranges
 
     def animate(
         self,

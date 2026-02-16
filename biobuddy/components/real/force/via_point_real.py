@@ -116,7 +116,7 @@ class ViaPointReal:
             )
         out_string = f"viapoint\t{self.name}\n"
         out_string += f"\tparent\t{self.parent_name}\n"
-        out_string += f"\tforce\t{self.muscle_name}\n"
+        out_string += f"\tmuscle\t{self.muscle_name}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"
         out_string += f"\tposition\t{np.round(self.position[0, 0], 6)}\t{np.round(self.position[1, 0], 6)}\t{np.round(self.position[2, 0], 6)}\n"
         out_string += "endviapoint\n"

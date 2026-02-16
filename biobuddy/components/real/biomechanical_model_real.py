@@ -114,12 +114,12 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ligament
             The ligament to add
         """
-        if ligament.origin_parent_name not in self.segment_names and ligament.origin_parent_name != "base":
+        if ligament.origin_position.parent_name not in self.segment_names and ligament.origin_position.parent_name != "base":
             raise ValueError(
                 f"The origin segment of a ligament must be declared before the ligament."
-                f"Please declare the segment {ligament.origin_parent_name} before declaring the ligament {ligament.name}."
+                f"Please declare the segment {ligament.origin_position.parent_name} before declaring the ligament {ligament.name}."
             )
-        if ligament.insertion_parent_name not in self.segment_names and ligament.origin_parent_name != "base":
+        if ligament.insertion_position.parent_name not in self.segment_names and ligament.insertion_position.parent_name != "base":
             raise ValueError(
                 f"The insertion segment of a ligament must be declared before the ligament."
                 f"Please declare the segment {ligament.insertion_parent_name} before declaring the ligament {ligament.name}."
@@ -266,6 +266,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                     muscle_to_add.muscle_group = good_muscle_group_name
                     # Transfer the muscles from on muscle group to the other
                     self.muscle_groups[good_muscle_group_name].add_muscle(muscle_to_add)
+
+                    for via_point in muscle_to_add.via_points:
+                        via_point.muscle_group = good_muscle_group_name
+
                 # Remove the old muscle group
                 self.remove_muscle_group(muscle_group.name)
 
@@ -363,14 +367,14 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 if muscle.origin_position.movement is not None:
                     # Get the position of the via point in this configuration
                     dof_indices = [self.dof_index(name) for name in muscle.origin_position.movement.dof_names]
-                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])
+                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])[0]
                     muscle.origin_position.movement = None
 
                 # Moving insertion
                 if muscle.insertion_position.movement is not None:
                     # Get the position of the via point in this configuration
                     dof_indices = [self.dof_index(name) for name in muscle.insertion_position.movement.dof_names]
-                    muscle.insertion_position.position = muscle.insertion_position.movement.evaluate(q[dof_indices])
+                    muscle.insertion_position.position = muscle.insertion_position.movement.evaluate(q[dof_indices])[0]
                     muscle.insertion_position.movement = None
 
                 #  Via points
@@ -394,11 +398,16 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
                         muscle.via_points[via_point.name].movement = None
 
-    def approximate_ligaments(self, ligament_type: LigamentType) -> None:
+    def approximate_ligaments(self, desired_ligament_type: LigamentType, plot_approximation: bool = True) -> None:
         old_model = deepcopy(self)
         new_model = deepcopy(self)
+        ligament_length_ranges = self.get_ligament_length_ranges()
         for ligament in old_model.ligaments:
-            new_ligament = ligament.approximate_ligament(ligament_type)
+            new_ligament = ligament.approximate_ligament(
+                desired_ligament_type,
+                ligament_length_ranges[ligament.name],
+                plot_approximation,
+            )
             new_model.ligaments[new_ligament.name] = new_ligament
         self.ligaments = new_model.ligaments
 

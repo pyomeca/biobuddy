@@ -38,7 +38,7 @@ def test_simm_spline(nb_nodes: int):
     osim_vector.set(0, test_x)
 
     # The evaluated value is the same
-    npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+    npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
     if nb_nodes == 7:
         # The derivative too, but I get a c++ error from Opensim on the remote tests (that I cannot reproduce locally), so I'll just test the values.
@@ -109,26 +109,26 @@ def test_simm_spline(nb_nodes: int):
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         test_x = 180.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         # Test for values at the end of the range
         test_x = 0.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         test_x = 90.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
 
 def test_simm_spline_errors():
@@ -191,7 +191,7 @@ def test_linear_function(nb_nodes: int):
         expected_a = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
         expected_b = 0.02
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a, decimal=6)
@@ -205,20 +205,20 @@ def test_linear_function(nb_nodes: int):
         # Test for extrapolation
         test_x = -10.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         test_x = 180.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         # Test for values at the end of the range
         test_x = 0.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         test_x = 90.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
     elif nb_nodes == 3:
         # Test the first segment
@@ -226,7 +226,7 @@ def test_linear_function(nb_nodes: int):
         expected_a_1 = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
         expected_b_1 = 0.02
         expected_value = expected_a_1 * test_x + expected_b_1
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_1, decimal=6)
@@ -237,7 +237,7 @@ def test_linear_function(nb_nodes: int):
         expected_a_2 = (y_points[2] - y_points[1]) / (x_points[2] - x_points[1])
         expected_b_2 = y_points[1] - expected_a_2 * x_points[1]
         expected_value = expected_a_2 * test_x + expected_b_2
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_2, decimal=6)

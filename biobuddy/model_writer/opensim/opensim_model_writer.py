@@ -321,3 +321,7 @@ class OpensimModelWriter(AbstractModelWriter):
             for muscle in muscle_group.muscles:
                 muscle_elem = muscle.to_osim()
                 objects.append(muscle_elem)
+
+        for ligament in model.ligaments:
+            ligament_elem = ligament.to_osim()
+            objects.append(ligament_elem)

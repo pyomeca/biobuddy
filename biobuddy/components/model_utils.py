@@ -146,6 +146,8 @@ class ModelUtils:
         chain = []
         this_segment = last_segment_name
         while this_segment != first_segment_name:
+            if this_segment == "base":
+                return []  # If we reached the base, it means that there is no chain between the two segments
             chain.append(this_segment)
             this_segment = self.segments[this_segment].parent_name
         chain.append(first_segment_name)

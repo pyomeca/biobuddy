@@ -42,6 +42,10 @@ class Ligament:
         """
         super().__init__()
 
+        # For convenience
+        self.origin_parent_name = None  # Will be set in the setter of origin_position
+        self.insertion_parent_name = None  # Will be set in the setter of insertion_position
+
         self.name = name
         self.ligament_type = ligament_type
         self.origin_position = origin_position
@@ -79,6 +83,8 @@ class Ligament:
         else:
             self._origin_position = value
 
+        self.origin_parent_name = value.parent_name
+
     @property
     def insertion_position(self) -> ViaPoint:
         return self._insertion_position
@@ -89,6 +95,8 @@ class Ligament:
             self._insertion_position = None
         else:
             self._insertion_position = value
+
+        self.insertion_parent_name = value.parent_name
 
     @property
     def stiffness_function(self) -> Callable[[dict[str, Any], Any], float]:

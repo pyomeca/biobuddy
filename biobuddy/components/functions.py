@@ -48,7 +48,7 @@ class InterpolationFunction(ABC):
         """Return the calculated coefficients."""
 
     @abstractmethod
-    def evaluate(self, x: float) -> float:
+    def evaluate(self, x: float | np.ndarray) -> np.ndarray:
         """
         Calculate the polynomial at a given x coordinate.
 
@@ -60,7 +60,7 @@ class InterpolationFunction(ABC):
         pass
 
     @abstractmethod
-    def evaluate_derivative(self, x: float, order: int = 1) -> float:
+    def evaluate_derivative(self, x: float | np.ndarray, order: int = 1) -> np.ndarray:
         """
         Calculate the derivative of the polynomial at a given x coordinate.
 
@@ -185,7 +185,7 @@ class SimmSpline(InterpolationFunction):
         """Return the calculated coefficients."""
         return self.b.copy(), self.c.copy(), self.d.copy()
 
-    def evaluate(self, x: float) -> float:
+    def evaluate(self, x: float | np.ndarray) -> np.ndarray:
         """
         Calculate the spline value at a given x coordinate.
 
@@ -194,44 +194,57 @@ class SimmSpline(InterpolationFunction):
         x
             The x coordinate to evaluate the spline at
         """
-        x_scalar = self.get_scalar_value(x)
+        if isinstance(x, (float, int)):
+            x = np.array([x])
+        x = x.reshape(-1, )
 
-        # Handle out-of-range extrapolation using slope at endpoints
-        if x_scalar < self.x_points[0]:
-            return self.y_points[0] + (x_scalar - self.x_points[0]) * self.b[0]
-        elif x_scalar > self.x_points[self.nb_nodes - 1]:
-            return (
-                self.y_points[self.nb_nodes - 1]
-                + (x_scalar - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
-            )
+        nb_frames = x.shape[0]
+        y_evaluation = np.zeros((nb_frames, ))
+        for i_frame in range(nb_frames):
+            x_scalar = x[i_frame]
 
-        # Check if close to endpoints (within numerical tolerance)
-        tolerance = 1e-10
-        if abs(x_scalar - self.x_points[0]) < tolerance:
-            return self.y_points[0]
-        elif abs(x_scalar - self.x_points[self.nb_nodes - 1]) < tolerance:
-            return self.y_points[self.nb_nodes - 1]
+            # Handle out-of-range extrapolation using slope at endpoints
+            if x_scalar < self.x_points[0]:
+                y_evaluation[i_frame] =  self.y_points[0] + (x_scalar - self.x_points[0]) * self.b[0]
 
-        # Find the appropriate interval using binary search
-        if self.nb_nodes < 3:
-            k = 0
-        else:
-            i = 0
-            j = self.nb_nodes
-            while True:
-                k = (i + j) // 2
-                if x_scalar < self.x_points[k]:
-                    j = k
-                elif x_scalar > self.x_points[k + 1]:
-                    i = k
+            elif x_scalar > self.x_points[self.nb_nodes - 1]:
+                y_evaluation[i_frame] =  (
+                    self.y_points[self.nb_nodes - 1]
+                    + (x_scalar - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
+                )
+
+            else:
+                # Check if close to endpoints (within numerical tolerance)
+                tolerance = 1e-10
+                if abs(x_scalar - self.x_points[0]) < tolerance:
+                    y_evaluation[i_frame] = self.y_points[0]
+
+                elif abs(x_scalar - self.x_points[self.nb_nodes - 1]) < tolerance:
+                    y_evaluation[i_frame] = self.y_points[self.nb_nodes - 1]
+
                 else:
-                    break
+                    # Find the appropriate interval using binary search
+                    if self.nb_nodes < 3:
+                        k = 0
+                    else:
+                        i = 0
+                        j = self.nb_nodes
+                        while True:
+                            k = (i + j) // 2
+                            if x_scalar < self.x_points[k]:
+                                j = k
+                            elif x_scalar > self.x_points[k + 1]:
+                                i = k
+                            else:
+                                break
 
-        # Evaluate the cubic polynomial using Horner's method
-        dx = x_scalar - self.x_points[k]
-        return self.y_points[k] + dx * (self.b[k] + dx * (self.c[k] + dx * self.d[k]))
+                    # Evaluate the cubic polynomial using Horner's method
+                    dx = x_scalar - self.x_points[k]
+                    y_evaluation[i_frame] = self.y_points[k] + dx * (self.b[k] + dx * (self.c[k] + dx * self.d[k]))
 
-    def evaluate_derivative(self, x: float, order: int = 1) -> float:
+        return y_evaluation
+
+    def evaluate_derivative(self, x: float | np.ndarray, order: int = 1) -> np.ndarray:
         """
         Calculate the derivative of the spline at a given x coordinate.
 
@@ -249,60 +262,69 @@ class SimmSpline(InterpolationFunction):
         # if order < 1 or order > 2:
         #     raise ValueError("Derivative order must be 1 or 2")
 
-        x_scalar = self.get_scalar_value(x)
+        if isinstance(x, (float, int)):
+            x = np.array([x])
+        x = x.reshape(-1, )
 
-        # Handle out-of-range cases
-        if x_scalar < self.x_points[0]:
-            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
-            # if order == 1:
-            #     return self.b[0]
-            # else:
-            #     return 0.0
-        elif x_scalar > self.x_points[self.nb_nodes - 1]:
-            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
-            # if order == 1:
-            #     return self.b[self.nb_nodes - 1]
-            # else:
-            #     return 0.0
+        nb_frames = x.shape[0]
+        y_evaluation = np.zeros((nb_frames, ))
+        for i_frame in range(nb_frames):
+            x_scalar = x[i_frame]
 
-        # Check if close to endpoints (within numerical tolerance)
-        tolerance = 1e-10
-        if abs(x_scalar - self.x_points[0]) < tolerance:
-            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
-            # if order == 1:
-            #     return self.b[0]
-            # else:
-            #     return 2.0 * self.c[0]
-        elif abs(x_scalar - self.x_points[self.nb_nodes - 1]) < tolerance:
-            raise NotImplementedError("Extrapolation for derivatives is not implemented.")
-            # if order == 1:
-            #     return self.b[self.nb_nodes - 1]
-            # else:
-            #     return 2.0 * self.c[self.nb_nodes - 1]
+            # Handle out-of-range cases
+            if x_scalar < self.x_points[0]:
+                raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+                # if order == 1:
+                #     return self.b[0]
+                # else:
+                #     return 0.0
+            elif x_scalar > self.x_points[self.nb_nodes - 1]:
+                raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+                # if order == 1:
+                #     return self.b[self.nb_nodes - 1]
+                # else:
+                #     return 0.0
 
-        # Find the appropriate interval using binary search
-        if self.nb_nodes < 3:
-            k = 0
-        else:
-            i = 0
-            j = self.nb_nodes
-            while True:
-                k = (i + j) // 2
-                if x_scalar < self.x_points[k]:
-                    j = k
-                elif x_scalar > self.x_points[k + 1]:
-                    i = k
-                else:
-                    break
+            # Check if close to endpoints (within numerical tolerance)
+            tolerance = 1e-10
+            if abs(x_scalar - self.x_points[0]) < tolerance:
+                raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+                # if order == 1:
+                #     return self.b[0]
+                # else:
+                #     return 2.0 * self.c[0]
+            elif abs(x_scalar - self.x_points[self.nb_nodes - 1]) < tolerance:
+                raise NotImplementedError("Extrapolation for derivatives is not implemented.")
+                # if order == 1:
+                #     return self.b[self.nb_nodes - 1]
+                # else:
+                #     return 2.0 * self.c[self.nb_nodes - 1]
 
-        dx = x_scalar - self.x_points[k]
+            # Find the appropriate interval using binary search
+            if self.nb_nodes < 3:
+                k = 0
+            else:
+                i = 0
+                j = self.nb_nodes
+                while True:
+                    k = (i + j) // 2
+                    if x_scalar < self.x_points[k]:
+                        j = k
+                    elif x_scalar > self.x_points[k + 1]:
+                        i = k
+                    else:
+                        break
 
-        if order == 1:
-            # First derivative: b + 2*c*dx + 3*d*dx^2
-            return self.b[k] + dx * (2.0 * self.c[k] + 3.0 * dx * self.d[k])
-        else:
-            # Second derivative: 2*c + 6*d*dx
-            return 2.0 * self.c[k] + 6.0 * dx * self.d[k]
+            dx = x_scalar - self.x_points[k]
+
+            if order == 1:
+                # First derivative: b + 2*c*dx + 3*d*dx^2
+                y_evaluation[i_frame] = self.b[k] + dx * (2.0 * self.c[k] + 3.0 * dx * self.d[k])
+            else:
+                # Second derivative: 2*c + 6*d*dx
+                y_evaluation[i_frame] = 2.0 * self.c[k] + 6.0 * dx * self.d[k]
+
+        return y_evaluation
 
     def to_osim(self, name: str = None) -> etree.Element:
         """Generate OpenSim XML representation of the function."""
@@ -311,10 +333,10 @@ class SimmSpline(InterpolationFunction):
         function_elem = etree.Element("SimmSpline", name=name)
 
         x_elem = etree.SubElement(function_elem, "x")
-        x_elem.text = "\t".join(f"{x:.8f}" for x in self.x_points)
+        x_elem.text = " ".join(f"{x:.8f}" for x in self.x_points.reshape(-1))
 
-        y_elem = etree.SubElement(function_elem, "x")
-        y_elem.text = "\t".join(f"{y:.8f}" for y in self.y_points)
+        y_elem = etree.SubElement(function_elem, "y")
+        y_elem.text = " ".join(f"{y:.8f}" for y in self.y_points.reshape(-1))
 
         return function_elem
 
@@ -366,7 +388,7 @@ class PiecewiseLinearFunction(InterpolationFunction):
             linear_piece_idx = np.where(x < self.x_points)[0][0] - 1
         return linear_piece_idx
 
-    def evaluate(self, x: float) -> float:
+    def evaluate(self, x: float | np.ndarray) -> np.ndarray:
         """
         Calculate the linear interpolation value at a given x coordinate.
 
@@ -375,12 +397,19 @@ class PiecewiseLinearFunction(InterpolationFunction):
         x
             The x coordinate to evaluate the line at
         """
-        x_scalar = self.get_scalar_value(x)
-        linear_piece_idx = self.get_coefficient_index(x_scalar)
-        y = self.a[linear_piece_idx] * x_scalar + self.b[linear_piece_idx]
-        return y
+        if isinstance(x, (float, int)):
+            x = np.array([x])
+        x = x.reshape(-1, )
 
-    def evaluate_derivative(self, x: float, order: int = 1) -> float:
+        nb_frames = x.shape[0]
+        y_evaluation = np.zeros((nb_frames, ))
+        for i_frame in range(nb_frames):
+            x_scalar = x[i_frame]
+            linear_piece_idx = self.get_coefficient_index(x_scalar)
+            y_evaluation[i_frame] = self.a[linear_piece_idx] * x_scalar + self.b[linear_piece_idx]
+        return y_evaluation
+
+    def evaluate_derivative(self, x: float | np.ndarray, order: int = 1) -> np.ndarray:
         """
         Calculate the derivative of the spline at a given x coordinate.
 
@@ -394,12 +423,21 @@ class PiecewiseLinearFunction(InterpolationFunction):
         if not isinstance(order, int) or order < 1:
             raise RuntimeError("The order of the derivative must be an int larger or equal to 1.0")
 
+        if isinstance(x, (float, int)):
+            x = np.array([x])
+        x = x.reshape(-1, )
+
+        nb_frames = x.shape[0]
+        y_evaluation = np.zeros((nb_frames,))
         if order == 1.0:
-            x_scalar = self.get_scalar_value(x)
-            linear_piece_idx = self.get_coefficient_index(x_scalar)
-            return self.a[linear_piece_idx]
+            for i_frame in range(nb_frames):
+                x_scalar = x[i_frame]
+                linear_piece_idx = self.get_coefficient_index(x_scalar)
+                y_evaluation[i_frame] = self.a[linear_piece_idx]
+            return y_evaluation
         else:
-            return 0.0
+            # Zeros
+            return y_evaluation
 
     def to_osim(self, name: str = None) -> etree.Element:
         """Generate OpenSim XML representation of the function."""
