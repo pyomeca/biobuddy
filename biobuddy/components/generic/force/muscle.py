@@ -45,7 +45,7 @@ class Muscle(MuscleUtils):
         optimal_length_function
             The function giving the optimal length of the muscle
         maximal_force_function
-            The function giving the maximal force of the force can reach
+            The function giving the maximal force of the muscle can reach
         tendon_slack_length_function
             The function giving the length of the tendon at rest
         pennation_angle_function
@@ -173,12 +173,12 @@ class Muscle(MuscleUtils):
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The insertion's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
+                    f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The insertion's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
+                    f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._insertion_position = value

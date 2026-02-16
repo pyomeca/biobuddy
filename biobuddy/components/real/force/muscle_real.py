@@ -40,7 +40,7 @@ class MuscleReal(MuscleUtils):
         optimal_length
             The optimal length of the muscle
         maximal_force
-            The maximal force of the force can reach
+            The maximal force of the muscle can reach
         tendon_slack_length
             The length of the tendon at rest
         pennation_angle
@@ -79,11 +79,11 @@ class MuscleReal(MuscleUtils):
         """
         if via_point.muscle_name is not None and via_point.muscle_name != self.name:
             raise ValueError(
-                f"The via points's force {via_point.muscle_name} should be the same as the force's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
+                f"The via points's muscle {via_point.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, via_point.muscle_name can be left undefined"
             )
         if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
             raise ValueError(
-                f"The via points's force group {via_point.muscle_group} should be the same as the force's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
             )
 
         via_point.muscle_name = self.name
@@ -169,12 +169,12 @@ class MuscleReal(MuscleUtils):
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The insertion's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
+                    f"The insertion's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, insertion_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The insertion's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
+                    f"The insertion's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, insertion_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._insertion_position = value
@@ -201,7 +201,7 @@ class MuscleReal(MuscleUtils):
     @maximal_force.setter
     def maximal_force(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The maximal force of the force must be greater than 0.")
+            raise ValueError("The maximal force of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]

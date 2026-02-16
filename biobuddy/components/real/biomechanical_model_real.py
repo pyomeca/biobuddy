@@ -373,7 +373,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 if muscle.origin_position.movement is not None:
                     # Get the position of the via point in this configuration
                     dof_indices = [self.dof_index(name) for name in muscle.origin_position.movement.dof_names]
-                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])[0]
+                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])
                     muscle.origin_position.movement = None
 
                 # Moving insertion

@@ -39,7 +39,7 @@ class MuscleGroup:
         """
         if muscle.muscle_group is not None and muscle.muscle_group != self.name:
             raise ValueError(
-                "The force's muscle_group should be the same as the 'key'. Alternatively, force.muscle_group can be left undefined"
+                "The muscle's muscle_group should be the same as the 'key'. Alternatively, muscle.muscle_group can be left undefined"
             )
 
         muscle.muscle_group = self.name
