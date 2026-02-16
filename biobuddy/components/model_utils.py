@@ -16,6 +16,7 @@ class ModelUtils:
         # Attributes that will be filled by BiomechanicalModelReal
         self.segments = None
         self.muscle_groups = None
+        self.ligaments = None
 
     @property
     def segment_names(self) -> list[str]:
@@ -84,6 +85,13 @@ class ModelUtils:
                 for via_point in muscle.via_points:
                     names.append(via_point.name)
         return names
+
+    @property
+    def ligament_names(self) -> list[str]:
+        """
+        Get the names of the ligaments in the model
+        """
+        return list(self.ligaments.keys())
 
     def has_parent_offset(self, segment_name: str) -> bool:
         """True if the segment segment_name has an offset parent."""
@@ -210,6 +218,10 @@ class ModelUtils:
         return nb
 
     @property
+    def nb_ligaments(self) -> int:
+        return len(self.ligaments)
+
+    @property
     def nb_q(self) -> int:
         return sum(segment.nb_q for segment in self.segments)
 
@@ -330,6 +342,20 @@ class ModelUtils:
         for mg in self.muscle_groups:
             muscle_group_origins.append(mg.insertion_parent_name)
         return muscle_group_origins
+
+    @property
+    def ligament_origin_parent_names(self):
+        ligament_origins = []
+        for ligament in self.ligaments:
+            ligament_origins.append(ligament.origin_parent_name)
+        return ligament_origins
+
+    @property
+    def ligament_insertion_parent_names(self):
+        ligament_origins = []
+        for ligament in self.ligaments:
+            ligament_origins.append(ligament.insertion_parent_name)
+        return ligament_origins
 
     def remove_dofs(self, dofs_to_remove: list[str]):
         """

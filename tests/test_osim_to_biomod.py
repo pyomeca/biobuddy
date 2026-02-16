@@ -717,6 +717,7 @@ def test_osim_to_biomod_with_ligament():
         mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
     )
     model.fix_via_points()
+    model.approximate_ligaments(LigamentType.LINEAR_SPRING)
     model.to_biomod(biomod_filepath, with_mesh=False)
 
     # Test that the model created is valid

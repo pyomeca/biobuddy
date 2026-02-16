@@ -455,6 +455,11 @@ class OsimModelParser(AbstractModelParser):
             muscle_group_name = muscle.muscle_group
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
 
+    def _set_ligaments(self):
+        """Add the ligament components to the BiomechanicalModelReal."""
+        for ligament in self.ligaments:
+            self.biomechanical_model_real.add_ligament(ligament)
+
     @staticmethod
     def get_dof_and_names_and_ranges(
         dof_names: list[str], ranges: list[str | None]
@@ -928,6 +933,9 @@ class OsimModelParser(AbstractModelParser):
 
         # Muscles
         self._set_muscles()
+
+        # Ligaments
+        self._set_ligaments()
 
         # Warnings
         self._set_warnings()

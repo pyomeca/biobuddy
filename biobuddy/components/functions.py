@@ -401,5 +401,18 @@ class PiecewiseLinearFunction(InterpolationFunction):
         else:
             return 0.0
 
+    def to_osim(self, name: str = None) -> etree.Element:
+        """Generate OpenSim XML representation of the function."""
+
+        name = name if name is not None else "piecewise_linear_function"
+        function_elem = etree.Element("PiecewiseLinearFunction", name=name)
+
+        x_elem = etree.SubElement(function_elem, "x")
+        x_elem.text = "\t".join(f"{x:.8f}" for x in self.x_points)
+
+        y_elem = etree.SubElement(function_elem, "x")
+        y_elem.text = "\t".join(f"{y:.8f}" for y in self.y_points)
+
+        return function_elem
 
 Functions: TypeAlias = SimmSpline | PiecewiseLinearFunction

@@ -70,6 +70,28 @@ class BiomechanicalModel(ModelUtils):
         """
         self.muscle_groups._remove(muscle_group_name)
 
+    def add_ligament(self, ligament: MuscleGroup):
+        """
+        Add a ligament to the model
+
+        Parameters
+        ----------
+        ligament
+            The ligament to add
+        """
+        self.ligaments._append(ligament)
+
+    def remove_ligament(self, ligament_name: str):
+        """
+        Remove a ligament from the model
+
+        Parameters
+        ----------
+        ligament_name
+            The name of the ligament to remove
+        """
+        self.ligaments._remove(ligament_name)
+
     def to_real(self, data: MarkerData, gravity: Point = None) -> BiomechanicalModelReal:
         """
         Collapse the model to an actual personalized biomechanical model based on the generic model and the data

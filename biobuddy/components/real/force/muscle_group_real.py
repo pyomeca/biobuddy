@@ -13,11 +13,11 @@ class MuscleGroupReal:
         Parameters
         ----------
         name
-            The name of the new force group
+            The name of the new muscle group
         origin_parent_name
-            The name of the parent segment for this force group
+            The name of the parent segment for this muscle group
         insertion_parent_name
-            The name of the insertion segment for this force group
+            The name of the insertion segment for this muscle group
         """
         # Sanity checks
         if origin_parent_name == insertion_parent_name and origin_parent_name != "":
@@ -30,16 +30,16 @@ class MuscleGroupReal:
 
     def add_muscle(self, muscle: MuscleReal) -> None:
         """
-        Add a force to the model
+        Add a muscle to the model
 
         Parameters
         ----------
         muscle
-            The force to add
+            The muscle to add
         """
         if muscle.muscle_group is not None and muscle.muscle_group != self.name:
             raise ValueError(
-                "The force's muscle_group should be the same as the 'key'. Alternatively, force.muscle_group can be left undefined"
+                "The muscle's muscle_group should be the same as the 'key'. Alternatively, muscle.muscle_group can be left undefined"
             )
 
         muscle.muscle_group = self.name
@@ -47,12 +47,12 @@ class MuscleGroupReal:
 
     def remove_muscle(self, muscle_name: str) -> None:
         """
-        Remove a force from the model
+        Remove a muscle from the model
 
         Parameters
         ----------
         muscle_name
-            The name of the force to remove
+            The name of the muscle to remove
         """
         self.muscles._remove(muscle_name)
 

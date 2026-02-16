@@ -269,7 +269,7 @@ class MuscleReal(MuscleUtils):
 
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
-        out_string = f"force\t{self.name}\n"
+        out_string = f"muscle\t{self.name}\n"
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
         out_string += f"\tmusclegroup\t{self.muscle_group}\n"

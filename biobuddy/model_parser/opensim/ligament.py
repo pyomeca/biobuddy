@@ -1,7 +1,7 @@
 import numpy as np
 from lxml import etree
 
-from .functions import spline_from_element
+from .functions import spline_from_element, piece_wise_linear_from_element
 from .path_point import PathPoint, PathPointMovement, PathPointCondition
 from ..utils_xml import find_in_tree, find_sub_elements_in_tree, find_sub_element_in_tree
 from ...components.ligament_utils import LigamentType
@@ -25,7 +25,7 @@ def check_for_wrappings(element: etree.ElementTree, name: str) -> str:
         n_wrap = 0 if not wrap_tp else len(wrap_tp)
         wrap = n_wrap != 0
     if wrap:
-        warnings += f"Some wrapping objects were present on the muscle {name} in the original file force set.\nWraping objects are not supported yet so they will be ignored."
+        warnings += f"Some wrapping objects were present on the ligament {name} in the original file force set.\nWraping objects are not supported yet so they will be ignored."
     return warnings
 
 def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
@@ -58,7 +58,16 @@ def get_ligament_from_element(
         if len(force_length_element) > 1:
             warnings += f"The ligament {name} has {len(force_length_element)} force-length function, but only 1 is supported for now. Please report this issue to the developers."
             return None, warnings
-        force_length_function = spline_from_element(force_length_element[0])
+        if force_length_element[0].tag == "SimmSpline":
+            force_length_function = spline_from_element(force_length_element[0])
+        elif force_length_element[0].tag == "PiecewiseLinearFunction":
+            force_length_function = piece_wise_linear_from_element(force_length_element[0])
+        else:
+            warnings += f"The ligament {name} has a force-length function of type {force_length_element[0].tag}, but only SimmSpline and PiecewiseLinearFunction are supported for now. Please report this issue to the developers."
+            return None, warnings
+    else:
+        warnings += f"There was a problem reading the ligament {name}'s force-length function. Please report this issue to the developers."
+        return None, warnings
 
     path_points: list[PathPoint] = []
     via_points: list[PathPoint] = []
