@@ -200,7 +200,7 @@ class LigamentReal:
         if self.ligament_type == LigamentType.FUNCTION:
             length_points = (self.force_length_function.x_points * self.ligament_slack_length) + self.ligament_slack_length
             force_points = self.force_length_function.y_points * self.pcsa
-            good_indices = np.where(length_points > self.ligament_slack_length)
+            good_indices = np.where(length_points >= self.ligament_slack_length)
             if len(good_indices[0]) == 0:
                 raise ValueError(f"All the length points of the ligament {self.name} are negative or zero, cannot approximate it with a function of type {desired_ligament_type.value}.")
             length_points = length_points[good_indices[0]]
