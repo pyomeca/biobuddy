@@ -156,11 +156,11 @@ class BiomodModelParser(AbstractModelParser):
                             ligament_type=None,
                             origin_position=ViaPointReal(
                                 name=f"origin_{name}",
-                                parent_name="", # Will be set later
+                                parent_name="",  # Will be set later
                             ),
                             insertion_position=ViaPointReal(
                                 name=f"insertion_{name}",
-                                parent_name="", # Will be set later
+                                parent_name="",  # Will be set later
                             ),
                             ligament_slack_length=0.0,
                         )
@@ -416,7 +416,9 @@ class BiomodModelParser(AbstractModelParser):
                     elif token.lower() == "originposition":
                         current_component.origin_position.position = read_float_vector(next_token=next_token, length=3)
                     elif token.lower() == "insertionposition":
-                        current_component.insertion_position.position = read_float_vector(next_token=next_token, length=3)
+                        current_component.insertion_position.position = read_float_vector(
+                            next_token=next_token, length=3
+                        )
                     elif token.lower() == "ligamentslacklength":
                         current_component.ligament_slack_length = read_float(next_token=next_token)
                     elif token.lower() == "stiffness":

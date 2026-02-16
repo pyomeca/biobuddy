@@ -196,19 +196,21 @@ class SimmSpline(InterpolationFunction):
         """
         if isinstance(x, (float, int)):
             x = np.array([x])
-        x = x.reshape(-1, )
+        x = x.reshape(
+            -1,
+        )
 
         nb_frames = x.shape[0]
-        y_evaluation = np.zeros((nb_frames, ))
+        y_evaluation = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
             x_scalar = x[i_frame]
 
             # Handle out-of-range extrapolation using slope at endpoints
             if x_scalar < self.x_points[0]:
-                y_evaluation[i_frame] =  self.y_points[0] + (x_scalar - self.x_points[0]) * self.b[0]
+                y_evaluation[i_frame] = self.y_points[0] + (x_scalar - self.x_points[0]) * self.b[0]
 
             elif x_scalar > self.x_points[self.nb_nodes - 1]:
-                y_evaluation[i_frame] =  (
+                y_evaluation[i_frame] = (
                     self.y_points[self.nb_nodes - 1]
                     + (x_scalar - self.x_points[self.nb_nodes - 1]) * self.b[self.nb_nodes - 1]
                 )
@@ -264,10 +266,12 @@ class SimmSpline(InterpolationFunction):
 
         if isinstance(x, (float, int)):
             x = np.array([x])
-        x = x.reshape(-1, )
+        x = x.reshape(
+            -1,
+        )
 
         nb_frames = x.shape[0]
-        y_evaluation = np.zeros((nb_frames, ))
+        y_evaluation = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
             x_scalar = x[i_frame]
 
@@ -399,10 +403,12 @@ class PiecewiseLinearFunction(InterpolationFunction):
         """
         if isinstance(x, (float, int)):
             x = np.array([x])
-        x = x.reshape(-1, )
+        x = x.reshape(
+            -1,
+        )
 
         nb_frames = x.shape[0]
-        y_evaluation = np.zeros((nb_frames, ))
+        y_evaluation = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
             x_scalar = x[i_frame]
             linear_piece_idx = self.get_coefficient_index(x_scalar)
@@ -425,7 +431,9 @@ class PiecewiseLinearFunction(InterpolationFunction):
 
         if isinstance(x, (float, int)):
             x = np.array([x])
-        x = x.reshape(-1, )
+        x = x.reshape(
+            -1,
+        )
 
         nb_frames = x.shape[0]
         y_evaluation = np.zeros((nb_frames,))
@@ -452,5 +460,6 @@ class PiecewiseLinearFunction(InterpolationFunction):
         y_elem.text = "\t".join(f"{y:.8f}" for y in self.y_points)
 
         return function_elem
+
 
 Functions: TypeAlias = SimmSpline | PiecewiseLinearFunction

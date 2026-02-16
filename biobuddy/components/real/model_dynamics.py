@@ -835,11 +835,14 @@ class ModelDynamics:
                 end_of_the_chain_name = origin_parent
             else:
                 raise NotImplementedError(
-                    f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers.")
+                    f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers."
+                )
 
             while this_parent_name != end_of_the_chain_name:
                 if this_parent_name == "base":
-                    raise NotImplementedError(f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers.")
+                    raise NotImplementedError(
+                        f"The segment kinematic chain between the ligament' origin {origin_parent} and insertion {insertion_parent} could not be reconstructed. Please notify the developers."
+                    )
                 if self.segments[this_parent_name].nb_q > 0:
                     dof_indices = self.dof_indices(this_parent_name)
                     dof_min = self.segments[this_parent_name].q_ranges.min_bound
@@ -856,13 +859,9 @@ class ModelDynamics:
             length_q_min = self.ligament_length(ligament.name, q_min)
             length_q_max = self.ligament_length(ligament.name, q_max)
             if length_q_min < ligament.ligament_slack_length:
-                _logger.warning(
-                    f"The ligament {ligament.name} is slack at the minimum of the DoF range."
-                )
+                _logger.warning(f"The ligament {ligament.name} is slack at the minimum of the DoF range.")
             if length_q_max < ligament.ligament_slack_length:
-                _logger.warning(
-                    f"The ligament {ligament.name} is slack at the maximum of the DoF range."
-                )
+                _logger.warning(f"The ligament {ligament.name} is slack at the maximum of the DoF range.")
             ligament_length_ranges[ligament.name] = (
                 ligament.ligament_slack_length,
                 max(length_q_min, length_q_max),

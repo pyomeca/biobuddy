@@ -11,5 +11,6 @@ class LigamentType(Enum):
 
 LIGAMENT_FUNCTION = {
     LigamentType.LINEAR_SPRING: lambda length, slack_length, stiffness: stiffness * (length - slack_length),
-    LigamentType.SECOND_ORDER_SPRING: lambda length, slack_length, stiffness: (stiffness / 2) * ((length - slack_length) + np.sqrt((length - slack_length) * (length - slack_length) + 1e-6)),
+    LigamentType.SECOND_ORDER_SPRING: lambda length, slack_length, stiffness: (stiffness / 2)
+    * ((length - slack_length) + np.sqrt((length - slack_length) * (length - slack_length) + 1e-6)),
 }

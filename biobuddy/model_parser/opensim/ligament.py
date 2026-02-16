@@ -28,6 +28,7 @@ def check_for_wrappings(element: etree.ElementTree, name: str) -> str:
         warnings += f"Some wrapping objects were present on the ligament {name} in the original file force set.\nWraping objects are not supported yet so they will be ignored."
     return warnings
 
+
 def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
     applied = True
     if element.find("appliesForce") is not None and not ignore_applied:
@@ -36,8 +37,8 @@ def is_applied(element: etree.ElementTree, ignore_applied: bool) -> bool:
 
 
 def get_ligament_from_element(
-        element: etree.ElementTree,
-        ignore_applied: bool,
+    element: etree.ElementTree,
+    ignore_applied: bool,
 ) -> tuple[LigamentReal, str]:
     """
     TODO: Better handle ignore_applied parameter. LigamentReal should have a applied parameter, a remove_unapplied_ligament method, and we should remove unapplied ligament in to_biomod.
@@ -78,8 +79,10 @@ def get_ligament_from_element(
     )
 
     if len(path_point_elts) != 2:
-        raise RuntimeError(f"The ligament {name} has {len(path_point_elts)} path points, but only 2 are supported for now. "
-                           f"Please report this issue to the developers.")
+        raise RuntimeError(
+            f"The ligament {name} has {len(path_point_elts)} path points, but only 2 are supported for now. "
+            f"Please report this issue to the developers."
+        )
 
     for i_path_point, path_point_elt in enumerate(path_point_elts):
         via_point = PathPoint.from_element(path_point_elt)
@@ -104,7 +107,9 @@ def get_ligament_from_element(
         warning = ""
         if path_point_elt.tag == "MovingPathPoint":
             movement, warning = PathPointMovement.from_element(path_point_elt)
-            warning += f"\nThe ligament {name} has a moving path point at {via_point.body} which is not supported for now. "
+            warning += (
+                f"\nThe ligament {name} has a moving path point at {via_point.body} which is not supported for now. "
+            )
         if warning != "":
             warnings += warning
             if i_path_point == 0 or i_path_point == len(path_point_elts) - 1:

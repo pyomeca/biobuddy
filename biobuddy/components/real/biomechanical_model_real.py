@@ -114,12 +114,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ligament
             The ligament to add
         """
-        if ligament.origin_position.parent_name not in self.segment_names and ligament.origin_position.parent_name != "base":
+        if (
+            ligament.origin_position.parent_name not in self.segment_names
+            and ligament.origin_position.parent_name != "base"
+        ):
             raise ValueError(
                 f"The origin segment of a ligament must be declared before the ligament."
                 f"Please declare the segment {ligament.origin_position.parent_name} before declaring the ligament {ligament.name}."
             )
-        if ligament.insertion_position.parent_name not in self.segment_names and ligament.insertion_position.parent_name != "base":
+        if (
+            ligament.insertion_position.parent_name not in self.segment_names
+            and ligament.insertion_position.parent_name != "base"
+        ):
             raise ValueError(
                 f"The insertion segment of a ligament must be declared before the ligament."
                 f"Please declare the segment {ligament.insertion_parent_name} before declaring the ligament {ligament.name}."
@@ -244,10 +250,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         for muscle_group in self.muscle_groups:
             origin_parent = muscle_group.origin_parent_name
             insertion_parent = muscle_group.insertion_parent_name
-            if (
-                    (origin_parent, insertion_parent) not in pairs.values() and
-                    (insertion_parent, origin_parent) not in pairs.values()
-            ):
+            if (origin_parent, insertion_parent) not in pairs.values() and (
+                insertion_parent,
+                origin_parent,
+            ) not in pairs.values():
                 pairs[muscle_group.name] = (origin_parent, insertion_parent)
             elif (origin_parent, insertion_parent) in pairs.values():
                 raise RuntimeError(

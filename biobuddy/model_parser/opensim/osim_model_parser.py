@@ -965,9 +965,7 @@ class OsimModelParser(AbstractModelParser):
                         self.warnings.append(warnings)
 
                 elif "Ligament" in element.tag:
-                    ligament, warnings = get_ligament_from_element(
-                        element, self.ignore_ligament_applied_tag
-                    )
+                    ligament, warnings = get_ligament_from_element(element, self.ignore_ligament_applied_tag)
                     if ligament is not None:
                         self.ligaments.append(ligament)
                     if len(warnings) > 0:

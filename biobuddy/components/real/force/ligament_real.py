@@ -49,13 +49,19 @@ class LigamentReal:
         if ligament_type == LigamentType.FUNCTION:
             # You are using an OpenSim-like ligament
             if force_length_function is None:
-                raise ValueError("The force-length function of the ligament must be provided for ligaments of type FUNCTION.")
+                raise ValueError(
+                    "The force-length function of the ligament must be provided for ligaments of type FUNCTION."
+                )
             if pcsa is None:
-                raise ValueError("The physiological cross-sectional area of the ligament must be provided for ligaments of type FUNCTION.")
+                raise ValueError(
+                    "The physiological cross-sectional area of the ligament must be provided for ligaments of type FUNCTION."
+                )
         elif ligament_type in [LigamentType.LINEAR_SPRING, LigamentType.SECOND_ORDER_SPRING]:
             # You are using a biorbd-like ligament
             if stiffness is None:
-                raise ValueError("The stiffness of the ligament must be provided for ligaments of type CONSTANT, LINEAR_SPRING, or SECOND_ORDER_SPRING.")
+                raise ValueError(
+                    "The stiffness of the ligament must be provided for ligaments of type CONSTANT, LINEAR_SPRING, or SECOND_ORDER_SPRING."
+                )
             if damping is None:
                 damping = 0.0
 
@@ -72,7 +78,6 @@ class LigamentReal:
         self.damping = damping
         self.force_length_function = force_length_function
         self.pcsa = pcsa
-
 
     @property
     def name(self) -> str:
@@ -187,10 +192,10 @@ class LigamentReal:
         self._pcsa = value
 
     def approximate_ligament(
-            self,
-            desired_ligament_type: LigamentType,
-            length_range: tuple[float, float],
-            plot_approximation: bool = False,
+        self,
+        desired_ligament_type: LigamentType,
+        length_range: tuple[float, float],
+        plot_approximation: bool = False,
     ) -> "LigamentReal":
 
         if desired_ligament_type == self.ligament_type:
@@ -198,14 +203,20 @@ class LigamentReal:
             return self
 
         if self.ligament_type == LigamentType.FUNCTION:
-            length_points = (self.force_length_function.x_points * self.ligament_slack_length) + self.ligament_slack_length
+            length_points = (
+                self.force_length_function.x_points * self.ligament_slack_length
+            ) + self.ligament_slack_length
             force_points = self.force_length_function.y_points * self.pcsa
             good_indices = np.where(length_points >= self.ligament_slack_length)
             if len(good_indices[0]) == 0:
-                raise ValueError(f"All the length points of the ligament {self.name} are negative or zero, cannot approximate it with a function of type {desired_ligament_type.value}.")
+                raise ValueError(
+                    f"All the length points of the ligament {self.name} are negative or zero, cannot approximate it with a function of type {desired_ligament_type.value}."
+                )
             length_points = length_points[good_indices[0]]
             force_points = force_points[good_indices[0]]
-            approximating_function = lambda length, stiffness : LIGAMENT_FUNCTION[desired_ligament_type](length, self.ligament_slack_length, stiffness)
+            approximating_function = lambda length, stiffness: LIGAMENT_FUNCTION[desired_ligament_type](
+                length, self.ligament_slack_length, stiffness
+            )
             popt, _ = curve_fit(approximating_function, length_points, force_points)
 
             new_ligament = LigamentReal(
@@ -221,13 +232,25 @@ class LigamentReal:
             if plot_approximation:
                 plt.figure()
                 x_vector = np.linspace(min(length_points), max(length_points), 100)
-                y_evaluation = self.force_length_function.evaluate((x_vector - self.ligament_slack_length) / self.ligament_slack_length) * self.pcsa
+                y_evaluation = (
+                    self.force_length_function.evaluate(
+                        (x_vector - self.ligament_slack_length) / self.ligament_slack_length
+                    )
+                    * self.pcsa
+                )
                 plt.plot(length_points, force_points, "ok", label="Original points")
                 plt.plot(x_vector, y_evaluation, "-k", label="Original function")
-                plt.plot(x_vector, approximating_function(x_vector, *popt), "--r", label=f"Approximating function of type {desired_ligament_type.value}")
+                plt.plot(
+                    x_vector,
+                    approximating_function(x_vector, *popt),
+                    "--r",
+                    label=f"Approximating function of type {desired_ligament_type.value}",
+                )
                 plt.xlabel("Ligament length")
                 plt.ylabel("Ligament force")
-                plt.title(f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}")
+                plt.title(
+                    f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}"
+                )
                 plt.legend()
                 plt.show()
 
@@ -257,28 +280,43 @@ class LigamentReal:
                 if plot_approximation:
                     plt.figure()
                     x_vector = np.linspace(min(x_points), max(x_points), 100)
-                    y_evaluation = spline.evaluate((x_vector - self.ligament_slack_length) / self.ligament_slack_length) * pcsa
+                    y_evaluation = (
+                        spline.evaluate((x_vector - self.ligament_slack_length) / self.ligament_slack_length) * pcsa
+                    )
                     plt.plot(x_points, y_points, "ok", label="Original points")
-                    plt.plot(x_vector, LIGAMENT_FUNCTION[self.ligament_type](x_vector, self.ligament_slack_length, self.stiffness), "-k", label="Original function")
+                    plt.plot(
+                        x_vector,
+                        LIGAMENT_FUNCTION[self.ligament_type](x_vector, self.ligament_slack_length, self.stiffness),
+                        "-k",
+                        label="Original function",
+                    )
                     plt.plot(x_vector, y_evaluation, "-r", label="New SimmSpline function")
                     plt.xlabel("Ligament length")
                     plt.ylabel("Ligament force")
-                    plt.title(f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}")
+                    plt.title(
+                        f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}"
+                    )
                     plt.legend()
                     plt.show()
 
             else:
-                original_function = lambda length: LIGAMENT_FUNCTION[self.ligament_type](length, self.ligament_slack_length, self.stiffness)
-                x_vector = np.linspace(length_range[0], length_range[1], 100).reshape(-1, )
-                y_vector = original_function(x_vector).reshape(-1, )
-                approximating_function = lambda length, stiffness: LIGAMENT_FUNCTION[desired_ligament_type](length,
-                                                                                                    self.ligament_slack_length,
-                                                                                                    stiffness)
+                original_function = lambda length: LIGAMENT_FUNCTION[self.ligament_type](
+                    length, self.ligament_slack_length, self.stiffness
+                )
+                x_vector = np.linspace(length_range[0], length_range[1], 100).reshape(
+                    -1,
+                )
+                y_vector = original_function(x_vector).reshape(
+                    -1,
+                )
+                approximating_function = lambda length, stiffness: LIGAMENT_FUNCTION[desired_ligament_type](
+                    length, self.ligament_slack_length, stiffness
+                )
                 popt, _ = curve_fit(
                     approximating_function,
                     x_vector,
                     y_vector,
-                    p0=[self.stiffness*2], # Initial guess
+                    p0=[self.stiffness * 2],  # Initial guess
                 )
 
                 new_ligament = LigamentReal(
@@ -294,12 +332,17 @@ class LigamentReal:
                 if plot_approximation:
                     plt.figure()
                     plt.plot(x_vector, y_vector, "-k", label="Original function")
-                    plt.plot(x_vector, approximating_function(x_vector, *popt), "--r",
-                             label=f"Approximating function of type {desired_ligament_type.value}")
+                    plt.plot(
+                        x_vector,
+                        approximating_function(x_vector, *popt),
+                        "--r",
+                        label=f"Approximating function of type {desired_ligament_type.value}",
+                    )
                     plt.xlabel("Ligament length")
                     plt.ylabel("Ligament force")
                     plt.title(
-                        f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}")
+                        f"Approximation of the ligament {self.name} with a function of type {desired_ligament_type.value}"
+                    )
                     plt.legend()
                     plt.show()
 
@@ -311,8 +354,10 @@ class LigamentReal:
         """
 
         if self.ligament_type == LigamentType.FUNCTION:
-            raise NotImplementedError("The to_biomod method is not implemented for ligaments of type FUNCTION."
-                                      "Please use model.approximate_ligaments(ligament_type, damping), with ligament_type in LigamentType.LINEAR_SPRING or LigamentType.SECOND_ORDER_SPRING.")
+            raise NotImplementedError(
+                "The to_biomod method is not implemented for ligaments of type FUNCTION."
+                "Please use model.approximate_ligaments(ligament_type, damping), with ligament_type in LigamentType.LINEAR_SPRING or LigamentType.SECOND_ORDER_SPRING."
+            )
 
         out_string = f"ligament\t{self.name}\n"
         out_string += f"\ttype\t{self.ligament_type.value}\n"
@@ -334,8 +379,10 @@ class LigamentReal:
         """
 
         if self.ligament_type in [LigamentType.LINEAR_SPRING, LigamentType.SECOND_ORDER_SPRING]:
-            raise NotImplementedError("The to_osim method is not implemented for ligaments of types LigamentType.LINEAR_SPRING, LigamentType.SECOND_ORDER_SPRING."
-                                      "Please use model.approximate_ligaments(ligament_type=LigamentType.FUNCTION).")
+            raise NotImplementedError(
+                "The to_osim method is not implemented for ligaments of types LigamentType.LINEAR_SPRING, LigamentType.SECOND_ORDER_SPRING."
+                "Please use model.approximate_ligaments(ligament_type=LigamentType.FUNCTION)."
+            )
 
         ligament_elem = etree.Element("Ligament", name=self.name)
 

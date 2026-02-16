@@ -415,8 +415,8 @@ class LigamentTest(ModelEvaluation):
                 moment_arm_error[:, m] = np.mean(np.sqrt((osim_moment_arm[:, m, i] - biorbd_moment_arm[:, m, i]) ** 2))
 
         return moment_arm_error
-    
-    
+
+
 class VisualizeModel:
     def __init__(self, biomod_filepath):
         try:
@@ -697,6 +697,7 @@ def test_translation_osim_to_biomod():
                         raise RuntimeError(
                             f"OpenSim added a new model to their repository: {os.path.join(folder, name)}. Please check the model."
                         )
+
 
 def test_osim_to_biomod_with_ligament():
 
