@@ -864,7 +864,7 @@ class ModelDynamics:
                     f"The ligament {ligament.name} is slack at the maximum of the DoF range."
                 )
             ligament_length_ranges[ligament.name] = (
-                min(length_q_min, length_q_max, ligament.ligament_slack_length), # Should be slack length
+                ligament.ligament_slack_length,
                 max(length_q_min, length_q_max),
             )
 

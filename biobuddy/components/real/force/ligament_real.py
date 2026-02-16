@@ -198,8 +198,13 @@ class LigamentReal:
             return self
 
         if self.ligament_type == LigamentType.FUNCTION:
-            length_points = self.force_length_function.x_points * self.ligament_slack_length
+            length_points = (self.force_length_function.x_points * self.ligament_slack_length) + self.ligament_slack_length
             force_points = self.force_length_function.y_points * self.pcsa
+            good_indices = np.where(length_points > self.ligament_slack_length)
+            if len(good_indices[0]) == 0:
+                raise ValueError(f"All the length points of the ligament {self.name} are negative or zero, cannot approximate it with a function of type {desired_ligament_type.value}.")
+            length_points = length_points[good_indices[0]]
+            force_points = force_points[good_indices[0]]
             approximating_function = lambda length, stiffness : LIGAMENT_FUNCTION[desired_ligament_type](length, self.ligament_slack_length, stiffness)
             popt, _ = curve_fit(approximating_function, length_points, force_points)
 
@@ -216,7 +221,7 @@ class LigamentReal:
             if plot_approximation:
                 plt.figure()
                 x_vector = np.linspace(min(length_points), max(length_points), 100)
-                y_evaluation = self.force_length_function.evaluate(x_vector / self.ligament_slack_length) * self.pcsa
+                y_evaluation = self.force_length_function.evaluate((x_vector - self.ligament_slack_length) / self.ligament_slack_length) * self.pcsa
                 plt.plot(length_points, force_points, "ok", label="Original points")
                 plt.plot(x_vector, y_evaluation, "-k", label="Original function")
                 plt.plot(x_vector, approximating_function(x_vector, *popt), "--r", label=f"Approximating function of type {desired_ligament_type.value}")
@@ -234,7 +239,7 @@ class LigamentReal:
                 y_points = LIGAMENT_FUNCTION[self.ligament_type](x_points, self.ligament_slack_length, self.stiffness)
 
                 pcsa = 1000  # Arbitrary, but we have to pick one
-                x_spline = x_points / self.ligament_slack_length
+                x_spline = (x_points - self.ligament_slack_length) / self.ligament_slack_length
                 y_spline = y_points / pcsa
                 spline = SimmSpline(x_spline, y_spline)
 
@@ -252,7 +257,7 @@ class LigamentReal:
                 if plot_approximation:
                     plt.figure()
                     x_vector = np.linspace(min(x_points), max(x_points), 100)
-                    y_evaluation = spline.evaluate(x_vector / self.ligament_slack_length) * pcsa
+                    y_evaluation = spline.evaluate((x_vector - self.ligament_slack_length) / self.ligament_slack_length) * pcsa
                     plt.plot(x_points, y_points, "ok", label="Original points")
                     plt.plot(x_vector, LIGAMENT_FUNCTION[self.ligament_type](x_vector, self.ligament_slack_length, self.stiffness), "-k", label="Original function")
                     plt.plot(x_vector, y_evaluation, "-r", label="New SimmSpline function")
