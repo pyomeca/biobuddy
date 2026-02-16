@@ -38,7 +38,7 @@ class MuscleReal(MuscleUtils):
         insertion_position
             The insertion position of the force the local reference frame of the insertion segment
         optimal_length
-            The optimal length of the force
+            The optimal length of the muscle
         maximal_force
             The maximal force of the force can reach
         tendon_slack_length
@@ -148,12 +148,12 @@ class MuscleReal(MuscleUtils):
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The origin's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
+                    f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The origin's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._origin_position = value
@@ -186,7 +186,7 @@ class MuscleReal(MuscleUtils):
     @optimal_length.setter
     def optimal_length(self, value: float):
         if value is not None and value <= 0:
-            raise ValueError("The optimal length of the force must be greater than 0.")
+            raise ValueError("The optimal length of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]

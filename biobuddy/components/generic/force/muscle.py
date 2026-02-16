@@ -43,7 +43,7 @@ class Muscle(MuscleUtils):
         insertion_position
             The insertion position of the force the local reference frame of the insertion segment
         optimal_length_function
-            The function giving the optimal length of the force
+            The function giving the optimal length of the muscle
         maximal_force_function
             The function giving the maximal force of the force can reach
         tendon_slack_length_function
@@ -83,11 +83,11 @@ class Muscle(MuscleUtils):
         """
         if via_point.muscle_name is not None and via_point.muscle_name != self.name:
             raise ValueError(
-                "The via points's force should be the same as the 'key'. Alternatively, via_point.muscle_name can be left undefined"
+                "The via points's muscle should be the same as the 'key'. Alternatively, via_point.muscle_name can be left undefined"
             )
         if via_point.muscle_group is not None and via_point.muscle_group != self.muscle_group:
             raise ValueError(
-                f"The via points's force group {via_point.muscle_group} should be the same as the force's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
+                f"The via points's muscle group {via_point.muscle_group} should be the same as the muscle's name {self.muscle_group}. Alternatively, via_point.muscle_group can be left undefined"
             )
 
         via_point.muscle_name = self.name
@@ -152,12 +152,12 @@ class Muscle(MuscleUtils):
         else:
             if value.muscle_name is not None and value.muscle_name != self.name:
                 raise ValueError(
-                    f"The origin's force {value.muscle_name} should be the same as the force's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
+                    f"The origin's muscle {value.muscle_name} should be the same as the muscle's name {self.name}. Alternatively, origin_position.muscle_name can be left undefined"
                 )
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The origin's force group {value.muscle_group} should be the same as the force's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._origin_position = value
