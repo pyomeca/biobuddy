@@ -707,8 +707,9 @@ def test_osim_to_biomod_with_ligament():
     # Paths
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     root_path = parent_path + "/examples/models"
-    osim_filepath = f"{root_path}/MOBL_ARMS_41.osim"
-    biomod_filepath = f"{root_path}/MOBL_ARMS_41.bioMod"
+    osim_filepath = f"{root_path}/ModelwithKneeLigaments.osim"
+    biomod_filepath = f"{root_path}/ModelwithKneeLigaments.bioMod"
+    biomod_filepath_reference = f"{root_path}/ModelwithKneeLigaments_reference.bioMod"
 
     # Convert osim to biomod
     model = BiomechanicalModelReal().from_osim(
@@ -728,8 +729,8 @@ def test_osim_to_biomod_with_ligament():
     biomod_model = biorbd.Model(biomod_filepath)
 
     nb_ligaments = biomod_model.nbLigaments()
-    assert nb_ligaments == 4
-    assert model.nb_ligaments == 4
+    assert nb_ligaments == 20
+    assert model.nb_ligaments == 20
 
     # Test that the .biomod can be reconverted into .osim
     model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
@@ -763,6 +764,12 @@ def test_osim_to_biomod_with_ligament():
         desired_ligament_type=LigamentType.FUNCTION,
         plot_approximation=False,
     )
+
+    # Compare the translated model with a reference
+    reference_biomod_model = BiomechanicalModelReal().from_biomod(
+        filepath=biomod_filepath_reference,
+    )
+    compare_models(model_from_biomod_2, reference_biomod_model, decimal=4)
 
     if os.path.exists(biomod_filepath):
         os.remove(biomod_filepath)
