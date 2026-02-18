@@ -829,7 +829,7 @@ class ModelDynamics:
                 # origin -> insertion
                 this_parent_name = origin_parent
                 end_of_the_chain_name = insertion_parent
-            elif len(self.get_chain_between_segments(insertion_parent, origin_parent)) > 0:
+            elif len(self.get_chain_between_segments(origin_parent, insertion_parent)) > 0:
                 # insertion -> origin
                 this_parent_name = insertion_parent
                 end_of_the_chain_name = origin_parent

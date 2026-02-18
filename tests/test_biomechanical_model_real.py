@@ -908,17 +908,34 @@ def test_segment_coordinate_system_in_local():
     scs_local = model.segment_coordinate_system_in_local("base")
     assert scs_local.is_identity
 
-    # Test with segment already in local
+    # Test with segment already in local -> does not chance
+    model.segments["parent"].segment_coordinate_system.scs = RotoTransMatrix.from_euler_angles_and_translation(
+        "xyz",
+        angles=np.array([0.3, 0.2, 0.1]),
+        translation=np.array([0.5, 0.0, 0.5])
+    )
+    model.segments["child"].segment_coordinate_system.scs = RotoTransMatrix.from_euler_angles_and_translation(
+        "xyz",
+        angles=np.array([0.1, 0.2, 0.3]),
+        translation=np.array([0.25, 0.5, 0.75])
+    )
     model.segments["child"].segment_coordinate_system.is_in_global = False
     scs_local = model.segment_coordinate_system_in_local("child")
     assert scs_local == model.segments["child"].segment_coordinate_system.scs
+    npt.assert_almost_equal(scs_local.rt_matrix, np.array([[ 0.93629336, -0.28962948,  0.19866933,  0.25      ],
+                                                   [ 0.31299183,  0.94470249, -0.0978434 ,  0.5       ],
+                                                   [-0.15934508,  0.153792  ,  0.97517033,  0.75      ],
+                                                   [ 0.        ,  0.        ,  0.        ,  1.        ]]))
 
     # Test with segment in global (needs transformation)
     model.segments["child"].segment_coordinate_system.is_in_global = True
-    scs_local = model.segment_coordinate_system_in_local("child")
+    new_scs_local = model.segment_coordinate_system_in_local("child")
     # The result should be different from the original global SCS
-    assert not np.allclose(scs_local.rt_matrix, model.segments["child"].segment_coordinate_system.scs.rt_matrix)
-
+    assert not np.allclose(new_scs_local.rt_matrix, scs_local.rt_matrix)
+    npt.assert_almost_equal(new_scs_local.rt_matrix, np.array([[ 0.986572  , -0.16165639,  0.02330031, -0.20673285],
+                                   [ 0.15420033,  0.96893676,  0.19334896,  0.57506005],
+                                   [-0.05383262, -0.18715975,  0.98085334,  0.03959127],
+                                   [ 0.        ,  0.        ,  0.        ,  1.        ]]))
 
 def test_segment_coordinate_system_in_global():
     # Create a simple model
@@ -987,6 +1004,7 @@ def test_segment_com_in_global():
     assert com_position.shape == (4, 1)
 
     # Test with segment without inertia
+    model.segments["parent"].inertia_parameters = None
     com_position = model.segment_com_in_global("parent")
     assert com_position is None
 
@@ -1170,7 +1188,7 @@ def test_get_ligament_length_ranges():
     assert "test_ligament" in ranges
     assert len(ranges["test_ligament"]) == 2
     assert ranges["test_ligament"][0] == 0.1  # slack length
-    assert ranges["test_ligament"][1] > 0.1  # max length
+    npt.assert_almost_equal(ranges["test_ligament"][1], 1.41421356, decimal=6)  # max length
 
 
 def test_forward_kinematics_errors():
