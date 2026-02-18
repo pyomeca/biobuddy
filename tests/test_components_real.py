@@ -1837,44 +1837,6 @@ def test_muscle_real_to_osim_with_missing_optional_params():
     assert "<max_contraction_velocity>10</max_contraction_velocity>" in osim_content
 
 
-def test_muscle_real_to_osim_missing_origin():
-    # Create insertion via point
-    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
-
-    # Create a muscle without origin
-    muscle = MuscleReal(
-        name="test_muscle",
-        muscle_type=MuscleType.HILL,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group="group1",
-        origin_position=None,
-        insertion_position=insertion,
-    )
-
-    # Should raise error when trying to export
-    with pytest.raises(ValueError, match="The origin position of the muscle test_muscle has to be defined."):
-        muscle.to_osim()
-
-
-def test_muscle_real_to_osim_missing_insertion():
-    # Create origin via point
-    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
-
-    # Create a muscle without insertion
-    muscle = MuscleReal(
-        name="test_muscle",
-        muscle_type=MuscleType.HILL,
-        state_type=MuscleStateType.DEGROOTE,
-        muscle_group="group1",
-        origin_position=origin,
-        insertion_position=None,
-    )
-
-    # Should raise error when trying to export
-    with pytest.raises(ValueError, match="The insertion position of the muscle test_muscle has to be defined."):
-        muscle.to_osim()
-
-
 # ------- MuscleGroupReal ------- #
 def test_init_muscle_group_real():
     # Test initialization

@@ -185,13 +185,13 @@ class MuscleReal(MuscleUtils):
 
     @optimal_length.setter
     def optimal_length(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The optimal length of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The optimal length must be a float.")
+        if value is not None and value <= 0:
+            raise ValueError("The optimal length of the muscle must be greater than 0.")
         self._optimal_length = value
 
     @property
@@ -200,13 +200,13 @@ class MuscleReal(MuscleUtils):
 
     @maximal_force.setter
     def maximal_force(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The maximal force of the muscle must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The maximal force must be a float.")
+        if value is not None and value <= 0:
+            raise ValueError("The maximal force of the muscle must be greater than 0.")
         self._maximal_force = value
 
     @property
@@ -215,13 +215,13 @@ class MuscleReal(MuscleUtils):
 
     @tendon_slack_length.setter
     def tendon_slack_length(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The tendon slack length of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The tendon slack length must be a float.")
+        if value is not None and value <= 0:
+            raise ValueError("The tendon slack length of the force must be greater than 0.")
         self._tendon_slack_length = value
 
     @property
@@ -243,13 +243,13 @@ class MuscleReal(MuscleUtils):
 
     @maximal_velocity.setter
     def maximal_velocity(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The maximal contraction velocity of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The maximal velocity must be a float.")
+        if value is not None and value <= 0:
+            raise ValueError("The maximal contraction velocity of the force must be greater than 0.")
         self._maximal_velocity = value
 
     @property
@@ -258,17 +258,47 @@ class MuscleReal(MuscleUtils):
 
     @maximal_excitation.setter
     def maximal_excitation(self, value: float):
-        if value is not None and value <= 0:
-            raise ValueError("The maximal excitation of the force must be greater than 0.")
         if isinstance(value, np.ndarray):
             if value.shape == (1,):
                 value = value[0]
             else:
                 raise ValueError("The maximal excitation must be a float.")
+        if value is not None and value <= 0:
+            raise ValueError("The maximal excitation of the force must be greater than 0.")
         self._maximal_excitation = value
 
+    def check_that_everything_is_set(self):
+        if not isinstance(self.name, str):
+            raise ValueError("The muscle's name must be a string.")
+        if not isinstance(self.muscle_type, MuscleType):
+            raise ValueError("The muscle's type must be a MuscleType.")
+        if not isinstance(self.state_type, MuscleStateType):
+            raise ValueError("The muscle's state type must be a MuscleStateType.")
+        if not isinstance(self.muscle_group, str):
+            raise ValueError("The muscle's muscle group must be a string.")
+        if not isinstance(self.origin_position, ViaPointReal):
+            raise ValueError("The muscle's origin position must be a ViaPointReal.")
+        if not isinstance(self.insertion_position, ViaPointReal):
+            raise ValueError("The muscle's insertion position must be a ViaPointReal.")
+        if self.optimal_length is not None and not isinstance(self.optimal_length, (float, int)):
+            raise ValueError("The muscle's optimal length must be a float.")
+        if self.maximal_force is not None and not isinstance(self.maximal_force, (float, int)):
+            raise ValueError("The muscle's maximal force must be a float.")
+        if self.tendon_slack_length is not None and not isinstance(self.tendon_slack_length, (float, int)):
+            raise ValueError("The muscle's tendon slack length must be a float.")
+        if self.pennation_angle is not None and not isinstance(self.pennation_angle, (float, int)):
+            raise ValueError("The muscle's pennation angle must be a float.")
+        if self.maximal_velocity is not None and not isinstance(self.maximal_velocity, (float, int)):
+            raise ValueError("The muscle's maximal velocity must be a float.")
+        if self.maximal_excitation is not None and not isinstance(self.maximal_excitation, (float, int)):
+            raise ValueError("The muscle's maximal excitation must be a float.")
+
     def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
+        """
+        Define the print function, so it automatically formats things in the file properly
+        """
+        self.check_that_everything_is_set()
+
         out_string = f"muscle\t{self.name}\n"
         out_string += f"\ttype\t{self.muscle_type.value}\n"
         out_string += f"\tstatetype\t{self.state_type.value}\n"
@@ -297,6 +327,7 @@ class MuscleReal(MuscleUtils):
 
     def to_osim(self):
         """Generate OpenSim XML representation of the force"""
+        self.check_that_everything_is_set()
 
         # TODO: handle different force types than DeGrooteFregly2016Muscle
         muscle_elem = etree.Element("DeGrooteFregly2016Muscle", name=self.name)
