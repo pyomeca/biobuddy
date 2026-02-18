@@ -1199,8 +1199,12 @@ def test_ligament_real_properties():
     assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
 
     # Test ligament_type property with string
-    ligament.ligament_type = "linear_spring"
+    ligament.ligament_type = "linearspring"
     assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    ligament.ligament_type = "secondorderspring"
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
+    ligament.ligament_type = "function"
+    assert ligament.ligament_type == LigamentType.FUNCTION
 
     # Test origin_position property
     new_origin = ViaPointReal(name="new_origin", parent_name="segment3", position=np.array([[0.5], [0.0], [0.0], [1.0]]))
@@ -1291,8 +1295,7 @@ def test_ligament_real_approximate_ligament_function_to_linear():
     assert approximated.ligament_type == LigamentType.LINEAR_SPRING
     assert approximated.ligament_slack_length == 0.1
     assert approximated.damping == 10.0
-    assert approximated.stiffness is not None
-    # TODO: Add expected stiffness value check
+    npt.assert_almost_equal(approximated.stiffness, 10000.0)
     assert approximated.force_length_function is None
     assert approximated.pcsa is None
 
@@ -1321,10 +1324,14 @@ def test_ligament_real_approximate_ligament_linear_to_function():
     assert approximated.ligament_type == LigamentType.FUNCTION
     assert approximated.ligament_slack_length == 0.1
     assert approximated.damping == 10.0
-    assert approximated.force_length_function is not None
-    assert isinstance(approximated.force_length_function, SimmSpline)
     assert approximated.pcsa == 1000  # Arbitrary value used in the code
     assert approximated.stiffness is None
+
+    assert approximated.force_length_function is not None
+    assert isinstance(approximated.force_length_function, SimmSpline)
+    lengths_to_test = np.array([0.1, 0.2, 0.3, 0.4])
+    expected = 1000.0 * (lengths_to_test - 0.1)
+    npt.assert_almost_equal(approximated.force_length_function.evaluate((lengths_to_test - 0.1) / 0.1) * 1000, expected)
 
 
 def test_ligament_real_approximate_ligament_linear_to_second_order():
@@ -1351,10 +1358,9 @@ def test_ligament_real_approximate_ligament_linear_to_second_order():
     assert approximated.ligament_type == LigamentType.SECOND_ORDER_SPRING
     assert approximated.ligament_slack_length == 0.1
     assert approximated.damping == 10.0
-    assert approximated.stiffness is not None
-    # TODO: Add expected stiffness value check
     assert approximated.force_length_function is None
     assert approximated.pcsa is None
+    npt.assert_almost_equal(approximated.stiffness, 999.9813449133459, decimal=6)
 
 
 def test_ligament_real_approximate_ligament_same_type():
@@ -1401,16 +1407,8 @@ def test_ligament_real_to_biomod():
     biomod_str = ligament.to_biomod()
 
     # Check the content
-    assert "ligament\ttest_ligament" in biomod_str
-    assert "\ttype\tlinear_spring" in biomod_str
-    assert "\torigin\tsegment1" in biomod_str
-    assert "\tinsertion\tsegment2" in biomod_str
-    assert "\toriginposition\t0.0\t0.0\t0.0" in biomod_str
-    assert "\tinsertionposition\t1.0\t0.0\t0.0" in biomod_str
-    assert "\tstiffness\t1000.0000" in biomod_str
-    assert "\tligamentslacklength\t0.1000" in biomod_str
-    assert "\tdamping\t10.0000" in biomod_str
-    assert "endligament" in biomod_str
+    expected_str = "ligament\ttest_ligament\n\ttype\tlinearspring\n\torigin\tsegment1\n\tinsertion\tsegment2\n\toriginposition\t0.0\t0.0\t0.0\n\tinsertionposition\t1.0\t0.0\t0.0\n\tstiffness\t1000.0000\n\tligamentslacklength\t0.1000\n\tdamping\t10.0000\nendligament\n\n\n"
+    assert expected_str == biomod_str
 
     # Test that FUNCTION type raises error
     x_points = np.array([0.0, 0.5, 1.0, 1.5])
@@ -1460,16 +1458,8 @@ def test_ligament_real_to_osim():
     osim_content = get_xml_str(ligament_elem)
 
     # Check the content
-    assert '<Ligament name="test_ligament">' in osim_content
-    assert "<appliesForce>true</appliesForce>" in osim_content
-    assert "<resting_length>0.10000000</resting_length>" in osim_content
-    assert "<pcsa_force>0.10000000</pcsa_force>" in osim_content
-    assert '<GeometryPath name="path">' in osim_content
-    assert '<PathPoint name="test_ligament_origin">' in osim_content
-    assert "<socket_parent_frame>bodyset/segment1</socket_parent_frame>" in osim_content
-    assert "<location>0.00000000 0.00000000 0.00000000</location>" in osim_content
-    assert '<PathPoint name="test_ligament_insertion">' in osim_content
-    assert '<SimmSpline name="force_length_curve">' in osim_content
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<Ligament name="test_ligament">\n  <appliesForce>true</appliesForce>\n  <resting_length>0.10000000</resting_length>\n  <pcsa_force>0.10000000</pcsa_force>\n  <GeometryPath name="path">\n    <PathPointSet>\n      <objects>\n        <PathPoint name="test_ligament_origin">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="test_ligament_insertion">\n          <socket_parent_frame>bodyset/segment2</socket_parent_frame>\n          <location>1.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n      </objects>\n    </PathPointSet>\n  </GeometryPath>\n  <SimmSpline name="force_length_curve">\n    <x>0.00000000 0.50000000 1.00000000 1.50000000</x>\n    <y>0.00000000 0.50000000 1.00000000 1.50000000</y>\n  </SimmSpline>\n</Ligament>\n'
+    assert osim_content == expected_str
 
     # Test that LINEAR_SPRING type raises error
     ligament_linear = LigamentReal(
