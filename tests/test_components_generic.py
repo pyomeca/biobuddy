@@ -50,7 +50,7 @@ def test_init_ligament():
     # Test initialization
     ligament = Ligament(
         name="test_ligament",
-        ligament_type=LigamentType.LINEAR,
+        ligament_type=LigamentType.LINEAR_SPRING,
         origin_position=origin,
         insertion_position=insertion,
         stiffness_function=mock_stiffness,
@@ -59,7 +59,7 @@ def test_init_ligament():
     )
 
     assert ligament.name == "test_ligament"
-    assert ligament.ligament_type == LigamentType.LINEAR
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
     assert ligament.origin_position == origin
     assert ligament.insertion_position == insertion
     assert ligament.origin_parent_name == "segment1"
@@ -82,7 +82,7 @@ def test_ligament_properties():
     # Create a ligament
     ligament = Ligament(
         name="test_ligament",
-        ligament_type=LigamentType.LINEAR,
+        ligament_type=LigamentType.LINEAR_SPRING,
         origin_position=origin,
         insertion_position=insertion,
         stiffness_function=mock_stiffness,
@@ -96,13 +96,17 @@ def test_ligament_properties():
     assert ligament.name == "new_ligament_name"
 
     # Test ligament_type property with enum
-    assert ligament.ligament_type == LigamentType.LINEAR
-    ligament.ligament_type = LigamentType.NONLINEAR
-    assert ligament.ligament_type == LigamentType.NONLINEAR
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    ligament.ligament_type = LigamentType.SECOND_ORDER_SPRING
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
 
     # Test ligament_type property with string
-    ligament.ligament_type = "linear"
-    assert ligament.ligament_type == LigamentType.LINEAR
+    ligament.ligament_type = "linearspring"
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+
+    # Test ligament_type property with string
+    ligament.ligament_type = "secondorderspring"
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
 
     # Test origin_position property
     new_origin = ViaPoint(name="new_origin", parent_name="segment3")
@@ -145,7 +149,7 @@ def test_ligament_to_ligament_local():
     # Create a ligament
     ligament = Ligament(
         name="test_ligament",
-        ligament_type=LigamentType.LINEAR,
+        ligament_type=LigamentType.LINEAR_SPRING,
         origin_position=origin,
         insertion_position=insertion,
         stiffness_function=mock_stiffness,
@@ -162,12 +166,11 @@ def test_ligament_to_ligament_local():
 
     # Basic verification that the conversion happened
     assert ligament_real.name == "test_ligament"
-    assert ligament_real.ligament_type == LigamentType.LINEAR
+    assert ligament_real.ligament_type == LigamentType.LINEAR_SPRING
 
     # Test the ligament parameters evaluation
     npt.assert_almost_equal(ligament_real.stiffness, 1000.0)
-    # TODO: Fill in expected value for ligament_slack_length
-    # npt.assert_almost_equal(ligament_real.ligament_slack_length, ???)
+    npt.assert_almost_equal(ligament_real.ligament_slack_length, 0.1)
     npt.assert_almost_equal(ligament_real.damping, 10.0)
 
     # Test the origin and insertion positions
@@ -198,7 +201,7 @@ def test_ligament_to_ligament_global():
     # Create a ligament
     ligament = Ligament(
         name="test_ligament",
-        ligament_type=LigamentType.NONLINEAR,
+        ligament_type=LigamentType.SECOND_ORDER_SPRING,
         origin_position=origin,
         insertion_position=insertion,
         stiffness_function=mock_stiffness,
@@ -215,12 +218,11 @@ def test_ligament_to_ligament_global():
 
     # Basic verification that the conversion happened
     assert ligament_real.name == "test_ligament"
-    assert ligament_real.ligament_type == LigamentType.NONLINEAR
+    assert ligament_real.ligament_type == LigamentType.SECOND_ORDER_SPRING
 
     # Test the ligament parameters evaluation
     npt.assert_almost_equal(ligament_real.stiffness, 1500.0)
-    # TODO: Fill in expected value for ligament_slack_length
-    # npt.assert_almost_equal(ligament_real.ligament_slack_length, ???)
+    npt.assert_almost_equal(ligament_real.ligament_slack_length, 0.15)
     npt.assert_almost_equal(ligament_real.damping, 15.0)
 
     # Test the origin and insertion positions (should be in local coordinates after transformation)
@@ -236,41 +238,6 @@ def test_ligament_to_ligament_global():
         ),
         np.array([-0.47436502, 0.4726582, 0.57603569, 1.0]),
     )
-
-
-def test_ligament_functions():
-    # Create mock functions for ligament parameters with known return values
-    mock_stiffness = lambda params, bio: 2500.0
-    mock_slack_length = lambda params, bio: 0.25
-    mock_damping = lambda params, bio: 25.0
-
-    # Create mock via points
-    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV")
-    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="SUP")
-
-    # Create a ligament
-    ligament = Ligament(
-        name="test_ligament",
-        ligament_type=LigamentType.LINEAR,
-        origin_position=origin,
-        insertion_position=insertion,
-        stiffness_function=mock_stiffness,
-        ligament_slack_length_function=mock_slack_length,
-        damping_function=mock_damping,
-    )
-
-    # Mock data and model
-    mock_data = MockC3dData()
-    mock_model = BiomechanicalModelReal()
-
-    # Call to_ligament
-    ligament_real = ligament.to_ligament(mock_data, mock_model, MOCK_RT)
-
-    # Test the ligament parameters evaluation with known values
-    npt.assert_almost_equal(ligament_real.stiffness, 2500.0)
-    # TODO: Fill in expected value for ligament_slack_length
-    # npt.assert_almost_equal(ligament_real.ligament_slack_length, ???)
-    npt.assert_almost_equal(ligament_real.damping, 25.0)
 
 
 # ------- Via Point ------- #

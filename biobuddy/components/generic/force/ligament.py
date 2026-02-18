@@ -147,7 +147,7 @@ class Ligament:
             origin_position,
             insertion_position,
             stiffness=self.stiffness_function(model, data),
-            ligament_slack_length=self.tendon_slack_length_function(model, data),
+            ligament_slack_length=self.ligament_slack_length_function(model, data),
             damping=self.damping_function(model, data),
         )
 
