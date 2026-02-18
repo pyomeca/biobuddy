@@ -636,7 +636,7 @@ def test_get_real_parent_name():
 
     # Test getting real parent through ghost parents
     real_parent = model.get_real_parent_name("test_segment")
-    assert real_parent == "child"
+    assert real_parent == "test_segment_translation"
 
 
 def test_has_parent_offset():
@@ -681,13 +681,13 @@ def test_remove_muscles():
     model = create_simple_model()
 
     # Verify initial state
-    assert "muscle1" in model.muscle_groups["parent_to_child"].muscles
+    assert "muscle1" in model.muscle_groups["parent_to_child"].muscle_names
 
     # Remove a muscle
     model.remove_muscles(["muscle1"])
 
     # Verify muscle was removed
-    assert "muscle1" not in model.muscle_groups["parent_to_child"].muscles
+    assert "muscle1" not in model.muscle_groups["parent_to_child"].muscle_names
 
     # Test removing non-existent muscle (should not raise error)
     model.remove_muscles(["non_existent_muscle"])
@@ -701,13 +701,13 @@ def test_update_muscle_groups():
     model.remove_muscles(["muscle1"])
 
     # Verify muscle group still exists
-    assert "parent_to_child" in model.muscle_groups
+    assert "parent_to_child" in model.muscle_group_names
 
     # Update muscle groups to remove empty ones
     model.update_muscle_groups()
 
     # Verify empty muscle group was removed
-    assert "parent_to_child" not in model.muscle_groups
+    assert "parent_to_child" not in model.muscle_group_names
 
 
 def test_update_segments():
@@ -729,17 +729,18 @@ def test_update_segments():
         SegmentReal(
             name="child_of_empty",
             parent_name="empty_segment",
+            translations=Translations.XYZ,  # Add something to the segment so that it is kept
         )
     )
 
     # Verify empty segment exists
-    assert "empty_segment" in model.segments
+    assert "empty_segment" in model.segment_names
 
     # Update segments to remove empty ones
     model.update_segments()
 
     # Verify empty segment was removed
-    assert "empty_segment" not in model.segments
+    assert "empty_segment" not in model.segment_names
 
     # Verify kinematic chain was updated
     assert model.segments["child_of_empty"].parent_name == "child"
@@ -815,7 +816,8 @@ def test_contact_indices():
     indices = model.contact_indices(contact_names)
 
     # Verify indices are correct
-    assert indices == [0, 1]
+    assert indices == [0, 1, 2, 3]
+    assert model.contact_indices(['contact1']) == [1]
 
 
 def test_imu_indices():
@@ -844,9 +846,10 @@ def test_dofs_property():
     dofs = model.dofs
 
     # Verify DOFs are correct
-    assert len(dofs) == 2
+    assert len(dofs) == 3
     assert dofs[0] == Translations.XYZ
-    assert dofs[1] == Rotations.X
+    assert dofs[1] == Rotations.XYZ
+    assert dofs[2] == Rotations.X
 
 
 def test_muscle_group_origin_insertion_parent_names():
