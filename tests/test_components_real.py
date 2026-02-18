@@ -1207,7 +1207,9 @@ def test_ligament_real_properties():
     assert ligament.ligament_type == LigamentType.FUNCTION
 
     # Test origin_position property
-    new_origin = ViaPointReal(name="new_origin", parent_name="segment3", position=np.array([[0.5], [0.0], [0.0], [1.0]]))
+    new_origin = ViaPointReal(
+        name="new_origin", parent_name="segment3", position=np.array([[0.5], [0.0], [0.0], [1.0]])
+    )
     ligament.origin_position = new_origin
     assert ligament.origin_position == new_origin
     assert ligament.origin_parent_name == "segment3"
