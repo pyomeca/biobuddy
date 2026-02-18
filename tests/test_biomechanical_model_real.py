@@ -16,7 +16,11 @@ from biobuddy import (
     Ranges,
     Translations,
     Rotations,
+    RotoTransMatrix,
+    InertiaParametersReal,
+    LigamentReal,
 )
+from biobuddy.components.ligament_utils import LigamentType
 from test_utils import create_simple_model
 
 
@@ -817,7 +821,7 @@ def test_contact_indices():
 
     # Verify indices are correct
     assert indices == [0, 1, 2, 3]
-    assert model.contact_indices(['contact1']) == [1]
+    assert model.contact_indices(["contact1"]) == [1]
 
 
 def test_imu_indices():
@@ -894,3 +898,337 @@ def test_ligament_origin_insertion_parent_names():
     # Get ligament insertion parent names
     insertion_names = model.ligament_insertion_parent_names
     assert insertion_names == ["child"]
+
+
+def test_segment_coordinate_system_in_local():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with base segment
+    scs_local = model.segment_coordinate_system_in_local("base")
+    assert scs_local.is_identity
+
+    # Test with segment already in local
+    model.segments["child"].segment_coordinate_system.is_in_global = False
+    scs_local = model.segment_coordinate_system_in_local("child")
+    assert scs_local == model.segments["child"].segment_coordinate_system.scs
+
+    # Test with segment in global (needs transformation)
+    model.segments["child"].segment_coordinate_system.is_in_global = True
+    scs_local = model.segment_coordinate_system_in_local("child")
+    # The result should be different from the original global SCS
+    assert not np.allclose(scs_local.rt_matrix, model.segments["child"].segment_coordinate_system.scs.rt_matrix)
+
+
+def test_segment_coordinate_system_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with base segment
+    scs_global = model.segment_coordinate_system_in_global("base")
+    assert scs_global.is_identity
+
+    # Test with segment already in global
+    model.segments["child"].segment_coordinate_system.is_in_global = True
+    scs_global = model.segment_coordinate_system_in_global("child")
+    assert scs_global == model.segments["child"].segment_coordinate_system.scs
+
+    # Test with segment in local (needs transformation)
+    model.segments["child"].segment_coordinate_system.is_in_global = False
+    scs_global = model.segment_coordinate_system_in_global("child")
+    # The result should include parent transformations
+    assert isinstance(scs_global, RotoTransMatrix)
+
+
+def test_rt_from_parent_offset_to_real_segment():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with no parent offset
+    rt = model.rt_from_parent_offset_to_real_segment("child")
+    assert rt.is_identity
+
+    # Add a parent offset segment
+    model.add_segment(
+        SegmentReal(
+            name="test_segment_parent_offset",
+            parent_name="child",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="test_segment",
+            parent_name="test_segment_parent_offset",
+        )
+    )
+
+    # Test with parent offset
+    rt = model.rt_from_parent_offset_to_real_segment("test_segment")
+    assert isinstance(rt, RotoTransMatrix)
+
+
+def test_segment_com_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add inertia parameters to a segment
+    model.segments["child"].inertia_parameters = InertiaParametersReal(
+        mass=1.0, center_of_mass=np.array([[0.1], [0.2], [0.3], [1.0]]), inertia=np.eye(4)
+    )
+
+    # Test with default q (zeros)
+    com_position = model.segment_com_in_global("child")
+    assert com_position.shape == (4, 1)
+    assert com_position[3, 0] == 1.0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    com_position = model.segment_com_in_global("child", q)
+    assert com_position.shape == (4, 1)
+
+    # Test with segment without inertia
+    com_position = model.segment_com_in_global("parent")
+    assert com_position is None
+
+
+def test_muscle_origin_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with default q
+    origin_position = model.muscle_origin_in_global("muscle1")
+    assert origin_position.shape == (4, 1)
+    assert origin_position[3, 0] == 1.0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    origin_position = model.muscle_origin_in_global("muscle1", q)
+    assert origin_position.shape == (4, 1)
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    origin_position = model.muscle_origin_in_global("muscle1", q)
+    assert origin_position.shape == (4, 5)
+
+
+def test_muscle_insertion_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with default q
+    insertion_position = model.muscle_insertion_in_global("muscle1")
+    assert insertion_position.shape == (4, 1)
+    assert insertion_position[3, 0] == 1.0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    insertion_position = model.muscle_insertion_in_global("muscle1", q)
+    assert insertion_position.shape == (4, 1)
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    insertion_position = model.muscle_insertion_in_global("muscle1", q)
+    assert insertion_position.shape == (4, 5)
+
+
+def test_via_points_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with default q
+    via_points_position = model.via_points_in_global("muscle1")
+    assert via_points_position.shape[0] == 4
+    assert via_points_position.shape[2] == 1
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    via_points_position = model.via_points_in_global("muscle1", q)
+    assert via_points_position.shape[0] == 4
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    via_points_position = model.via_points_in_global("muscle1", q)
+    assert via_points_position.shape[2] == 5
+
+
+def test_total_com_in_global():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add inertia parameters to segments
+    model.segments["parent"].inertia_parameters = InertiaParametersReal(
+        mass=2.0, center_of_mass=np.array([[0.1], [0.2], [0.3], [1.0]]), inertia=np.eye(4)
+    )
+    model.segments["child"].inertia_parameters = InertiaParametersReal(
+        mass=1.0, center_of_mass=np.array([[0.2], [0.3], [0.4], [1.0]]), inertia=np.eye(4)
+    )
+
+    # Test with default q
+    com_position = model.total_com_in_global()
+    assert com_position.shape == (4, 1)
+    assert com_position[3, 0] == 1.0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    com_position = model.total_com_in_global(q)
+    assert com_position.shape == (4, 1)
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    com_position = model.total_com_in_global(q)
+    assert com_position.shape == (4, 5)
+
+
+def test_muscle_tendon_length():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with default q
+    length = model.muscle_tendon_length("muscle1")
+    assert length.shape == (1,)
+    assert length[0] > 0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    length = model.muscle_tendon_length("muscle1", q)
+    assert length.shape == (1,)
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    length = model.muscle_tendon_length("muscle1", q)
+    assert length.shape == (5,)
+
+    # Test with non-existent muscle
+    with pytest.raises(RuntimeError, match="The muscle non_existent was not found in the model."):
+        model.muscle_tendon_length("non_existent")
+
+
+def test_ligament_length():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add a ligament
+    origin = ViaPointReal(name="lig_origin", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="lig_insertion", parent_name="child", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+    )
+
+    model.add_ligament(ligament)
+
+    # Test with default q
+    length = model.ligament_length("test_ligament")
+    assert length.shape == (1,)
+    assert length[0] > 0
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    length = model.ligament_length("test_ligament", q)
+    assert length.shape == (1,)
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    length = model.ligament_length("test_ligament", q)
+    assert length.shape == (5,)
+
+
+def test_get_ligament_length_ranges():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add DoF ranges
+    model.segments["parent"].q_ranges = RangeOfMotion(
+        range_type=Ranges.Q, min_bound=[-np.pi / 4] * 6, max_bound=[np.pi / 4] * 6
+    )
+    model.segments["child"].q_ranges = RangeOfMotion(range_type=Ranges.Q, min_bound=[-np.pi / 2], max_bound=[np.pi / 2])
+
+    # Add a ligament
+    origin = ViaPointReal(name="lig_origin", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="lig_insertion", parent_name="child", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+    )
+
+    model.add_ligament(ligament)
+
+    # Get ligament length ranges
+    ranges = model.get_ligament_length_ranges()
+
+    # Verify the ranges
+    assert "test_ligament" in ranges
+    assert len(ranges["test_ligament"]) == 2
+    assert ranges["test_ligament"][0] == 0.1  # slack length
+    assert ranges["test_ligament"][1] > 0.1  # max length
+
+
+def test_forward_kinematics_errors():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with wrong shape
+    with pytest.raises(RuntimeError, match="q must be of shape"):
+        model.forward_kinematics(np.ones((model.nb_q, 5, 3)))
+
+
+def test_markers_in_global_errors():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with wrong shape
+    with pytest.raises(RuntimeError, match="q must be of shape"):
+        model.markers_in_global(np.ones((model.nb_q, 5, 3)))
+
+
+def test_contacts_in_global():
+    # Create a simple model with contacts
+    model = create_simple_model()
+
+    from biobuddy import ContactReal
+
+    model.segments["parent"].add_contact(
+        ContactReal(name="contact1", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    )
+
+    # Test with default q
+    contact_positions = model.contacts_in_global()
+    assert contact_positions.shape[0] == 4
+    assert contact_positions.shape[2] == 1
+
+    # Test with custom q
+    q = np.ones((model.nb_q, 1)) * 0.1
+    contact_positions = model.contacts_in_global(q)
+    assert contact_positions.shape[0] == 4
+
+    # Test with multiple frames
+    q = np.ones((model.nb_q, 5)) * 0.1
+    contact_positions = model.contacts_in_global(q)
+    assert contact_positions.shape[2] == 5
+
+
+def test_requires_initialization_decorator():
+    # Create a model without initialization
+    from biobuddy.components.real.model_dynamics import ModelDynamics
+
+    model = ModelDynamics()
+
+    # Test that methods raise error when not initialized
+    with pytest.raises(RuntimeError, match="cannot be called because the object is not initialized"):
+        model.segment_coordinate_system_in_local("test")
+
+    with pytest.raises(RuntimeError, match="cannot be called because the object is not initialized"):
+        model.segment_coordinate_system_in_global("test")
+
+    with pytest.raises(RuntimeError, match="cannot be called because the object is not initialized"):
+        model.forward_kinematics()
