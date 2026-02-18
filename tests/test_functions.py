@@ -484,10 +484,10 @@ def test_piecewise_linear_get_coefficient_index():
 
     # Test x exactly at a point
     idx = func.get_coefficient_index(10.0)
-    assert idx == 0  # Should use the segment before the point
+    assert idx == 1  # Should use the segment after the point
 
     idx = func.get_coefficient_index(20.0)
-    assert idx == 1
+    assert idx == 2  # Should use the segment after the point
 
 
 def test_piecewise_linear_evaluate_array_inputs():
