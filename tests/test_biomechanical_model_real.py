@@ -14,6 +14,8 @@ from biobuddy import (
     MeshReal,
     RangeOfMotion,
     Ranges,
+    Translations,
+    Rotations,
 )
 from test_utils import create_simple_model
 
@@ -484,3 +486,408 @@ def test_write_graphviz():
         output_dot = f.read()
 
     assert reference_dot == output_dot
+
+
+def test_segment_has_ghost_parents():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Initially, no segments have ghost parents
+    assert not model.segment_has_ghost_parents("parent")
+    assert not model.segment_has_ghost_parents("child")
+
+    # Add a segment with a ghost parent
+    model.add_segment(
+        SegmentReal(
+            name="test_segment_parent_offset",
+            parent_name="child",
+        )
+    )
+    assert model.segment_has_ghost_parents("test_segment")
+
+    # Add other types of ghost parents
+    model.add_segment(
+        SegmentReal(
+            name="test_segment2_translation",
+            parent_name="child",
+        )
+    )
+    assert model.segment_has_ghost_parents("test_segment2")
+
+    model.add_segment(
+        SegmentReal(
+            name="test_segment3_rotation_transform",
+            parent_name="child",
+        )
+    )
+    assert model.segment_has_ghost_parents("test_segment3")
+
+    model.add_segment(
+        SegmentReal(
+            name="test_segment4_reset_axis",
+            parent_name="child",
+        )
+    )
+    assert model.segment_has_ghost_parents("test_segment4")
+
+
+def test_children_segment_names():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test getting children of parent segment
+    children = model.children_segment_names("parent")
+    assert children == ["child"]
+
+    # Test getting children of child segment (should be empty)
+    children = model.children_segment_names("child")
+    assert children == []
+
+    # Add more children to test multiple children
+    model.add_segment(
+        SegmentReal(
+            name="child2",
+            parent_name="parent",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="child3",
+            parent_name="parent",
+        )
+    )
+
+    children = model.children_segment_names("parent")
+    assert set(children) == {"child", "child2", "child3"}
+
+
+def test_get_chain_between_segments():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test chain from parent to child
+    chain = model.get_chain_between_segments("parent", "child")
+    assert chain == ["parent", "child"]
+
+    # Add more segments to create a longer chain
+    model.add_segment(
+        SegmentReal(
+            name="grandchild",
+            parent_name="child",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="great_grandchild",
+            parent_name="grandchild",
+        )
+    )
+
+    # Test longer chain
+    chain = model.get_chain_between_segments("parent", "great_grandchild")
+    assert chain == ["parent", "child", "grandchild", "great_grandchild"]
+
+    # Test chain from child to grandchild
+    chain = model.get_chain_between_segments("child", "grandchild")
+    assert chain == ["child", "grandchild"]
+
+    # Test when segments are not in the same chain (should return empty list)
+    model.add_segment(
+        SegmentReal(
+            name="unrelated_segment",
+            parent_name="base",
+        )
+    )
+    chain = model.get_chain_between_segments("parent", "unrelated_segment")
+    assert chain == []
+
+    # Test same segment
+    chain = model.get_chain_between_segments("child", "child")
+    assert chain == ["child"]
+
+
+def test_get_real_parent_name():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test with no ghost parents
+    real_parent = model.get_real_parent_name("child")
+    assert real_parent == "parent"
+
+    # Add ghost parents
+    model.add_segment(
+        SegmentReal(
+            name="test_segment_parent_offset",
+            parent_name="child",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="test_segment_translation",
+            parent_name="test_segment_parent_offset",
+        )
+    )
+    model.add_segment(
+        SegmentReal(
+            name="test_segment",
+            parent_name="test_segment_translation",
+        )
+    )
+
+    # Test getting real parent through ghost parents
+    real_parent = model.get_real_parent_name("test_segment")
+    assert real_parent == "child"
+
+
+def test_has_parent_offset():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Initially, no segments have parent offset
+    assert not model.has_parent_offset("parent")
+    assert not model.has_parent_offset("child")
+
+    # Add a segment with parent offset
+    model.add_segment(
+        SegmentReal(
+            name="test_segment_parent_offset",
+            parent_name="child",
+        )
+    )
+
+    # Now test_segment should have a parent offset
+    assert model.has_parent_offset("test_segment")
+
+
+def test_dof_parent_segment_name():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test getting parent segment for a DOF
+    parent_segment = model.dof_parent_segment_name("child_rotX")
+    assert parent_segment == "child"
+
+    # Test with parent segment DOFs
+    parent_segment = model.dof_parent_segment_name("parent_transX")
+    assert parent_segment == "parent"
+
+    # Test with non-existent DOF
+    with pytest.raises(ValueError, match="Degree of freedom non_existent_dof not found in the model"):
+        model.dof_parent_segment_name("non_existent_dof")
+
+
+def test_remove_muscles():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Verify initial state
+    assert "muscle1" in model.muscle_groups["parent_to_child"].muscles
+
+    # Remove a muscle
+    model.remove_muscles(["muscle1"])
+
+    # Verify muscle was removed
+    assert "muscle1" not in model.muscle_groups["parent_to_child"].muscles
+
+    # Test removing non-existent muscle (should not raise error)
+    model.remove_muscles(["non_existent_muscle"])
+
+
+def test_update_muscle_groups():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Remove all muscles from a muscle group
+    model.remove_muscles(["muscle1"])
+
+    # Verify muscle group still exists
+    assert "parent_to_child" in model.muscle_groups
+
+    # Update muscle groups to remove empty ones
+    model.update_muscle_groups()
+
+    # Verify empty muscle group was removed
+    assert "parent_to_child" not in model.muscle_groups
+
+
+def test_update_segments():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add an empty segment (no markers, contacts, imus, dofs, mesh, inertia)
+    model.add_segment(
+        SegmentReal(
+            name="empty_segment",
+            parent_name="child",
+            translations=Translations.NONE,
+            rotations=Rotations.NONE,
+        )
+    )
+
+    # Add a child to the empty segment
+    model.add_segment(
+        SegmentReal(
+            name="child_of_empty",
+            parent_name="empty_segment",
+        )
+    )
+
+    # Verify empty segment exists
+    assert "empty_segment" in model.segments
+
+    # Update segments to remove empty ones
+    model.update_segments()
+
+    # Verify empty segment was removed
+    assert "empty_segment" not in model.segments
+
+    # Verify kinematic chain was updated
+    assert model.segments["child_of_empty"].parent_name == "child"
+
+
+def test_modify_model_static_pose():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Get initial segment coordinate systems
+    initial_scs = model.segments["child"].segment_coordinate_system.scs.rt_matrix.copy()
+
+    # Create a new static pose
+    q_static = np.ones((model.nb_q,)) * 0.1
+
+    # Modify the static pose
+    model.modify_model_static_pose(q_static)
+
+    # Verify segment coordinate systems were updated
+    new_scs = model.segments["child"].segment_coordinate_system.scs.rt_matrix
+    assert not np.allclose(initial_scs, new_scs)
+
+    # Test with wrong shape
+    with pytest.raises(RuntimeError, match="The shape of q_static must be"):
+        model.modify_model_static_pose(np.ones((model.nb_q + 1,)))
+
+
+def test_dof_indices():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Test getting DOF indices for parent segment
+    parent_indices = model.dof_indices("parent")
+    assert parent_indices == [0, 1, 2, 3, 4, 5]
+
+    # Test getting DOF indices for child segment
+    child_indices = model.dof_indices("child")
+    assert child_indices == [6]
+
+    # Test with non-existent segment
+    with pytest.raises(ValueError, match="Segment non_existent not found in the model"):
+        model.dof_indices("non_existent")
+
+
+def test_markers_indices():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Get marker indices
+    marker_names = model.marker_names
+    indices = model.markers_indices(marker_names[:2])
+
+    # Verify indices are correct
+    assert indices == [0, 1]
+
+
+def test_contact_indices():
+    # Create a simple model with contacts
+    model = create_simple_model()
+
+    # Add contacts to test
+    from biobuddy import ContactReal
+
+    model.segments["parent"].add_contact(
+        ContactReal(name="contact1", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    )
+    model.segments["child"].add_contact(
+        ContactReal(name="contact2", parent_name="child", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    )
+
+    # Get contact indices
+    contact_names = model.contact_names
+    indices = model.contact_indices(contact_names)
+
+    # Verify indices are correct
+    assert indices == [0, 1]
+
+
+def test_imu_indices():
+    # Create a simple model with IMUs
+    model = create_simple_model()
+
+    # Add IMUs to test
+    from biobuddy import InertialMeasurementUnitReal
+
+    model.segments["parent"].add_imu(InertialMeasurementUnitReal(name="imu1", parent_name="parent"))
+    model.segments["child"].add_imu(InertialMeasurementUnitReal(name="imu2", parent_name="child"))
+
+    # Get IMU indices
+    imu_names = model.imu_names
+    indices = model.imu_indices(imu_names)
+
+    # Verify indices are correct
+    assert indices == [0, 1]
+
+
+def test_dofs_property():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Get DOFs
+    dofs = model.dofs
+
+    # Verify DOFs are correct
+    assert len(dofs) == 2
+    assert dofs[0] == Translations.XYZ
+    assert dofs[1] == Rotations.X
+
+
+def test_muscle_group_origin_insertion_parent_names():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Get muscle group origin parent names
+    origin_names = model.muscle_group_origin_parent_names
+    assert origin_names == ["parent"]
+
+    # Get muscle group insertion parent names
+    insertion_names = model.muscle_group_insertion_parent_names
+    assert insertion_names == ["child"]
+
+
+def test_ligament_origin_insertion_parent_names():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add a ligament
+    from biobuddy import LigamentReal, ViaPointReal
+    from biobuddy.components.ligament_utils import LigamentType
+
+    origin = ViaPointReal(name="lig_origin", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="lig_insertion", parent_name="child", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+    )
+
+    model.add_ligament(ligament)
+
+    # Get ligament origin parent names
+    origin_names = model.ligament_origin_parent_names
+    assert origin_names == ["parent"]
+
+    # Get ligament insertion parent names
+    insertion_names = model.ligament_insertion_parent_names
+    assert insertion_names == ["child"]
