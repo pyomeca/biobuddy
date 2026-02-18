@@ -1563,6 +1563,82 @@ def test_init_muscle_real():
         )
 
 
+def test_muscle_real_property_setters_with_arrays():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+    )
+
+    # Test optimal_length with numpy array
+    muscle.optimal_length = np.array([0.15])
+    assert muscle.optimal_length == 0.15
+
+    # Test optimal_length with invalid array shape
+    with pytest.raises(ValueError, match="The optimal length must be a float."):
+        muscle.optimal_length = np.array([0.15, 0.2])
+
+    # Test maximal_force with numpy array
+    muscle.maximal_force = np.array([150.0])
+    assert muscle.maximal_force == 150.0
+
+    # Test maximal_force with invalid array shape
+    with pytest.raises(ValueError, match="The maximal force must be a float."):
+        muscle.maximal_force = np.array([150.0, 200.0])
+
+    # Test tendon_slack_length with numpy array
+    muscle.tendon_slack_length = np.array([0.25])
+    assert muscle.tendon_slack_length == 0.25
+
+    # Test tendon_slack_length with invalid array shape
+    with pytest.raises(ValueError, match="The tendon slack length must be a float."):
+        muscle.tendon_slack_length = np.array([0.25, 0.3])
+
+    # Test tendon_slack_length with invalid value
+    with pytest.raises(ValueError, match="The tendon slack length of the force must be greater than 0."):
+        muscle.tendon_slack_length = 0.0
+
+    # Test pennation_angle with numpy array
+    muscle.pennation_angle = np.array([0.12])
+    assert muscle.pennation_angle == 0.12
+
+    # Test pennation_angle with invalid array shape
+    with pytest.raises(ValueError, match="The optimal length must be a float."):
+        muscle.pennation_angle = np.array([0.12, 0.15])
+
+    # Test maximal_velocity with numpy array
+    muscle.maximal_velocity = np.array([12.0])
+    assert muscle.maximal_velocity == 12.0
+
+    # Test maximal_velocity with invalid array shape
+    with pytest.raises(ValueError, match="The maximal velocity must be a float."):
+        muscle.maximal_velocity = np.array([12.0, 15.0])
+
+    # Test maximal_velocity with invalid value
+    with pytest.raises(ValueError, match="The maximal contraction velocity of the force must be greater than 0."):
+        muscle.maximal_velocity = 0.0
+
+    # Test maximal_excitation with numpy array
+    muscle.maximal_excitation = np.array([0.9])
+    assert muscle.maximal_excitation == 0.9
+
+    # Test maximal_excitation with invalid array shape
+    with pytest.raises(ValueError, match="The maximal excitation must be a float."):
+        muscle.maximal_excitation = np.array([0.9, 1.0])
+
+    # Test maximal_excitation with invalid value
+    with pytest.raises(ValueError, match="The maximal excitation of the force must be greater than 0."):
+        muscle.maximal_excitation = 0.0
+
+
 def test_muscle_real_add_remove_via_point():
     # Create origin and insertion via points
     origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -1608,6 +1684,16 @@ def test_muscle_real_add_remove_via_point():
     )
     with pytest.raises(ValueError, match="The via points's muscle .* should be the same as the muscle's name"):
         muscle.add_via_point(via_point3)
+
+    # Create a via point with non-matching muscle_group
+    via_point4 = ViaPointReal(
+        name="via_point4",
+        parent_name="segment1",
+        muscle_group="other_group",
+        position=np.array([[0.8], [0.0], [0.0], [1.0]]),
+    )
+    with pytest.raises(ValueError, match="The via points's muscle group .* should be the same as the muscle's name"):
+        muscle.add_via_point(via_point4)
 
     # Remove a via point
     muscle.remove_via_point("via_point")
@@ -1661,6 +1747,36 @@ def test_muscle_real_to_biomod():
     assert "viapoint\tvia_point" in biomod_str
 
 
+def test_muscle_real_to_biomod_with_missing_optional_params():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle with only required parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+        maximal_force=100.0,
+    )
+
+    # Generate biomod string
+    biomod_str = muscle.to_biomod()
+
+    # Check that optional parameters are not included
+    assert "\toptimallength" not in biomod_str
+    assert "\ttendonslacklength" not in biomod_str
+    assert "\tpennationangle" not in biomod_str
+    assert "\tmaxvelocity" not in biomod_str
+    assert "\tmaxexcitation" not in biomod_str
+
+    # But required parameters should be there
+    assert "\tmaximalforce\t100.0000" in biomod_str
+
+
 def test_muscle_real_to_osim():
     # Create origin and insertion via points
     origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -1692,6 +1808,71 @@ def test_muscle_real_to_osim():
     osim_content = get_xml_str(muscle_elem)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<DeGrooteFregly2016Muscle name="test_muscle">\n  <max_isometric_force>100.00000000</max_isometric_force>\n  <optimal_fiber_length>0.10000000</optimal_fiber_length>\n  <tendon_slack_length>0.20000000</tendon_slack_length>\n  <pennation_angle_at_optimal>0.10000000</pennation_angle_at_optimal>\n  <max_contraction_velocity>10.00000000</max_contraction_velocity>\n  <GeometryPath name="path">\n    <PathPointSet>\n      <objects>\n        <PathPoint name="test_muscle_origin">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="via_point">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.50000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="test_muscle_insertion">\n          <socket_parent_frame>bodyset/segment2</socket_parent_frame>\n          <location>1.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n      </objects>\n    </PathPointSet>\n  </GeometryPath>\n</DeGrooteFregly2016Muscle>\n'
     assert osim_content == expected_str
+
+
+def test_muscle_real_to_osim_with_missing_optional_params():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle with only required parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+    )
+
+    # Generate xml
+    muscle_elem = muscle.to_osim()
+    osim_content = get_xml_str(muscle_elem)
+
+    # Check that default values are used for missing parameters
+    assert "<max_isometric_force>1000.0</max_isometric_force>" in osim_content
+    assert "<optimal_fiber_length>0.1</optimal_fiber_length>" in osim_content
+    assert "<tendon_slack_length>0.2</tendon_slack_length>" in osim_content
+    assert "<pennation_angle_at_optimal>0</pennation_angle_at_optimal>" in osim_content
+    assert "<max_contraction_velocity>10</max_contraction_velocity>" in osim_content
+
+
+def test_muscle_real_to_osim_missing_origin():
+    # Create insertion via point
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle without origin
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=None,
+        insertion_position=insertion,
+    )
+
+    # Should raise error when trying to export
+    with pytest.raises(ValueError, match="The origin position of the muscle test_muscle has to be defined."):
+        muscle.to_osim()
+
+
+def test_muscle_real_to_osim_missing_insertion():
+    # Create origin via point
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle without insertion
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=None,
+    )
+
+    # Should raise error when trying to export
+    with pytest.raises(ValueError, match="The insertion position of the muscle test_muscle has to be defined."):
+        muscle.to_osim()
 
 
 # ------- MuscleGroupReal ------- #
