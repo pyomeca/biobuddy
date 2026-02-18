@@ -1,8 +1,10 @@
+from .ligament import Ligament
 from .muscle import Muscle
 from .muscle_group import MuscleGroup
 from .via_point import ViaPoint
 
 __all__ = [
+    Ligament.__name__,
     Muscle.__name__,
     MuscleGroup.__name__,
     ViaPoint.__name__,

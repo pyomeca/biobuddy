@@ -18,9 +18,9 @@ from ..components.real.rigidbody.contact_real import ContactReal
 from ..components.real.rigidbody.inertial_measurement_unit_real import InertialMeasurementUnitReal
 from ..components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ..components.real.muscle.muscle_real import MuscleReal
-from ..components.real.muscle.muscle_group_real import MuscleGroupReal
-from ..components.real.muscle.via_point_real import ViaPointReal
+from ..components.real.force.muscle_real import MuscleReal
+from ..components.real.force.muscle_group_real import MuscleGroupReal
+from ..components.real.force.via_point_real import ViaPointReal
 from ..utils.linear_algebra import RotoTransMatrix
 from ..utils.named_list import NamedList
 from ..utils.marker_data import MarkerData

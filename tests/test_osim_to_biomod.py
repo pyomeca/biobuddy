@@ -9,7 +9,7 @@ import pytest
 import numpy.testing as npt
 import lxml
 
-from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal
+from biobuddy import MuscleType, MuscleStateType, BiomechanicalModelReal, LigamentType
 from test_utils import compare_models
 
 
@@ -332,7 +332,7 @@ class MomentArmTest(ModelEvaluation):
         nb_dof = self.biomod_model.nbQ()
         nb_frame = states.shape[1]
         osim_moment_arm = np.ndarray((nb_dof, nb_muscles, nb_frame))
-        biorbd_mament_arm = np.ndarray((nb_dof, nb_muscles, nb_frame))
+        biorbd_moment_arm = np.ndarray((nb_dof, nb_muscles, nb_frame))
         moment_arm_error = np.ndarray((nb_dof, nb_muscles))
         osim_muscle_idx = []
         ordered_osim_idx = self._reorder_osim_coordinate()
@@ -354,15 +354,66 @@ class MomentArmTest(ModelEvaluation):
                         .get(osim_idx)
                         .computeMomentArm(my_state, self.osim_model.getCoordinateSet().get(ordered_osim_idx[d]))
                     )
-                biorbd_mament_arm[:, m, i] = bio_moment_arm_array[m]
-                moment_arm_error[:, m] = np.mean(np.sqrt((osim_moment_arm[:, m, i] - biorbd_mament_arm[:, m, i]) ** 2))
+                biorbd_moment_arm[:, m, i] = bio_moment_arm_array[m]
+                moment_arm_error[:, m] = np.mean(np.sqrt((osim_moment_arm[:, m, i] - biorbd_moment_arm[:, m, i]) ** 2))
         if plot:
             default_nb_line = 5
             self._plot_moment_arm(
-                default_nb_line, osim_muscle_idx, ordered_osim_idx, osim_moment_arm, biorbd_mament_arm
+                default_nb_line, osim_muscle_idx, ordered_osim_idx, osim_moment_arm, biorbd_moment_arm
             )
             self._plot_states(default_nb_line, ordered_osim_idx, osim_state, states)
             plt.show()
+        return moment_arm_error
+
+
+class LigamentTest(ModelEvaluation):
+    def __init__(self, biomod: str, osim_model: str):
+        super(LigamentTest, self).__init__(biomod, osim_model)
+
+    def from_states(self, states, plot: bool = True) -> list:
+        """
+        Run test using states data:
+        1) apply the states on both model
+        2) compare the lever arm during the movement
+
+        Parameter:
+        states: np.ndarray()
+            states data (nb_dof, nb_frames) in the order of biomod model
+        plot: bool
+            plot the markers position at the end of the evaluation
+
+        Returns:
+        moment arm error: list
+        """
+        nb_muscles = self.osim_model.getMuscles().getSize()
+        nb_dof = self.biomod_model.nbQ()
+        nb_frame = states.shape[1]
+        osim_moment_arm = np.ndarray((nb_dof, nb_muscles, nb_frame))
+        biorbd_moment_arm = np.ndarray((nb_dof, nb_muscles, nb_frame))
+        moment_arm_error = np.ndarray((nb_dof, nb_muscles))
+        osim_muscle_idx = []
+        ordered_osim_idx = self._reorder_osim_coordinate()
+        osim_state = np.copy(states)
+        osim_muscle_names = [
+            self.osim_model.getMuscles().get(m).toString() for m in range(self.osim_model.getMuscles().getSize())
+        ]
+        my_state = self.osim_model.initSystem()
+        for i in range(nb_frame):
+            osim_state[:, i] = self._update_osim_model(my_state, states[:, i], ordered_osim_idx)
+            bio_moment_arm_array = self.biomod_model.musclesLengthJacobian(states[:, i]).to_array()
+            osim_muscle_idx = []
+            for m in range(nb_muscles):
+                osim_idx = osim_muscle_names.index(self.biomod_model.muscleNames()[m].to_string())
+                osim_muscle_idx.append(osim_idx)
+                for d in range(self.biomod_model.nbDof()):
+                    osim_moment_arm[d, m, i] = (
+                        -self.osim_model.getMuscles()
+                        .get(osim_idx)
+                        .computeMomentArm(my_state, self.osim_model.getCoordinateSet().get(ordered_osim_idx[d]))
+                    )
+                biorbd_moment_arm[:, m, i] = bio_moment_arm_array[m]
+                moment_arm_error[:, m] = np.mean(np.sqrt((osim_moment_arm[:, m, i] - biorbd_moment_arm[:, m, i]) ** 2))
+
         return moment_arm_error
 
 
@@ -646,3 +697,82 @@ def test_translation_osim_to_biomod():
                         raise RuntimeError(
                             f"OpenSim added a new model to their repository: {os.path.join(folder, name)}. Please check the model."
                         )
+
+
+def test_osim_to_biomod_with_ligament():
+
+    # For ortho_norm_basis
+    np.random.seed(42)
+
+    # Paths
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    root_path = parent_path + "/examples/models"
+    osim_filepath = f"{root_path}/ModelwithKneeLigaments.osim"
+    biomod_filepath = f"{root_path}/ModelwithKneeLigaments.bioMod"
+    biomod_filepath_reference = f"{root_path}/ModelwithKneeLigaments_reference.bioMod"
+
+    # Convert osim to biomod
+    model = BiomechanicalModelReal().from_osim(
+        filepath=osim_filepath,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
+    )
+    model.fix_via_points()
+    model.approximate_ligaments(
+        desired_ligament_type=LigamentType.SECOND_ORDER_SPRING,
+        plot_approximation=False,
+    )
+    model.to_biomod(biomod_filepath, with_mesh=False)
+
+    # Test that the model created is valid
+    biomod_model = biorbd.Model(biomod_filepath)
+
+    nb_ligaments = biomod_model.nbLigaments()
+    assert nb_ligaments == 20
+    assert model.nb_ligaments == 20
+
+    # Test that the .biomod can be reconverted into .osim
+    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
+        filepath=biomod_filepath,
+    )
+    translated_osim_filepath = biomod_filepath.replace(".bioMod", "_translated.osim")
+    model_from_biomod_2.approximate_ligaments(
+        desired_ligament_type=LigamentType.FUNCTION,
+        plot_approximation=False,
+    )
+    model_from_biomod_2.to_osim(filepath=translated_osim_filepath, with_mesh=True)
+    model_from_osim_2 = BiomechanicalModelReal().from_osim(
+        filepath=translated_osim_filepath,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        muscle_state_type=MuscleStateType.DEGROOTE,
+        mesh_dir=parent_path + "/examples/models/Geometry_cleaned",
+    )
+    assert model_from_osim_2.ligament_names == model.ligament_names
+    assert model_from_biomod_2.ligament_names == model.ligament_names
+
+    # Make sure the other approximation transitions work to
+    model_from_osim_2.approximate_ligaments(
+        desired_ligament_type=LigamentType.SECOND_ORDER_SPRING,
+        plot_approximation=False,
+    )
+    model_from_osim_2.approximate_ligaments(
+        desired_ligament_type=LigamentType.LINEAR_SPRING,
+        plot_approximation=False,
+    )
+    model_from_osim_2.approximate_ligaments(
+        desired_ligament_type=LigamentType.FUNCTION,
+        plot_approximation=False,
+    )
+
+    # Compare the translated model with a reference
+    reference_biomod_model = BiomechanicalModelReal().from_biomod(
+        filepath=biomod_filepath_reference,
+    )
+    compare_models(model_from_biomod_2, reference_biomod_model, decimal=4)
+
+    if os.path.exists(biomod_filepath):
+        os.remove(biomod_filepath)
+
+    if os.path.exists(translated_osim_filepath):
+        os.remove(translated_osim_filepath)

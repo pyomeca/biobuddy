@@ -16,6 +16,20 @@ def get_etree_without_comments(element: etree.ElementTree) -> etree.ElementTree:
     return element_list
 
 
+def find_sub_element_in_tree(
+    element: etree.ElementTree, sub_element_names: list[str] | str
+) -> list[etree.ElementTree] | None:
+    sub_elements: list[etree.ElementTree] = []
+    for sub_elem in get_etree_without_comments(element):
+        for sub_element_name in sub_element_names:
+            if match_tag(sub_elem, sub_element_name):
+                sub_elements += [sub_elem]
+    if len(sub_elements) == 0:
+        return None
+    else:
+        return sub_elements
+
+
 def find_sub_elements_in_tree(
     element: etree.ElementTree, parent_element_name: list[str] | str, sub_element_names: list[str] | str
 ) -> list[etree.ElementTree] | None:

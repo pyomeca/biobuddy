@@ -14,15 +14,17 @@ from lxml import etree
 
 from .body import Body
 from .joint import Joint
+from .ligament import get_ligament_from_element
 from .marker import Marker
 from .muscle import get_muscle_from_element
 from ..utils_xml import is_element_empty, match_tag
 from ..abstract_model_parser import AbstractModelParser
-from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.muscle.muscle_group_real import MuscleGroupReal
 from ...components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.real.muscle.via_point_real import ViaPointReal, PathPointMovement, PathPointCondition
+from ...components.real.biomechanical_model_real import BiomechanicalModelReal
+from ...components.real.force.muscle_group_real import MuscleGroupReal
+from ...components.real.force.ligament_real import LigamentReal
+from ...components.real.force.muscle_real import MuscleReal
+from ...components.real.force.via_point_real import ViaPointReal, PathPointMovement, PathPointCondition
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from ...components.real.rigidbody.marker_real import MarkerReal
@@ -67,6 +69,7 @@ class OsimModelParser(AbstractModelParser):
         ignore_fixed_dof_tag: bool = False,
         ignore_clamped_dof_tag: bool = False,
         ignore_muscle_applied_tag: bool = False,
+        ignore_ligament_applied_tag: bool = False,
         skip_virtual: bool = False,
     ):
         """
@@ -102,6 +105,7 @@ class OsimModelParser(AbstractModelParser):
         self.ignore_fixed_dof_tag = ignore_fixed_dof_tag
         self.ignore_clamped_dof_tag = ignore_clamped_dof_tag
         self.ignore_muscle_applied_tag = ignore_muscle_applied_tag
+        self.ignore_ligament_applied_tag = ignore_ligament_applied_tag
         self.skip_virtual = skip_virtual
 
         # Extended attributes
@@ -126,6 +130,7 @@ class OsimModelParser(AbstractModelParser):
         self.bodies: NamedList[Body] = NamedList()
         self.muscle_groups: NamedList[MuscleGroupReal] = NamedList()
         self.muscles: NamedList[MuscleReal] = NamedList()
+        self.ligaments: NamedList[LigamentReal] = NamedList()
         self.joints: NamedList[Joint] = NamedList()
         self.markers: NamedList[Marker] = NamedList()
         self.constraint_set = []  # Not implemented
@@ -449,6 +454,11 @@ class OsimModelParser(AbstractModelParser):
         for muscle in self.muscles:
             muscle_group_name = muscle.muscle_group
             self.biomechanical_model_real.muscle_groups[muscle_group_name].add_muscle(muscle)
+
+    def _set_ligaments(self):
+        """Add the ligament components to the BiomechanicalModelReal."""
+        for ligament in self.ligaments:
+            self.biomechanical_model_real.add_ligament(ligament)
 
     @staticmethod
     def get_dof_and_names_and_ranges(
@@ -924,6 +934,9 @@ class OsimModelParser(AbstractModelParser):
         # Muscles
         self._set_muscles()
 
+        # Ligaments
+        self._set_ligaments()
+
         # Warnings
         self._set_warnings()
 
@@ -948,6 +961,13 @@ class OsimModelParser(AbstractModelParser):
                         self.muscle_groups.append(muscle_group)
                     if muscle is not None:
                         self.muscles.append(muscle)
+                    if len(warnings) > 0:
+                        self.warnings.append(warnings)
+
+                elif "Ligament" in element.tag:
+                    ligament, warnings = get_ligament_from_element(element, self.ignore_ligament_applied_tag)
+                    if ligament is not None:
+                        self.ligaments.append(ligament)
                     if len(warnings) > 0:
                         self.warnings.append(warnings)
 

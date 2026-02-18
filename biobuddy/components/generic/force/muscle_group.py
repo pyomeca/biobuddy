@@ -1,8 +1,8 @@
 from ....utils.named_list import NamedList
-from ..muscle.muscle_real import MuscleReal
+from .muscle import Muscle
 
 
-class MuscleGroupReal:
+class MuscleGroup:
     def __init__(
         self,
         name: str,
@@ -13,11 +13,11 @@ class MuscleGroupReal:
         Parameters
         ----------
         name
-            The name of the new muscle group
+            The name of the new force group
         origin_parent_name
-            The name of the parent segment for this muscle group
+            The name of the parent segment for this force group
         insertion_parent_name
-            The name of the insertion segment for this muscle group
+            The name of the insertion segment for this force group
         """
         # Sanity checks
         if origin_parent_name == insertion_parent_name and origin_parent_name != "":
@@ -26,16 +26,16 @@ class MuscleGroupReal:
         self.name = name
         self.origin_parent_name = origin_parent_name
         self.insertion_parent_name = insertion_parent_name
-        self.muscles = NamedList[MuscleReal]()
+        self.muscles = NamedList[Muscle]()
 
-    def add_muscle(self, muscle: MuscleReal) -> None:
+    def add_muscle(self, muscle: Muscle) -> None:
         """
-        Add a muscle to the model
+        Add a force to the model
 
         Parameters
         ----------
         muscle
-            The muscle to add
+            The force to add
         """
         if muscle.muscle_group is not None and muscle.muscle_group != self.name:
             raise ValueError(
@@ -47,12 +47,12 @@ class MuscleGroupReal:
 
     def remove_muscle(self, muscle_name: str) -> None:
         """
-        Remove a muscle from the model
+        Remove a force from the model
 
         Parameters
         ----------
         muscle_name
-            The name of the muscle to remove
+            The name of the force to remove
         """
         self.muscles._remove(muscle_name)
 
@@ -87,18 +87,3 @@ class MuscleGroupReal:
     @property
     def muscle_names(self):
         return [m.name for m in self.muscles]
-
-    def to_biomod(self):
-        # Define the print function, so it automatically formats things in the file properly
-        out_string = f"musclegroup\t{self.name}\n"
-        out_string += f"\tOriginParent\t{self.origin_parent_name}\n"
-        out_string += f"\tInsertionParent\t{self.insertion_parent_name}\n"
-        out_string += "endmusclegroup\n"
-
-        out_string += "\n // ------ MUSCLES ------\n"
-        for muscle in self.muscles:
-            out_string += muscle.to_biomod()
-        return out_string
-
-    def to_urdf(self):
-        raise NotImplementedError("Muscle groups are not implemented yet for URDF export")

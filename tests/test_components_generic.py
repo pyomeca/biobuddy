@@ -27,11 +27,217 @@ from biobuddy import (
     BiomechanicalModelReal,
     RotoTransMatrixTimeSeries,
 )
+from biobuddy.components.generic.force.ligament import Ligament
+from biobuddy.components.ligament_utils import LigamentType
 from biobuddy.components.generic.rigidbody.segment_coordinate_system import _visualize_score
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
 
 MOCK_RT = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0.1, 0.9, 0.5]), np.array([0.5, 0.5, 0.5]))
+
+
+# ------- Ligament ------- #
+def test_init_ligament():
+    # Create mock functions for ligament parameters
+    mock_stiffness = lambda params, bio: 1000.0
+    mock_slack_length = lambda params, bio: 0.1
+    mock_damping = lambda params, bio: 10.0
+
+    # Create mock via points
+    origin = ViaPoint(name="origin", parent_name="segment1")
+    insertion = ViaPoint(name="insertion", parent_name="segment2")
+
+    # Test initialization
+    ligament = Ligament(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        stiffness_function=mock_stiffness,
+        ligament_slack_length_function=mock_slack_length,
+        damping_function=mock_damping,
+    )
+
+    assert ligament.name == "test_ligament"
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    assert ligament.origin_position == origin
+    assert ligament.insertion_position == insertion
+    assert ligament.origin_parent_name == "segment1"
+    assert ligament.insertion_parent_name == "segment2"
+    assert ligament.stiffness_function == mock_stiffness
+    assert ligament.ligament_slack_length_function == mock_slack_length
+    assert ligament.damping_function == mock_damping
+
+
+def test_ligament_properties():
+    # Create mock functions for ligament parameters
+    mock_stiffness = lambda params, bio: 1000.0
+    mock_slack_length = lambda params, bio: 0.1
+    mock_damping = lambda params, bio: 10.0
+
+    # Create mock via points
+    origin = ViaPoint(name="origin", parent_name="segment1")
+    insertion = ViaPoint(name="insertion", parent_name="segment2")
+
+    # Create a ligament
+    ligament = Ligament(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        stiffness_function=mock_stiffness,
+        ligament_slack_length_function=mock_slack_length,
+        damping_function=mock_damping,
+    )
+
+    # Test name property
+    assert ligament.name == "test_ligament"
+    ligament.name = "new_ligament_name"
+    assert ligament.name == "new_ligament_name"
+
+    # Test ligament_type property with enum
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    ligament.ligament_type = LigamentType.SECOND_ORDER_SPRING
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
+
+    # Test ligament_type property with string
+    ligament.ligament_type = "linearspring"
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+
+    # Test ligament_type property with string
+    ligament.ligament_type = "secondorderspring"
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
+
+    # Test origin_position property
+    new_origin = ViaPoint(name="new_origin", parent_name="segment3")
+    ligament.origin_position = new_origin
+    assert ligament.origin_position == new_origin
+    assert ligament.origin_parent_name == "segment3"
+
+    # Test insertion_position property
+    new_insertion = ViaPoint(name="new_insertion", parent_name="segment4")
+    ligament.insertion_position = new_insertion
+    assert ligament.insertion_position == new_insertion
+    assert ligament.insertion_parent_name == "segment4"
+
+    # Test stiffness_function property
+    new_stiffness = lambda params, bio: 2000.0
+    ligament.stiffness_function = new_stiffness
+    assert ligament.stiffness_function == new_stiffness
+
+    # Test ligament_slack_length_function property
+    new_slack_length = lambda params, bio: 0.2
+    ligament.ligament_slack_length_function = new_slack_length
+    assert ligament.ligament_slack_length_function == new_slack_length
+
+    # Test damping_function property
+    new_damping = lambda params, bio: 20.0
+    ligament.damping_function = new_damping
+    assert ligament.damping_function == new_damping
+
+
+def test_ligament_to_ligament_local():
+    # Create mock functions for ligament parameters
+    mock_stiffness = lambda params, bio: 1000.0
+    mock_slack_length = lambda params, bio: 0.1
+    mock_damping = lambda params, bio: 10.0
+
+    # Create mock via points
+    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV", is_local=True)
+    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="SUP", is_local=True)
+
+    # Create a ligament
+    ligament = Ligament(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        stiffness_function=mock_stiffness,
+        ligament_slack_length_function=mock_slack_length,
+        damping_function=mock_damping,
+    )
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Call to_ligament
+    ligament_real = ligament.to_ligament(mock_data, mock_model, MOCK_RT)
+
+    # Basic verification that the conversion happened
+    assert ligament_real.name == "test_ligament"
+    assert ligament_real.ligament_type == LigamentType.LINEAR_SPRING
+
+    # Test the ligament parameters evaluation
+    npt.assert_almost_equal(ligament_real.stiffness, 1000.0)
+    npt.assert_almost_equal(ligament_real.ligament_slack_length, 0.1)
+    npt.assert_almost_equal(ligament_real.damping, 10.0)
+
+    # Test the origin and insertion positions
+    npt.assert_almost_equal(
+        np.mean(ligament_real.origin_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([0.5758053, 0.60425486, 1.67896849, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.mean(ligament_real.insertion_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([0.5515919, 0.60041439, 1.37607094, 1.0]),
+    )
+
+
+def test_ligament_to_ligament_global():
+    # Create mock functions for ligament parameters
+    mock_stiffness = lambda params, bio: 1500.0
+    mock_slack_length = lambda params, bio: 0.15
+    mock_damping = lambda params, bio: 15.0
+
+    # Create mock via points
+    origin = ViaPoint(name="origin", parent_name="segment1", position_function="HV", is_local=False)
+    insertion = ViaPoint(name="insertion", parent_name="segment2", position_function="SUP", is_local=False)
+
+    # Create a ligament
+    ligament = Ligament(
+        name="test_ligament",
+        ligament_type=LigamentType.SECOND_ORDER_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        stiffness_function=mock_stiffness,
+        ligament_slack_length_function=mock_slack_length,
+        damping_function=mock_damping,
+    )
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Call to_ligament
+    ligament_real = ligament.to_ligament(mock_data, mock_model, MOCK_RT)
+
+    # Basic verification that the conversion happened
+    assert ligament_real.name == "test_ligament"
+    assert ligament_real.ligament_type == LigamentType.SECOND_ORDER_SPRING
+
+    # Test the ligament parameters evaluation
+    npt.assert_almost_equal(ligament_real.stiffness, 1500.0)
+    npt.assert_almost_equal(ligament_real.ligament_slack_length, 0.15)
+    npt.assert_almost_equal(ligament_real.damping, 15.0)
+
+    # Test the origin and insertion positions (should be in local coordinates after transformation)
+    npt.assert_almost_equal(
+        np.mean(ligament_real.origin_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.65174504, 0.60837317, 0.78210787, 1.0]),
+    )
+    npt.assert_almost_equal(
+        np.mean(ligament_real.insertion_position.position, axis=1).reshape(
+            4,
+        ),
+        np.array([-0.47436502, 0.4726582, 0.57603569, 1.0]),
+    )
 
 
 # ------- Via Point ------- #

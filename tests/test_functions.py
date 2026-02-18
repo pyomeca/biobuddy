@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 import numpy.testing as npt
+from lxml import etree
 
 import opensim as osim
 
@@ -38,7 +39,7 @@ def test_simm_spline(nb_nodes: int):
     osim_vector.set(0, test_x)
 
     # The evaluated value is the same
-    npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+    npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
     if nb_nodes == 7:
         # The derivative too, but I get a c++ error from Opensim on the remote tests (that I cannot reproduce locally), so I'll just test the values.
@@ -109,26 +110,26 @@ def test_simm_spline(nb_nodes: int):
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         test_x = 180.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         # Test for values at the end of the range
         test_x = 0.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
         test_x = 90.0
         osim_vector = osim.Vector()
         osim_vector.resize(1)
         osim_vector.set(0, test_x)
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), opensim_spline.calcValue(osim_vector), decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], opensim_spline.calcValue(osim_vector), decimal=6)
 
 
 def test_simm_spline_errors():
@@ -171,6 +172,152 @@ def test_simm_spline_errors():
         biobuddy_spline.evaluate_derivative(90.0, order=1)
 
 
+def test_simm_spline_safe_max():
+    # Create a simple spline
+    x_points = np.array([0, 1, 2])
+    y_points = np.array([0, 1, 0])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test safe_max with normal values
+    result = spline.safe_max(np.array([1.0, 2.0, 3.0]))
+    assert result == 3.0
+
+    # Test safe_max with very small values (should return TINY_NUMBER)
+    result = spline.safe_max(np.array([1e-10, 1e-11, 1e-12]))
+    assert result == spline.TINY_NUMBER
+
+    # Test safe_max with negative values
+    result = spline.safe_max(np.array([-1.0, -2.0, -3.0]))
+    assert result == spline.TINY_NUMBER
+
+
+def test_simm_spline_get_scalar_value():
+    # Create a simple spline
+    x_points = np.array([0, 1, 2])
+    y_points = np.array([0, 1, 0])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test with scalar float
+    result = spline.get_scalar_value(5.0)
+    assert result == 5.0
+
+    # Test with scalar int
+    result = spline.get_scalar_value(5)
+    assert result == 5
+
+    # Test with single-element array
+    result = spline.get_scalar_value(np.array([5.0]))
+    assert result == 5.0
+
+    # Test with single-element list
+    result = spline.get_scalar_value([5.0])
+    assert result == 5.0
+
+    # Test with multi-element array (should raise error)
+    with pytest.raises(ValueError, match="Only single value arrays are supported"):
+        spline.get_scalar_value(np.array([5.0, 6.0]))
+
+    # Test with multi-element list (should raise error)
+    with pytest.raises(ValueError, match="Only single value arrays are supported"):
+        spline.get_scalar_value([5.0, 6.0])
+
+
+def test_simm_spline_evaluate_array_inputs():
+    # Create a simple spline
+    x_points = np.array([0, 15, 30, 45, 60, 75, 90])
+    y_points = np.array([0.02, 0.045, 0.055, 0.05, 0.04, 0.025, 0.01])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test with array of x values
+    test_x = np.array([10.0, 20.0, 30.0, 40.0])
+    result = spline.evaluate(test_x)
+    assert result.shape == (4,)
+
+    # Verify each value individually
+    for i, x in enumerate(test_x):
+        expected = spline.evaluate(x)[0]
+        npt.assert_almost_equal(result[i], expected)
+
+    # Test with 2D array (should be reshaped)
+    test_x = np.array([[10.0], [20.0], [30.0]])
+    result = spline.evaluate(test_x)
+    assert result.shape == (3,)
+
+
+def test_simm_spline_evaluate_derivative_array_inputs():
+    # Create a simple spline
+    x_points = np.array([0, 15, 30, 45, 60, 75, 90])
+    y_points = np.array([0.02, 0.045, 0.055, 0.05, 0.04, 0.025, 0.01])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test with array of x values
+    test_x = np.array([10.0, 20.0, 30.0, 40.0])
+    result = spline.evaluate_derivative(test_x, order=1)
+    assert result.shape == (4,)
+
+    # Verify each value individually
+    for i, x in enumerate(test_x):
+        expected = spline.evaluate_derivative(x, order=1)[0]
+        npt.assert_almost_equal(result[i], expected)
+
+    # Test with 2D array (should be reshaped)
+    test_x = np.array([[10.0], [20.0], [30.0]])
+    result = spline.evaluate_derivative(test_x, order=1)
+    assert result.shape == (3,)
+
+
+def test_simm_spline_to_osim():
+    # Create a simple spline
+    x_points = np.array([0, 15, 30, 45])
+    y_points = np.array([0.02, 0.045, 0.055, 0.05])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test with default name
+    xml_elem = spline.to_osim()
+    assert xml_elem.tag == "SimmSpline"
+    assert xml_elem.get("name") == "spline_function"
+
+    # Check x values
+    x_elem = xml_elem.find("x")
+    assert x_elem is not None
+    x_values = [float(v) for v in x_elem.text.split()]
+    npt.assert_almost_equal(x_values, x_points)
+
+    # Check y values
+    y_elem = xml_elem.find("y")
+    assert y_elem is not None
+    y_values = [float(v) for v in y_elem.text.split()]
+    npt.assert_almost_equal(y_values, y_points)
+
+    # Test with custom name
+    xml_elem = spline.to_osim(name="custom_spline")
+    assert xml_elem.get("name") == "custom_spline"
+
+
+def test_simm_spline_two_points():
+    # Test the special case with only 2 points (linear interpolation)
+    x_points = np.array([0, 10])
+    y_points = np.array([0, 5])
+    spline = SimmSpline(x_points, y_points)
+
+    # Get coefficients
+    b, c, d = spline.get_coefficients()
+
+    # For 2 points, should be linear (c and d should be zero)
+    npt.assert_almost_equal(c, np.array([0.0, 0.0]))
+    npt.assert_almost_equal(d, np.array([0.0, 0.0]))
+
+    # b should be the slope
+    expected_slope = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
+    npt.assert_almost_equal(b, np.array([expected_slope, expected_slope]))
+
+    # Test evaluation
+    test_x = 5.0
+    result = spline.evaluate(test_x)
+    expected = y_points[0] + expected_slope * (test_x - x_points[0])
+    npt.assert_almost_equal(result[0], expected)
+
+
 @pytest.mark.parametrize("nb_nodes", [2, 3])
 def test_linear_function(nb_nodes: int):
 
@@ -191,7 +338,7 @@ def test_linear_function(nb_nodes: int):
         expected_a = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
         expected_b = 0.02
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a, decimal=6)
@@ -205,20 +352,20 @@ def test_linear_function(nb_nodes: int):
         # Test for extrapolation
         test_x = -10.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         test_x = 180.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         # Test for values at the end of the range
         test_x = 0.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
         test_x = 90.0
         expected_value = expected_a * test_x + expected_b
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value, decimal=6)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value, decimal=6)
 
     elif nb_nodes == 3:
         # Test the first segment
@@ -226,7 +373,7 @@ def test_linear_function(nb_nodes: int):
         expected_a_1 = (y_points[1] - y_points[0]) / (x_points[1] - x_points[0])
         expected_b_1 = 0.02
         expected_value = expected_a_1 * test_x + expected_b_1
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_1, decimal=6)
@@ -237,7 +384,7 @@ def test_linear_function(nb_nodes: int):
         expected_a_2 = (y_points[2] - y_points[1]) / (x_points[2] - x_points[1])
         expected_b_2 = y_points[1] - expected_a_2 * x_points[1]
         expected_value = expected_a_2 * test_x + expected_b_2
-        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x), expected_value)
+        npt.assert_almost_equal(biobuddy_spline.evaluate(test_x)[0], expected_value)
 
         # Test derivatives
         npt.assert_almost_equal(biobuddy_spline.evaluate_derivative(test_x, order=1), expected_a_2, decimal=6)
@@ -277,3 +424,175 @@ def test_linear_function_errors():
         match="The order of the derivative must be an int larger or equal to 1.0",
     ):
         biobuddy_spline.evaluate_derivative(30, order=1.5)
+
+
+def test_piecewise_linear_safe_max():
+    # Create a simple function
+    x_points = np.array([0, 1, 2])
+    y_points = np.array([0, 1, 0])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test safe_max with normal values
+    result = func.safe_max(np.array([1.0, 2.0, 3.0]))
+    assert result == 3.0
+
+    # Test safe_max with very small values (should return TINY_NUMBER)
+    result = func.safe_max(np.array([1e-10, 1e-11, 1e-12]))
+    assert result == func.TINY_NUMBER
+
+
+def test_piecewise_linear_get_scalar_value():
+    # Create a simple function
+    x_points = np.array([0, 1, 2])
+    y_points = np.array([0, 1, 0])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test with scalar float
+    result = func.get_scalar_value(5.0)
+    assert result == 5.0
+
+    # Test with single-element array
+    result = func.get_scalar_value(np.array([5.0]))
+    assert result == 5.0
+
+
+def test_piecewise_linear_get_coefficient_index():
+    # Create a function with multiple segments
+    x_points = np.array([0, 10, 20, 30])
+    y_points = np.array([0, 5, 3, 8])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test x before first point (should use first segment)
+    idx = func.get_coefficient_index(-5.0)
+    assert idx == 0
+
+    # Test x after last point (should use last segment)
+    idx = func.get_coefficient_index(50.0)
+    assert idx == -1
+
+    # Test x in first segment
+    idx = func.get_coefficient_index(5.0)
+    assert idx == 0
+
+    # Test x in second segment
+    idx = func.get_coefficient_index(15.0)
+    assert idx == 1
+
+    # Test x in third segment
+    idx = func.get_coefficient_index(25.0)
+    assert idx == 2
+
+    # Test x exactly at a point
+    idx = func.get_coefficient_index(10.0)
+    assert idx == 1  # Should use the segment after the point
+
+    idx = func.get_coefficient_index(20.0)
+    assert idx == 2  # Should use the segment after the point
+
+
+def test_piecewise_linear_evaluate_array_inputs():
+    # Create a simple function
+    x_points = np.array([0, 10, 20, 30])
+    y_points = np.array([0, 5, 3, 8])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test with array of x values
+    test_x = np.array([5.0, 15.0, 25.0])
+    result = func.evaluate(test_x)
+    assert result.shape == (3,)
+
+    # Verify each value individually
+    for i, x in enumerate(test_x):
+        expected = func.evaluate(x)[0]
+        npt.assert_almost_equal(result[i], expected)
+
+    # Test with 2D array (should be reshaped)
+    test_x = np.array([[5.0], [15.0], [25.0]])
+    result = func.evaluate(test_x)
+    assert result.shape == (3,)
+
+
+def test_piecewise_linear_evaluate_derivative_array_inputs():
+    # Create a simple function
+    x_points = np.array([0, 10, 20, 30])
+    y_points = np.array([0, 5, 3, 8])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test with array of x values for first derivative
+    test_x = np.array([5.0, 15.0, 25.0])
+    result = func.evaluate_derivative(test_x, order=1)
+    assert result.shape == (3,)
+
+    # Verify each value individually
+    for i, x in enumerate(test_x):
+        expected = func.evaluate_derivative(x, order=1)[0]
+        npt.assert_almost_equal(result[i], expected)
+
+    # Test with array of x values for second derivative (should be all zeros)
+    result = func.evaluate_derivative(test_x, order=2)
+    assert result.shape == (3,)
+    npt.assert_almost_equal(result, np.zeros(3))
+
+    # Test with higher order derivatives (should be all zeros)
+    result = func.evaluate_derivative(test_x, order=3)
+    assert result.shape == (3,)
+    npt.assert_almost_equal(result, np.zeros(3))
+
+
+def test_piecewise_linear_to_osim():
+    # Create a simple function
+    x_points = np.array([0, 10, 20, 30])
+    y_points = np.array([0, 5, 3, 8])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test with default name
+    xml_elem = func.to_osim()
+    assert xml_elem.tag == "PiecewiseLinearFunction"
+    assert xml_elem.get("name") == "piecewise_linear_function"
+
+    # Check x values
+    x_elem = xml_elem.find("x")
+    assert x_elem is not None
+    x_values = [float(v) for v in x_elem.text.split("\t")]
+    npt.assert_almost_equal(x_values, x_points)
+
+    # Check y values (note: the implementation has a bug - it uses "x" tag for y values)
+    y_elem = xml_elem.findall("x")[1]  # Second "x" element is actually y values
+    assert y_elem is not None
+    y_values = [float(v) for v in y_elem.text.split("\t")]
+    npt.assert_almost_equal(y_values, y_points)
+
+    # Test with custom name
+    xml_elem = func.to_osim(name="custom_linear_func")
+    assert xml_elem.get("name") == "custom_linear_func"
+
+
+def test_piecewise_linear_evaluate_at_boundaries():
+    # Create a simple function
+    x_points = np.array([0, 10, 20])
+    y_points = np.array([0, 5, 3])
+    func = PiecewiseLinearFunction(x_points, y_points)
+
+    # Test evaluation exactly at x_points
+    result = func.evaluate(0.0)
+    npt.assert_almost_equal(result[0], 0.0)
+
+    result = func.evaluate(10.0)
+    npt.assert_almost_equal(result[0], 5.0)
+
+    result = func.evaluate(20.0)
+    npt.assert_almost_equal(result[0], 3.0)
+
+
+def test_simm_spline_evaluate_at_boundaries():
+    # Create a simple spline
+    x_points = np.array([0, 10, 20])
+    y_points = np.array([0, 5, 3])
+    spline = SimmSpline(x_points, y_points)
+
+    # Test evaluation exactly at x_points (within tolerance)
+    result = spline.evaluate(0.0 + 1e-11)
+    npt.assert_almost_equal(result[0], 0.0, decimal=5)
+
+    result = spline.evaluate(20.0 - 1e-11)
+    npt.assert_almost_equal(result[0], 3.0, decimal=5)

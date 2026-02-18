@@ -1,6 +1,6 @@
 from typing import Callable, Any, TYPE_CHECKING
 
-from ..muscle.via_point import ViaPoint
+from ..force.via_point import ViaPoint
 from ...muscle_utils import MuscleType, MuscleStateType, MuscleUtils
 from ....utils.marker_data import MarkerData
 from ....utils.named_list import NamedList
@@ -8,7 +8,7 @@ from ....utils.linear_algebra import RotoTransMatrix
 
 if TYPE_CHECKING:
     from ...real.biomechanical_model_real import BiomechanicalModelReal
-    from ...real.muscle.muscle_real import MuscleReal
+    from ...real.force.muscle_real import MuscleReal
 
 
 class Muscle(MuscleUtils):
@@ -31,17 +31,17 @@ class Muscle(MuscleUtils):
         Parameters
         ----------
         name
-            The name of the muscle
+            The name of the force
         muscle_type
-            The type of the muscle
+            The type of the force
         state_type
-            The state type of the muscle
+            The state type of the force
         muscle_group
-            The muscle group the muscle belongs to
+            The force group the force belongs to
         origin_position
-            The origin position of the muscle in the local reference frame of the origin segment
+            The origin position of the force in the local reference frame of the origin segment
         insertion_position
-            The insertion position of the muscle the local reference frame of the insertion segment
+            The insertion position of the force the local reference frame of the insertion segment
         optimal_length_function
             The function giving the optimal length of the muscle
         maximal_force_function
@@ -49,11 +49,11 @@ class Muscle(MuscleUtils):
         tendon_slack_length_function
             The function giving the length of the tendon at rest
         pennation_angle_function
-            The function giving the pennation angle of the muscle
+            The function giving the pennation angle of the force
         maximal_velocity_function
-            The function giving the maximal contraction velocity of the muscle (a common value is 10 m/s)
+            The function giving the maximal contraction velocity of the force (a common value is 10 m/s)
         maximal_excitation
-            The maximal excitation of the muscle (usually 1.0, since it is normalized)
+            The maximal excitation of the force (usually 1.0, since it is normalized)
         """
         super().__init__()
 
@@ -157,7 +157,7 @@ class Muscle(MuscleUtils):
             value.muscle_name = self.name
             if value.muscle_group is not None and value.muscle_group != self.muscle_group:
                 raise ValueError(
-                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's muscle group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
+                    f"The origin's muscle group {value.muscle_group} should be the same as the muscle's force group {self.muscle_group}. Alternatively, origin_position.muscle_group can be left undefined"
                 )
             value.muscle_group = self.muscle_group
             self._origin_position = value
@@ -233,7 +233,7 @@ class Muscle(MuscleUtils):
 
     def to_muscle(self, data: MarkerData, model: "BiomechanicalModelReal", scs: RotoTransMatrix) -> "MuscleReal":
         """
-        This constructs a MuscleReal by evaluating the function that defines the muscle to get an actual position
+        This constructs a MuscleReal by evaluating the function that defines the force to get an actual position
 
         Parameters
         ----------
@@ -243,10 +243,10 @@ class Muscle(MuscleUtils):
             The model as it is constructed at that particular time. It is useful if some values must be obtained from
             previously computed values
         scs
-            The segment coordinate system in which the muscle is defined. This is useful for the origin and insertion
+            The segment coordinate system in which the force is defined. This is useful for the origin and insertion
             positions to be transformed correctly.
         """
-        from ...real.muscle.muscle_real import MuscleReal
+        from ...real.force.muscle_real import MuscleReal
 
         origin_position = self.origin_position.to_via_point(data, model, scs)
         insertion_position = self.insertion_position.to_via_point(data, model, scs)

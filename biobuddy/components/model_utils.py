@@ -16,6 +16,7 @@ class ModelUtils:
         # Attributes that will be filled by BiomechanicalModelReal
         self.segments = None
         self.muscle_groups = None
+        self.ligaments = None
 
     @property
     def segment_names(self) -> list[str]:
@@ -85,6 +86,13 @@ class ModelUtils:
                     names.append(via_point.name)
         return names
 
+    @property
+    def ligament_names(self) -> list[str]:
+        """
+        Get the names of the ligaments in the model
+        """
+        return list(self.ligaments.keys())
+
     def has_parent_offset(self, segment_name: str) -> bool:
         """True if the segment segment_name has an offset parent."""
         return segment_name + "_parent_offset" in self.segment_names
@@ -138,6 +146,8 @@ class ModelUtils:
         chain = []
         this_segment = last_segment_name
         while this_segment != first_segment_name:
+            if this_segment == "base":
+                return []  # If we reached the base, it means that there is no chain between the two segments
             chain.append(this_segment)
             this_segment = self.segments[this_segment].parent_name
         chain.append(first_segment_name)
@@ -208,6 +218,10 @@ class ModelUtils:
             for muscle in muscle_group.muscles:
                 nb += len(muscle.via_points)
         return nb
+
+    @property
+    def nb_ligaments(self) -> int:
+        return len(self.ligaments)
 
     @property
     def nb_q(self) -> int:
@@ -330,6 +344,20 @@ class ModelUtils:
         for mg in self.muscle_groups:
             muscle_group_origins.append(mg.insertion_parent_name)
         return muscle_group_origins
+
+    @property
+    def ligament_origin_parent_names(self):
+        ligament_origins = []
+        for ligament in self.ligaments:
+            ligament_origins.append(ligament.origin_parent_name)
+        return ligament_origins
+
+    @property
+    def ligament_insertion_parent_names(self):
+        ligament_origins = []
+        for ligament in self.ligaments:
+            ligament_origins.append(ligament.insertion_parent_name)
+        return ligament_origins
 
     def remove_dofs(self, dofs_to_remove: list[str]):
         """

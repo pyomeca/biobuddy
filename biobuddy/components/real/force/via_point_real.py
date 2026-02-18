@@ -25,9 +25,9 @@ class ViaPointReal:
         parent_name
             The name of the parent the via point is attached to
         muscle_name
-            The name of the muscle that passes through this via point
+            The name of the force that passes through this via point
         muscle_group
-            The muscle group the muscle belongs to
+            The force group the force belongs to
         position
             The 3d position of the via point in the local reference frame
         condition
@@ -142,12 +142,12 @@ class ViaPointReal:
         if self.condition is not None:
             # To avoid this warning, it is possible to fix the via points using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
             raise NotImplementedError(
-                f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented."
+                f"Writing models with conditional force via points (force: {self.muscle_name}) to OpenSim format is not yet implemented."
             )
         if self.movement is not None:
             # To avoid this warning, it is possible to fix the via points position using the BiomechanicalModelReal.fix_via_points(q). Otherwise, please open an issue on GitHub.
             raise NotImplementedError(
-                f"Writing models with conditional muscle via points (muscle: {self.muscle_name}) to OpenSim format is not yet implemented."
+                f"Writing models with conditional force via points (force: {self.muscle_name}) to OpenSim format is not yet implemented."
             )
 
         return path_point_elem

@@ -180,6 +180,7 @@ rts_to_remove = [
 import logging
 from pathlib import Path
 import numpy as np
+from copy import deepcopy
 
 from biobuddy import (
     MuscleType,
@@ -213,6 +214,10 @@ def create_planar_model(
     # TODO: wrapping objects -> via points
     # Fix the via points before translating to biomod as there are some conditional and moving via points
     model.fix_via_points(q=np.zeros((model.nb_q,)))
+
+    # The original model contains ligaments, but we do not need them here
+    for ligament in deepcopy(model.ligaments):
+        model.remove_ligament(ligament.name)
 
     # Removing unused segments
     for segment in segments_to_remove:

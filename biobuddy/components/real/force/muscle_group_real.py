@@ -1,8 +1,8 @@
 from ....utils.named_list import NamedList
-from .muscle import Muscle
+from ..force.muscle_real import MuscleReal
 
 
-class MuscleGroup:
+class MuscleGroupReal:
     def __init__(
         self,
         name: str,
@@ -26,9 +26,9 @@ class MuscleGroup:
         self.name = name
         self.origin_parent_name = origin_parent_name
         self.insertion_parent_name = insertion_parent_name
-        self.muscles = NamedList[Muscle]()
+        self.muscles = NamedList[MuscleReal]()
 
-    def add_muscle(self, muscle: Muscle) -> None:
+    def add_muscle(self, muscle: MuscleReal) -> None:
         """
         Add a muscle to the model
 
@@ -87,3 +87,18 @@ class MuscleGroup:
     @property
     def muscle_names(self):
         return [m.name for m in self.muscles]
+
+    def to_biomod(self):
+        # Define the print function, so it automatically formats things in the file properly
+        out_string = f"musclegroup\t{self.name}\n"
+        out_string += f"\tOriginParent\t{self.origin_parent_name}\n"
+        out_string += f"\tInsertionParent\t{self.insertion_parent_name}\n"
+        out_string += "endmusclegroup\n"
+
+        out_string += "\n // ------ MUSCLES ------\n"
+        for muscle in self.muscles:
+            out_string += muscle.to_biomod()
+        return out_string
+
+    def to_urdf(self):
+        raise NotImplementedError("Muscle groups are not implemented yet for URDF export")

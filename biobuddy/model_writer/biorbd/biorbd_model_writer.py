@@ -42,6 +42,15 @@ class BiorbdModelWriter(AbstractModelWriter):
                 out_string += "\n"
             out_string += "\n\n\n"  # Give some space after muscle groups
 
+        if model.ligaments:
+            out_string += "// --------------------------------------------------------------\n"
+            out_string += "// LIGAMENTS\n"
+            out_string += "// --------------------------------------------------------------\n\n"
+            for ligament in model.ligaments:
+                out_string += ligament.to_biomod()
+                out_string += "\n"
+            out_string += "\n\n\n"  # Give some space after ligaments
+
         if model.warnings:
             out_string += "\n/*-------------- WARNINGS---------------\n"
             for warning in model.warnings:

@@ -25,6 +25,9 @@ from biobuddy import (
     ViaPoint,
     BiomechanicalModelReal,
 )
+from biobuddy.components.real.force.ligament_real import LigamentReal
+from biobuddy.components.ligament_utils import LigamentType
+from biobuddy.components.functions import SimmSpline
 from test_utils import MockC3dData, get_xml_str, read_xml_str
 
 
@@ -1068,6 +1071,416 @@ def test_via_point_real_to_osim():
         via_point.to_osim()
 
 
+# ------- LigamentReal ------- #
+def test_init_ligament_real_linear_spring():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Test initialization with LINEAR_SPRING type
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    assert ligament.name == "test_ligament"
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    assert ligament.origin_position == origin
+    assert ligament.insertion_position == insertion
+    assert ligament.origin_parent_name == "segment1"
+    assert ligament.insertion_parent_name == "segment2"
+    assert ligament.ligament_slack_length == 0.1
+    assert ligament.stiffness == 1000.0
+    assert ligament.damping == 10.0
+    assert ligament.force_length_function is None
+    assert ligament.pcsa is None
+
+    # Test that missing stiffness raises error
+    with pytest.raises(
+        ValueError,
+        match="The stiffness of the ligament must be provided for ligaments of type CONSTANT, LINEAR_SPRING, or SECOND_ORDER_SPRING.",
+    ):
+        LigamentReal(
+            name="test_ligament",
+            ligament_type=LigamentType.LINEAR_SPRING,
+            origin_position=origin,
+            insertion_position=insertion,
+            ligament_slack_length=0.1,
+        )
+
+
+def test_init_ligament_real_function():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a force-length function
+    x_points = np.array([0.0, 0.5, 1.0, 1.5])
+    y_points = np.array([0.0, 0.5, 1.0, 1.5])
+    force_length_func = SimmSpline(x_points, y_points)
+
+    # Test initialization with FUNCTION type
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.FUNCTION,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        force_length_function=force_length_func,
+        pcsa=1000.0,
+    )
+
+    assert ligament.name == "test_ligament"
+    assert ligament.ligament_type == LigamentType.FUNCTION
+    assert ligament.ligament_slack_length == 0.1
+    assert ligament.force_length_function == force_length_func
+    assert ligament.pcsa == 1000.0
+    assert ligament.stiffness is None
+    assert ligament.damping is None
+
+    # Test that missing force_length_function raises error
+    with pytest.raises(
+        ValueError,
+        match="The force-length function of the ligament must be provided for ligaments of type FUNCTION.",
+    ):
+        LigamentReal(
+            name="test_ligament",
+            ligament_type=LigamentType.FUNCTION,
+            origin_position=origin,
+            insertion_position=insertion,
+            ligament_slack_length=0.1,
+            pcsa=1000.0,
+        )
+
+    # Test that missing pcsa raises error
+    with pytest.raises(
+        ValueError,
+        match="The physiological cross-sectional area of the ligament must be provided for ligaments of type FUNCTION.",
+    ):
+        LigamentReal(
+            name="test_ligament",
+            ligament_type=LigamentType.FUNCTION,
+            origin_position=origin,
+            insertion_position=insertion,
+            ligament_slack_length=0.1,
+            force_length_function=force_length_func,
+        )
+
+
+def test_ligament_real_properties():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    # Test name property
+    assert ligament.name == "test_ligament"
+    ligament.name = "new_ligament_name"
+    assert ligament.name == "new_ligament_name"
+
+    # Test ligament_type property with enum
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    ligament.ligament_type = LigamentType.SECOND_ORDER_SPRING
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
+
+    # Test ligament_type property with string
+    ligament.ligament_type = "linearspring"
+    assert ligament.ligament_type == LigamentType.LINEAR_SPRING
+    ligament.ligament_type = "secondorderspring"
+    assert ligament.ligament_type == LigamentType.SECOND_ORDER_SPRING
+    ligament.ligament_type = "function"
+    assert ligament.ligament_type == LigamentType.FUNCTION
+
+    # Test origin_position property
+    new_origin = ViaPointReal(
+        name="new_origin", parent_name="segment3", position=np.array([[0.5], [0.0], [0.0], [1.0]])
+    )
+    ligament.origin_position = new_origin
+    assert ligament.origin_position == new_origin
+    assert ligament.origin_parent_name == "segment3"
+
+    # Test insertion_position property
+    new_insertion = ViaPointReal(
+        name="new_insertion", parent_name="segment4", position=np.array([[1.5], [0.0], [0.0], [1.0]])
+    )
+    ligament.insertion_position = new_insertion
+    assert ligament.insertion_position == new_insertion
+    assert ligament.insertion_parent_name == "segment4"
+
+    # Test stiffness property
+    ligament.stiffness = 2000.0
+    assert ligament.stiffness == 2000.0
+
+    # Test stiffness with numpy array
+    ligament.stiffness = np.array([3000.0])
+    assert ligament.stiffness == 3000.0
+
+    # Test ligament_slack_length property
+    ligament.ligament_slack_length = 0.2
+    assert ligament.ligament_slack_length == 0.2
+
+    # Test ligament_slack_length with numpy array
+    ligament.ligament_slack_length = np.array([0.3])
+    assert ligament.ligament_slack_length == 0.3
+
+    # Test negative ligament_slack_length raises error
+    with pytest.raises(ValueError, match="The ligament slack length of the force must be greater or equal to 0."):
+        ligament.ligament_slack_length = -0.1
+
+    # Test damping property
+    ligament.damping = 20.0
+    assert ligament.damping == 20.0
+
+    # Test damping with numpy array
+    ligament.damping = np.array([30.0])
+    assert ligament.damping == 30.0
+
+    # Test negative damping raises error
+    with pytest.raises(ValueError, match="The damping of the ligament must be greater or equal to 0."):
+        ligament.damping = -10.0
+
+    # Test pcsa property
+    ligament.pcsa = 1000.0
+    assert ligament.pcsa == 1000.0
+
+    # Test pcsa with numpy array
+    ligament.pcsa = np.array([2000.0])
+    assert ligament.pcsa == 2000.0
+
+    # Test zero or negative pcsa raises error
+    with pytest.raises(ValueError, match="The pcsa of the ligament must be greater than 0."):
+        ligament.pcsa = 0.0
+
+
+def test_ligament_real_approximate_ligament_function_to_linear():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a force-length function (linear for simplicity)
+    x_points = np.array([0.0, 0.5, 1.0, 1.5])
+    y_points = np.array([0.0, 0.5, 1.0, 1.5])
+    force_length_func = SimmSpline(x_points, y_points)
+
+    # Create a FUNCTION ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.FUNCTION,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        force_length_function=force_length_func,
+        pcsa=1000.0,
+        damping=10.0,
+    )
+
+    # Approximate to LINEAR_SPRING
+    approximated = ligament.approximate_ligament(
+        desired_ligament_type=LigamentType.LINEAR_SPRING, length_range=(0.1, 0.3), plot_approximation=False
+    )
+
+    assert approximated.ligament_type == LigamentType.LINEAR_SPRING
+    assert approximated.ligament_slack_length == 0.1
+    assert approximated.damping == 10.0
+    npt.assert_almost_equal(approximated.stiffness, 10000.0)
+    assert approximated.force_length_function is None
+    assert approximated.pcsa is None
+
+
+def test_ligament_real_approximate_ligament_linear_to_function():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a LINEAR_SPRING ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    # Approximate to FUNCTION
+    approximated = ligament.approximate_ligament(
+        desired_ligament_type=LigamentType.FUNCTION, length_range=(0.1, 0.3), plot_approximation=False
+    )
+
+    assert approximated.ligament_type == LigamentType.FUNCTION
+    assert approximated.ligament_slack_length == 0.1
+    assert approximated.damping == 10.0
+    assert approximated.pcsa == 1000  # Arbitrary value used in the code
+    assert approximated.stiffness is None
+
+    assert approximated.force_length_function is not None
+    assert isinstance(approximated.force_length_function, SimmSpline)
+    lengths_to_test = np.array([0.1, 0.2, 0.3, 0.4])
+    expected = 1000.0 * (lengths_to_test - 0.1)
+    npt.assert_almost_equal(approximated.force_length_function.evaluate((lengths_to_test - 0.1) / 0.1) * 1000, expected)
+
+
+def test_ligament_real_approximate_ligament_linear_to_second_order():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a LINEAR_SPRING ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    # Approximate to SECOND_ORDER_SPRING
+    approximated = ligament.approximate_ligament(
+        desired_ligament_type=LigamentType.SECOND_ORDER_SPRING, length_range=(0.1, 0.3), plot_approximation=False
+    )
+
+    assert approximated.ligament_type == LigamentType.SECOND_ORDER_SPRING
+    assert approximated.ligament_slack_length == 0.1
+    assert approximated.damping == 10.0
+    assert approximated.force_length_function is None
+    assert approximated.pcsa is None
+    npt.assert_almost_equal(approximated.stiffness, 999.9813449133459, decimal=6)
+
+
+def test_ligament_real_approximate_ligament_same_type():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a LINEAR_SPRING ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    # Approximate to same type (should return self)
+    approximated = ligament.approximate_ligament(
+        desired_ligament_type=LigamentType.LINEAR_SPRING, length_range=(0.1, 0.3), plot_approximation=False
+    )
+
+    assert approximated is ligament
+
+
+def test_ligament_real_to_biomod():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a LINEAR_SPRING ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    # Generate biomod string
+    biomod_str = ligament.to_biomod()
+
+    # Check the content
+    expected_str = "ligament\ttest_ligament\n\ttype\tlinearspring\n\torigin\tsegment1\n\tinsertion\tsegment2\n\toriginposition\t0.0\t0.0\t0.0\n\tinsertionposition\t1.0\t0.0\t0.0\n\tstiffness\t1000.0000\n\tligamentslacklength\t0.1000\n\tdamping\t10.0000\nendligament\n\n\n"
+    assert expected_str == biomod_str
+
+    # Test that FUNCTION type raises error
+    x_points = np.array([0.0, 0.5, 1.0, 1.5])
+    y_points = np.array([0.0, 0.5, 1.0, 1.5])
+    force_length_func = SimmSpline(x_points, y_points)
+
+    ligament_func = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.FUNCTION,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        force_length_function=force_length_func,
+        pcsa=1000.0,
+    )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="The to_biomod method is not implemented for ligaments of type FUNCTION.",
+    ):
+        ligament_func.to_biomod()
+
+
+def test_ligament_real_to_osim():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a force-length function
+    x_points = np.array([0.0, 0.5, 1.0, 1.5])
+    y_points = np.array([0.0, 0.5, 1.0, 1.5])
+    force_length_func = SimmSpline(x_points, y_points)
+
+    # Create a FUNCTION ligament
+    ligament = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.FUNCTION,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        force_length_function=force_length_func,
+        pcsa=1000.0,
+    )
+
+    # Generate xml
+    ligament_elem = ligament.to_osim()
+    osim_content = get_xml_str(ligament_elem)
+
+    # Check the content
+    expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<Ligament name="test_ligament">\n  <appliesForce>true</appliesForce>\n  <resting_length>0.10000000</resting_length>\n  <pcsa_force>0.10000000</pcsa_force>\n  <GeometryPath name="path">\n    <PathPointSet>\n      <objects>\n        <PathPoint name="test_ligament_origin">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="test_ligament_insertion">\n          <socket_parent_frame>bodyset/segment2</socket_parent_frame>\n          <location>1.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n      </objects>\n    </PathPointSet>\n  </GeometryPath>\n  <SimmSpline name="force_length_curve">\n    <x>0.00000000 0.50000000 1.00000000 1.50000000</x>\n    <y>0.00000000 0.50000000 1.00000000 1.50000000</y>\n  </SimmSpline>\n</Ligament>\n'
+    assert osim_content == expected_str
+
+    # Test that LINEAR_SPRING type raises error
+    ligament_linear = LigamentReal(
+        name="test_ligament",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=origin,
+        insertion_position=insertion,
+        ligament_slack_length=0.1,
+        stiffness=1000.0,
+        damping=10.0,
+    )
+
+    with pytest.raises(
+        NotImplementedError,
+        match="The to_osim method is not implemented for ligaments of types LigamentType.LINEAR_SPRING, LigamentType.SECOND_ORDER_SPRING.",
+    ):
+        ligament_linear.to_osim()
+
+
 # ------- MuscleReal ------- #
 def test_init_muscle_real():
     # Create origin and insertion via points
@@ -1152,6 +1565,82 @@ def test_init_muscle_real():
         )
 
 
+def test_muscle_real_property_setters_with_arrays():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+    )
+
+    # Test optimal_length with numpy array
+    muscle.optimal_length = np.array([0.15])
+    assert muscle.optimal_length == 0.15
+
+    # Test optimal_length with invalid array shape
+    with pytest.raises(ValueError, match="The optimal length must be a float."):
+        muscle.optimal_length = np.array([0.15, 0.2])
+
+    # Test maximal_force with numpy array
+    muscle.maximal_force = np.array([150.0])
+    assert muscle.maximal_force == 150.0
+
+    # Test maximal_force with invalid array shape
+    with pytest.raises(ValueError, match="The maximal force must be a float."):
+        muscle.maximal_force = np.array([150.0, 200.0])
+
+    # Test tendon_slack_length with numpy array
+    muscle.tendon_slack_length = np.array([0.25])
+    assert muscle.tendon_slack_length == 0.25
+
+    # Test tendon_slack_length with invalid array shape
+    with pytest.raises(ValueError, match="The tendon slack length must be a float."):
+        muscle.tendon_slack_length = np.array([0.25, 0.3])
+
+    # Test tendon_slack_length with invalid value
+    with pytest.raises(ValueError, match="The tendon slack length of the force must be greater than 0."):
+        muscle.tendon_slack_length = 0.0
+
+    # Test pennation_angle with numpy array
+    muscle.pennation_angle = np.array([0.12])
+    assert muscle.pennation_angle == 0.12
+
+    # Test pennation_angle with invalid array shape
+    with pytest.raises(ValueError, match="The optimal length must be a float."):
+        muscle.pennation_angle = np.array([0.12, 0.15])
+
+    # Test maximal_velocity with numpy array
+    muscle.maximal_velocity = np.array([12.0])
+    assert muscle.maximal_velocity == 12.0
+
+    # Test maximal_velocity with invalid array shape
+    with pytest.raises(ValueError, match="The maximal velocity must be a float."):
+        muscle.maximal_velocity = np.array([12.0, 15.0])
+
+    # Test maximal_velocity with invalid value
+    with pytest.raises(ValueError, match="The maximal contraction velocity of the force must be greater than 0."):
+        muscle.maximal_velocity = 0.0
+
+    # Test maximal_excitation with numpy array
+    muscle.maximal_excitation = np.array([0.9])
+    assert muscle.maximal_excitation == 0.9
+
+    # Test maximal_excitation with invalid array shape
+    with pytest.raises(ValueError, match="The maximal excitation must be a float."):
+        muscle.maximal_excitation = np.array([0.9, 1.0])
+
+    # Test maximal_excitation with invalid value
+    with pytest.raises(ValueError, match="The maximal excitation of the force must be greater than 0."):
+        muscle.maximal_excitation = 0.0
+
+
 def test_muscle_real_add_remove_via_point():
     # Create origin and insertion via points
     origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -1197,6 +1686,16 @@ def test_muscle_real_add_remove_via_point():
     )
     with pytest.raises(ValueError, match="The via points's muscle .* should be the same as the muscle's name"):
         muscle.add_via_point(via_point3)
+
+    # Create a via point with non-matching muscle_group
+    via_point4 = ViaPointReal(
+        name="via_point4",
+        parent_name="segment1",
+        muscle_group="other_group",
+        position=np.array([[0.8], [0.0], [0.0], [1.0]]),
+    )
+    with pytest.raises(ValueError, match="The via points's muscle group .* should be the same as the muscle's name"):
+        muscle.add_via_point(via_point4)
 
     # Remove a via point
     muscle.remove_via_point("via_point")
@@ -1250,6 +1749,36 @@ def test_muscle_real_to_biomod():
     assert "viapoint\tvia_point" in biomod_str
 
 
+def test_muscle_real_to_biomod_with_missing_optional_params():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle with only required parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+        maximal_force=100.0,
+    )
+
+    # Generate biomod string
+    biomod_str = muscle.to_biomod()
+
+    # Check that optional parameters are not included
+    assert "\toptimallength" not in biomod_str
+    assert "\ttendonslacklength" not in biomod_str
+    assert "\tpennationangle" not in biomod_str
+    assert "\tmaxvelocity" not in biomod_str
+    assert "\tmaxexcitation" not in biomod_str
+
+    # But required parameters should be there
+    assert "\tmaximalforce\t100.0000" in biomod_str
+
+
 def test_muscle_real_to_osim():
     # Create origin and insertion via points
     origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -1281,6 +1810,33 @@ def test_muscle_real_to_osim():
     osim_content = get_xml_str(muscle_elem)
     expected_str = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>\n<DeGrooteFregly2016Muscle name="test_muscle">\n  <max_isometric_force>100.00000000</max_isometric_force>\n  <optimal_fiber_length>0.10000000</optimal_fiber_length>\n  <tendon_slack_length>0.20000000</tendon_slack_length>\n  <pennation_angle_at_optimal>0.10000000</pennation_angle_at_optimal>\n  <max_contraction_velocity>10.00000000</max_contraction_velocity>\n  <GeometryPath name="path">\n    <PathPointSet>\n      <objects>\n        <PathPoint name="test_muscle_origin">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="via_point">\n          <socket_parent_frame>bodyset/segment1</socket_parent_frame>\n          <location>0.50000000 0.00000000 0.00000000</location>\n        </PathPoint>\n        <PathPoint name="test_muscle_insertion">\n          <socket_parent_frame>bodyset/segment2</socket_parent_frame>\n          <location>1.00000000 0.00000000 0.00000000</location>\n        </PathPoint>\n      </objects>\n    </PathPointSet>\n  </GeometryPath>\n</DeGrooteFregly2016Muscle>\n'
     assert osim_content == expected_str
+
+
+def test_muscle_real_to_osim_with_missing_optional_params():
+    # Create origin and insertion via points
+    origin = ViaPointReal(name="origin", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
+    insertion = ViaPointReal(name="insertion", parent_name="segment2", position=np.array([[1.0], [0.0], [0.0], [1.0]]))
+
+    # Create a muscle with only required parameters
+    muscle = MuscleReal(
+        name="test_muscle",
+        muscle_type=MuscleType.HILL,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group="group1",
+        origin_position=origin,
+        insertion_position=insertion,
+    )
+
+    # Generate xml
+    muscle_elem = muscle.to_osim()
+    osim_content = get_xml_str(muscle_elem)
+
+    # Check that default values are used for missing parameters
+    assert "<max_isometric_force>1000.0</max_isometric_force>" in osim_content
+    assert "<optimal_fiber_length>0.1</optimal_fiber_length>" in osim_content
+    assert "<tendon_slack_length>0.2</tendon_slack_length>" in osim_content
+    assert "<pennation_angle_at_optimal>0</pennation_angle_at_optimal>" in osim_content
+    assert "<max_contraction_velocity>10</max_contraction_velocity>" in osim_content
 
 
 # ------- MuscleGroupReal ------- #

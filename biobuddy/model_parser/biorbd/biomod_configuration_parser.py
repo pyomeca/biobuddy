@@ -2,9 +2,9 @@ from time import strftime
 from typing import TYPE_CHECKING
 
 from .utils import tokenize_biomod, read_str, read_str_list, read_float
-from ...components.real.muscle.muscle_group_real import MuscleGroupReal
-from ...components.real.muscle.muscle_real import MuscleReal
-from ...components.real.muscle.via_point_real import ViaPointReal
+from ...components.real.force.muscle_group_real import MuscleGroupReal
+from ...components.real.force.muscle_real import MuscleReal
+from ...components.real.force.via_point_real import ViaPointReal
 from ...components.real.rigidbody.marker_weight import MarkerWeight
 from ...components.real.rigidbody.segment_scaling import SegmentScaling, SegmentWiseScaling, AxisWiseScaling
 from ...components.real.rigidbody.segment_real import SegmentReal, InertialMeasurementUnitReal, MarkerReal

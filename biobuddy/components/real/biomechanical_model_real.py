@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from .model_dynamics import ModelDynamics
+from ..ligament_utils import LigamentType
 from ..model_utils import ModelUtils
 from ..muscle_utils import MuscleType, MuscleStateType
 from ...utils.aliases import Point, point_to_array
@@ -11,14 +12,15 @@ from ...utils.named_list import NamedList
 
 if TYPE_CHECKING:
     from .rigidbody.segment_real import SegmentReal
-    from .muscle.muscle_group_real import MuscleGroupReal
+    from .force.muscle_group_real import MuscleGroupReal
 
 
 class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def __init__(self, gravity: Point = None):
 
         # Imported here to prevent from circular imports
-        from .muscle.muscle_group_real import MuscleGroupReal
+        from .force.ligament_real import LigamentReal
+        from .force.muscle_group_real import MuscleGroupReal
         from .rigidbody.segment_real import SegmentReal
 
         ModelDynamics.__init__(self)
@@ -30,6 +32,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.gravity = gravity
         self.segments = NamedList[SegmentReal]()
         self.muscle_groups = NamedList[MuscleGroupReal]()
+        self.ligaments = NamedList[LigamentReal]()
         self.warnings = ""
 
         # Meta-data
@@ -101,6 +104,44 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             The name of the muscle group to remove
         """
         self.muscle_groups._remove(muscle_group_name)
+
+    def add_ligament(self, ligament: "LigamentReal") -> None:
+        """
+        Add a ligament to the model
+
+        Parameters
+        ----------
+        ligament
+            The ligament to add
+        """
+        if (
+            ligament.origin_position.parent_name not in self.segment_names
+            and ligament.origin_position.parent_name != "base"
+        ):
+            raise ValueError(
+                f"The origin segment of a ligament must be declared before the ligament."
+                f"Please declare the segment {ligament.origin_position.parent_name} before declaring the ligament {ligament.name}."
+            )
+        if (
+            ligament.insertion_position.parent_name not in self.segment_names
+            and ligament.insertion_position.parent_name != "base"
+        ):
+            raise ValueError(
+                f"The insertion segment of a ligament must be declared before the ligament."
+                f"Please declare the segment {ligament.insertion_parent_name} before declaring the ligament {ligament.name}."
+            )
+        self.ligaments._append(ligament)
+
+    def remove_ligament(self, ligament_name: str) -> None:
+        """
+        Remove a ligament from the model
+
+        Parameters
+        ----------
+        ligament_name
+            The name of the ligament to remove
+        """
+        self.ligaments._remove(ligament_name)
 
     @property
     def gravity(self) -> np.ndarray:
@@ -204,6 +245,40 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                             f"A via point can either have a movement or a condition, but not both at the same time, {via_point.name} has both."
                         )
 
+    def validate_muscle_groups(self):
+        pairs = {}
+        for muscle_group in self.muscle_groups:
+            origin_parent = muscle_group.origin_parent_name
+            insertion_parent = muscle_group.insertion_parent_name
+            if (origin_parent, insertion_parent) not in pairs.values() and (
+                insertion_parent,
+                origin_parent,
+            ) not in pairs.values():
+                pairs[muscle_group.name] = (origin_parent, insertion_parent)
+            elif (origin_parent, insertion_parent) in pairs.values():
+                raise RuntimeError(
+                    f"The muscle group {muscle_group.name} has the same origin and insertion parent as another muscle group, which is not permitted. "
+                    f"Please make sure that each muscle group has a unique pair of origin and insertion parent segments."
+                )
+            else:
+                # There exists another muscle group with the insertion and origin inverted.
+                # So we merge the two muscle groups together
+                good_muscle_group_idx = list(pairs.values()).index((insertion_parent, origin_parent))
+                good_muscle_group_name = list(pairs.keys())[good_muscle_group_idx]
+                for muscle in muscle_group.muscles:
+                    muscle_to_add = deepcopy(muscle)
+                    muscle_to_add.origin_position = muscle.insertion_position
+                    muscle_to_add.insertion_position = muscle.origin_position
+                    muscle_to_add.muscle_group = good_muscle_group_name
+                    # Transfer the muscles from on muscle group to the other
+                    self.muscle_groups[good_muscle_group_name].add_muscle(muscle_to_add)
+
+                    for via_point in muscle_to_add.via_points:
+                        via_point.muscle_group = good_muscle_group_name
+
+                # Remove the old muscle group
+                self.remove_muscle_group(muscle_group.name)
+
     def validate_kinematic_chain(self):
         """
         Explore the kinematic chain by going from child to parent to make sure that there are no closed-loops in the kinematic chain.
@@ -234,6 +309,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.segments_rt_to_local()
         self.validate_dofs()
         self.validate_parents()
+        self.validate_muscle_groups()
         self.validate_moving_via_points()
         self.validate_kinematic_chain()
 
@@ -327,6 +403,19 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         dof_indices = [self.dof_index(name) for name in via_point.movement.dof_names]
                         muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
                         muscle.via_points[via_point.name].movement = None
+
+    def approximate_ligaments(self, desired_ligament_type: LigamentType, plot_approximation: bool = True) -> None:
+        old_model = deepcopy(self)
+        new_model = deepcopy(self)
+        ligament_length_ranges = self.get_ligament_length_ranges()
+        for ligament in old_model.ligaments:
+            new_ligament = ligament.approximate_ligament(
+                desired_ligament_type,
+                ligament_length_ranges[ligament.name],
+                plot_approximation,
+            )
+            new_model.ligaments[new_ligament.name] = new_ligament
+        self.ligaments = new_model.ligaments
 
     def from_biomod(
         self,
