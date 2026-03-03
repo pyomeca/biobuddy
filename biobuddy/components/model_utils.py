@@ -599,7 +599,7 @@ class ModelUtils:
                 origin = mg.origin_parent_name
                 insertion = mg.insertion_parent_name
 
-                label = f"{mg.name}\\n({origin} → {insertion})"
+                label = f"{mg.name}\\n({origin} -> {insertion})"
                 f.write(f'  "{mg.name}" [shape=parallelogram, style=filled, fillcolor=lightblue, label="{label}"];\n')
                 # origin ---> insertion
                 if origin:
@@ -660,7 +660,7 @@ class ModelUtils:
                     keys.append("key_marker")
 
                 f.write(
-                    '\n    key_muscle_groups   [label="Muscle group\\n(origin → insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];'
+                    '\n    key_muscle_groups   [label="Muscle group\\n(origin -> insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];'
                 )
                 keys.append("key_muscle_groups")
                 nb_column = len(keys) - 1

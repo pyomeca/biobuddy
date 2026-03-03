@@ -42,7 +42,7 @@ digraph biomech {
   "r_ulna_radius_hand" -> "rwra";
 
   // Muscle groups
-  "base_to_r_ulna_radius_hand" [shape=parallelogram, style=filled, fillcolor=lightblue, label="base_to_r_ulna_radius_hand\n(base → r_ulna_radius_hand)"];
+  "base_to_r_ulna_radius_hand" [shape=parallelogram, style=filled, fillcolor=lightblue, label="base_to_r_ulna_radius_hand\n(base -> r_ulna_radius_hand)"];
   "base" -> "base_to_r_ulna_radius_hand" [label="origin"];
   "base_to_r_ulna_radius_hand" -> "r_ulna_radius_hand" [label="insertion"];
 
@@ -87,7 +87,7 @@ digraph biomech {
     key_segment_dof   [label="DOF segment \n(DOF T: (x,y,z) | R: (x,y,z))", shape=box, style="filled,diagonals", fillcolor=lightyellow];
     key_segment_ghost [label="Ghost segment", shape=box, style=rounded]
     key_marker    [label="Marker", shape=octagon, style=filled, fillcolor=lightgreen];
-    key_muscle_groups   [label="Muscle group\n(origin → insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];
+    key_muscle_groups   [label="Muscle group\n(origin -> insertion)", shape=parallelogram, style=filled, fillcolor=lightblue];
     key_muscles   [label="Muscle", shape=diamond, style=filled, fillcolor=lightcoral];
     key_via_point   [label="Via point", shape=ellipse, style=filled, fillcolor=orange]; 
     { rank=same; key_segment key_segment_dof key_segment_ghost key_marker }
