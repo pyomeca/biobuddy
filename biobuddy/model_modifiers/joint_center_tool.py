@@ -373,7 +373,7 @@ class RigidSegmentIdentification(ABC):
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
         temporary_model_path = current_path + "/temporary_rt.bioMod"
-        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        mesh_relative_path = "Geometry_cleaned"
         if os.path.exists(current_path + "/" + mesh_relative_path):
             joint_model.change_mesh_directories(mesh_relative_path)
             joint_model.to_biomod(temporary_model_path)
@@ -1113,9 +1113,7 @@ class JointCenterTool:
             # get the filename so that we can point to the Geometry_cleaned forler
             mesh_file = None
             if self.original_model.segments[segment_name].mesh_file is not None:
-                mesh_file = self.original_model.segments[segment_name].mesh_file
-                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
-                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
+                mesh_file = deepcopy(self.original_model.segments[segment_name].mesh_file)
 
             if segment_name == task.parent_name:
                 # Add 6DoFs to the parent segment
@@ -1140,7 +1138,7 @@ class JointCenterTool:
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
         temporary_model_path = current_path + "/temporary_rt.bioMod"
-        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        mesh_relative_path = "Geometry_cleaned"
         if os.path.exists(current_path + "/" + mesh_relative_path):
             joint_model.change_mesh_directories(mesh_relative_path)
             joint_model.to_biomod(temporary_model_path)
