@@ -640,7 +640,7 @@ class ScaleTool:
 
             current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
             temporary_model_path = current_path + "/temporary.bioMod"
-            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            mesh_relative_path = "Geometry_cleaned"
             if os.path.exists(current_path + "/" + mesh_relative_path):
                 model_to_use.change_mesh_directories(mesh_relative_path)
                 model_to_use.to_biomod(temporary_model_path)
