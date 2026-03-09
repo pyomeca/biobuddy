@@ -816,7 +816,7 @@ class Sara(RigidSegmentIdentification):
     def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
-        original_axis_global: np.ndarray,
+        original_axis_global: np.ndarray | None = None,
         recursive_outlier_removal: bool = True,
     ) -> Tuple[
         np.ndarray,
@@ -838,7 +838,7 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
-        original_axis_global: np.ndarray
+        original_axis_global: np.ndarray | None
             The original rotation axis direction. This axis is used to make sure the new axis is in a similar direction.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
@@ -906,7 +906,7 @@ class Sara(RigidSegmentIdentification):
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
-        if np.dot(aor_mean_global, original_axis_global) < 0:
+        if original_axis_global is not None and np.dot(aor_mean_global, original_axis_global) < 0:
             # The axis is in the wrong direction
             aor_mean_global *= -1
             aor_parent_local *= -1

@@ -109,7 +109,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
-            expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -184,9 +184,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
             np.array(
                 [
-                    [0.99777494, 0.06547161, -0.01259532],
-                    [-0.0664371, 0.99220326, -0.1054457],
-                    [0.00559341, 0.10604788, 0.99434529],
+                    [-0.99777,  0.06547,  0.01259],
+                    [0.06644,  0.9922 ,  0.10545],
+                    [-0.00559,  0.10605, -0.99435],
                 ]
             ),
             decimal=5,
@@ -408,7 +408,7 @@ def test_score_and_sara_with_ghost_segments():
             child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
-            expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
