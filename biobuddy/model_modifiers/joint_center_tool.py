@@ -11,6 +11,7 @@ from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.marker_weight import MarkerWeight
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
 from ..utils.marker_data import MarkerData
@@ -791,6 +792,7 @@ class Sara(RigidSegmentIdentification):
         joint_center_markers: list[str],
         distal_markers: list[str],
         is_longitudinal_axis_from_jcs_to_distal_markers: bool,
+        expected_rotation_axis_orientation: Axis,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
@@ -808,11 +810,13 @@ class Sara(RigidSegmentIdentification):
         self.joint_center_markers = joint_center_markers
         self.distal_markers = distal_markers
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
+        self.expected_rotation_axis_orientation = expected_rotation_axis_orientation
 
     @staticmethod
     def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
+        original_axis_global: np.ndarray,
         recursive_outlier_removal: bool = True,
     ) -> Tuple[
         np.ndarray,
@@ -834,6 +838,8 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
+        original_axis_global: np.ndarray
+            The original rotation axis direction. This axis is used to make sure the new axis is in a similar direction.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
@@ -892,11 +898,17 @@ class Sara(RigidSegmentIdentification):
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-                return Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+                return Sara.perform_algorithm(rt_parent, rt_child, original_axis_global, recursive_outlier_removal=False)
 
         # Final output
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
+
+        if np.dot(aor_mean_global, original_axis_global) < 0:
+            # The axis is in the wrong direction
+            aor_mean_global *= -1
+            aor_parent_local *= -1
+            aor_child_local *= -1
 
         _logger.info(
             f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
@@ -936,6 +948,24 @@ class Sara(RigidSegmentIdentification):
         longitudinal_axis_local[3] = 1
 
         return joint_center_local, longitudinal_axis_local
+
+    def _original_rotation_axis(self, original_model: BiomechanicalModelReal) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Estimate the original axis of rotation to make sure that the axis is in the right direction.
+        """
+        segment_rt_in_global = original_model.forward_kinematics()
+        parent_jcs_in_global = segment_rt_in_global[self.parent_name][0]
+
+        start_marker_index = original_model.markers_indices([self.expected_rotation_axis_orientation.start.name])
+        end_marker_index = original_model.markers_indices([self.expected_rotation_axis_orientation.end.name])
+        start_marker_global = original_model.markers_in_global()[:, start_marker_index, 0]
+        end_marker_global = original_model.markers_in_global()[:, end_marker_index, 0]
+        global_axis = end_marker_global - start_marker_global
+        start_marker_local = parent_jcs_in_global.inverse @ start_marker_global
+        end_marker_local = parent_jcs_in_global.inverse @ end_marker_global
+        local_axis = end_marker_local - start_marker_local
+
+        return global_axis[:3], local_axis[:3]
 
     def get_rotation_index(self, original_model):
         if self.child_name + "_rotation_transform" in original_model.segments.keys():
@@ -1026,8 +1056,9 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
+        original_axis_global, _ = self._original_rotation_axis(new_model)
         aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
-            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+            rt_parent_functional, rt_child_functional, original_axis_global, recursive_outlier_removal=True
         )
 
         # Extract the joint coordinate system
