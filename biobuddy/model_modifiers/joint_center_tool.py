@@ -898,7 +898,9 @@ class Sara(RigidSegmentIdentification):
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-                return Sara.perform_algorithm(rt_parent, rt_child, original_axis_global, recursive_outlier_removal=False)
+                return Sara.perform_algorithm(
+                    rt_parent, rt_child, original_axis_global, recursive_outlier_removal=False
+                )
 
         # Final output
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))

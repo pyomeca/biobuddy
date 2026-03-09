@@ -903,7 +903,7 @@ def test_original_rotation_axis_axis():
         original_axis_global.reshape(
             3,
         ),
-        np.array([0.01857409, -0.09155144,  0.01915594]),
+        np.array([0.01857409, -0.09155144, 0.01915594]),
         decimal=6,
     )
     npt.assert_almost_equal(
@@ -920,17 +920,16 @@ def test_original_rotation_axis_axis():
     rt_tibia = score_model.segments["tibia_r"].segment_coordinate_system.scs
     npt.assert_almost_equal(
         rt_tibia.rotation_matrix,
-        np.array([[ 0.99778346,  0.0657014 , -0.01055861],
-               [-0.06648268,  0.99106219, -0.11565378],
-               [ 0.00286562,  0.1160994 ,  0.99323347]]),
-        decimal=4
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
     )
-    npt.assert_almost_equal(
-        rt_tibia.translation,
-        np.array([0.00498373, -0.37616619, -0.0030206]),
-        decimal=4
-    )
-
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
 
     # Test the other direction
     sara = Sara(
@@ -951,7 +950,7 @@ def test_original_rotation_axis_axis():
         original_axis_global.reshape(
             3,
         ),
-        np.array([-0.01857409,  0.09155144, -0.01915594]),
+        np.array([-0.01857409, 0.09155144, -0.01915594]),
         decimal=6,
     )
     npt.assert_almost_equal(
@@ -968,22 +967,23 @@ def test_original_rotation_axis_axis():
     rt_tibia_reverse = score_model.segments["tibia_r"].segment_coordinate_system.scs
     npt.assert_almost_equal(
         rt_tibia.rotation_matrix,
-        np.array([[ 0.99778346,  0.0657014 , -0.01055861],
-               [-0.06648268,  0.99106219, -0.11565378],
-               [ 0.00286562,  0.1160994 ,  0.99323347]]),
-        decimal=4
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
     )
-    npt.assert_almost_equal(
-        rt_tibia.translation,
-        np.array([0.00498373, -0.37616619, -0.0030206]),
-        decimal=4
-    )
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
     # Make sure the axis are in opposite direction
     npt.assert_almost_equal(
         rt_tibia_reverse.rotation_matrix @ np.array([0, 0, 1]),
         -(rt_tibia.rotation_matrix @ np.array([0, 0, 1])),
         decimal=6,
     )
+
 
 # Test Joint Center Tool
 def test_add():
