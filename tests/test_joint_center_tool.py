@@ -1,7 +1,7 @@
 import os
 
 from biobuddy.utils.named_list import NamedList
-from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations
+from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations, Axis
 from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification
 import numpy as np
 import numpy.testing as npt
@@ -109,6 +109,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -183,9 +184,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
             np.array(
                 [
-                    [0.99777494, 0.06547161, -0.01259532],
-                    [-0.0664371, 0.99220326, -0.1054457],
-                    [0.00559341, 0.10604788, 0.99434529],
+                    [-0.99777, 0.06547, 0.01259],
+                    [0.06644, 0.9922, 0.10545],
+                    [-0.00559, 0.10605, -0.99435],
                 ]
             ),
             decimal=5,
@@ -407,6 +408,7 @@ def test_score_and_sara_with_ghost_segments():
             child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
@@ -792,6 +794,7 @@ def test_longitudinal_axis():
         joint_center_markers=["RLFE", "RMFE"],
         distal_markers=["RLM", "RSPH"],
         is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
         initialize_whole_trial_reconstruction=False,
         animate_rt=False,
     )
@@ -844,6 +847,142 @@ def test_longitudinal_axis():
         match="The Sara algorithm is meant to be used with a one DoF joint, you have defined rotations Rotations.XYZ for segment tibia_r.",
     ):
         sara.get_rotation_index(scaled_model)
+
+
+def test_original_rotation_axis_axis():
+
+    np.random.seed(42)
+
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    child_name = "tibia_r"
+    parent_name = "femur_r"
+    scaled_model = BiomechanicalModelReal().from_biomod(
+        filepath=leg_model_filepath,
+    )
+
+    marker_weights = NamedList()
+    marker_weights.append(MarkerWeight("RASIS", 1.0))
+    marker_weights.append(MarkerWeight("LASIS", 1.0))
+    marker_weights.append(MarkerWeight("LPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RLFE", 1.0))
+    marker_weights.append(MarkerWeight("RMFE", 1.0))
+    marker_weights.append(MarkerWeight("RGT", 0.1))
+    marker_weights.append(MarkerWeight("RTHI1", 5.0))
+    marker_weights.append(MarkerWeight("RTHI2", 5.0))
+    marker_weights.append(MarkerWeight("RTHI3", 5.0))
+    marker_weights.append(MarkerWeight("RATT", 0.5))
+    marker_weights.append(MarkerWeight("RLM", 1.0))
+    marker_weights.append(MarkerWeight("RSPH", 1.0))
+    marker_weights.append(MarkerWeight("RLEG1", 5.0))
+    marker_weights.append(MarkerWeight("RLEG2", 5.0))
+    marker_weights.append(MarkerWeight("RLEG3", 5.0))
+
+    # Test the longitudinal axis calculation
+    sara = Sara(
+        functional_trial=knee_c3d,
+        parent_name=parent_name,
+        child_name=child_name,
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
+        initialize_whole_trial_reconstruction=False,
+        animate_rt=False,
+    )
+
+    original_axis_global, original_axis_local = sara._original_rotation_axis(scaled_model)
+    npt.assert_almost_equal(
+        original_axis_global.reshape(
+            3,
+        ),
+        np.array([0.01857409, -0.09155144, 0.01915594]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        original_axis_local.reshape(
+            3,
+        ),
+        np.array([0.01996359, 0.00347809, 0.09318246]),
+        decimal=6,
+    )
+
+    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
+    joint_center_tool.add(sara)
+    score_model = joint_center_tool.replace_joint_centers(marker_weights)
+    rt_tibia = score_model.segments["tibia_r"].segment_coordinate_system.scs
+    npt.assert_almost_equal(
+        rt_tibia.rotation_matrix,
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
+    )
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
+
+    # Test the other direction
+    sara = Sara(
+        functional_trial=knee_c3d,
+        parent_name=parent_name,
+        child_name=child_name,
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
+        initialize_whole_trial_reconstruction=False,
+        animate_rt=False,
+    )
+    original_axis_global, original_axis_local = sara._original_rotation_axis(scaled_model)
+    npt.assert_almost_equal(
+        original_axis_global.reshape(
+            3,
+        ),
+        np.array([-0.01857409, 0.09155144, -0.01915594]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        original_axis_local.reshape(
+            3,
+        ),
+        np.array([-0.01996359, -0.00347809, -0.09318246]),
+        decimal=6,
+    )
+
+    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
+    joint_center_tool.add(sara)
+    score_model = joint_center_tool.replace_joint_centers(marker_weights)
+    rt_tibia_reverse = score_model.segments["tibia_r"].segment_coordinate_system.scs
+    npt.assert_almost_equal(
+        rt_tibia.rotation_matrix,
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
+    )
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
+    # Make sure the axis are in opposite direction
+    npt.assert_almost_equal(
+        rt_tibia_reverse.rotation_matrix @ np.array([0, 0, 1]),
+        -(rt_tibia.rotation_matrix @ np.array([0, 0, 1])),
+        decimal=6,
+    )
 
 
 # Test Joint Center Tool
