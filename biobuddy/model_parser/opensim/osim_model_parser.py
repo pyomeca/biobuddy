@@ -623,7 +623,7 @@ class OsimModelParser(AbstractModelParser):
     def get_scs_from_offset(rt_in_matrix: bool, frame_offset: RotoTransMatrix):
         if rt_in_matrix:
             frame_offset = frame_offset if frame_offset else RotoTransMatrix()
-            segment_coordinate_system = SegmentCoordinateSystemReal.from_closest_rt_matrix(
+            segment_coordinate_system = SegmentCoordinateSystemReal.from_rt_matrix(
                 rt_matrix=get_closest_rt_matrix(frame_offset.rt_matrix), is_scs_local=True
             )
         else:
