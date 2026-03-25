@@ -13,7 +13,6 @@ from biobuddy.utils.linear_algebra import (
     get_vector_from_sequence,
     mean_homogenous_matrix,
     mean_unit_vector,
-    to_euler,
     transpose_homogenous_matrix,
     norm2,
     unit_vector,
@@ -201,19 +200,15 @@ def test_to_euler():
     )
 
     # Extract Euler angles
-    extracted_angles = to_euler(rt, "xyz")
+    extracted_angles = rt_matrix.rotation_matrix.euler_angles("xyz")
 
     # Check that we get back the original angles (within tolerance)
     npt.assert_almost_equal(extracted_angles, angles, decimal=5)
 
     # Test with identity matrix
-    identity_rt = np.eye(4)
-    zero_angles = to_euler(identity_rt, "xyz")
+    identity_rt = RotoTransMatrix()
+    zero_angles = identity_rt.rotation_matrix.euler_angles("xyz")
     npt.assert_almost_equal(zero_angles, np.array([0, 0, 0]), decimal=10)
-
-    # Test error condition
-    with pytest.raises(NotImplementedError, match="This angle_sequence is not implemented"):
-        to_euler(np.eye(4), "zyx")
 
 
 def test_norm2():
@@ -588,7 +583,7 @@ def test_rototrans_matrix_time_series():
     # Check that we can access individual frames
     for i in range(n_frames):
         rt_frame = rt_series[i]
-        npt.assert_almost_equal(rt_frame.rotation_matrix, rotation_matrices[:, :, i])
+        npt.assert_almost_equal(rt_frame.rotation_matrix.rotation_matrix, rotation_matrices[:, :, i])
         npt.assert_almost_equal(rt_frame.translation, translations[:, i])
 
     # Test initialization from rt matrices
@@ -667,7 +662,7 @@ def test_rt():
             rot_biorbd = rotation_matrix_biorbd.to_array()
 
             npt.assert_almost_equal(
-                rot_biobuddy,
+                rot_biobuddy.rotation_matrix,
                 rot_biorbd,
             )
             npt.assert_almost_equal(translations, rt_biobuddy.translation)
@@ -683,7 +678,7 @@ def test_rt():
                 )
             else:
                 with pytest.raises(NotImplementedError, match="This angle_sequence is not implemented yet"):
-                    angles_biobuddy = rt_biobuddy.euler_angles(angle_sequence=angle_sequence.value)
+                    angles_biobuddy = rt_biobuddy.rotation_matrix.euler_angles(angle_sequence=angle_sequence.value)
 
 
 def test_negative_determinant_matrices():
@@ -945,7 +940,7 @@ def test_roto_trans_matrix():
     # Test rotation matrix setter
     new_rotation = rot_x_matrix(np.pi / 4)
     rt_obj2.rotation_matrix = new_rotation
-    npt.assert_almost_equal(rt_obj2.rotation_matrix, new_rotation)
+    npt.assert_almost_equal(rt_obj2.rotation_matrix.rotation_matrix, new_rotation)
 
     # Test the rt_matrix
     rt_expected = np.array(

@@ -1369,7 +1369,7 @@ def test_rigidify():
     )
 
     # Check the rotation
-    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - expected_euler) < 0.02)
+    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().rotation_matrix.euler_angles("xyz") - expected_euler) < 0.02)
 
 
 def test_mean_markers():

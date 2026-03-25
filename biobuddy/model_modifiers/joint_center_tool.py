@@ -66,7 +66,7 @@ class JointCoordinateModifier:
         inertia_parameters = self.original_model.segments[segment_name].inertia_parameters
         if inertia_parameters is not None:
             inertia = inertia_parameters.inertia[:3, :3]
-            rotation_transform = new_rt_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            rotation_transform = new_rt_in_global.inverse.rotation_matrix.rotation_matrix @ original_child_jcs_in_global.rotation_matrix.rotation_matrix
             new_inertia = rotation_transform @ inertia @ rotation_transform.T
             self.new_model.segments[segment_name].inertia_parameters.inertia = new_inertia
 
@@ -129,7 +129,7 @@ class JointCoordinateModifier:
                     new_rt = rotation_translation_transform @ mesh_rt
 
                     # Update mesh file's local rotation and translation
-                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt.rotation_matrix)
+                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = new_rt.rotation_matrix.euler_angles("xyz")
                     self.new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
 
         # Markers
@@ -350,9 +350,9 @@ class RigidSegmentIdentification(ABC):
 
         for i_frame in range(nb_frames):
             parent_trans[:, i_frame] = rt_parent[i_frame].translation
-            parent_rot[:, i_frame] = rt_parent[i_frame].euler_angles("xyz")
+            parent_rot[:, i_frame] = rt_parent[i_frame].rotation_matrix.euler_angles("xyz")
             child_trans[:, i_frame] = rt_child[i_frame].translation
-            child_rot[:, i_frame] = rt_child[i_frame].euler_angles("xyz")
+            child_rot[:, i_frame] = rt_child[i_frame].rotation_matrix.euler_angles("xyz")
 
         q = np.vstack((parent_trans, parent_rot, child_trans, child_rot))
 
@@ -649,8 +649,8 @@ def get_svd(
     b[:] = np.nan
 
     for i_frame in range(nb_frames):
-        A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
-        A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+        A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix.rotation_matrix
+        A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix.rotation_matrix
         b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
     # Remove nans
@@ -977,7 +977,7 @@ class Sara(RigidSegmentIdentification):
                 rotation_vector = (
                     original_model.segments[
                         self.child_name + "_reset_axis"
-                    ].segment_coordinate_system.scs.rotation_matrix
+                    ].segment_coordinate_system.scs.rotation_matrix.rotation_matrix
                     @ rotation_vector
                 )
                 rot = get_sequence_from_rotation_vector(rotation_vector)

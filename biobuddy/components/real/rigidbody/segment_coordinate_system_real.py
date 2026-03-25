@@ -31,9 +31,7 @@ class SegmentCoordinateSystemReal:
     @scs.setter
     def scs(self, value: RotoTransMatrix):
         if not value.rotation_matrix.is_orthonormal:
-            raise ValueError(
-                f"The scs must be a right hand orthonormal coordinate system. You have {value.rotation_matrix.rotation_matrix}."
-            )
+            value.rotation_matrix.suggest_correction()  # Raise the error with recommendations
         self._scs = value
 
     @property
@@ -70,9 +68,8 @@ class SegmentCoordinateSystemReal:
         """
         scs = RotoTransMatrix.from_rt_matrix(rt_matrix)
         if not scs.rotation_matrix.is_orthonormal:
-            raise ValueError(
-                f"The scs must be a right hand orthonormal coordinate system. You have {scs.rotation_matrix.rotation_matrix}."
-            )
+            scs.rotation_matrix.suggest_correction()  # Raise the error with recommendations
+
         return cls(scs=scs, is_scs_local=is_scs_local)
 
     @classmethod
@@ -136,7 +133,7 @@ class SegmentCoordinateSystemReal:
         origin.set(
             "xyz", f"{self.scs.translation[0]:0.6f} {self.scs.translation[1]:0.6f} {self.scs.translation[2]:0.6f}"
         )
-        rpy = self.scs.euler_angles("xyz")
+        rpy = self.scs.rotation_matrix.euler_angles("xyz")
         origin.set("rpy", f"{rpy[0]:0.6f} {rpy[1]:0.6f} {rpy[2]:0.6f}")
 
     def to_osim(self):

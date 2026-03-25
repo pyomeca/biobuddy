@@ -161,7 +161,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         )
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             # Both rotation and translation parts were modified
             np.array(
                 [
@@ -181,7 +181,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         )
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             np.array(
                 [
                     [-0.99777, 0.06547, 0.01259],
@@ -430,7 +430,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     # The rotation should not change
     npt.assert_almost_equal(
-        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix,
+        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
         np.array(
             [
                 [1.0, 0.0, 0.0],
@@ -463,7 +463,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     # The rotation is the result from SARA (and is less stable numerically)
     npt.assert_almost_equal(
-        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix,
+        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
         np.array(
             [
                 [-0.98002501, 0.18601934, 0.07034055],
@@ -919,7 +919,7 @@ def test_original_rotation_axis_axis():
     score_model = joint_center_tool.replace_joint_centers(marker_weights)
     rt_tibia = score_model.segments["tibia_r"].segment_coordinate_system.scs
     npt.assert_almost_equal(
-        rt_tibia.rotation_matrix,
+        rt_tibia.rotation_matrix.rotation_matrix,
         np.array(
             [
                 [0.99778346, 0.0657014, -0.01055861],
@@ -979,8 +979,8 @@ def test_original_rotation_axis_axis():
     npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
     # Make sure the axis are in opposite direction
     npt.assert_almost_equal(
-        rt_tibia_reverse.rotation_matrix @ np.array([0, 0, 1]),
-        -(rt_tibia.rotation_matrix @ np.array([0, 0, 1])),
+        rt_tibia_reverse.rotation_matrix.rotation_matrix @ np.array([0, 0, 1]),
+        -(rt_tibia.rotation_matrix.rotation_matrix @ np.array([0, 0, 1])),
         decimal=6,
     )
 
