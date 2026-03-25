@@ -609,7 +609,7 @@ class RigidSegmentIdentification(ABC):
                 # Use the optimal rt of the previous frame
                 init = rt_optimal[:, :, i_frame]
 
-        return RotoTransMatrixTimeSeries.from_rt_matrix(rt_optimal)
+        return RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_optimal)
 
     def rt_from_trial(
         self,
@@ -723,8 +723,8 @@ class Score(RigidSegmentIdentification):
         if recursive_outlier_removal:
             valid = Score.get_good_frames(residuals, nb_frames)
             if not np.all(valid):
-                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
-                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
                 return Score.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
@@ -896,8 +896,8 @@ class Sara(RigidSegmentIdentification):
         if recursive_outlier_removal:
             valid = Sara.get_good_frames(residuals, nb_frames)
             if not np.all(valid):
-                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
-                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
                 return Sara.perform_algorithm(
                     rt_parent, rt_child, original_axis_global, recursive_outlier_removal=False
                 )
@@ -1034,7 +1034,7 @@ class Sara(RigidSegmentIdentification):
         scs_of_child_in_local[:3, 3] = joint_center_local[:3, 0]
         scs_of_child_in_local[3, 3] = 1
 
-        return RotoTransMatrix.from_rt_matrix(scs_of_child_in_local)
+        return RotoTransMatrix.from_closest_rt_matrix(scs_of_child_in_local)
 
     def perform_task(
         self,
