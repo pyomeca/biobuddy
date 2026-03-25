@@ -34,7 +34,7 @@ class RotationMatrix:
                 f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
         instance = cls()
-        instance._rotation_matrix = rotation_matrix
+        instance._rotation_matrix = np.array(rotation_matrix, dtype=np.float64)
         return instance
 
     @classmethod
@@ -64,7 +64,7 @@ class RotationMatrix:
             "z": rot_z_matrix,
         }
 
-        rotation_matrix = np.identity(3)
+        rotation_matrix = np.identity(3, dtype=np.float64)
         for angle, axis in zip(angles, angle_sequence):
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
         instance = cls()
@@ -160,6 +160,8 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rotation matrix provided {rotation_matrix} is not a valid rotation matrix (det = {np.linalg.det(rotation_matrix)}, and should be 1.0)."
             )
+        # Enforce np.float64
+        rotation_matrix = np.array(rotation_matrix, dtype=np.float64)
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
@@ -194,8 +196,12 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
+
+        if np.any(np.isnan(rt)):
+            rt[:, :] = np.nan
+
         roto_trans_matrix = cls()
-        roto_trans_matrix._rt = rt
+        roto_trans_matrix._rt = np.array(rt, dtype=np.float64)
         return roto_trans_matrix
 
     @classmethod
@@ -256,7 +262,7 @@ class RotoTransMatrix:
         """
         Tests if the RotoTransMatrix is an identity matrix
         """
-        if np.all(np.abs(self._rt - np.eye(4)) < 1e-6):
+        if np.all(np.abs(self._rt - np.eye(4)) < 1e-4):
             return True
         else:
             return False
@@ -288,7 +294,7 @@ class RotoTransMatrixTimeSeries:
                     f"The multiplication of RotoTransMatrixTimeSeries is only possible with np.array of shape (3, nb_frames) or (4, nb_frames)."
                     f"Expected {self.nb_frames}, got shape {other.shape}."
                 )
-            out = np.zeros((4, self.nb_frames))
+            out = np.zeros((4, self.nb_frames), dtype=np.float64)
             points_array = points_to_array(points=other)
             for i_frame in range(self.nb_frames):
                 out[:, i_frame] = self[i_frame].rt_matrix @ points_array[:, i_frame]
@@ -345,7 +351,7 @@ class RotoTransMatrixTimeSeries:
         -------
         The mean homogenous matrix
         """
-        matrices = np.zeros((4, 4, len(self._rt_time_series)))
+        matrices = np.zeros((4, 4, len(self._rt_time_series)), dtype=np.float64)
         for i_frame, rt in enumerate(self._rt_time_series):
             matrices[:, :, i_frame] = rt.rt_matrix
         mean_rt = mean_homogenous_matrix(matrices)
@@ -444,7 +450,7 @@ def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:
     -------
     The mean homogenous matrix
     """
-    mean_matrix = np.identity(4)
+    mean_matrix = np.identity(4, dtype=np.float64)
 
     # Perform an Arithmetic mean of each element
     arithmetic_mean_scs = np.nanmean(matrices, axis=2)
@@ -568,7 +574,7 @@ def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
         raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
 
-    output_rt = np.identity(4)
+    output_rt = np.identity(4, dtype=np.float64)
     output_rt[:3, 3] = rt_matrix[:3, 3]
     output_rt[:3, :3] = get_closest_rotation_matrix(rt_matrix[:3, :3])
     return output_rt
@@ -598,7 +604,8 @@ def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -
             [1.0 - 2.0 * qy**2 - 2.0 * qz**2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
             [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx**2 - 2.0 * qz**2, 2.0 * qy * qz - 2.0 * qx * qw],
             [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx**2 - 2.0 * qy**2],
-        ]
+        ],
+        dtype=np.float64
     )
 
     if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
@@ -642,7 +649,7 @@ def coord_sys(axis: tuple[float, float, float]) -> tuple[list[np.ndarray], str]:
 def ortho_norm_basis(vector, idx) -> np.ndarray:
     # build an orthogonal basis fom a vector
     basis = []
-    v = np.random.random(3)
+    v = np.array(np.random.random(3), dtype=np.float64)
     vector_norm = vector / np.linalg.norm(vector)
     z = np.cross(v, vector_norm)
     z_norm = z / np.linalg.norm(z)
