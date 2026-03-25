@@ -66,7 +66,10 @@ class JointCoordinateModifier:
         inertia_parameters = self.original_model.segments[segment_name].inertia_parameters
         if inertia_parameters is not None:
             inertia = inertia_parameters.inertia[:3, :3]
-            rotation_transform = new_rt_in_global.inverse.rotation_matrix.rotation_matrix @ original_child_jcs_in_global.rotation_matrix.rotation_matrix
+            rotation_transform = (
+                new_rt_in_global.inverse.rotation_matrix.rotation_matrix
+                @ original_child_jcs_in_global.rotation_matrix.rotation_matrix
+            )
             new_inertia = rotation_transform @ inertia @ rotation_transform.T
             self.new_model.segments[segment_name].inertia_parameters.inertia = new_inertia
 
@@ -129,7 +132,9 @@ class JointCoordinateModifier:
                     new_rt = rotation_translation_transform @ mesh_rt
 
                     # Update mesh file's local rotation and translation
-                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = new_rt.rotation_matrix.euler_angles("xyz")
+                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = new_rt.rotation_matrix.euler_angles(
+                        "xyz"
+                    )
                     self.new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
 
         # Markers

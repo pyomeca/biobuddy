@@ -340,7 +340,9 @@ class RotoTransMatrixTimeSeries:
             )
 
         rts = cls(nb_frames=rt.shape[2])
-        rts._rt_time_series = [RotoTransMatrix.from_closest_rt_matrix(rt[:, :, i_frame]) for i_frame in range(rt.shape[2])]
+        rts._rt_time_series = [
+            RotoTransMatrix.from_closest_rt_matrix(rt[:, :, i_frame]) for i_frame in range(rt.shape[2])
+        ]
         return rts
 
     def mean_homogenous_matrix(self) -> RotoTransMatrix:
@@ -605,7 +607,7 @@ def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -
             [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx**2 - 2.0 * qz**2, 2.0 * qy * qz - 2.0 * qx * qw],
             [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx**2 - 2.0 * qy**2],
         ],
-        dtype=np.float64
+        dtype=np.float64,
     )
 
     if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
