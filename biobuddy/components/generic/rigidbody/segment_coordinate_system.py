@@ -216,7 +216,9 @@ class SegmentCoordinateSystemUtils:
                 r = vh.T @ u.T
 
             t = centroid.flatten()
-            rt_matrices[i_frame] = RotoTransMatrix.from_closest_rt_matrix(np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1])))
+            rt_matrices[i_frame] = RotoTransMatrix.from_closest_rt_matrix(
+                np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1]))
+            )
 
         return rt_matrices
 

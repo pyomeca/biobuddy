@@ -31,7 +31,9 @@ class SegmentCoordinateSystemReal:
     @scs.setter
     def scs(self, value: RotoTransMatrix):
         if not value.rotation_matrix.is_orthonormal:
-            raise ValueError(f"The scs must be a right hand orthonormal coordinate system. You have {value.rotation_matrix.rotation_matrix}.")
+            raise ValueError(
+                f"The scs must be a right hand orthonormal coordinate system. You have {value.rotation_matrix.rotation_matrix}."
+            )
         self._scs = value
 
     @property
@@ -68,7 +70,9 @@ class SegmentCoordinateSystemReal:
         """
         scs = RotoTransMatrix.from_rt_matrix(rt_matrix)
         if not scs.rotation_matrix.is_orthonormal:
-            raise ValueError(f"The scs must be a right hand orthonormal coordinate system. You have {scs.rotation_matrix.rotation_matrix}.")
+            raise ValueError(
+                f"The scs must be a right hand orthonormal coordinate system. You have {scs.rotation_matrix.rotation_matrix}."
+            )
         return cls(scs=scs, is_scs_local=is_scs_local)
 
     @classmethod

@@ -118,9 +118,9 @@ class RotationMatrix:
         Tests if the axis of the rotation matrix are orthogonal
         """
         if (
-                np.abs(np.dot(self.rotation_matrix[:, 0], self.rotation_matrix[:, 1])) < 1e-4 and
-                np.abs(np.dot(self.rotation_matrix[:, 1], self.rotation_matrix[:, 2])) < 1e-4 and
-                np.abs(np.dot(self.rotation_matrix[:, 2], self.rotation_matrix[:, 0])) < 1e-4
+            np.abs(np.dot(self.rotation_matrix[:, 0], self.rotation_matrix[:, 1])) < 1e-4
+            and np.abs(np.dot(self.rotation_matrix[:, 1], self.rotation_matrix[:, 2])) < 1e-4
+            and np.abs(np.dot(self.rotation_matrix[:, 2], self.rotation_matrix[:, 0])) < 1e-4
         ):
             return True
         else:
