@@ -34,6 +34,16 @@ class RotationMatrix:
                 f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
         instance = cls()
+        instance._rotation_matrix = rotation_matrix
+        return instance
+
+    @classmethod
+    def from_closest_rotation_matrix(cls, rotation_matrix: np.ndarray):
+        if rotation_matrix.shape != (3, 3):
+            raise ValueError(
+                f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
+            )
+        instance = cls()
         instance._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
         return instance
 
@@ -81,6 +91,50 @@ class RotationMatrix:
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
         out_inverse = RotationMatrix.from_rotation_matrix(inverse_rotation_matrix)
         return out_inverse
+
+    @property
+    def is_right_handed(self) -> bool:
+        """
+        Tests if the rotation matrix is a right hand coordinate system
+        """
+        if np.linalg.det(self.rotation_matrix) > 0:
+            return True
+        else:
+            return False
+
+    @property
+    def is_normalized(self) -> bool:
+        """
+        Tests if the rotation matrix has the right norm
+        """
+        if np.abs(np.linalg.norm(self.rotation_matrix @ self.rotation_matrix.T, "fro") ** 2 - 3) < 1e-4:
+            return True
+        else:
+            return False
+
+    @property
+    def is_orthogonal(self) -> bool:
+        """
+        Tests if the axis of the rotation matrix are orthogonal
+        """
+        if (
+                np.abs(np.dot(self.rotation_matrix[:, 0], self.rotation_matrix[:, 1])) < 1e-4 and
+                np.abs(np.dot(self.rotation_matrix[:, 1], self.rotation_matrix[:, 2])) < 1e-4 and
+                np.abs(np.dot(self.rotation_matrix[:, 2], self.rotation_matrix[:, 0])) < 1e-4
+        ):
+            return True
+        else:
+            return False
+
+    @property
+    def is_orthonormal(self) -> bool:
+        """
+        Tests if the rotation matrix is orthonormal
+        """
+        if self.is_normalized and self.is_orthogonal and self.is_right_handed:
+            return True
+        else:
+            return False
 
 
 class RotoTransMatrix:
@@ -157,6 +211,18 @@ class RotoTransMatrix:
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
         roto_trans_matrix = cls()
+        roto_trans_matrix._rt = rt
+        return roto_trans_matrix
+
+    @classmethod
+    def from_closest_rt_matrix(cls, rt: np.ndarray):
+        if rt.shape == (4, 4, 1):
+            rt = rt[:, :, 0]
+        elif rt.shape != (4, 4):
+            raise ValueError(
+                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
+            )
+        roto_trans_matrix = cls()
         roto_trans_matrix._rt = get_closest_rt_matrix(rt)
         return roto_trans_matrix
 
@@ -173,8 +239,8 @@ class RotoTransMatrix:
         self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(3)
 
     @property
-    def rotation_matrix(self) -> np.ndarray:
-        return self._rt[:3, :3]
+    def rotation_matrix(self) -> RotationMatrix:
+        return RotationMatrix.from_rotation_matrix(self._rt[:3, :3])
 
     @rotation_matrix.setter
     def rotation_matrix(self, rotation_matrix: np.ndarray | RotationMatrix):
@@ -191,9 +257,9 @@ class RotoTransMatrix:
         return to_euler(self.rotation_matrix, angle_sequence)
 
     @property
-    def inverse(self) -> "RotationMatrix":
+    def inverse(self) -> "RotoTransMatrix":
 
-        inverse_rotation_matrix = np.transpose(self.rotation_matrix)
+        inverse_rotation_matrix = np.transpose(self.rotation_matrix.rotation_matrix)
         inverse_translation = -inverse_rotation_matrix.reshape(3, 3) @ self.translation
 
         rt_matrix = np.zeros((4, 4))
