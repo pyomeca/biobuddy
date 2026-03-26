@@ -145,8 +145,8 @@ class MergeSegmentsTool:
             second_scs = second_segment.segment_coordinate_system.scs
             merged_scs = RotoTransMatrix()
             merged_scs.translation = (first_scs.translation + second_scs.translation) / 2
-            first_euler = first_scs.euler_angles("xyz")
-            second_euler = second_scs.euler_angles("xyz")
+            first_euler = first_scs.rotation_matrix.euler_angles("xyz")
+            second_euler = second_scs.rotation_matrix.euler_angles("xyz")
             if any(first_euler != second_euler):
                 raise NotImplementedError(
                     "You want to merge segments that are not aligned in orientation. This should be allowed, but is not implemented yet."

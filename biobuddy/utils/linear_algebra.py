@@ -34,6 +34,16 @@ class RotationMatrix:
                 f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
             )
         instance = cls()
+        instance._rotation_matrix = np.array(rotation_matrix, dtype=np.float64)
+        return instance
+
+    @classmethod
+    def from_closest_rotation_matrix(cls, rotation_matrix: np.ndarray):
+        if rotation_matrix.shape != (3, 3):
+            raise ValueError(
+                f"The rotation_matrix used to initialize a RotationMatrix should be of shape (3, 3). You have {rotation_matrix.shape}"
+            )
+        instance = cls()
         instance._rotation_matrix = get_closest_rotation_matrix(rotation_matrix)
         return instance
 
@@ -54,7 +64,7 @@ class RotationMatrix:
             "z": rot_z_matrix,
         }
 
-        rotation_matrix = np.identity(3)
+        rotation_matrix = np.identity(3, dtype=np.float64)
         for angle, axis in zip(angles, angle_sequence):
             rotation_matrix = rotation_matrix @ matrix[axis](angle)
         instance = cls()
@@ -71,16 +81,44 @@ class RotationMatrix:
             raise ValueError(
                 f"The rotation_matrix used to set a RotationMatrix should be of shape (3, 3). You have {rot.shape}"
             )
-        self._rotation_matrix[:3, :3] = get_closest_rotation_matrix(rot)
+        if not RotationMatrix.from_rotation_matrix(rot).is_orthonormal:
+            raise RuntimeError(f"The rotation matrix {rot} is not a valid rotation matrix (not orthonormal).")
+        self._rotation_matrix[:3, :3] = np.array(rot, dtype=np.float64)
 
     def euler_angles(self, angle_sequence: str) -> np.ndarray:
-        return to_euler(self.rotation_matrix, angle_sequence)
+        if angle_sequence == "xyz":
+            rx = np.arctan2(-self.rotation_matrix[1, 2], self.rotation_matrix[2, 2])
+            ry = np.arcsin(self.rotation_matrix[0, 2])
+            rz = np.arctan2(-self.rotation_matrix[0, 1], self.rotation_matrix[0, 0])
+        else:
+            raise NotImplementedError("This angle_sequence is not implemented yet")
+
+        return np.array([rx, ry, rz], dtype=np.float64)
 
     @property
     def inverse(self) -> "RotationMatrix":
         inverse_rotation_matrix = np.transpose(self.rotation_matrix)
         out_inverse = RotationMatrix.from_rotation_matrix(inverse_rotation_matrix)
         return out_inverse
+
+    @property
+    def is_orthonormal(self) -> bool:
+        """
+        Tests if the rotation matrix is orthonormal
+        """
+        is_orthonormal = np.allclose(self.rotation_matrix.T @ self.rotation_matrix, np.eye(3), atol=1e-5)
+        is_right_handed = np.linalg.det(self.rotation_matrix) > 0
+        if is_orthonormal and is_right_handed:
+            return True
+        else:
+            return False
+
+    def suggest_correction(self) -> None:
+        raise RuntimeError(
+            f"The rotation matrix \n{self.rotation_matrix}\n is not orthonormal or not right-handed. "
+            f"You can use RotationMatrix.from_closest_rotation_matrix to get the closest orthonormal rotation matrix."
+            f"In this case: \n{get_closest_rotation_matrix(self.rotation_matrix)}\n"
+        )
 
 
 class RotoTransMatrix:
@@ -122,6 +160,8 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rotation matrix provided {rotation_matrix} is not a valid rotation matrix (det = {np.linalg.det(rotation_matrix)}, and should be 1.0)."
             )
+        # Enforce np.float64
+        rotation_matrix = np.array(rotation_matrix, dtype=np.float64)
 
         rt_matrix = np.zeros((4, 4))
         rt_matrix[:3, :3] = rotation_matrix[:3, :3]
@@ -156,6 +196,22 @@ class RotoTransMatrix:
             raise ValueError(
                 f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
             )
+
+        if np.any(np.isnan(rt)):
+            rt[:, :] = np.nan
+
+        roto_trans_matrix = cls()
+        roto_trans_matrix._rt = np.array(rt, dtype=np.float64)
+        return roto_trans_matrix
+
+    @classmethod
+    def from_closest_rt_matrix(cls, rt: np.ndarray):
+        if rt.shape == (4, 4, 1):
+            rt = rt[:, :, 0]
+        elif rt.shape != (4, 4):
+            raise ValueError(
+                f"The rt used to initialize a RotoTransMatrix should be of shape (4, 4). You have {rt.shape}"
+            )
         roto_trans_matrix = cls()
         roto_trans_matrix._rt = get_closest_rt_matrix(rt)
         return roto_trans_matrix
@@ -173,8 +229,8 @@ class RotoTransMatrix:
         self._rt[:3, 3] = point_to_array(trans)[:3, 0].reshape(3)
 
     @property
-    def rotation_matrix(self) -> np.ndarray:
-        return self._rt[:3, :3]
+    def rotation_matrix(self) -> RotationMatrix:
+        return RotationMatrix.from_rotation_matrix(self._rt[:3, :3])
 
     @rotation_matrix.setter
     def rotation_matrix(self, rotation_matrix: np.ndarray | RotationMatrix):
@@ -187,16 +243,13 @@ class RotoTransMatrix:
             rotation_matrix = rotation_matrix.rotation_matrix
         self._rt[:3, :3] = get_closest_rotation_matrix(rotation_matrix)
 
-    def euler_angles(self, angle_sequence: str) -> np.ndarray:
-        return to_euler(self.rotation_matrix, angle_sequence)
-
     @property
-    def inverse(self) -> "RotationMatrix":
+    def inverse(self) -> "RotoTransMatrix":
 
-        inverse_rotation_matrix = np.transpose(self.rotation_matrix)
+        inverse_rotation_matrix = np.transpose(self.rotation_matrix.rotation_matrix)
         inverse_translation = -inverse_rotation_matrix.reshape(3, 3) @ self.translation
 
-        rt_matrix = np.zeros((4, 4))
+        rt_matrix = np.zeros((4, 4), dtype=np.float64)
         rt_matrix[:3, :3] = inverse_rotation_matrix.reshape(3, 3)
         rt_matrix[:3, 3] = inverse_translation.reshape(3)
         rt_matrix[3, 3] = 1.0
@@ -209,7 +262,7 @@ class RotoTransMatrix:
         """
         Tests if the RotoTransMatrix is an identity matrix
         """
-        if np.all(np.abs(self._rt - np.eye(4)) < 1e-6):
+        if np.all(np.abs(self._rt - np.eye(4)) < 1e-4):
             return True
         else:
             return False
@@ -241,7 +294,7 @@ class RotoTransMatrixTimeSeries:
                     f"The multiplication of RotoTransMatrixTimeSeries is only possible with np.array of shape (3, nb_frames) or (4, nb_frames)."
                     f"Expected {self.nb_frames}, got shape {other.shape}."
                 )
-            out = np.zeros((4, self.nb_frames))
+            out = np.zeros((4, self.nb_frames), dtype=np.float64)
             points_array = points_to_array(points=other)
             for i_frame in range(self.nb_frames):
                 out[:, i_frame] = self[i_frame].rt_matrix @ points_array[:, i_frame]
@@ -279,6 +332,19 @@ class RotoTransMatrixTimeSeries:
         rts._rt_time_series = [RotoTransMatrix.from_rt_matrix(rt[:, :, i_frame]) for i_frame in range(rt.shape[2])]
         return rts
 
+    @classmethod
+    def from_closest_rt_matrix(cls, rt: np.ndarray):
+        if len(rt.shape) != 3:
+            raise ValueError(
+                f"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape (..., nb_frames). You have {rt.shape}"
+            )
+
+        rts = cls(nb_frames=rt.shape[2])
+        rts._rt_time_series = [
+            RotoTransMatrix.from_closest_rt_matrix(rt[:, :, i_frame]) for i_frame in range(rt.shape[2])
+        ]
+        return rts
+
     def mean_homogenous_matrix(self) -> RotoTransMatrix:
         """
         Computes the closest homogenous matrix that approximates all the homogenous matrices in the time series
@@ -287,7 +353,7 @@ class RotoTransMatrixTimeSeries:
         -------
         The mean homogenous matrix
         """
-        matrices = np.zeros((4, 4, len(self._rt_time_series)))
+        matrices = np.zeros((4, 4, len(self._rt_time_series)), dtype=np.float64)
         for i_frame, rt in enumerate(self._rt_time_series):
             matrices[:, :, i_frame] = rt.rt_matrix
         mean_rt = mean_homogenous_matrix(matrices)
@@ -386,7 +452,7 @@ def mean_homogenous_matrix(matrices: np.ndarray) -> np.ndarray:
     -------
     The mean homogenous matrix
     """
-    mean_matrix = np.identity(4)
+    mean_matrix = np.identity(4, dtype=np.float64)
 
     # Perform an Arithmetic mean of each element
     arithmetic_mean_scs = np.nanmean(matrices, axis=2)
@@ -407,21 +473,10 @@ def mean_unit_vector(vectors: np.ndarray) -> np.ndarray:
             "The vectors must be of shape (4, n). Only the three first components will be averaged (the last component is a 1)."
         )
 
-    mean_vector = np.ones((4,))
+    mean_vector = np.ones((4,), dtype=np.float64)
     mean_vector[:3] = np.nanmean(vectors[:3, :], axis=1)
     mean_vector[:3] /= np.linalg.norm(mean_vector[:3])
     return mean_vector
-
-
-def to_euler(rt, angle_sequence: str) -> np.ndarray:
-    if angle_sequence == "xyz":
-        rx = np.arctan2(-rt[1, 2], rt[2, 2])
-        ry = np.arcsin(rt[0, 2])
-        rz = np.arctan2(-rt[0, 1], rt[0, 0])
-    else:
-        raise NotImplementedError("This angle_sequence is not implemented yet")
-
-    return np.array([rx, ry, rz])
 
 
 def transpose_homogenous_matrix(matrix: np.ndarray) -> np.ndarray:
@@ -483,14 +538,15 @@ def get_closest_rotation_matrix(rotation_matrix: np.ndarray) -> np.ndarray:
     if rotation_matrix.shape != (3, 3):
         raise ValueError(f"Expected 3x3 matrix, got shape {rotation_matrix.shape}")
 
+    # Enforce np.float64 just in case
+    rotation_matrix = np.array(rotation_matrix, dtype=np.float64)
+
     current_norm_error = np.abs(np.linalg.norm(rotation_matrix @ rotation_matrix.T - np.eye(3), "fro"))
     if np.any(np.isnan(rotation_matrix)):
         rotation_matrix[:, :] = np.nan
         return rotation_matrix
-    if current_norm_error > 0.1:
-        # The input is far from being valid
-        raise RuntimeError(f"The rotation matrix {rotation_matrix} is far from SO(3).")
-    elif current_norm_error < 1e-6:
+
+    if current_norm_error < 1e-6:
         # The input is already valid
         # But we still make sure the det(R) = +1
         if np.linalg.det(rotation_matrix) < 0:
@@ -520,7 +576,7 @@ def get_closest_rt_matrix(rt_matrix: np.ndarray) -> np.ndarray:
     if np.abs(np.linalg.norm(rt_matrix[3, :]) - 1) > 0.1:
         raise RuntimeError(f"Check rt matrix: the bottom line is {rt_matrix[3, :]} and should be [0, 0, 0, 1].")
 
-    output_rt = np.identity(4)
+    output_rt = np.identity(4, dtype=np.float64)
     output_rt[:3, 3] = rt_matrix[:3, 3]
     output_rt[:3, :3] = get_closest_rotation_matrix(rt_matrix[:3, :3])
     return output_rt
@@ -550,7 +606,8 @@ def quaternion_to_rotation_matrix(quat_scalar: float, quat_vector: np.ndarray) -
             [1.0 - 2.0 * qy**2 - 2.0 * qz**2, 2.0 * qx * qy - 2.0 * qz * qw, 2.0 * qx * qz + 2.0 * qy * qw],
             [2.0 * qx * qy + 2.0 * qz * qw, 1.0 - 2.0 * qx**2 - 2.0 * qz**2, 2.0 * qy * qz - 2.0 * qx * qw],
             [2.0 * qx * qz - 2.0 * qy * qw, 2.0 * qy * qz + 2.0 * qx * qw, 1.0 - 2.0 * qx**2 - 2.0 * qy**2],
-        ]
+        ],
+        dtype=np.float64,
     )
 
     if np.abs(3 - np.linalg.norm(rot_matrix) ** 2) > 1e-6:
@@ -594,7 +651,7 @@ def coord_sys(axis: tuple[float, float, float]) -> tuple[list[np.ndarray], str]:
 def ortho_norm_basis(vector, idx) -> np.ndarray:
     # build an orthogonal basis fom a vector
     basis = []
-    v = np.random.random(3)
+    v = np.array(np.random.random(3), dtype=np.float64)
     vector_norm = vector / np.linalg.norm(vector)
     z = np.cross(v, vector_norm)
     z_norm = z / np.linalg.norm(z)

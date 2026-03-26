@@ -77,6 +77,13 @@ def destroy_model(bio_model: BiomechanicalModelReal | BiomechanicalModel):
     assert bio_model.nb_muscle_groups == 0
     assert bio_model.muscle_group_names == []
 
+    # Remove ligaments
+    for ligament_name in bio_model.ligament_names:
+        bio_model.remove_ligament(ligament_name)
+
+    assert bio_model.nb_ligaments == 0
+    assert bio_model.ligament_names == []
+
 
 def compare_models(model1: BiomechanicalModelReal, model2: BiomechanicalModelReal, decimal: int = 5):
     """

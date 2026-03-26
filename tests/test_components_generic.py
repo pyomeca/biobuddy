@@ -29,7 +29,7 @@ from biobuddy import (
 )
 from biobuddy.components.generic.force.ligament import Ligament
 from biobuddy.components.ligament_utils import LigamentType
-from biobuddy.components.generic.rigidbody.segment_coordinate_system import _visualize_score
+from biobuddy.components.generic.rigidbody.segment_coordinate_system import _visualize_score, _markers_fingerprint
 from biobuddy.utils.named_list import NamedList
 from test_utils import MockC3dData, get_xml_str
 
@@ -1116,9 +1116,9 @@ def test_marker_to_marker_global():
     # Create a marker with a position function
     marker = Marker(name="SUP", parent_name="segment1", is_local=False)
 
-    # Mock data and model
-    mock_data = MockC3dData()
+    # Mock data
     mock_model = BiomechanicalModelReal()
+    mock_data = MockC3dData()
 
     # Marker without a position function is by default its name in the c3d
     marker_real = marker.to_marker(mock_data, mock_model, MOCK_RT)
@@ -1297,6 +1297,120 @@ def test_segment_coordinate_system_to_scs_local():
     )
 
 
+def test_segment_coordinate_system_get_axes():
+    # Create axes for the coordinate system
+    first_axis = Axis(name=Axis.Name.X, start="HV", end="SUP")
+    second_axis = Axis(name=Axis.Name.Y, start="LA", end="RA")
+
+    # Create a segment coordinate system
+    scs = SegmentCoordinateSystem(origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.X)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Test get_axes
+    first_axis_real, second_axis_real, third_axis_name = scs.get_axes(mock_data, mock_model, MOCK_RT)
+
+    assert first_axis_real.name == Axis.Name.X
+    assert second_axis_real.name == Axis.Name.Y
+    assert third_axis_name == Axis.Name.Z
+
+    # Test with same axis names (should raise error)
+    first_axis_bad = Axis(name=Axis.Name.X, start="HV", end="SUP")
+    second_axis_bad = Axis(name=Axis.Name.X, start="LA", end="RA")
+    scs_bad = SegmentCoordinateSystem(
+        origin="HV", first_axis=first_axis_bad, second_axis=second_axis_bad, axis_to_keep=Axis.Name.X
+    )
+
+    with pytest.raises(ValueError, match="The two axes cannot be the same axis"):
+        scs_bad.get_axes(mock_data, mock_model, MOCK_RT)
+
+
+def test_segment_coordinate_system_get_axes_vectors():
+    # Create axes for the coordinate system
+    first_axis = Axis(name=Axis.Name.X, start="HV", end="SUP")
+    second_axis = Axis(name=Axis.Name.Y, start="LA", end="RA")
+
+    # Create a segment coordinate system
+    scs = SegmentCoordinateSystem(origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.X)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Get axes
+    first_axis_real, second_axis_real, _ = scs.get_axes(mock_data, mock_model, MOCK_RT)
+
+    # Test get_axes_vectors
+    first_vec, second_vec, third_vec = scs.get_axes_vectors(first_axis_real, second_axis_real)
+
+    # Check dimensions
+    assert first_vec.shape[0] == 3
+    assert second_vec.shape[0] == 3
+    assert third_vec.shape[0] == 3
+
+    # Check orthogonality
+    npt.assert_almost_equal(np.dot(first_vec[:, 0], third_vec[:, 0]), 0, decimal=10)
+    npt.assert_almost_equal(np.dot(second_vec[:, 0], third_vec[:, 0]), 0, decimal=10)
+
+    # Test with axis_to_keep as second axis
+    scs2 = SegmentCoordinateSystem(
+        origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.Y
+    )
+    first_axis_real2, second_axis_real2, _ = scs2.get_axes(mock_data, mock_model, MOCK_RT)
+    first_vec2, second_vec2, third_vec2 = scs2.get_axes_vectors(first_axis_real2, second_axis_real2)
+
+    # Check orthogonality
+    npt.assert_almost_equal(np.dot(first_vec2[:, 0], third_vec2[:, 0]), 0, decimal=10)
+    npt.assert_almost_equal(np.dot(second_vec2[:, 0], third_vec2[:, 0]), 0, decimal=10)
+
+    # Test with invalid axis_to_keep
+    scs3 = SegmentCoordinateSystem(
+        origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.Z
+    )
+    first_axis_real3, second_axis_real3, _ = scs3.get_axes(mock_data, mock_model, MOCK_RT)
+
+    with pytest.raises(ValueError, match="Name of axis to keep should be one of the two axes"):
+        scs3.get_axes_vectors(first_axis_real3, second_axis_real3)
+
+
+def test_segment_coordinate_system_get_scs_from_vectors():
+    # Create axes for the coordinate system
+    first_axis = Axis(name=Axis.Name.X, start="HV", end="SUP")
+    second_axis = Axis(name=Axis.Name.Y, start="LA", end="RA")
+
+    # Create a segment coordinate system
+    scs = SegmentCoordinateSystem(origin="HV", first_axis=first_axis, second_axis=second_axis, axis_to_keep=Axis.Name.X)
+
+    # Mock data and model
+    mock_data = MockC3dData()
+    mock_model = BiomechanicalModelReal()
+
+    # Get axes and vectors
+    first_axis_real, second_axis_real, third_axis_name = scs.get_axes(mock_data, mock_model, MOCK_RT)
+    first_vec, second_vec, third_vec = scs.get_axes_vectors(first_axis_real, second_axis_real)
+    origin = scs.origin.to_marker(mock_data, mock_model, MOCK_RT).position
+
+    # Test get_scs_from_vectors
+    result_scs = scs.get_scs_from_vectors(
+        first_axis_real, second_axis_real, third_axis_name, first_vec, second_vec, third_vec, origin
+    )
+
+    # Check that result is a RotoTransMatrix
+    assert isinstance(result_scs, RotoTransMatrix)
+
+    # Check that the rotation matrix is orthonormal
+    npt.assert_almost_equal(
+        result_scs.rotation_matrix.rotation_matrix @ result_scs.rotation_matrix.rotation_matrix.T,
+        np.eye(3),
+        decimal=10,
+    )
+
+    # Check that the translation is correct
+    npt.assert_almost_equal(result_scs.translation, origin[:3, 0])
+
+
 # ------- SegmentCoordinateSystemUtils ------- #
 def test_rigidify():
     np.random.seed(0)
@@ -1369,7 +1483,62 @@ def test_rigidify():
     )
 
     # Check the rotation
-    assert np.all(np.abs(rigidified_rt.mean_homogenous_matrix().euler_angles("xyz") - expected_euler) < 0.02)
+    assert np.all(
+        np.abs(rigidified_rt.mean_homogenous_matrix().rotation_matrix.euler_angles("xyz") - expected_euler) < 0.02
+    )
+
+
+def test_rigidify_without_static_data():
+    """Test rigidify when no static data is provided"""
+    np.random.seed(42)
+    nb_frames = 50
+
+    # Create markers with some movement
+    markers = {
+        "marker1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "marker2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "marker3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+
+    functional_data = DictData(markers)
+
+    # Rigidify without static data (should use first frame as reference)
+    rigidified_rt = SegmentCoordinateSystemUtils.rigidify(functional_data=functional_data, static_data=None)
+
+    # Check that we got valid RT matrices
+    assert len(rigidified_rt) == nb_frames
+
+    # Check that first frame is close to identity (since it's the reference)
+    first_frame_rt = rigidified_rt[0].rt_matrix
+    npt.assert_almost_equal(first_frame_rt[:3, :3], np.eye(3), decimal=2)
+
+
+def test_rigidify_with_nan_values():
+    """Test rigidify handles NaN values correctly"""
+    np.random.seed(42)
+    nb_frames = 10
+
+    # Create markers with NaN in one frame
+    markers = {
+        "marker1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "marker2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+    }
+
+    # Add NaN to frame 5
+    markers["marker1"][:, 5] = np.nan
+
+    functional_data = DictData(markers)
+    static_data = DictData({name: data[:, 0:1] for name, data in markers.items()})
+
+    # Rigidify should handle NaN gracefully
+    rigidified_rt = SegmentCoordinateSystemUtils.rigidify(functional_data=functional_data, static_data=static_data)
+
+    # Check that frame 5 has NaN RT
+    assert np.all(np.isnan(rigidified_rt[5].rt_matrix))
+
+    # Check that other frames are valid
+    assert not np.any(np.isnan(rigidified_rt[0].rt_matrix))
+    assert not np.any(np.isnan(rigidified_rt[9].rt_matrix))
 
 
 def test_mean_markers():
@@ -1741,6 +1910,48 @@ def test_visualize_score_with_axis():
     # Test that plotting from cache works
     figure_cached = _visualize_score(data, rt_parent, rt_child, cor_global)
     assert figure_cached == figure
+
+
+def test_markers_fingerprint():
+    """Test the _markers_fingerprint function"""
+    # Create test marker data
+    markers1 = {
+        "marker1": np.array([[1.0], [2.0], [3.0], [1.0]]),
+        "marker2": np.array([[4.0], [5.0], [6.0], [1.0]]),
+    }
+    data1 = DictData(markers1)
+
+    # Same data should produce same fingerprint
+    fingerprint1 = _markers_fingerprint(data1)
+    fingerprint1_again = _markers_fingerprint(data1)
+    assert fingerprint1 == fingerprint1_again
+
+    # Different data should produce different fingerprint
+    markers2 = {
+        "marker1": np.array([[1.1], [2.0], [3.0], [1.0]]),
+        "marker2": np.array([[4.0], [5.0], [6.0], [1.0]]),
+    }
+    data2 = DictData(markers2)
+    fingerprint2 = _markers_fingerprint(data2)
+    assert fingerprint1 != fingerprint2
+
+    # Different marker names should produce different fingerprint
+    markers3 = {
+        "marker1": np.array([[1.0], [2.0], [3.0], [1.0]]),
+        "marker3": np.array([[4.0], [5.0], [6.0], [1.0]]),
+    }
+    data3 = DictData(markers3)
+    fingerprint3 = _markers_fingerprint(data3)
+    assert fingerprint1 != fingerprint3
+
+    # Order of markers shouldn't matter (sorted internally)
+    markers4 = {
+        "marker2": np.array([[4.0], [5.0], [6.0], [1.0]]),
+        "marker1": np.array([[1.0], [2.0], [3.0], [1.0]]),
+    }
+    data4 = DictData(markers4)
+    fingerprint4 = _markers_fingerprint(data4)
+    assert fingerprint1 == fingerprint4
 
 
 # ------- Mesh ------- #

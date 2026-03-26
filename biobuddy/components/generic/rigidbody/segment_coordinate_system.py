@@ -206,7 +206,7 @@ class SegmentCoordinateSystemUtils:
             try:
                 u, _, vh = np.linalg.svd(h, full_matrices=False)
             except np.linalg.LinAlgError as e:
-                rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.ndarray((4, 4, 1)) * np.nan)
+                rt_matrices[i_frame] = RotoTransMatrix.from_closest_rt_matrix(np.ndarray((4, 4, 1)) * np.nan)
                 continue
             r = vh.T @ u.T
 
@@ -216,7 +216,9 @@ class SegmentCoordinateSystemUtils:
                 r = vh.T @ u.T
 
             t = centroid.flatten()
-            rt_matrices[i_frame] = RotoTransMatrix.from_rt_matrix(np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1])))
+            rt_matrices[i_frame] = RotoTransMatrix.from_closest_rt_matrix(
+                np.vstack((np.hstack((r, t[:, None])), [0, 0, 0, 1]))
+            )
 
         return rt_matrices
 

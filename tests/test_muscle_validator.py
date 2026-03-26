@@ -73,6 +73,8 @@ def test_muscle_validator_initialization():
                 0.109,
                 0.52,
                 0.095,
+                0.089,
+                0.084,
                 0.06,
                 0.064,
                 0.05,
@@ -84,6 +86,8 @@ def test_muscle_validator_initialization():
                 0.109,
                 0.52,
                 0.095,
+                0.089,
+                0.084,
                 0.06,
                 0.064,
                 0.05,
@@ -116,34 +120,34 @@ def test_muscle_validator_initialization():
     assert validator.muscle_moment_arm.shape == (model.nb_q, model.nb_muscles, nb_states)
     npt.assert_almost_equal(
         validator.muscle_moment_arm[7, 11, :],
-        np.array([0.01702134, -0.06367495, -0.02969015, -0.02648772, -0.04840938]),
+        np.array([0.02094623, -0.06511116, -0.02315659, -0.0280816, -0.06025606]),
         decimal=6,
     )
     npt.assert_almost_equal(
         validator.muscle_moment_arm[34, 43, :],
-        np.array([0.01169217, -0.00614974, 0.02490801, 0.01319443, -0.00754774]),
+        np.array([-0.00555095, -0.0141655, 0.00812161, -0.01066432, -0.0067984]),
         decimal=6,
     )
     assert validator.muscle_max_torque.shape == (model.nb_q, model.nb_muscles, nb_states)
     npt.assert_almost_equal(
         validator.muscle_max_torque[7, 11, :],
-        np.array([-6.87949845, 23.94079864, -15.20118408, 8.76100787, 16.88174848]),
+        np.array([-8.55859959, 22.39304372, 1.19972076, 11.51196094, 24.47050633]),
         decimal=6,
     )
     npt.assert_almost_equal(
         validator.muscle_max_torque[34, 43, :],
-        np.array([-96.37131862, 93.93907444, -31.5198799, -147.62853678, 274.2484967]),
+        np.array([-91.2986461, 96.43727881, -17.1287718, -139.83077543, 274.85113004]),
         decimal=6,
     )
     assert validator.muscle_min_torque.shape == (model.nb_q, nb_states)
     npt.assert_almost_equal(
         validator.muscle_min_torque[7, :],
-        np.array([-0.08677469, 0.81549208, -27.26596649, 2.84157495, -1.10186809]),
+        np.array([-6.93669192e-02, 1.03022872e-13, -2.44079000e00, 2.67311044e-01, 1.85973336e-01]),
         decimal=6,
     )
     npt.assert_almost_equal(
         validator.muscle_min_torque[34, :],
-        np.array([-94.68727368, 90.64623855, -15.96985247, -140.96772428, 271.91400559]),
+        np.array([-94.68727797, 90.64623914, -15.96985543, -140.96772137, 271.91400534]),
         decimal=6,
     )
 
@@ -389,17 +393,22 @@ def test_plot_moment_arm_structure():
     # Check some moment arm traces data
     np.testing.assert_array_almost_equal(
         figure.data[2078].y,
-        np.array([-0.00259353, -0.00725183, -0.01137835, -0.00800461, 0.00923218]),
+        np.array([0.0, 0.0, 0.0, 0.0, 0.0]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[1456].y,
-        np.array([0.00923368, 0.04433126, -0.023978, -0.03251468, -0.00605079]),
+        np.array([0.00876453, -0.01154376, 0.00177781, 0.01221064, -0.0060508]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[591].y,
-        np.array([0.02080347, 0.00304979, -0.0127689, 0.01738389, 0.03817868]),
+        np.array([0.0, 0.0, 0.0, 0.0, 0.0]),
+        decimal=6,
+    )
+    np.testing.assert_array_almost_equal(
+        figure.data[521].y,
+        np.array([-0.02761741, -0.0309185, -0.01097717, 0.01949086, 0.03205424]),
         decimal=6,
     )
 
@@ -450,34 +459,34 @@ def test_plot_torques_structure():
     # Check some max torque traces data
     np.testing.assert_array_almost_equal(
         figure.data[2372].y,
-        np.array([3.80419484e-01, 3.08300772e00, 4.44089210e-15, -5.08933956e00, -5.08295526e-02]),
+        np.array([-1.35442174, -5.87193092, 0.0, 46.79111287, 1.17353167]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[4260].y,
-        np.array([-0.80740831, -0.55732177, -0.2920292, -0.0015274, -0.00692852]),
+        np.array([0.22466436, -0.18870296, 0.68962033, 0.05989628, -0.13047899]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[1244].y,
-        np.array([11.51297038, 6.30633666, 0.96889746, -13.75417984, -45.35209531]),
+        np.array([11.51150145, 6.30667511, 0.96892677, -14.096754, -38.60689506]),
         decimal=6,
     )
 
     # Check some min torque traces data
     np.testing.assert_array_almost_equal(
         figure.data[2373].y,
-        np.array([3.80419484e-01, 3.08300772e00, 2.66453526e-15, -5.08933956e00, -5.08295526e-02]),
+        np.array([-1.35442174, -5.87193092, 0.0, 46.79111287, 1.17353167]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[4261].y,
-        np.array([0.0, 0.0, -0.17492009, 0.0, 0.0]),
+        np.array([0.22466436, -0.18870296, 0.68962033, 0.05989628, -0.13047899]),
         decimal=6,
     )
     np.testing.assert_array_almost_equal(
         figure.data[1243].y,
-        np.array([11.51297038, 6.30633666, 0.96889746, -13.75417984, -45.35209531]),
+        np.array([11.51150145, 6.30667511, 0.96892677, -14.096754, -38.60689506]),
         decimal=6,
     )
 

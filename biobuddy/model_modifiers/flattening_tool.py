@@ -27,7 +27,7 @@ class FlatteningTool:
         This is temporary, as in the future, symmetrization could be performes on different axis for each segment.
         """
         for segment in self.original_model.segments:
-            if np.any(np.abs(segment.segment_coordinate_system.scs.rotation_matrix - np.eye(3)) > 1e-6):
+            if np.any(np.abs(segment.segment_coordinate_system.scs.rotation_matrix.rotation_matrix - np.eye(3)) > 1e-3):
                 raise ValueError(
                     f"Segment {segment.name} has a rotated coordinate system. Flattening is only possible if all segment coordinate systems are aligned."
                 )
