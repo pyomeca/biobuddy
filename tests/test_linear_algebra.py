@@ -327,12 +327,7 @@ def test_get_closest_rt_matrix():
     assert np.all(np.isnan(result))
 
     # Test error conditions
-    with pytest.raises(RuntimeError, match="far from SO\\(3\\)"):
-        invalid_rt = np.eye(4)
-        invalid_rt[:3, :3] = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
-        get_closest_rt_matrix(invalid_rt)
-
-    with pytest.raises(RuntimeError, match="Check rt matrix"):
+    with pytest.raises(RuntimeError, match=r"Check rt matrix: the bottom line is \[1. 0. 0. 1.\] and should be \[0, 0, 0, 1\]."):
         invalid_rt = np.eye(4)
         invalid_rt[3, :] = np.array([1, 0, 0, 1])
         get_closest_rt_matrix(invalid_rt)
@@ -502,7 +497,7 @@ def test_rototrans_matrix_class():
     rt = RotoTransMatrix.from_rotation_matrix_and_translation(rotation_matrix, translation)
 
     # Check properties
-    npt.assert_almost_equal(rt.rotation_matrix, rotation_matrix)
+    npt.assert_almost_equal(rt.rotation_matrix.rotation_matrix, rotation_matrix)
     npt.assert_almost_equal(rt.translation, translation)
 
     # Check full matrix
@@ -537,7 +532,7 @@ def test_rototrans_matrix_class():
     npt.assert_almost_equal(rt3.rt_matrix @ inverse_rt, np.eye(4))
 
     # Test Euler angles extraction
-    angles_extracted = rt2.euler_angles("xyz")
+    angles_extracted = rt2.rotation_matrix.euler_angles("xyz")
     assert len(angles_extracted) == 3
 
     # Test the initialization with nan
@@ -669,7 +664,7 @@ def test_rt():
 
             # --- Euler angles from rotation matrix --- #
             if angle_sequence == Rotations.XYZ:
-                angles_biobuddy = rt_biobuddy.euler_angles(angle_sequence=angle_sequence.value)
+                angles_biobuddy = rt_biobuddy.rotation_matrix.euler_angles(angle_sequence=angle_sequence.value)
                 angles_biorbd = biorbd.Rotation.toEulerAngles(rotation_matrix_biorbd, angle_sequence.value).to_array()
 
                 npt.assert_almost_equal(

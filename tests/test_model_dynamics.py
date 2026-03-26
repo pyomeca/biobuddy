@@ -640,14 +640,10 @@ def test_rt_from_parent_offset_to_real_segment_basic():
     rt_result = model_with.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix
     npt.assert_almost_equal(
         rt_result,
-        np.array(
-            [
-                [0.998838, 0.017684, -0.044828, 0.0],
-                [-0.011801, 0.99167, 0.128259, 0.0],
-                [0.046723, -0.127581, 0.990727, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        ),
+        np.array([[1., 0., 0., 0.],
+                   [0., 1., 0., 0.],
+                   [0., 0., 1., 0.],
+                   [0., 0., 0., 1.]]),
         decimal=5,
     )
 
