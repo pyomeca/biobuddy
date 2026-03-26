@@ -697,6 +697,50 @@ def test_remove_muscles():
     model.remove_muscles(["non_existent_muscle"])
 
 
+def test_remove_muscle_group():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Verify initial state
+    assert "parent_to_child" in model.muscle_group_names
+
+    # Remove a muscle group
+    model.remove_muscle_group("parent_to_child")
+
+    # Verify muscle was removed
+    assert "parent_to_child" not in model.muscle_group_names
+
+    # Test removing non-existent muscle group
+    with pytest.raises(AttributeError, match="The item named non_existent_muscle cannot be removed because it it not in the list."):
+        model.remove_muscle_group("non_existent_muscle")
+
+def test_remove_ligament():
+    # Create a simple model
+    model = create_simple_model()
+
+    # Add a ligament
+    model.add_ligament(LigamentReal(
+        name="ligament1",
+        ligament_type=LigamentType.LINEAR_SPRING,
+        origin_position=ViaPointReal(name="lig_origin", parent_name="parent", position=np.array([[0.0], [0.0], [0.0], [1.0]])),
+        insertion_position=ViaPointReal(name="lig_insertion", parent_name="child", position=np.array([[0.0], [0.0], [0.0], [1.0]])),
+        ligament_slack_length=0.1,
+        stiffness=1000,
+    ))
+
+    # Verify initial state
+    assert "ligament1" in model.ligament_names
+
+    # Remove a muscle group
+    model.remove_ligament("ligament1")
+
+    # Verify muscle was removed
+    assert "ligament1" not in model.ligament_names
+
+    # Test removing non-existent muscle group
+    with pytest.raises(AttributeError, match="The item named non_existent_ligament cannot be removed because it it not in the list."):
+        model.remove_ligament("non_existent_ligament")
+
 def test_update_muscle_groups():
     # Create a simple model
     model = create_simple_model()
