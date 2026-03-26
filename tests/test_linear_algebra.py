@@ -1001,9 +1001,9 @@ def test_rotation_matrix_from_closest_rotation_matrix():
     assert rot_obj2.is_orthonormal == True
     npt.assert_almost_equal(np.linalg.det(rot_obj2.rotation_matrix), 1.0)
 
-    npt.assert_almost_equal(rot_obj2.rotation_matrix, np.array([[1., 0., 0.],
-                   [0., 1., 0.],
-                   [0., 0., 1.]]), decimal=6)
+    npt.assert_almost_equal(
+        rot_obj2.rotation_matrix, np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]), decimal=6
+    )
 
 
 def test_rotation_matrix_is_orthonormal():
@@ -1032,17 +1032,18 @@ def test_rotation_matrix_suggest_correction():
 
     # Test that suggest_correction raises RuntimeError with helpful message
     with pytest.raises(
-            RuntimeError,
-            match=r"The rotation matrix "
-                  r"\n\[\[1.1 0.  0. \]\n"
-                  r" \[0.  1.  0. \]\n"
-                  r" \[0.  0.  1. \]\]\n"
-                  r" is not orthonormal or not right-handed. "
-                  r"You can use RotationMatrix.from_closest_rotation_matrix to get the closest orthonormal rotation matrix."
-                  r"In this case: \n"
-                  r"\[\[1. 0. 0.\]\n"
-                  r" \[0. 1. 0.\]\n"
-                  r" \[0. 0. 1.\]\]"):
+        RuntimeError,
+        match=r"The rotation matrix "
+        r"\n\[\[1.1 0.  0. \]\n"
+        r" \[0.  1.  0. \]\n"
+        r" \[0.  0.  1. \]\]\n"
+        r" is not orthonormal or not right-handed. "
+        r"You can use RotationMatrix.from_closest_rotation_matrix to get the closest orthonormal rotation matrix."
+        r"In this case: \n"
+        r"\[\[1. 0. 0.\]\n"
+        r" \[0. 1. 0.\]\n"
+        r" \[0. 0. 1.\]\]",
+    ):
         rot_obj.suggest_correction()
 
     # Create an invalid rotation matrix (determinant)
@@ -1051,17 +1052,18 @@ def test_rotation_matrix_suggest_correction():
 
     # Test that suggest_correction raises RuntimeError with helpful message
     with pytest.raises(
-            RuntimeError,
-            match=r"The rotation matrix \n"
-                  r"\[\[ 1.  0.  0.\]\n"
-                  r" \[ 0.  1.  0.\]\n"
-                  r" \[ 0.  0. -1.\]\]\n"
-                  r" is not orthonormal or not right-handed. "
-                  r"You can use RotationMatrix.from_closest_rotation_matrix to get the closest orthonormal rotation matrix."
-                  r"In this case: \n"
-                  r"\[\[1. 0. 0.\]\n"
-                  r" \[0. 1. 0.\]\n"
-                  r" \[0. 0. 1.\]\]"):
+        RuntimeError,
+        match=r"The rotation matrix \n"
+        r"\[\[ 1.  0.  0.\]\n"
+        r" \[ 0.  1.  0.\]\n"
+        r" \[ 0.  0. -1.\]\]\n"
+        r" is not orthonormal or not right-handed. "
+        r"You can use RotationMatrix.from_closest_rotation_matrix to get the closest orthonormal rotation matrix."
+        r"In this case: \n"
+        r"\[\[1. 0. 0.\]\n"
+        r" \[0. 1. 0.\]\n"
+        r" \[0. 0. 1.\]\]",
+    ):
         rot_obj.suggest_correction()
 
 
@@ -1131,8 +1133,11 @@ def test_rototrans_matrix_time_series_from_closest_rt_matrix():
         npt.assert_almost_equal(np.linalg.det(rt_frame.rotation_matrix.rotation_matrix), 1.0)
 
     # Test error condition
-    with pytest.raises(ValueError, match=r"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape \(..., nb_frames\). "
-                                         r"You have \(4, 4\)"):
+    with pytest.raises(
+        ValueError,
+        match=r"The rt used to initialize a RotoTransMatrixTimeSeries should be of shape \(..., nb_frames\). "
+        r"You have \(4, 4\)",
+    ):
         RotoTransMatrixTimeSeries.from_closest_rt_matrix(np.eye(4))
 
 
