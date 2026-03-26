@@ -1277,7 +1277,12 @@ def test_rotation_matrix_multiplication_with_point_4d():
 
     # Should only use first 3 components
     expected = rot_obj.rotation_matrix @ point_4d[:3]
-    npt.assert_almost_equal(result.reshape(3, ), expected)
+    npt.assert_almost_equal(
+        result.reshape(
+            3,
+        ),
+        expected,
+    )
 
 
 def test_rototrans_matrix_multiplication_with_point_3d():
@@ -1290,4 +1295,9 @@ def test_rototrans_matrix_multiplication_with_point_3d():
     # Should convert to 4D internally
     point_4d = np.array([4, 5, 6, 1])
     expected = rt_obj.rt_matrix @ point_4d
-    npt.assert_almost_equal(result.reshape(4, ), expected)
+    npt.assert_almost_equal(
+        result.reshape(
+            4,
+        ),
+        expected,
+    )
