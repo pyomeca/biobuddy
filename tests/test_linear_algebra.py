@@ -981,3 +981,281 @@ def test_roto_trans_matrix():
 
     non_identity_rt = RotoTransMatrix.from_rt_matrix(rt_expected)
     assert non_identity_rt.is_identity == False
+
+
+def test_rotation_matrix_from_closest_rotation_matrix():
+    """Test RotationMatrix.from_closest_rotation_matrix method."""
+    # Test with slightly invalid rotation matrix
+    invalid_rot = np.array([[1.01, 0, 0], [0, 0.99, 0], [0, 0, 1.0]])
+    rot_obj = RotationMatrix.from_closest_rotation_matrix(invalid_rot)
+
+    # Check that result is valid
+    assert rot_obj.is_orthonormal == True
+    npt.assert_almost_equal(rot_obj.rotation_matrix, np.eye(3), decimal=6)
+
+    # Test with negative determinant matrix
+    neg_det_rot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    rot_obj2 = RotationMatrix.from_closest_rotation_matrix(neg_det_rot)
+
+    # Check that result has positive determinant
+    assert rot_obj2.is_orthonormal == True
+    npt.assert_almost_equal(np.linalg.det(rot_obj2.rotation_matrix), 1.0)
+
+
+def test_rotation_matrix_is_orthonormal():
+    """Test RotationMatrix.is_orthonormal property."""
+    # Test with valid rotation matrix
+    valid_rot = rot_x_matrix(np.pi / 4)
+    rot_obj = RotationMatrix.from_rotation_matrix(valid_rot)
+    assert rot_obj.is_orthonormal == True
+
+    # Test with invalid rotation matrix (not orthonormal)
+    invalid_rot = np.array([[1.1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    rot_obj2 = RotationMatrix.from_rotation_matrix(invalid_rot)
+    assert rot_obj2.is_orthonormal == False
+
+    # Test with negative determinant (left-handed)
+    neg_det_rot = np.array([[1, 0, 0], [0, 1, 0], [0, 0, -1]])
+    rot_obj3 = RotationMatrix.from_rotation_matrix(neg_det_rot)
+    assert rot_obj3.is_orthonormal == False
+
+
+def test_rotation_matrix_suggest_correction():
+    """Test RotationMatrix.suggest_correction method."""
+    # Create an invalid rotation matrix
+    invalid_rot = np.array([[1.1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    rot_obj = RotationMatrix.from_rotation_matrix(invalid_rot)
+
+    # Test that suggest_correction raises RuntimeError with helpful message
+    with pytest.raises(RuntimeError, match="is not orthonormal or not right-handed"):
+        rot_obj.suggest_correction()
+
+    # Check that the error message contains the suggested correction
+    try:
+        rot_obj.suggest_correction()
+    except RuntimeError as e:
+        error_message = str(e)
+        assert "from_closest_rotation_matrix" in error_message
+        assert "In this case:" in error_message
+
+
+def test_rotation_matrix_setter_validation():
+    """Test RotationMatrix.rotation_matrix setter validation."""
+    rot_obj = RotationMatrix.from_rotation_matrix(np.eye(3))
+
+    # Test with invalid shape
+    with pytest.raises(ValueError, match="should be of shape \\(3, 3\\)"):
+        rot_obj.rotation_matrix = np.eye(2)
+
+    # Test with non-orthonormal matrix
+    invalid_rot = np.array([[1.1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    with pytest.raises(RuntimeError, match="is not a valid rotation matrix"):
+        rot_obj.rotation_matrix = invalid_rot
+
+
+def test_rototrans_matrix_from_closest_rt_matrix():
+    """Test RotoTransMatrix.from_closest_rt_matrix method."""
+    # Test with slightly invalid rotation matrix
+    invalid_rt = np.eye(4)
+    invalid_rt[:3, :3] = np.array([[1.01, 0, 0], [0, 0.99, 0], [0, 0, 1.0]])
+    invalid_rt[:3, 3] = np.array([1, 2, 3])
+
+    rt_obj = RotoTransMatrix.from_closest_rt_matrix(invalid_rt)
+
+    # Check that result is valid
+    npt.assert_almost_equal(rt_obj.rt_matrix[:3, :3], np.eye(3), decimal=6)
+    npt.assert_almost_equal(rt_obj.translation, np.array([1, 2, 3]))
+
+    # Test with 3D input
+    invalid_rt_3d = invalid_rt.reshape(4, 4, 1)
+    rt_obj2 = RotoTransMatrix.from_closest_rt_matrix(invalid_rt_3d)
+    npt.assert_almost_equal(rt_obj2.rt_matrix, rt_obj.rt_matrix)
+
+    # Test error condition
+    with pytest.raises(ValueError, match="should be of shape \\(4, 4\\)"):
+        RotoTransMatrix.from_closest_rt_matrix(np.eye(3))
+
+
+def test_rototrans_matrix_time_series_from_closest_rt_matrix():
+    """Test RotoTransMatrixTimeSeries.from_closest_rt_matrix method."""
+    # Create test data with slightly invalid rotation matrices
+    n_frames = 3
+    rt_matrices = np.zeros((4, 4, n_frames))
+
+    for i in range(n_frames):
+        angle = i * 0.1
+        # Create slightly invalid rotation
+        invalid_rot = rot_x_matrix(angle) * 1.01
+        rt_matrices[:3, :3, i] = invalid_rot
+        rt_matrices[:3, 3, i] = np.array([i, 0, 0])
+        rt_matrices[3, 3, i] = 1.0
+
+    rt_series = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_matrices)
+
+    # Check that all frames are valid
+    for i in range(n_frames):
+        rt_frame = rt_series[i]
+        # Check orthogonality
+        npt.assert_almost_equal(
+            rt_frame.rotation_matrix.rotation_matrix @ rt_frame.rotation_matrix.rotation_matrix.T,
+            np.eye(3),
+            decimal=6,
+        )
+        # Check determinant
+        npt.assert_almost_equal(np.linalg.det(rt_frame.rotation_matrix.rotation_matrix), 1.0)
+
+    # Test error condition
+    with pytest.raises(ValueError, match="should be of shape"):
+        RotoTransMatrixTimeSeries.from_closest_rt_matrix(np.eye(4))
+
+
+def test_rototrans_matrix_time_series_to_numpy():
+    """Test RotoTransMatrixTimeSeries.to_numpy method."""
+    # Create test data
+    n_frames = 3
+    rotation_matrices = np.zeros((3, 3, n_frames))
+    translations = np.zeros((3, n_frames))
+
+    for i in range(n_frames):
+        angle = i * 0.1
+        rotation_matrices[:, :, i] = rot_x_matrix(angle)
+        translations[:, i] = np.array([i, 0, 0])
+
+    rt_series = RotoTransMatrixTimeSeries.from_rotation_matrix_and_translation(rotation_matrices, translations)
+
+    # Test to_numpy method
+    numpy_result = rt_series.to_numpy()
+
+    # Check dimensions
+    assert numpy_result.shape == (4, 4, n_frames)
+
+    # Check that values match
+    for i in range(n_frames):
+        npt.assert_almost_equal(numpy_result[:, :, i], rt_series[i].rt_matrix)
+
+    # Check that to_numpy and get_rt_matrix return the same result
+    npt.assert_almost_equal(numpy_result, rt_series.get_rt_matrix())
+
+
+def test_rototrans_matrix_rotation_matrix_setter_with_rotation_matrix_object():
+    """Test RotoTransMatrix.rotation_matrix setter with RotationMatrix object."""
+    rt_obj = RotoTransMatrix.from_rt_matrix(np.eye(4))
+
+    # Create a RotationMatrix object
+    rot_matrix_obj = RotationMatrix.from_rotation_matrix(rot_x_matrix(np.pi / 4))
+
+    # Set rotation using RotationMatrix object
+    rt_obj.rotation_matrix = rot_matrix_obj
+
+    # Check that rotation was set correctly
+    npt.assert_almost_equal(rt_obj.rotation_matrix.rotation_matrix, rot_matrix_obj.rotation_matrix)
+
+
+def test_rototrans_matrix_from_rotation_matrix_and_translation_with_rotation_matrix_object():
+    """Test RotoTransMatrix.from_rotation_matrix_and_translation with RotationMatrix object."""
+    # Create a RotationMatrix object
+    rot_matrix_obj = RotationMatrix.from_rotation_matrix(rot_y_matrix(np.pi / 3))
+    translation = np.array([1, 2, 3])
+
+    # Create RotoTransMatrix using RotationMatrix object
+    rt_obj = RotoTransMatrix.from_rotation_matrix_and_translation(rot_matrix_obj, translation)
+
+    # Check that rotation and translation were set correctly
+    npt.assert_almost_equal(rt_obj.rotation_matrix.rotation_matrix, rot_matrix_obj.rotation_matrix)
+    npt.assert_almost_equal(rt_obj.translation, translation)
+
+
+def test_rototrans_matrix_from_rotation_matrix_and_translation_with_4d_translation():
+    """Test RotoTransMatrix.from_rotation_matrix_and_translation with 4D translation."""
+    rotation = rot_z_matrix(np.pi / 6)
+    translation_4d = np.array([1, 2, 3, 1])
+
+    rt_obj = RotoTransMatrix.from_rotation_matrix_and_translation(rotation, translation_4d)
+
+    # Check that only first 3 components of translation are used
+    npt.assert_almost_equal(rt_obj.translation, translation_4d[:3])
+
+
+def test_rototrans_matrix_from_euler_angles_and_translation_with_4d_translation():
+    """Test RotoTransMatrix.from_euler_angles_and_translation with 4D translation."""
+    angles = np.array([0.1, 0.2, 0.3])
+    translation_4d = np.array([1, 2, 3, 1])
+
+    rt_obj = RotoTransMatrix.from_euler_angles_and_translation("xyz", angles, translation_4d)
+
+    # Check that only first 3 components of translation are used
+    npt.assert_almost_equal(rt_obj.translation, translation_4d[:3])
+
+
+def test_get_closest_rotation_matrix_with_valid_input():
+    """Test get_closest_rotation_matrix with already valid rotation matrix."""
+    valid_rot = rot_x_matrix(np.pi / 4)
+    result = get_closest_rotation_matrix(valid_rot)
+
+    # Should return the same matrix (or very close)
+    npt.assert_almost_equal(result, valid_rot)
+
+
+def test_get_closest_rt_matrix_with_valid_input():
+    """Test get_closest_rt_matrix with already valid rt matrix."""
+    valid_rt = np.eye(4)
+    valid_rt[:3, :3] = rot_y_matrix(np.pi / 3)
+    valid_rt[:3, 3] = np.array([1, 2, 3])
+
+    result = get_closest_rt_matrix(valid_rt)
+
+    # Should return the same matrix (or very close)
+    npt.assert_almost_equal(result, valid_rt)
+
+
+def test_rototrans_matrix_time_series_multiplication_error_with_wrong_shape():
+    """Test RotoTransMatrixTimeSeries multiplication with wrong shape."""
+    n_frames = 3
+    rt_series = RotoTransMatrixTimeSeries(n_frames)
+
+    # Test with wrong number of frames
+    point_wrong_frames = np.random.randn(4, n_frames + 1)
+
+    with pytest.raises(ValueError, match="Expected .* got shape"):
+        _ = rt_series @ point_wrong_frames
+
+    # Test with wrong first dimension
+    point_wrong_dim = np.random.randn(2, n_frames)
+
+    with pytest.raises(ValueError, match="is only possible with np.array of shape"):
+        _ = rt_series @ point_wrong_dim
+
+
+def test_rototrans_matrix_from_rotation_matrix_and_translation_determinant_check():
+    """Test RotoTransMatrix.from_rotation_matrix_and_translation with invalid determinant."""
+    # Create a matrix with determinant != 1
+    invalid_rot = np.array([[2, 0, 0], [0, 2, 0], [0, 0, 2]])
+    translation = np.array([1, 2, 3])
+
+    with pytest.raises(ValueError, match="is not a valid rotation matrix"):
+        RotoTransMatrix.from_rotation_matrix_and_translation(invalid_rot, translation)
+
+
+def test_rotation_matrix_multiplication_with_point_4d():
+    """Test RotationMatrix multiplication with 4D point."""
+    rot_obj = RotationMatrix.from_rotation_matrix(rot_z_matrix(np.pi / 4))
+    point_4d = np.array([1, 2, 3, 1])
+
+    result = rot_obj @ point_4d
+
+    # Should only use first 3 components
+    expected = rot_obj.rotation_matrix @ point_4d[:3]
+    npt.assert_almost_equal(result, expected)
+
+
+def test_rototrans_matrix_multiplication_with_point_3d():
+    """Test RotoTransMatrix multiplication with 3D point."""
+    rt_obj = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0.1, 0.2, 0.3]), np.array([1, 2, 3]))
+    point_3d = np.array([4, 5, 6])
+
+    result = rt_obj @ point_3d
+
+    # Should convert to 4D internally
+    point_4d = np.array([4, 5, 6, 1])
+    expected = rt_obj.rt_matrix @ point_4d
+    npt.assert_almost_equal(result, expected)
