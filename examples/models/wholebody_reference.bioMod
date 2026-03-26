@@ -1,7 +1,7 @@
 version 4
 
 
-// File extracted from /Users/evecharbonneau/Documents/Programmation/biobuddy/examples/models/wholebody.osim on the 2025-07-24 12:28
+// File extracted from /home/charbie/Documents/Programmation/biobuddy/examples/models/wholebody.osim on the 2026-03-26 09:36
 
 // Original file publication : Whole body model that consists of 23 bodies, 42 degrees of freedom and 30 muscles. The whole-body geometric model and the lower limbs, pelvis and upper limbs anthropometry are based on the running model of Hammer et al. 2010 which consists of 12 segments and 29 degrees of freedom. Extra segments and degrees of freedom were later added based on Dumas et al. 2007. Muscles Each lower extremity had seven degrees-of-freedom; the hip was modeled as a ball-and-socket joint (3 dofs), the knee was modeled as a revolute joint with 1 dof, the ankle was modeled as 2 revolute joints and feet toes with one revolute joint. The pelvis joint was model as a free flyer joint (6 dofs) to allow the model to translate and rotate in the 3D space, the lumbar motion was modeled as a ball-and-socket joint (3 dofs) (Anderson and Pandy, 1999) and the neck joint was modeled as a ball-and-socket joint (3 dofs). Mass properties of the torso and head (including the neck) segments were estimated from Dumas et al., 2007. Each arm consisted of 8 degrees-of-freedom; the shoulder was modeled as a ball-and-socket joint (3 dofs), the elbow and forearm rotation were each modeled with revolute joints (1 dof) (Holzbaur et al., 2005), the wrist flexion and deviation were each modeled with revolute joints and the hand fingers were modeled with 1 revolute joint. Mass properties for the arms were estimated from 1 and de Leva, 1996. The model also include 30 superficial muscles of the whole body..
 
@@ -68,6 +68,7 @@ segment	pelvis_translation
 		-10.000000	10.000000
 		-6.000000	6.000000
 		-5.000000	5.000000
+
 endsegment
 
 
@@ -85,6 +86,7 @@ segment	pelvis_rotation_transform
 		-3.141600	3.141600
 		-3.141600	3.141600
 		-3.141600	3.141600
+
 endsegment
 
 
@@ -217,6 +219,7 @@ segment	femur_r_rotation_transform
 		-2.618000	2.094395
 		-2.094395	2.094395
 		-2.094395	2.094395
+
 endsegment
 
 
@@ -302,13 +305,14 @@ segment	tibia_r_rotation_transform
 	parent	tibia_r_translation
 	RTinMatrix	1
 	RT
-		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
 		0.000000	1.000000	0.000000	0.000000
 		1.000000	0.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
+
 endsegment
 
 
@@ -319,7 +323,7 @@ segment	tibia_r_reset_axis
 	RT
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	1.000000	0.000000	0.000000
-		1.000000	0.000000	0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -406,28 +410,29 @@ endsegment
 
 
 
-segment	talus_r_ankle_angle_r
+segment	tibia_r_offset_ankle_angle_r
 	parent	talus_r_translation
 	RTinMatrix	1
 	RT
-		-0.105014	0.282611	-0.953469	0.000000
-		-0.174022	0.938754	0.297416	0.000000
-		0.979126	0.197158	-0.049401	0.000000
+		-0.105014	0.318348	-0.942140	0.000000
+		-0.174022	0.926877	0.332588	0.000000
+		0.979126	0.198880	-0.041935	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
+
 endsegment
 
 
 
 segment	talus_r_rotation_1
-	parent	talus_r_ankle_angle_r
+	parent	tibia_r_offset_ankle_angle_r
 	RTinMatrix	1
 	RT
-		0.969931	-0.174022	0.170144	0.000000
-		0.215585	0.938754	-0.268818	0.000000
-		-0.112943	0.297416	0.948044	0.000000
+		0.175633	-0.174022	0.968953	0.000000
+		0.361540	0.926877	0.100933	0.000000
+		-0.915665	0.332588	0.225706	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -437,9 +442,9 @@ segment	talus_r_rotation_2
 	parent	talus_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.373432	0.911425	0.172781	0.000000
-		0.925342	0.379134	0.000000	0.000000
-		-0.065507	0.159881	-0.984960	0.000000
+		-0.100306	0.147475	0.983966	0.000000
+		0.826867	0.562398	0.000000	0.000000
+		-0.553381	0.813609	-0.178354	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -449,8 +454,8 @@ segment	talus_r_reset_axis
 	parent	talus_r_rotation_2
 	RTinMatrix	1
 	RT
-		0.040431	0.925342	-0.376972	0.000000
-		-0.098679	0.379134	0.920065	0.000000
+		0.059975	0.826867	-0.559191	0.000000
+		-0.088178	0.562398	0.822152	0.000000
 		0.994298	0.000000	0.106641	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -503,28 +508,29 @@ endsegment
 
 
 
-segment	calcn_r_subtalar_angle_r
+segment	talus_r_offset_subtalar_angle_r
 	parent	calcn_r_translation
 	RTinMatrix	1
 	RT
-		0.787180	-0.486423	0.379132	0.000000
-		0.604747	0.729371	-0.319842	0.000000
-		-0.120949	0.481053	0.868309	0.000000
+		0.787180	0.066652	0.613112	0.000000
+		0.604747	0.111546	-0.788567	0.000000
+		-0.120949	0.991522	0.047499	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
+
 endsegment
 
 
 
 segment	calcn_r_rotation_1
-	parent	calcn_r_subtalar_angle_r
+	parent	talus_r_offset_subtalar_angle_r
 	RTinMatrix	1
 	RT
-		0.506623	0.604747	-0.614503	0.000000
-		-0.042441	0.729371	0.682801	0.000000
-		0.861123	-0.319842	0.395182	0.000000
+		0.779715	0.604747	-0.162248	0.000000
+		0.118790	0.111546	0.986634	0.000000
+		0.614762	-0.788567	0.015136	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -534,9 +540,9 @@ segment	calcn_r_rotation_2
 	parent	calcn_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.514097	0.374649	-0.771584	0.000000
-		0.588954	0.808167	0.000000	0.000000
-		0.623569	-0.454427	-0.636127	0.000000
+		-0.911249	0.357942	-0.203723	0.000000
+		0.365609	0.930768	0.000000	0.000000
+		0.189619	-0.074483	-0.979029	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -546,9 +552,9 @@ segment	calcn_r_reset_axis
 	parent	calcn_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.798793	0.588954	0.122734	0.000000
-		0.582122	0.808167	-0.089443	0.000000
-		-0.151867	0.000000	-0.988401	0.000000
+		-0.919972	0.365609	0.141353	0.000000
+		0.361369	0.930768	-0.055524	0.000000
+		-0.151867	-0.000000	-0.988401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -623,13 +629,14 @@ segment	toes_r_rotation_transform
 	parent	toes_r_translation
 	RTinMatrix	1
 	RT
-		-0.580954	0.000000	0.813936	0.000000
-		0.000000	1.000000	-0.000000	0.000000
-		0.813936	0.000000	0.580954	0.000000
+		-0.580954	0.000000	-0.813936	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.813936	0.000000	-0.580954	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
+
 endsegment
 
 
@@ -640,7 +647,7 @@ segment	toes_r_reset_axis
 	RT
 		-0.580954	0.000000	0.813936	0.000000
 		0.000000	1.000000	0.000000	0.000000
-		0.813936	0.000000	0.580954	0.000000
+		-0.813936	0.000000	-0.580954	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -712,6 +719,7 @@ segment	femur_l_rotation_transform
 		-2.618000	2.094395
 		-2.094395	2.094395
 		-2.094395	2.094395
+
 endsegment
 
 
@@ -721,8 +729,8 @@ segment	femur_l_reset_axis
 	RTinMatrix	1
 	RT
 		0.000000	0.000000	1.000000	0.000000
-		-1.000000	-0.000000	-0.000000	0.000000
-		-0.000000	-1.000000	-0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
+		0.000000	-1.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -797,13 +805,14 @@ segment	tibia_l_rotation_transform
 	parent	tibia_l_translation
 	RTinMatrix	1
 	RT
-		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	-1.000000	0.000000
 		0.000000	1.000000	0.000000	0.000000
 		1.000000	0.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-3.141600	0.349100
+
 endsegment
 
 
@@ -814,7 +823,7 @@ segment	tibia_l_reset_axis
 	RT
 		0.000000	0.000000	1.000000	0.000000
 		0.000000	1.000000	0.000000	0.000000
-		1.000000	0.000000	0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -901,28 +910,29 @@ endsegment
 
 
 
-segment	talus_l_ankle_angle_l
+segment	tibia_l_offset_ankle_angle_l
 	parent	talus_l_translation
 	RTinMatrix	1
 	RT
-		0.105014	-0.120769	-0.987110	0.000000
-		0.174022	0.979515	-0.101326	0.000000
-		0.979126	-0.161139	0.123879	0.000000
+		0.105014	0.937514	-0.331723	0.000000
+		0.174022	0.311097	0.934310	0.000000
+		0.979126	-0.155843	-0.130479	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.047198	1.047198
+
 endsegment
 
 
 
 segment	talus_l_rotation_1
-	parent	talus_l_ankle_angle_l
+	parent	tibia_l_offset_ankle_angle_l
 	RTinMatrix	1
 	RT
-		0.918954	0.174022	0.353893	0.000000
-		-0.198513	0.979515	0.033814	0.000000
-		-0.340759	-0.101326	0.934675	0.000000
+		0.737313	0.174022	0.652752	0.000000
+		0.587756	0.311097	-0.746835	0.000000
+		-0.333035	0.934310	0.127093	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -932,9 +942,9 @@ segment	talus_l_rotation_2
 	parent	talus_l_rotation_1
 	RTinMatrix	1
 	RT
-		-0.719467	0.594320	0.359376	0.000000
-		0.636868	0.770973	0.000000	0.000000
-		-0.277070	0.228875	-0.933193	0.000000
+		-0.517237	0.541364	0.662866	0.000000
+		0.723035	0.690811	0.000000	0.000000
+		-0.457916	0.479276	-0.748738	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -944,9 +954,9 @@ segment	talus_l_reset_axis
 	parent	talus_l_rotation_2
 	RTinMatrix	1
 	RT
-		-0.082217	0.636868	-0.766577	0.000000
-		0.067916	0.770973	0.633236	0.000000
-		0.994298	-0.000000	-0.106641	0.000000
+		-0.073669	0.723035	-0.686872	0.000000
+		0.077105	0.690811	0.718912	0.000000
+		0.994298	0.000000	-0.106641	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -998,28 +1008,29 @@ endsegment
 
 
 
-segment	calcn_l_subtalar_angle_l
+segment	talus_l_offset_subtalar_angle_l
 	parent	calcn_l_translation
 	RTinMatrix	1
 	RT
-		-0.787180	0.616013	0.029591	0.000000
-		-0.604747	-0.761594	-0.232927	0.000000
-		-0.120949	-0.201250	0.972044	0.000000
+		-0.787180	0.537798	0.301863	0.000000
+		-0.604747	-0.577119	-0.548830	0.000000
+		-0.120949	-0.614579	0.779528	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.570796	1.570796
+
 endsegment
 
 
 
 segment	calcn_l_rotation_1
-	parent	calcn_l_subtalar_angle_l
+	parent	talus_l_offset_subtalar_angle_l
 	RTinMatrix	1
 	RT
-		-0.248736	-0.604747	0.756578	0.000000
-		-0.097223	-0.761594	-0.640720	0.000000
-		0.963680	-0.232927	0.130641	0.000000
+		-0.458388	-0.604747	0.651277	0.000000
+		-0.311310	-0.577119	-0.754997	0.000000
+		0.832446	-0.548830	0.076280	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1029,9 +1040,9 @@ segment	calcn_l_rotation_2
 	parent	calcn_l_rotation_1
 	RTinMatrix	1
 	RT
-		0.225097	0.216505	0.949977	0.000000
-		-0.693218	0.720728	0.000000	0.000000
-		-0.684676	-0.658541	0.312318	0.000000
+		0.067968	0.571535	0.817758	0.000000
+		-0.993003	0.118089	0.000000	0.000000
+		-0.096568	-0.812036	0.575562	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1041,9 +1052,9 @@ segment	calcn_l_reset_axis
 	parent	calcn_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.712369	-0.693218	0.109455	0.000000
-		0.685177	0.720728	0.105277	0.000000
-		-0.151867	-0.000000	0.988401	0.000000
+		0.116719	-0.993003	0.017934	0.000000
+		0.981485	0.118089	0.150804	0.000000
+		-0.151867	0.000000	0.988401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1118,13 +1129,14 @@ segment	toes_l_rotation_transform
 	parent	toes_l_translation
 	RTinMatrix	1
 	RT
-		0.580954	0.000000	0.813936	0.000000
+		0.580954	0.000000	-0.813936	0.000000
 		0.000000	1.000000	0.000000	0.000000
-		0.813936	0.000000	-0.580954	0.000000
+		0.813936	0.000000	0.580954	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-1.047198	1.047198
+
 endsegment
 
 
@@ -1135,7 +1147,7 @@ segment	toes_l_reset_axis
 	RT
 		0.580954	0.000000	0.813936	0.000000
 		0.000000	1.000000	0.000000	0.000000
-		0.813936	0.000000	-0.580954	0.000000
+		-0.813936	0.000000	0.580954	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1207,6 +1219,7 @@ segment	torso_rotation_transform
 		-1.570796	1.570796
 		-1.570796	1.570796
 		-1.570796	1.570796
+
 endsegment
 
 
@@ -1335,6 +1348,7 @@ segment	head_and_neck_rotation_transform
 		-1.745330	1.047198
 		-0.600000	0.600000
 		-1.221700	1.221700
+
 endsegment
 
 
@@ -1457,6 +1471,7 @@ segment	humerus_r_rotation_transform
 		-1.570796	3.141600
 		-3.839700	1.570796
 		-1.570796	1.570796
+
 endsegment
 
 
@@ -1532,28 +1547,29 @@ endsegment
 
 
 
-segment	ulna_r_elbow_flex_r
+segment	humerus_r_offset_elbow_flex_r
 	parent	ulna_r_translation
 	RTinMatrix	1
 	RT
-		0.226047	0.692817	-0.684768	0.000000
-		0.022269	0.699105	0.714672	0.000000
-		0.973862	-0.176799	0.142602	0.000000
+		0.226047	0.592684	-0.773065	0.000000
+		0.022269	0.790254	0.612374	0.000000
+		0.973862	-0.155641	0.165436	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		0.000000	3.141600
+
 endsegment
 
 
 
 segment	ulna_r_rotation_1
-	parent	ulna_r_elbow_flex_r
+	parent	humerus_r_offset_elbow_flex_r
 	RTinMatrix	1
 	RT
-		0.640155	0.022269	0.767923	0.000000
-		0.539115	0.699105	-0.469689	0.000000
-		-0.547318	0.714672	0.435530	0.000000
+		0.953377	0.022269	0.300958	0.000000
+		0.167605	0.790254	-0.589412	0.000000
+		-0.250959	0.612374	0.749678	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1563,9 +1579,9 @@ segment	ulna_r_rotation_2
 	parent	ulna_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.143251	0.624084	0.768114	0.000000
-		0.974653	0.223721	0.000000	0.000000
-		-0.171843	0.748645	-0.640313	0.000000
+		-0.507856	0.807131	0.301033	0.000000
+		0.846392	0.532560	-0.000000	0.000000
+		-0.160318	0.254792	-0.953614	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1575,8 +1591,8 @@ segment	ulna_r_reset_axis
 	parent	ulna_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.050584	0.974653	-0.217927	0.000000
-		0.220372	0.223721	0.949413	0.000000
+		-0.120413	0.846392	-0.518768	0.000000
+		0.191372	0.532560	0.824474	0.000000
 		0.974103	-0.000000	-0.226103	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -1629,28 +1645,29 @@ endsegment
 
 
 
-segment	radius_r_pro_sup_r
+segment	ulna_r_offset_pro_sup_r
 	parent	radius_r_translation
 	RTinMatrix	1
 	RT
-		0.056398	0.813819	0.578375	0.000000
-		0.998406	-0.047103	-0.031077	0.000000
-		0.001952	0.579206	-0.815179	0.000000
+		0.056398	0.958761	0.278562	0.000000
+		0.998406	-0.054704	-0.013858	0.000000
+		0.001952	0.278900	-0.960318	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-3.141600	3.141600
+
 endsegment
 
 
 
 segment	radius_r_rotation_1
-	parent	radius_r_pro_sup_r
+	parent	ulna_r_offset_pro_sup_r
 	RTinMatrix	1
 	RT
-		0.047051	0.998406	-0.031158	0.000000
-		0.998890	-0.047104	-0.000974	0.000000
-		-0.002440	-0.031077	-0.999514	0.000000
+		0.054078	0.998406	-0.016127	0.000000
+		0.997649	-0.054704	-0.041270	0.000000
+		-0.042087	-0.013858	-0.999018	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1660,9 +1677,9 @@ segment	radius_r_rotation_2
 	parent	radius_r_rotation_1
 	RTinMatrix	1
 	RT
-		-0.526648	0.646372	-0.552128	0.000000
-		0.775250	0.631654	-0.000000	0.000000
-		0.348754	-0.428037	-0.833759	0.000000
+		-0.476909	0.831196	-0.285783	0.000000
+		0.867370	0.497664	0.000000	0.000000
+		0.142224	-0.247879	-0.958294	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -1672,8 +1689,8 @@ segment	radius_r_reset_axis
 	parent	radius_r_rotation_2
 	RTinMatrix	1
 	RT
-		-0.631276	0.775250	-0.021854	0.000000
-		0.774786	0.631654	0.026822	0.000000
+		-0.497366	0.867370	-0.017218	0.000000
+		0.866851	0.497664	0.030009	0.000000
 		0.034598	-0.000000	-0.999401	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -1750,6 +1767,7 @@ segment	lunate_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
+
 endsegment
 
 
@@ -1823,6 +1841,7 @@ segment	hand_r_rotation_transform
 	rotations	y
 	rangesQ 
 		-0.436332	0.610865
+
 endsegment
 
 
@@ -2117,6 +2136,7 @@ segment	fingers_r_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
+
 endsegment
 
 
@@ -2375,6 +2395,7 @@ segment	humerus_l_rotation_transform
 		-1.570796	3.141600
 		-3.839700	1.570796
 		-1.570796	1.570796
+
 endsegment
 
 
@@ -2384,8 +2405,8 @@ segment	humerus_l_reset_axis
 	RTinMatrix	1
 	RT
 		0.000000	0.000000	1.000000	0.000000
-		-1.000000	-0.000000	-0.000000	0.000000
-		-0.000000	-1.000000	-0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
+		0.000000	-1.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2450,28 +2471,29 @@ endsegment
 
 
 
-segment	ulna_l_elbow_flex_l
+segment	humerus_l_offset_elbow_flex_l
 	parent	ulna_l_translation
 	RTinMatrix	1
 	RT
-		-0.226047	0.566145	-0.792706	0.000000
-		-0.022269	0.810553	0.585242	0.000000
-		0.973862	0.149945	-0.170616	0.000000
+		-0.226047	0.753650	-0.617183	0.000000
+		-0.022269	0.629418	0.776747	0.000000
+		0.973862	0.189325	-0.125495	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		0.000000	3.141600
+
 endsegment
 
 
 
 segment	ulna_l_rotation_1
-	parent	ulna_l_elbow_flex_l
+	parent	humerus_l_offset_elbow_flex_l
 	RTinMatrix	1
 	RT
-		-0.223291	-0.022269	0.974497	0.000000
-		0.566567	0.810553	0.148342	0.000000
-		-0.793185	0.585242	-0.168372	0.000000
+		0.273700	-0.022269	0.961557	0.000000
+		0.751096	0.629418	-0.199217	0.000000
+		-0.600786	0.776747	0.188998	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2481,9 +2503,9 @@ segment	ulna_l_rotation_2
 	parent	ulna_l_rotation_1
 	RTinMatrix	1
 	RT
-		0.104001	-0.197655	0.974739	0.000000
-		0.884970	0.465649	-0.000000	0.000000
-		-0.453886	0.862614	0.223346	0.000000
+		-0.270542	0.041904	0.961796	0.000000
+		0.153066	0.988216	0.000000	0.000000
+		-0.950462	0.147218	-0.273768	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2493,8 +2515,8 @@ segment	ulna_l_reset_axis
 	parent	ulna_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.105285	0.884970	-0.453590	0.000000
-		-0.200094	0.465649	0.862052	0.000000
+		0.223439	0.153066	-0.962625	0.000000
+		-0.034609	0.988216	0.149102	0.000000
 		0.974103	-0.000000	0.226103	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
@@ -2547,28 +2569,29 @@ endsegment
 
 
 
-segment	radius_l_pro_sup_l
+segment	ulna_l_offset_pro_sup_l
 	parent	radius_l_translation
 	RTinMatrix	1
 	RT
-		-0.056398	0.552654	-0.831500	0.000000
-		-0.998406	-0.029590	0.048052	0.000000
-		0.001952	0.832885	0.553442	0.000000
+		-0.056398	0.704979	-0.706982	0.000000
+		-0.998406	-0.038438	0.041316	0.000000
+		0.001952	0.708186	0.706023	0.000000
 		0.000000	0.000000	0.000000	1.000000
 	rotations	x
 	rangesQ 
 		-3.141600	3.141600
+
 endsegment
 
 
 
 segment	radius_l_rotation_1
-	parent	radius_l_pro_sup_l
+	parent	ulna_l_offset_pro_sup_l
 	RTinMatrix	1
 	RT
-		-0.051144	-0.998406	0.023851	0.000000
-		0.834343	-0.029590	0.550450	0.000000
-		-0.548867	0.048052	0.834527	0.000000
+		-0.031341	-0.998406	0.046929	0.000000
+		0.986543	-0.038438	-0.158917	0.000000
+		0.160467	0.041316	0.986176	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2578,9 +2601,9 @@ segment	radius_l_rotation_2
 	parent	radius_l_rotation_1
 	RTinMatrix	1
 	RT
-		0.891311	0.164115	0.422648	0.000000
-		-0.181083	0.983468	-0.000000	0.000000
-		-0.415661	-0.076534	0.906294	0.000000
+		0.358808	0.423914	0.831597	0.000000
+		-0.763288	0.646059	-0.000000	0.000000
+		-0.537260	-0.634748	0.555379	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2590,9 +2613,9 @@ segment	radius_l_reset_axis
 	parent	radius_l_rotation_2
 	RTinMatrix	1
 	RT
-		0.982879	-0.181083	-0.034019	0.000000
-		0.180975	0.983468	-0.006264	0.000000
-		0.034590	0.000000	0.999402	0.000000
+		0.645672	-0.763288	-0.022347	0.000000
+		0.762831	0.646059	-0.026402	0.000000
+		0.034590	-0.000000	0.999402	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2668,6 +2691,7 @@ segment	lunate_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
+
 endsegment
 
 
@@ -2677,8 +2701,8 @@ segment	lunate_l_reset_axis
 	RTinMatrix	1
 	RT
 		0.000000	0.000000	1.000000	0.000000
-		-1.000000	-0.000000	-0.000000	0.000000
-		-0.000000	-1.000000	-0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
+		0.000000	-1.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -2741,6 +2765,7 @@ segment	hand_l_rotation_transform
 	rotations	y
 	rangesQ 
 		-0.436332	0.610865
+
 endsegment
 
 
@@ -2750,8 +2775,8 @@ segment	hand_l_reset_axis
 	RTinMatrix	1
 	RT
 		0.000000	0.000000	1.000000	0.000000
-		-1.000000	-0.000000	-0.000000	0.000000
-		-0.000000	-1.000000	-0.000000	0.000000
+		-1.000000	0.000000	0.000000	0.000000
+		0.000000	-1.000000	0.000000	0.000000
 		0.000000	0.000000	0.000000	1.000000
 endsegment
 
@@ -3035,6 +3060,7 @@ segment	fingers_l_rotation_transform
 	rotations	x
 	rangesQ 
 		-1.570800	1.570800
+
 endsegment
 
 
@@ -3765,6 +3791,56 @@ musclegroup	femur_r_to_tibia_r
 endmusclegroup
 
  // ------ MUSCLES ------
+muscle	vas_med_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_r_to_tibia_r
+	originposition	0.014	-0.2099	0.0188
+	insertionposition	0.056	0.0218	-0.0146
+	optimallength	0.0890
+	maximalforce	1294.0000
+	tendonslacklength	0.1260
+	pennationangle	0.0873
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	vas_med_r-P2
+	parent	femur_r
+	muscle	vas_med_r
+	musclegroup	femur_r_to_tibia_r
+	position	0.0356	-0.2769	0.0009
+endviapoint
+
+
+muscle	vas_lat_r
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_r_to_tibia_r
+	originposition	0.0048	-0.1854	0.0349
+	insertionposition	0.06	0.0196	0.0165
+	optimallength	0.0840
+	maximalforce	1871.0000
+	tendonslacklength	0.1570
+	pennationangle	0.0873
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	vas_lat_r-P2
+	parent	femur_r
+	muscle	vas_lat_r
+	musclegroup	femur_r_to_tibia_r
+	position	0.0269	-0.2591	0.0409
+endviapoint
+
+
 
 musclegroup	femur_r_to_calcn_r
 	OriginParent	femur_r
@@ -4139,6 +4215,56 @@ musclegroup	femur_l_to_tibia_l
 endmusclegroup
 
  // ------ MUSCLES ------
+muscle	vas_med_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_l_to_tibia_l
+	originposition	0.014	-0.2099	-0.0188
+	insertionposition	0.056	0.0218	0.0146
+	optimallength	0.0890
+	maximalforce	1294.0000
+	tendonslacklength	0.1260
+	pennationangle	0.0873
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	vas_med_l-P2
+	parent	femur_l
+	muscle	vas_med_l
+	musclegroup	femur_l_to_tibia_l
+	position	0.0356	-0.2769	-0.0009
+endviapoint
+
+
+muscle	vas_lat_l
+	type	hilldegroote
+	statetype	degroote
+	musclegroup	femur_l_to_tibia_l
+	originposition	0.0048	-0.1854	-0.0349
+	insertionposition	0.06	0.0196	-0.0165
+	optimallength	0.0840
+	maximalforce	1871.0000
+	tendonslacklength	0.1570
+	pennationangle	0.0873
+	maxvelocity	10.0000
+	maxexcitation	1.0000
+endmuscle
+
+
+
+ // ------ VIA POINTS ------
+viapoint	vas_lat_l-P2
+	parent	femur_l
+	muscle	vas_lat_l
+	musclegroup	femur_l_to_tibia_l
+	position	0.0269	-0.2591	-0.0409
+endviapoint
+
+
 
 musclegroup	femur_l_to_calcn_l
 	OriginParent	femur_l
@@ -5187,9 +5313,7 @@ An element Flen was found in the muscle vas_med_r, but this feature is not imple
 An element activation_time_constant was found in the muscle vas_med_r, but this feature is not implemented yet so it will be ignored.
 
 An element deactivation_time_constant was found in the muscle vas_med_r, but this feature is not implemented yet so it will be ignored.
-Warning: No SimmSpline found in PathPointMovement locations. It will be ignored
 
-The muscle vas_med_r has a conditional or moving insertion or origin, it is not implemented yet.
 
 An element FmaxTendonStrain was found in the muscle vas_lat_r, but this feature is not implemented yet so it will be ignored.
 
@@ -5206,9 +5330,7 @@ An element Flen was found in the muscle vas_lat_r, but this feature is not imple
 An element activation_time_constant was found in the muscle vas_lat_r, but this feature is not implemented yet so it will be ignored.
 
 An element deactivation_time_constant was found in the muscle vas_lat_r, but this feature is not implemented yet so it will be ignored.
-Warning: No SimmSpline found in PathPointMovement locations. It will be ignored
 
-The muscle vas_lat_r has a conditional or moving insertion or origin, it is not implemented yet.
 
 An element FmaxTendonStrain was found in the muscle med_gas_r, but this feature is not implemented yet so it will be ignored.
 
@@ -5412,9 +5534,7 @@ An element Flen was found in the muscle vas_med_l, but this feature is not imple
 An element activation_time_constant was found in the muscle vas_med_l, but this feature is not implemented yet so it will be ignored.
 
 An element deactivation_time_constant was found in the muscle vas_med_l, but this feature is not implemented yet so it will be ignored.
-Warning: No SimmSpline found in PathPointMovement locations. It will be ignored
 
-The muscle vas_med_l has a conditional or moving insertion or origin, it is not implemented yet.
 
 An element FmaxTendonStrain was found in the muscle vas_lat_l, but this feature is not implemented yet so it will be ignored.
 
@@ -5431,9 +5551,7 @@ An element Flen was found in the muscle vas_lat_l, but this feature is not imple
 An element activation_time_constant was found in the muscle vas_lat_l, but this feature is not implemented yet so it will be ignored.
 
 An element deactivation_time_constant was found in the muscle vas_lat_l, but this feature is not implemented yet so it will be ignored.
-Warning: No SimmSpline found in PathPointMovement locations. It will be ignored
 
-The muscle vas_lat_l has a conditional or moving insertion or origin, it is not implemented yet.
 
 An element FmaxTendonStrain was found in the muscle med_gas_l, but this feature is not implemented yet so it will be ignored.
 
