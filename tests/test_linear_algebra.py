@@ -327,7 +327,9 @@ def test_get_closest_rt_matrix():
     assert np.all(np.isnan(result))
 
     # Test error conditions
-    with pytest.raises(RuntimeError, match=r"Check rt matrix: the bottom line is \[1. 0. 0. 1.\] and should be \[0, 0, 0, 1\]."):
+    with pytest.raises(
+        RuntimeError, match=r"Check rt matrix: the bottom line is \[1. 0. 0. 1.\] and should be \[0, 0, 0, 1\]."
+    ):
         invalid_rt = np.eye(4)
         invalid_rt[3, :] = np.array([1, 0, 0, 1])
         get_closest_rt_matrix(invalid_rt)

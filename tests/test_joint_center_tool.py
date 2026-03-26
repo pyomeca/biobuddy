@@ -126,19 +126,27 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
             # The rotation part did not change, only the translation part was modified
-            np.array([[ 0.941067  ,  0.334883  ,  0.047408  , -0.07073673],
-                   [-0.335537  ,  0.906752  ,  0.255373  , -0.02090609],
-                   [ 0.042533  , -0.25623   ,  0.96568   ,  0.09795744],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.941067, 0.334883, 0.047408, -0.07073673],
+                    [-0.335537, 0.906752, 0.255373, -0.02090609],
+                    [0.042533, -0.25623, 0.96568, 0.09795744],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
     else:
         npt.assert_almost_equal(
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
-            np.array([[ 0.941067  ,  0.334883  ,  0.047408  , -0.07167729],
-                   [-0.335537  ,  0.906752  ,  0.255373  , -0.02279122],
-                   [ 0.042533  , -0.25623   ,  0.96568   ,  0.09659233],
-                   [ 0.        ,  0.        ,  0.        ,  1.        ]]),
+            np.array(
+                [
+                    [0.941067, 0.334883, 0.047408, -0.07167729],
+                    [-0.335537, 0.906752, 0.255373, -0.02279122],
+                    [0.042533, -0.25623, 0.96568, 0.09659233],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            ),
             decimal=5,
         )
 
@@ -148,16 +156,20 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.translation,
             # Both rotation and translation parts were modified
-            np.array([0.0212648 , -0.40906054, -0.03103454]),
+            np.array([0.0212648, -0.40906054, -0.03103454]),
             decimal=5,
         )
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             # Both rotation and translation parts were modified
-            np.array([[-0.99777445,  0.06656196,  0.00395634],
-                   [ 0.06658717,  0.9915182 ,  0.11161452],
-                   [ 0.0035065 ,  0.11162956, -0.9937437 ]]),
+            np.array(
+                [
+                    [-0.99777445, 0.06656196, 0.00395634],
+                    [0.06658717, 0.9915182, 0.11161452],
+                    [0.0035065, 0.11162956, -0.9937437],
+                ]
+            ),
             decimal=5,
         )
     else:
