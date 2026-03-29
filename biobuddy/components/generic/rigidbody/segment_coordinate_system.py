@@ -333,6 +333,7 @@ class SegmentCoordinateSystemUtils:
         functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
+        origin_marker: Marker = None,
         visualize: bool = False,
     ) -> Axis:
         """
@@ -344,6 +345,9 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
+        origin_marker
+            The marker to use as origin of the axis, that is a point near the axis which is projected onto the axis to get the final origin.
+            If None is provided, the origin is directly what is computed by SARA
         visualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
@@ -355,7 +359,7 @@ class SegmentCoordinateSystemUtils:
         sara_cache = {}  # We only need to perform SARA once. So we store the result here.
 
         def collapse(
-            static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool
+            static_markers: MarkerData, bio_model: BiomechanicalModelReal, visualize: bool
         ) -> tuple[np.ndarray, np.ndarray]:
             static_markers_hash = _markers_fingerprint(static_markers)
 
@@ -401,6 +405,15 @@ class SegmentCoordinateSystemUtils:
             for i_frame in range(frame_count_static):
                 end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
                 start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
+
+                # Find the projection of the origin marker on the axis to get the final origin
+                if origin_marker is not None:
+                    a = start_aor_static[:3, i_frame]
+                    b = end_aor_static[:3, i_frame]
+                    p = origin_marker.function(static_markers, bio_model)[:3]
+                    ab = b - a
+                    ap = p - a
+                    start_aor_static[:3, i_frame] = a + np.dot(ap, ab) / np.dot(ab, ab) * ab
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
