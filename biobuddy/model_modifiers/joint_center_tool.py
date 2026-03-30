@@ -23,9 +23,10 @@ from ..utils.linear_algebra import (
     point_from_local_to_global,
     get_vector_from_sequence,
     get_sequence_from_rotation_vector,
-    rot2eul,
+    project_points_on_axes,
 )
 from ..utils.named_list import NamedList
+from ..utils.aliases import Points, Point, points_to_array, point_to_array
 
 _logger = logging.getLogger(__name__)
 
@@ -821,7 +822,8 @@ class Sara(RigidSegmentIdentification):
     def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
-        original_axis_global: np.ndarray | None = None,
+        original_axis_global: Point | None = None,
+        origin_positions_global: Points | None = None,
         recursive_outlier_removal: bool = True,
     ) -> Tuple[
         np.ndarray,
@@ -843,8 +845,10 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
-        original_axis_global: np.ndarray | None
-            The original rotation axis direction. This axis is used to make sure the new axis is in a similar direction.
+        origin_positions_global: np.ndarray | None
+            The positions in the global reference frame used as the origin of the axis (3 x FunctionalTrialFrameCount).
+            These points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed AOR value.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
@@ -867,6 +871,7 @@ class Sara(RigidSegmentIdentification):
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformations of the child segment after outlier removal.
         """
+
         nb_frames = len(rt_parent)
         U, S, V, b_valid = get_svd(rt_parent, rt_child)
 
@@ -903,24 +908,62 @@ class Sara(RigidSegmentIdentification):
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                if origin_positions_global is not None:
+                    origins = points_to_array(origin_positions_global)
+                    if origins.shape[1] != nb_frames:
+                        raise RuntimeError(
+                            f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
+                        )
+                    origin_positions_global = origins[:, valid]
+
                 return Sara.perform_algorithm(
-                    rt_parent, rt_child, original_axis_global, recursive_outlier_removal=False
+                    rt_parent=rt_parent,
+                    rt_child=rt_child,
+                    original_axis_global=original_axis_global,
+                    origin_positions_global=origin_positions_global,
+                    recursive_outlier_removal=False,
                 )
+
+        if origin_positions_global is not None:
+            origins_global = points_to_array(origin_positions_global)
+            if origins_global.shape[1] != nb_frames:
+                raise RuntimeError(
+                    f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
+                )
+
+            origins_parent = np.zeros((4, nb_frames))
+            origins_child = np.zeros((4, nb_frames))
+            for index in range(nb_frames):
+                origins_parent[:, index] = (rt_parent[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+                origins_child[:, index] = (rt_child[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+            cor_parent_local = project_points_on_axes(
+                origins_parent.mean(axis=1)[:3], start=cor_parent_local, end=cor_parent_local + aor_parent_local
+            )
+            cor_child_local = project_points_on_axes(
+                origins_child.mean(axis=1)[:3], start=cor_child_local, end=cor_child_local + aor_child_local
+            )
+            cor_parent_global = project_points_on_axes(
+                origins_global, start=cor_parent_global, end=aor_parent_global + cor_parent_global
+            )
+            cor_child_global = project_points_on_axes(
+                origins_global, start=cor_child_global, end=aor_child_global + cor_child_global
+            )
 
         # Final output
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
-        # TODO: project "origin position" to move the aor
-
-        if original_axis_global is not None and np.dot(aor_mean_global, original_axis_global) < 0:
-            # The axis is in the wrong direction
-            aor_mean_global *= -1
-            aor_parent_local *= -1
-            aor_child_local *= -1
+        if original_axis_global is not None:
+            original_axis_global = point_to_array(original_axis_global)[:3, 0]
+            if np.dot(cor_mean_global - aor_mean_global, original_axis_global) < 0:
+                # The axis is in the wrong direction
+                aor_mean_global *= -1
+                aor_parent_local *= -1
+                aor_child_local *= -1
 
         _logger.info(
-            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
+            f"\nThere is a residual angle between the parent's and the child's AoR of : "
+            f"{np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
         )
 
         return (
@@ -1049,7 +1092,7 @@ class Sara(RigidSegmentIdentification):
         new_model: BiomechanicalModelReal,
         parent_rt_init: RotoTransMatrixTimeSeries,
         child_rt_init: RotoTransMatrixTimeSeries,
-        origin_position: MarkerReal = None,
+        origin_positions_global: Points = None,
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
@@ -1071,7 +1114,7 @@ class Sara(RigidSegmentIdentification):
             rt_parent_functional,
             rt_child_functional,
             original_axis_global,
-            origin_position=origin_position, # TODO: Add test here by @charbie
+            origin_positions_global=origin_positions_global,  # TODO: Add test here by @charbie
             recursive_outlier_removal=True,
         )
 

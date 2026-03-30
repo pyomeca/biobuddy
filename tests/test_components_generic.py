@@ -1693,6 +1693,43 @@ def test_sara():
     npt.assert_array_equal(result_aor.end_point.position, result_aor2.end_point.position)
     npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
 
+    # Create SARA axis with an given origin_position
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        origin_positions_global=np.repeat([[0.25, 0.35, 0.45, 1.0]], nb_frames, axis=0).T,
+        visualize=False,
+    )
+
+    # Verify it returns an Axis object
+    assert isinstance(sara_axis, Axis)
+    assert sara_axis.name == Axis.Name.X
+
+    # Evaluate the sara function
+    mock_model = BiomechanicalModelReal()
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    npt.assert_almost_equal(
+        result_aor.start_point.position.reshape(4),
+        np.array([0.18947022, 0.34300285, 0.48010623, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.end_point.position.reshape(4),
+        np.array([0.54143488, 0.79048037, 1.08662582, 1.0]),
+    )
+    npt.assert_almost_equal(
+        result_aor.axis().reshape(4),
+        np.array([0.35196466, 0.44747752, 0.60651959, 0.0]),
+    )
+
+    # Test that calling twice returns the same result (caching)
+    result_aor2 = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+    npt.assert_array_equal(result_aor.start_point.position, result_aor2.start_point.position)
+    npt.assert_array_equal(result_aor.end_point.position, result_aor2.end_point.position)
+    npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
+
 
 def test_visualize_score_with_point():
     """Test the structure of the _visualize_score plot with a point (SCoRE)"""

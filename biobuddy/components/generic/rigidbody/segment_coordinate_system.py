@@ -9,7 +9,8 @@ from .marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ....utils.marker_data import MarkerData, DictData
+from ....utils.aliases import Points, Point
+from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 from ....model_modifiers.joint_center_tool import Score, Sara
 
@@ -333,7 +334,8 @@ class SegmentCoordinateSystemUtils:
         functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
-        origin_marker: Marker = None,
+        original_axis_global: Point | None = None,
+        origin_positions_global: Points | None = None,
         visualize: bool = False,
     ) -> Axis:
         """
@@ -345,9 +347,13 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
-        origin_marker
-            The marker to use as origin of the axis, that is a point near the axis which is projected onto the axis to get the final origin.
-            If None is provided, the origin is directly what is computed by SARA
+        original_axis_global: Point | None
+            The original axis in the global reference frame, of shape (3,). It is used to reorient the SARA axis if
+            it points in the opposite direction of the original axis. If None, the original axis is not used and the SARA axis is not reoriented.
+        origin_positions_global: Points | None
+            The positions in the global reference frame used as the origin of the axis (3 x FunctionalTrialFrameCount).
+            These points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed AOR value.
         visualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
@@ -385,7 +391,12 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
-                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(rt_parent_func, rt_child_func)
+                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
+                    rt_parent=rt_parent_func,
+                    rt_child=rt_child_func,
+                    original_axis_global=original_axis_global,
+                    origin_positions_global=origin_positions_global,
+                )
                 sara_cache[static_markers_hash] = [
                     rt_parent_static,
                     rt_parent_func,
@@ -405,15 +416,6 @@ class SegmentCoordinateSystemUtils:
             for i_frame in range(frame_count_static):
                 end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
                 start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
-
-                # Find the projection of the origin marker on the axis to get the final origin
-                if origin_marker is not None:
-                    a = start_aor_static[:3, i_frame]
-                    b = end_aor_static[:3, i_frame]
-                    p = origin_marker.function(static_markers, bio_model)[:3]
-                    ab = b - a
-                    ap = p - a
-                    start_aor_static[:3, i_frame] = a + np.dot(ap, ab) / np.dot(ab, ab) * ab
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
