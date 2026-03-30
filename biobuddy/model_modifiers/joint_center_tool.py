@@ -911,6 +911,8 @@ class Sara(RigidSegmentIdentification):
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
+        # TODO: project "origin position" to move the aor
+
         if original_axis_global is not None and np.dot(aor_mean_global, original_axis_global) < 0:
             # The axis is in the wrong direction
             aor_mean_global *= -1
@@ -1047,6 +1049,7 @@ class Sara(RigidSegmentIdentification):
         new_model: BiomechanicalModelReal,
         parent_rt_init: RotoTransMatrixTimeSeries,
         child_rt_init: RotoTransMatrixTimeSeries,
+        origin_position: MarkerReal = None,
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
@@ -1065,7 +1068,11 @@ class Sara(RigidSegmentIdentification):
         # Identify axis of rotation
         original_axis_global, _ = self._original_rotation_axis(new_model)
         aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
-            rt_parent_functional, rt_child_functional, original_axis_global, recursive_outlier_removal=True
+            rt_parent_functional,
+            rt_child_functional,
+            original_axis_global,
+            origin_position=origin_position, # TODO: Add test here by @charbie
+            recursive_outlier_removal=True,
         )
 
         # Extract the joint coordinate system
