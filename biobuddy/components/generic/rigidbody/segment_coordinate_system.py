@@ -329,17 +329,19 @@ class SegmentCoordinateSystemUtils:
         return partial(collapse, visualize=visualize)
 
     @staticmethod
-    def _original_rotation_axis(
-            original_axis_global: Axis,
-            static_markers: MarkerData
-    ) -> np.ndarray:
+    def _original_rotation_axis(original_axis_global: Axis, static_markers: MarkerData) -> np.ndarray:
         """
         Estimate the original axis of rotation to make sure that the axis is in the right direction.
         """
         if not isinstance(original_axis_global.start, Marker) or not isinstance(original_axis_global.end, Marker):
             raise NotImplementedError("The original_axis_global should be an Axis with start and end as Markers.")
-        if original_axis_global.start.name not in static_markers.marker_names or original_axis_global.end.name not in static_markers.marker_names:
-            raise NotImplementedError(f"The markers defining the original_axis_global should be present in the static markers, got start: {original_axis_global.start.name} and end: {original_axis_global.end.name}")
+        if (
+            original_axis_global.start.name not in static_markers.marker_names
+            or original_axis_global.end.name not in static_markers.marker_names
+        ):
+            raise NotImplementedError(
+                f"The markers defining the original_axis_global should be present in the static markers, got start: {original_axis_global.start.name} and end: {original_axis_global.end.name}"
+            )
 
         start_marker_global = static_markers.mean_marker_position(original_axis_global.start.name)
         end_marker_global = static_markers.mean_marker_position(original_axis_global.end.name)
@@ -417,7 +419,9 @@ class SegmentCoordinateSystemUtils:
                         static_markers)
                 else:
                     original_axis_global = None
-                origin_positions_global_evaluated = origin_positions_global(static_markers, bio_model) if origin_positions_global is not None else None
+                origin_positions_global_evaluated = (
+                    origin_positions_global(functional_data, bio_model) if origin_positions_global is not None else None
+                )
                 _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
                     rt_parent=rt_parent_func,
                     rt_child=rt_child_func,
