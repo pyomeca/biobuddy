@@ -22,6 +22,8 @@ from biobuddy import (
 
 _logger = logging.getLogger(__name__)
 
+# TODO: The SCoRE/SARA seems weird ! This should be checked, but in the mean time this example is used ofr tests
+
 
 def generate_lower_body_model(visualize: bool = True) -> BiomechanicalModelReal:
 
