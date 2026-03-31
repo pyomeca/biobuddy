@@ -1859,7 +1859,9 @@ def test_sara_with_callable_origin_positions():
         functional_data=functional_data,
         parent_marker_names=["parent1", "parent2", "parent3"],
         child_marker_names=["child1", "child2", "child3"],
-        origin_positions_global=SegmentCoordinateSystemUtils.mean_markers(["child1", "child2", "child3", "parent1", "parent2", "parent3"]),
+        origin_positions_global=SegmentCoordinateSystemUtils.mean_markers(
+            ["child1", "child2", "child3", "parent1", "parent2", "parent3"]
+        ),
         visualize=False,
     )
 
@@ -1883,6 +1885,7 @@ def test_sara_with_callable_origin_positions():
 
     assert np.all(np.abs(result_aor_no_origin.axis()[:3, 0] - result_aor.axis()[:3, 0])) > 1e-4
 
+
 def test_original_rotation_axis_errors():
     """Test _original_rotation_axis error handling"""
     # Create mock data
@@ -1895,7 +1898,9 @@ def test_original_rotation_axis_errors():
         end=lambda m, bio: np.array([4, 5, 6, 1]),
     )
 
-    with pytest.raises(NotImplementedError, match="The original_axis_global should be an Axis with start and end as Markers"):
+    with pytest.raises(
+        NotImplementedError, match="The original_axis_global should be an Axis with start and end as Markers"
+    ):
         SegmentCoordinateSystemUtils._original_rotation_axis(axis_bad, mock_data)
 
     # Test with markers not in static data
@@ -1905,7 +1910,10 @@ def test_original_rotation_axis_errors():
         end=Marker("missing_marker2"),
     )
 
-    with pytest.raises(NotImplementedError, match="The markers defining the original_axis_global should be present in the static markers"):
+    with pytest.raises(
+        NotImplementedError,
+        match="The markers defining the original_axis_global should be present in the static markers",
+    ):
         SegmentCoordinateSystemUtils._original_rotation_axis(axis_missing, mock_data)
 
 

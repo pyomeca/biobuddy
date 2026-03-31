@@ -1054,16 +1054,21 @@ def test_get_svd():
 
     # Check values
     assert U.shape == (30, 6)
-    assert S.shape == (6, )
+    assert S.shape == (6,)
     assert V.shape == (6, 6)
-    assert b.shape == (30, )
+    assert b.shape == (30,)
 
-    npt.assert_almost_equal(U[0, :], np.array([-3.16227766e-01, -2.37286751e-33,  2.10378946e-16, -1.56853474e-34,
-       -2.07171677e-17,  9.48683298e-01]), decimal=6)
-    npt.assert_almost_equal(S, np.array([4.47213595e+00, 4.46062656e+00, 4.46062656e+00, 3.20641084e-01,
-       3.20641084e-01, 5.40977915e-16]), decimal=6)
-    npt.assert_almost_equal(V[0, :], np.array([-0.70710678,  0.        ,  0.        , -0.        ,  0.        ,
-        0.70710678]), decimal=6)
+    npt.assert_almost_equal(
+        U[0, :],
+        np.array([-3.16227766e-01, -2.37286751e-33, 2.10378946e-16, -1.56853474e-34, -2.07171677e-17, 9.48683298e-01]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        S,
+        np.array([4.47213595e00, 4.46062656e00, 4.46062656e00, 3.20641084e-01, 3.20641084e-01, 5.40977915e-16]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(V[0, :], np.array([-0.70710678, 0.0, 0.0, -0.0, 0.0, 0.70710678]), decimal=6)
     npt.assert_almost_equal(b[:6], np.array([-0.1, -0.2, -0.3, -0.1, -0.2, -0.3]), decimal=6)
 
 
@@ -1081,7 +1086,9 @@ def test_score_perform_algorithm():
 
     for i in range(nb_frames):
         # Parent stays fixed
-        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0, 0, 0]), np.array([0, 0, 0]))
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
+        )
         # Child rotates around the CoR
         angle = i * 0.1
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
@@ -1115,7 +1122,9 @@ def test_sara_perform_algorithm():
 
     for i in range(nb_frames):
         # Parent stays fixed
-        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0, 0, 0]), np.array([0, 0, 0]))
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
+        )
         # Child rotates around X-axis through CoR
         angle = i * 0.1
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
@@ -1152,14 +1161,21 @@ def test_sara_perform_algorithm_with_origin_positions():
 
     for i in range(nb_frames):
         # Parent stays fixed
-        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([0, 0, 0]), np.array([1, 0, 0]))
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([1, 0, 0])
+        )
         # Child rotates around X-axis through CoR
         angle = i * 0.1
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
 
     # Run Sara algorithm
     aor_global, aor_parent, aor_child, cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = (
-        Sara.perform_algorithm(rt_parent, rt_child, origin_positions_global=np.repeat(cor_expected[:, np.newaxis], nb_frames, axis=1), recursive_outlier_removal=False)
+        Sara.perform_algorithm(
+            rt_parent,
+            rt_child,
+            origin_positions_global=np.repeat(cor_expected[:, np.newaxis], nb_frames, axis=1),
+            recursive_outlier_removal=False,
+        )
     )
 
     # Check that AoR is close to expected (X-axis)
@@ -1168,7 +1184,7 @@ def test_sara_perform_algorithm_with_origin_positions():
 
     # Check that CoR is close to expected on all axes
     # npt.assert_almost_equal(cor_global, cor_expected, decimal=1)
-    npt.assert_almost_equal(cor_global, np.array([-2.61484107,  0.58614833,  0.8792225 ]), decimal=6)  # TODO: remove !
+    npt.assert_almost_equal(cor_global, np.array([-2.61484107, 0.58614833, 0.8792225]), decimal=6)  # TODO: remove !
 
 
 def test_joint_coordinate_modifier():
@@ -1327,7 +1343,9 @@ def test_score_with_nan_frames():
                 "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
             )
             angle = i * 0.1
-            rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
+            rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+                "xyz", np.array([angle, 0, 0]), cor_expected
+            )
 
     # Run Score algorithm
     cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = Score.perform_algorithm(

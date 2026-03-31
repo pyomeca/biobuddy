@@ -1149,7 +1149,7 @@ class Sara(RigidSegmentIdentification):
             rt_parent_functional,
             rt_child_functional,
             original_axis_global,
-            origin_positions_global=origin_positions_global,  # TODO: Add test here by @charbie
+            origin_positions_global=origin_positions_global,
             recursive_outlier_removal=True,
         )
 
