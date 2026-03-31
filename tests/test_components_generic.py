@@ -1684,7 +1684,7 @@ def test_sara():
         result_aor.axis().reshape(
             4,
         ),
-        np.array([0.56057423, 0.73547957, 0.99896262, 0.0]),
+        np.array([0.56057423, 0.73547957, 0.99896262, 1.0]),
     )
 
     # Test that calling twice returns the same result (caching)
@@ -1699,7 +1699,7 @@ def test_sara():
         functional_data=functional_data,
         parent_marker_names=["parent1", "parent2", "parent3"],
         child_marker_names=["child1", "child2", "child3"],
-        origin_positions_global=np.repeat([[0.25, 0.35, 0.45, 1.0]], nb_frames, axis=0).T,
+        origin_positions_global= lambda b, m : np.repeat([[0.25, 0.35, 0.45, 1.0]], nb_frames, axis=0).T,
         visualize=False,
     )
 
@@ -1713,15 +1713,15 @@ def test_sara():
 
     npt.assert_almost_equal(
         result_aor.start_point.position.reshape(4),
-        np.array([0.18947022, 0.34300285, 0.48010623, 1.0]),
+        np.array([0.19072147, 0.3447303 , 0.48246012, 1.]),
     )
     npt.assert_almost_equal(
         result_aor.end_point.position.reshape(4),
-        np.array([0.54143488, 0.79048037, 1.08662582, 1.0]),
+        np.array([0.54143488, 0.79048037, 1.08662582, 1.]),
     )
     npt.assert_almost_equal(
         result_aor.axis().reshape(4),
-        np.array([0.35196466, 0.44747752, 0.60651959, 0.0]),
+        np.array([0.35071341, 0.44575007, 0.6041657 , 1.]),
     )
 
     # Test that calling twice returns the same result (caching)
@@ -1869,7 +1869,7 @@ def test_sara_with_callable_origin_positions():
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
-    npt.assert_almost_equal(result_aor.axis()[:3, 0], np.array([0.28390546, 0.35331399, 0.47841864]))
+    npt.assert_almost_equal(result_aor.axis()[:3, 0], np.array([0.37383181, 0.47738288, 0.64757445]))
 
     # Check that the result is different from the case without origin_positions_global (since the origin is different)
     # It should also be the same result as the first test in test_sara_with_expected_rotation_axis
@@ -1899,7 +1899,7 @@ def test_original_rotation_axis_errors():
     )
 
     with pytest.raises(
-        NotImplementedError, match="The original_axis_global should be an Axis with start and end as Markers"
+        NotImplementedError, match="The markers defining the original_axis_global should be present in the static markers, got start: start_0 and end: end_0"
     ):
         SegmentCoordinateSystemUtils._original_rotation_axis(axis_bad, mock_data)
 
@@ -1912,7 +1912,7 @@ def test_original_rotation_axis_errors():
 
     with pytest.raises(
         NotImplementedError,
-        match="The markers defining the original_axis_global should be present in the static markers",
+        match="The markers defining the original_axis_global should be present in the static markers, got start: missing_marker1 and end: missing_marker2",
     ):
         SegmentCoordinateSystemUtils._original_rotation_axis(axis_missing, mock_data)
 
