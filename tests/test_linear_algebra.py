@@ -1318,38 +1318,38 @@ def test_project_points_on_axes():
     npt.assert_almost_equal(result[:, 0], expected)
 
     # Test with multiple points
-    points = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
+    points = np.array([[0.9, 2, 3], [1, 0.9, 3], [0.7, 2, 3]])
     start = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
     end = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
     result = project_points_on_axes(points, start, end)
 
     # Each point should be projected onto its respective axis
-    expected = np.array([[1, 0, 0], [0, 2, 0], [0, 0, 3]])
+    expected = np.array([[0.9, 0, 0], [0, 0.9, 0], [0, 0, 3]])
     npt.assert_almost_equal(result, expected)
 
     # Test with 4D points
-    points_4d = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 1, 1]])
-    start_4d = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1]])
-    end_4d = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+    points_4d = np.array([[0.9, 2, 3, 1], [1, 0.9, 3, 1], [0.7, 2, 3, 1]])
+    start_4d = np.array([[0, 0, 0, 1], [0, 0, 0, 1], [0, 0, 0, 1]])
+    end_4d = np.array([[1, 0, 0, 1], [0, 1, 0, 1], [0, 0, 1, 1]])
 
     result_4d = project_points_on_axes(points_4d, start_4d, end_4d)
 
     # Check dimensions
-    assert result_4d.shape == (4, 3)
+    assert result_4d.shape == (3, 4)
 
     # Check projections (first 3 rows)
-    npt.assert_almost_equal(result_4d[:3, :], expected)
+    npt.assert_almost_equal(result_4d[:, :3], expected)
 
     # Test with diagonal axis
-    points = np.array([1, 1, 0])
+    points = np.array([0.5, 0.5, 0])
     start = np.array([0, 0, 0])
     end = np.array([1, 1, 0])
 
     result = project_points_on_axes(points, start, end)
 
     # Point should be projected onto diagonal
-    expected = np.array([1, 1, 0])
+    expected = np.array([0.5, 0.5, 0])
     npt.assert_almost_equal(result[:, 0], expected)
 
     # Test with point not on axis
