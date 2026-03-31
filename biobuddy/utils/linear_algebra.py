@@ -740,7 +740,7 @@ def project_points_on_axes(points: Points, start: Points, end: Points) -> Points
 
     Parameters
     ----------
-    point
+    points
         The points to project, of shape (3, N) or (4, N).
     start
         The start points of the axes, of shape (3, N).
@@ -774,7 +774,6 @@ def project_points_on_axes(points: Points, start: Points, end: Points) -> Points
             f"Expected points, start and end to have the same number of columns. Got {points.shape[1]}, {start.shape[1]}, {end.shape[1]}"
         )
 
-    a = start
-    ab = end - a
-    ap = points - a
-    return a + np.einsum("ij,ij->j", ap, ab) / np.einsum("ij,ij->j", ab, ab) * ab
+    start_to_end = end - start
+    start_to_point = points - start
+    return start + np.einsum("ij,ij->j", start_to_point, start_to_end) / np.einsum("ij,ij->j", start_to_end, start_to_end) * start_to_end

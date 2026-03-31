@@ -847,10 +847,12 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
-        origin_positions_global: np.ndarray | None
-            The positions in the global reference frame used as the origin of the axis (3 x FunctionalTrialFrameCount).
-            These points are projected onto the computed axis to determine the final origin of the axis; effectively
-            replacing the computed AOR value.
+        original_axis_global: Points | None
+            The original rotation axis direction. This axis is used to make sure the new axis is in a similar direction.
+        origin_positions_global: Points | None
+            The positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
+            The origin_positions_global points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed COR value.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
@@ -905,18 +907,20 @@ class Sara(RigidSegmentIdentification):
             cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
             cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
 
+        if origin_positions_global is not None:
+            origins_global = points_to_array(origin_positions_global)
+            if origins_global.shape[1] != nb_frames:
+                raise RuntimeError(
+                    f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
+                )
+
         if recursive_outlier_removal:
             valid = Sara.get_good_frames(residuals, nb_frames)
             if not np.all(valid):
                 rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
                 rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
                 if origin_positions_global is not None:
-                    origins = points_to_array(origin_positions_global)
-                    if origins.shape[1] != nb_frames:
-                        raise RuntimeError(
-                            f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
-                        )
-                    origin_positions_global = origins[:, valid]
+                    origin_positions_global = origins_global[:, valid]
 
                 return Sara.perform_algorithm(
                     rt_parent=rt_parent,
@@ -927,12 +931,6 @@ class Sara(RigidSegmentIdentification):
                 )
 
         if origin_positions_global is not None:
-            origins_global = points_to_array(origin_positions_global)
-            if origins_global.shape[1] != nb_frames:
-                raise RuntimeError(
-                    f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
-                )
-
             origins_parent = np.zeros((4, nb_frames))
             origins_child = np.zeros((4, nb_frames))
             for index in range(nb_frames):

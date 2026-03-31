@@ -351,9 +351,9 @@ class SegmentCoordinateSystemUtils:
             The original axis in the global reference frame, of shape (3,). It is used to reorient the SARA axis if
             it points in the opposite direction of the original axis. If None, the original axis is not used and the SARA axis is not reoriented.
         origin_positions_global: Points | None
-            The positions in the global reference frame used as the origin of the axis (3 x FunctionalTrialFrameCount).
-            These points are projected onto the computed axis to determine the final origin of the axis; effectively
-            replacing the computed AOR value.
+            The positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
+            The origin_positions_global points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed COR value.
         visualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
