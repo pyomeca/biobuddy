@@ -1786,12 +1786,37 @@ def test_sara_with_expected_rotation_axis():
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
-    # The axis should be aligned with the expected direction
+    # The axis should be aligned with the expected direction (positive)
     axis_vector = result_aor.axis()[:3, 0]
-    axis_vector_normalized = axis_vector / np.linalg.norm(axis_vector)
+    npt.assert_almost_equal(axis_vector, np.array([0.56073976, 0.73525461, 0.99915736]))
 
-    # Check that the axis is roughly in the X direction (allowing for some variation)
-    assert abs(axis_vector_normalized[0]) > 0.5  # X component should be dominant
+    # Test in the other direction as well
+    # Create expected rotation axis (-X-axis direction)
+    expected_axis = Axis(
+        name=Axis.Name.X,
+        start=Marker(name="parent2", function=lambda m, bio: m.get_position(["parent1"])[:, :, 0]),
+        end=Marker(name="parent1", function=lambda m, bio: m.get_position(["parent2"])[:, :, 0]),
+    )
+
+    # Create SARA axis with expected rotation axis
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        expected_rotation_axis_orientation=expected_axis,
+        visualize=False,
+    )
+
+    # Evaluate the sara function
+    mock_model = BiomechanicalModelReal()
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    # The axis should be aligned with the expected direction (negative)
+    axis_vector = result_aor.axis()[:3, 0]
+    npt.assert_almost_equal(axis_vector, np.array([-0.22725815, -0.35192431, -0.48310486]))
+
+    # TODO: this test should be updated when the scs origin is modified by SARA as well.
 
 
 def test_sara_with_callable_origin_positions():
@@ -1828,17 +1853,13 @@ def test_sara_with_callable_origin_positions():
     static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
     static_data = DictData(static_markers)
 
-    # Create callable origin_positions_global
-    def origin_func(data, model):
-        return np.repeat([[0.25, 0.35, 0.45, 1.0]], nb_frames, axis=0).T
-
     # Create SARA axis with callable origin
     sara_axis = SegmentCoordinateSystemUtils.sara(
         name=Axis.Name.X,
         functional_data=functional_data,
         parent_marker_names=["parent1", "parent2", "parent3"],
         child_marker_names=["child1", "child2", "child3"],
-        origin_positions_global=origin_func,
+        origin_positions_global=SegmentCoordinateSystemUtils.mean_markers(["child1", "child2", "child3", "parent1", "parent2", "parent3"]),
         visualize=False,
     )
 
@@ -1846,10 +1867,21 @@ def test_sara_with_callable_origin_positions():
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
-    # Check that we got valid results
-    assert result_aor.start_point.position.shape == (4, 1)
-    assert result_aor.end_point.position.shape == (4, 1)
+    npt.assert_almost_equal(result_aor.axis()[:3, 0], np.array([0.28390546, 0.35331399, 0.47841864]))
 
+    # Check that the result is different from the case without origin_positions_global (since the origin is different)
+    # It should also be the same result as the first test in test_sara_with_expected_rotation_axis
+    sara_axis_no_origin = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        visualize=False,
+    )
+    result_aor_no_origin = sara_axis_no_origin.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+    npt.assert_almost_equal(result_aor_no_origin.axis()[:3, 0], np.array([0.56073976, 0.73525461, 0.99915736]))
+
+    assert np.all(np.abs(result_aor_no_origin.axis()[:3, 0] - result_aor.axis()[:3, 0])) > 1e-4
 
 def test_original_rotation_axis_errors():
     """Test _original_rotation_axis error handling"""

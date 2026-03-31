@@ -359,6 +359,7 @@ class SegmentCoordinateSystemUtils:
     ) -> Axis:
         """
         Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
+        # TODO: SARA should also change the origin of the axis, not only the direction.
 
         Parameters
         ----------
@@ -410,9 +411,12 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
-                original_axis_global = SegmentCoordinateSystemUtils._original_rotation_axis(
-                    expected_rotation_axis_orientation,
-                    static_markers)
+                if expected_rotation_axis_orientation is not None:
+                    original_axis_global = SegmentCoordinateSystemUtils._original_rotation_axis(
+                        expected_rotation_axis_orientation,
+                        static_markers)
+                else:
+                    original_axis_global = None
                 origin_positions_global_evaluated = origin_positions_global(static_markers, bio_model) if origin_positions_global is not None else None
                 _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
                     rt_parent=rt_parent_func,
