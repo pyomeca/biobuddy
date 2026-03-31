@@ -329,13 +329,32 @@ class SegmentCoordinateSystemUtils:
         return partial(collapse, visualize=visualize)
 
     @staticmethod
+    def _original_rotation_axis(
+            original_axis_global: Axis,
+            static_markers: MarkerData
+    ) -> np.ndarray:
+        """
+        Estimate the original axis of rotation to make sure that the axis is in the right direction.
+        """
+        if not isinstance(original_axis_global.start, Marker) or not isinstance(original_axis_global.end, Marker):
+            raise NotImplementedError("The original_axis_global should be an Axis with start and end as Markers.")
+        if original_axis_global.start.name not in static_markers.marker_names or original_axis_global.end.name not in static_markers.marker_names:
+            raise NotImplementedError(f"The markers defining the original_axis_global should be present in the static markers, got start: {original_axis_global.start.name} and end: {original_axis_global.end.name}")
+
+        start_marker_global = static_markers.mean_marker_position(original_axis_global.start.name)
+        end_marker_global = static_markers.mean_marker_position(original_axis_global.end.name)
+        global_axis = end_marker_global - start_marker_global
+
+        return global_axis[:3]
+
+    @staticmethod
     def sara(
         name: int,
         functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
-        original_axis_global: Point | None = None,
-        origin_positions_global: Points | None = None,
+        expected_rotation_axis_orientation: Axis | None = None,
+        origin_positions_global: Callable | None = None,
         visualize: bool = False,
     ) -> Axis:
         """
@@ -347,11 +366,11 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
-        original_axis_global: Point | None
+        expected_rotation_axis_orientation: Axis | None
             The original axis in the global reference frame, of shape (3,). It is used to reorient the SARA axis if
             it points in the opposite direction of the original axis. If None, the original axis is not used and the SARA axis is not reoriented.
-        origin_positions_global: Points | None
-            The positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
+        origin_positions_global: Callable | None
+            The function defining the positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
             The origin_positions_global points are projected onto the computed axis to determine the final origin of the axis; effectively
             replacing the computed COR value.
         visualize
@@ -391,11 +410,15 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
+                original_axis_global, _ = SegmentCoordinateSystemUtils._original_rotation_axis(
+                    expected_rotation_axis_orientation,
+                    static_markers)
+                origin_positions_global_evaluated = origin_positions_global(static_markers, bio_model) if origin_positions_global is not None else None
                 _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
                     rt_parent=rt_parent_func,
                     rt_child=rt_child_func,
                     original_axis_global=original_axis_global,
-                    origin_positions_global=origin_positions_global,
+                    origin_positions_global=origin_positions_global_evaluated,
                 )
                 sara_cache[static_markers_hash] = [
                     rt_parent_static,

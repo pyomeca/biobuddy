@@ -804,6 +804,36 @@ class Sara(RigidSegmentIdentification):
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
+        """
+        Initialize the SARA (Symmetrical Axis of Rotation Approach) algorithm.
+
+        Parameters
+        ----------
+        functional_trial: MarkerData
+            The MarkerData containing the functional trial.
+        parent_name: str
+            The name of the joint's parent segment.
+        child_name: str
+            The name of the joint's child segment.
+        parent_marker_names: list[str]
+            The name of the markers in the parent segment to consider during the SARA algorithm.
+        child_marker_names: list[str]
+            The name of the markers in the child segment to consider during the SARA algorithm.
+        joint_center_markers: list[str]
+            The name of the markers to consider as joint center markers (i.e., markers close to the joint center).
+            # TODO: should be uniformized with origin_positions_global: Points from SegmentCoordinateSystemUtils.sara
+        distal_markers: list[str]
+            The name of the markers to consider as distal markers (i.e., markers close to the distal end of the child segment).
+        is_longitudinal_axis_from_jcs_to_distal_markers: bool
+            If True, the longitudinal axis of the child segment is defined from the joint center markers to the distal markers.
+            If False, the longitudinal axis is defined from the distal markers to the joint center markers.
+        expected_rotation_axis_orientation: Axis
+            The expected orientation of the rotation axis (e.g., Axis.X, Axis.Y, or Axis.Z). This is used to make sure the computed axis is in the expected direction.
+        initialize_whole_trial_reconstruction: bool
+            If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
+        animate_rt: bool
+            If True, it animates the segment rt reconstruction using pyorerun.
+        """
 
         super(Sara, self).__init__(
             functional_trial=functional_trial,

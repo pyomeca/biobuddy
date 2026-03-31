@@ -22,8 +22,6 @@ from biobuddy import (
 
 _logger = logging.getLogger(__name__)
 
-# TODO: The SCoRE/SARA seems weird ! This should be checked, but in the mean time this example is used ofr tests
-
 
 def generate_lower_body_model(visualize: bool = True) -> BiomechanicalModelReal:
 
@@ -115,8 +113,15 @@ def generate_lower_body_model(visualize: bool = True) -> BiomechanicalModelReal:
         functional_data=right_knee_data,
         parent_marker_names=["RTHI1", "RTHI2", "RTHI3"],
         child_marker_names=["RLEG1", "RLEG2", "RLEG3", "RATT", "RLM", "RSPH"],
+        expected_rotation_axis_orientation=Axis(
+            name=Axis.Name.X,
+            start=Marker("RMFE", is_technical=False, is_anatomical=True),
+            end=Marker("RLFE", is_technical=False, is_anatomical=True),
+        ),
+        origin_positions_global=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
         visualize=visualize,
     )
+
     right_ankle_mid = SegmentCoordinateSystemUtils.mean_markers(["RLM", "RSPH"])
     model.add_segment(
         Segment(
