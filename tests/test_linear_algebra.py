@@ -31,6 +31,7 @@ from biobuddy.utils.linear_algebra import (
     RotoTransMatrixTimeSeries,
     get_closest_rotation_matrix,
     local_rt_between_global_rts,
+    project_points_on_axes,
 )
 
 
@@ -1301,3 +1302,93 @@ def test_rototrans_matrix_multiplication_with_point_3d():
         ),
         expected,
     )
+
+
+def test_project_points_on_axes():
+    """Test projection of points onto axes."""
+    # Test with single point and axis along x-axis
+    points = np.array([2, 3, 4])
+    start = np.array([0, 0, 0])
+    end = np.array([5, 0, 0])
+
+    result = project_points_on_axes(points, start, end)
+
+    # Point should be projected onto x-axis
+    expected = np.array([2, 0, 0])
+    npt.assert_almost_equal(result[:, 0], expected)
+
+    # Test with multiple points
+    points = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3]])
+    start = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0]])
+    end = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+    result = project_points_on_axes(points, start, end)
+
+    # Each point should be projected onto its respective axis
+    expected = np.array([[1, 0, 0], [0, 2, 0], [0, 0, 3]])
+    npt.assert_almost_equal(result, expected)
+
+    # Test with 4D points
+    points_4d = np.array([[1, 2, 3], [1, 2, 3], [1, 2, 3], [1, 1, 1]])
+    start_4d = np.array([[0, 0, 0], [0, 0, 0], [0, 0, 0], [1, 1, 1]])
+    end_4d = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+
+    result_4d = project_points_on_axes(points_4d, start_4d, end_4d)
+
+    # Check dimensions
+    assert result_4d.shape == (4, 3)
+
+    # Check projections (first 3 rows)
+    npt.assert_almost_equal(result_4d[:3, :], expected)
+
+    # Test with diagonal axis
+    points = np.array([1, 1, 0])
+    start = np.array([0, 0, 0])
+    end = np.array([1, 1, 0])
+
+    result = project_points_on_axes(points, start, end)
+
+    # Point should be projected onto diagonal
+    expected = np.array([1, 1, 0])
+    npt.assert_almost_equal(result[:, 0], expected)
+
+    # Test with point not on axis
+    points = np.array([1, 2, 3])
+    start = np.array([0, 0, 0])
+    end = np.array([1, 1, 1])
+
+    result = project_points_on_axes(points, start, end)
+
+    # Projection should be at (2, 2, 2) since dot product is 6 and axis length squared is 3
+    expected = np.array([2, 2, 2])
+    npt.assert_almost_equal(result[:, 0], expected)
+
+    # Test with offset axis
+    points = np.array([3, 3, 3])
+    start = np.array([1, 1, 1])
+    end = np.array([2, 2, 2])
+
+    result = project_points_on_axes(points, start, end)
+
+    # Point should be projected onto the axis from (1,1,1) to (2,2,2)
+    # Vector from start to point: (2, 2, 2)
+    # Axis direction: (1, 1, 1)
+    # Projection: start + ((2,2,2)·(1,1,1) / (1,1,1)·(1,1,1)) * (1,1,1) = (1,1,1) + 2*(1,1,1) = (3,3,3)
+    expected = np.array([3, 3, 3])
+    npt.assert_almost_equal(result[:, 0], expected)
+
+    # Test error conditions
+    with pytest.raises(ValueError, match="Expected points of shape \\(3, N\\) or \\(4, N\\)"):
+        project_points_on_axes(np.array([[1, 2]]), start, end)
+
+    with pytest.raises(ValueError, match="Expected start points of shape \\(3, N\\) or \\(4, N\\)"):
+        project_points_on_axes(points, np.array([[1, 2]]), end)
+
+    with pytest.raises(ValueError, match="Expected end points of shape \\(3, N\\) or \\(4, N\\)"):
+        project_points_on_axes(points, start, np.array([[1, 2]]))
+
+    with pytest.raises(ValueError, match="Expected points, start and end to have the same number of rows"):
+        project_points_on_axes(np.array([1, 2, 3]), np.array([1, 2, 3, 4]), end)
+
+    with pytest.raises(ValueError, match="Expected points, start and end to have the same number of columns"):
+        project_points_on_axes(np.array([[1, 2], [1, 2], [1, 2]]), np.array([1, 2, 3]), np.array([1, 2, 3]))
