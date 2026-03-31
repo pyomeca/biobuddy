@@ -955,7 +955,7 @@ class Sara(RigidSegmentIdentification):
 
         if original_axis_global is not None:
             original_axis_global = point_to_array(original_axis_global)[:3, 0]
-            if np.dot(cor_mean_global - aor_mean_global, original_axis_global) < 0:
+            if np.dot(aor_mean_global, original_axis_global) < 0:
                 # The axis is in the wrong direction
                 aor_mean_global *= -1
                 aor_parent_local *= -1
