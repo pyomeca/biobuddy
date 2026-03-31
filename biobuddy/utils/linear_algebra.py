@@ -776,4 +776,9 @@ def project_points_on_axes(points: Points, start: Points, end: Points) -> Points
 
     start_to_end = end - start
     start_to_point = points - start
-    return start + np.einsum("ij,ij->j", start_to_point, start_to_end) / np.einsum("ij,ij->j", start_to_end, start_to_end) * start_to_end
+    return (
+        start
+        + np.einsum("ij,ij->j", start_to_point, start_to_end)
+        / np.einsum("ij,ij->j", start_to_end, start_to_end)
+        * start_to_end
+    )
