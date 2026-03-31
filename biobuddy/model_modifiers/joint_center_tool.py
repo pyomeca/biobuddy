@@ -917,6 +917,7 @@ class Sara(RigidSegmentIdentification):
         aor_child_local /= np.linalg.norm(aor_child_local)
 
         # Compute pseudo-inverse solution
+        # cor = V[:, :5] @ np.diag(1.0 / S[:5]) @ U[:, :5].T @ b_valid  # TODO: make a breaking PR for this change !!!
         cor = V @ np.diag(1.0 / S) @ U.T @ b_valid
         cor_parent_local = cor[3:]
         cor_child_local = cor[:3]
@@ -934,6 +935,7 @@ class Sara(RigidSegmentIdentification):
                 np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
                 / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
             )
+
             cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
             cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
 
@@ -966,9 +968,9 @@ class Sara(RigidSegmentIdentification):
         if origin_positions_global is not None:
             origins_parent = np.zeros((4, nb_frames))
             origins_child = np.zeros((4, nb_frames))
-            for index in range(nb_frames):
-                origins_parent[:, index] = (rt_parent[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
-                origins_child[:, index] = (rt_child[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+            for i_frame in range(nb_frames):
+                origins_parent[:, i_frame] = (rt_parent[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+                origins_child[:, i_frame] = (rt_child[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
             cor_parent_local = project_points_on_axes(
                 origins_parent.mean(axis=1)[:3], start=cor_parent_local, end=cor_parent_local + aor_parent_local
             )
