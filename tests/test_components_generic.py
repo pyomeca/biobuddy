@@ -1731,6 +1731,152 @@ def test_sara():
     npt.assert_array_equal(result_aor.axis(), result_aor2.axis())
 
 
+def test_sara_with_expected_rotation_axis():
+    """Test SARA with expected rotation axis orientation"""
+    np.random.seed(42)
+    nb_frames = 50
+
+    # Create parent markers
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+
+    # Create child markers rotating around X-axis
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.05, 0, 0]), np.array([0.2, 0.2, 0.2])
+        )
+    child_markers = {
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+
+    # Create static data
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+
+    # Create expected rotation axis (X-axis direction)
+    expected_axis = Axis(
+        name=Axis.Name.X,
+        start=Marker(name="parent1", function=lambda m, bio: m.get_position(["parent1"])[:, :, 0]),
+        end=Marker(name="parent2", function=lambda m, bio: m.get_position(["parent2"])[:, :, 0]),
+    )
+
+    # Create SARA axis with expected rotation axis
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        expected_rotation_axis_orientation=expected_axis,
+        visualize=False,
+    )
+
+    # Evaluate the sara function
+    mock_model = BiomechanicalModelReal()
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    # The axis should be aligned with the expected direction
+    axis_vector = result_aor.axis()[:3, 0]
+    axis_vector_normalized = axis_vector / np.linalg.norm(axis_vector)
+
+    # Check that the axis is roughly in the X direction (allowing for some variation)
+    assert abs(axis_vector_normalized[0]) > 0.5  # X component should be dominant
+
+
+def test_sara_with_callable_origin_positions():
+    """Test SARA with callable origin_positions_global"""
+    np.random.seed(42)
+    nb_frames = 50
+
+    # Create parent markers
+    parent_markers = {
+        "parent1": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.1], [0.2], [0.3], [1.0]]),
+        "parent2": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.15], [0.25], [0.35], [1.0]]),
+        "parent3": np.random.randn(4, nb_frames) * 0.01 + np.array([[0.2], [0.3], [0.4], [1.0]]),
+    }
+
+    # Create child markers
+    rt_matrix_time_series = RotoTransMatrixTimeSeries(nb_frames)
+    for i_frame in range(nb_frames):
+        rt_matrix_time_series[i_frame] = RotoTransMatrix().from_euler_angles_and_translation(
+            "xyz", np.array([i_frame * 0.05, 0, 0]), np.array([0.2, 0.2, 0.2])
+        )
+    child_markers = {
+        "child1": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.3], [0.4], [0.5], [1.0]])),
+        "child2": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.35], [0.45], [0.55], [1.0]])),
+        "child3": rt_matrix_time_series
+        @ (np.random.randn(4, nb_frames) * 0.01 + np.array([[0.4], [0.5], [0.6], [1.0]])),
+    }
+
+    all_markers = {**parent_markers, **child_markers}
+    functional_data = DictData(all_markers)
+
+    # Create static data
+    static_markers = {name: data[:, 0:1] for name, data in all_markers.items()}
+    static_data = DictData(static_markers)
+
+    # Create callable origin_positions_global
+    def origin_func(data, model):
+        return np.repeat([[0.25, 0.35, 0.45, 1.0]], nb_frames, axis=0).T
+
+    # Create SARA axis with callable origin
+    sara_axis = SegmentCoordinateSystemUtils.sara(
+        name=Axis.Name.X,
+        functional_data=functional_data,
+        parent_marker_names=["parent1", "parent2", "parent3"],
+        child_marker_names=["child1", "child2", "child3"],
+        origin_positions_global=origin_func,
+        visualize=False,
+    )
+
+    # Evaluate the sara function
+    mock_model = BiomechanicalModelReal()
+    result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
+
+    # Check that we got valid results
+    assert result_aor.start_point.position.shape == (4, 1)
+    assert result_aor.end_point.position.shape == (4, 1)
+
+
+def test_original_rotation_axis_errors():
+    """Test _original_rotation_axis error handling"""
+    # Create mock data
+    mock_data = MockC3dData()
+
+    # Test with non-Marker start/end
+    axis_bad = Axis(
+        name=Axis.Name.X,
+        start=lambda m, bio: np.array([1, 2, 3, 1]),
+        end=lambda m, bio: np.array([4, 5, 6, 1]),
+    )
+
+    with pytest.raises(NotImplementedError, match="The original_axis_global should be an Axis with start and end as Markers"):
+        SegmentCoordinateSystemUtils._original_rotation_axis(axis_bad, mock_data)
+
+    # Test with markers not in static data
+    axis_missing = Axis(
+        name=Axis.Name.X,
+        start=Marker("missing_marker1"),
+        end=Marker("missing_marker2"),
+    )
+
+    with pytest.raises(NotImplementedError, match="The markers defining the original_axis_global should be present in the static markers"):
+        SegmentCoordinateSystemUtils._original_rotation_axis(axis_missing, mock_data)
+
+
 def test_visualize_score_with_point():
     """Test the structure of the _visualize_score plot with a point (SCoRE)"""
     np.random.seed(42)
