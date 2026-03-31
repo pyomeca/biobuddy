@@ -684,7 +684,9 @@ def test_init_rigid_segment_identification():
     rsi._check_marker_functional_trial_file()  # Should not raise an error
 
     # Test with no markers
-    with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
+    with pytest.raises(
+        RuntimeError, match=r"The functional trial file does not contain any frame. Please check the trial again."
+    ):
         rsi_no_markers = Score(
             MockEmptyC3dData(),
             parent_name,

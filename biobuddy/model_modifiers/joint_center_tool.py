@@ -298,6 +298,8 @@ class RigidSegmentIdentification(ABC):
         Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
         """
         self.marker_names = self._data.marker_names
+        if self._data.nb_frames == 0:
+            raise RuntimeError("The functional trial file does not contain any frame. Please check the trial again.")
         self.marker_positions = self._data.all_marker_positions[:3, :, :]
 
         # Check that the markers move
