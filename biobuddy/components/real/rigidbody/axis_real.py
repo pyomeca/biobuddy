@@ -50,6 +50,8 @@ class AxisReal:
         """
         Returns the axis vector
         """
+        axis = np.ones((4, 1))
         start = self.start_point.position
         end = self.end_point.position
-        return end - start
+        axis[:3, :] = end[:3] - start[:3]
+        return axis

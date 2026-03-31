@@ -905,7 +905,7 @@ class ModelDynamics:
                     _logger.error("pyorerun is not installed. Cannot animate the model.")
                     return
 
-                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
+                animation = pyorerun.LiveModelAnimation.from_file(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
                 return

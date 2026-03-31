@@ -732,3 +732,53 @@ def local_rt_between_global_rts(
 
     local_rt = parent_rt_in_global.inverse @ child_rt_in_global
     return local_rt
+
+
+def project_points_on_axes(points: Points, start: Points, end: Points) -> Points:
+    """
+    Projects points on axes defined by two points at each column.
+
+    Parameters
+    ----------
+    points
+        The points to project, of shape (3, N) or (4, N).
+    start
+        The start points of the axes, of shape (3, N).
+    end
+        The end points of the axes, of shape (3, N).
+
+    Returns
+    -------
+    projected_point
+        The projected points, of shape (3, N).
+    """
+    if len(points.shape) == 1:
+        points = points[:, None]
+    if len(start.shape) == 1:
+        start = start[:, None]
+    if len(end.shape) == 1:
+        end = end[:, None]
+
+    if points.shape[0] != 3 and points.shape[0] != 4:
+        raise ValueError(f"Expected points of shape (3, N) or (4, N), got shape {points.shape}")
+    if start.shape[0] != 3 and start.shape[0] != 4:
+        raise ValueError(f"Expected start points of shape (3, N) or (4, N), got shape {start.shape}")
+    if end.shape[0] != 3 and end.shape[0] != 4:
+        raise ValueError(f"Expected end points of shape (3, N) or (4, N), got shape {end.shape}")
+    if points.shape[0] != start.shape[0] or points.shape[0] != end.shape[0]:
+        raise ValueError(
+            f"Expected points, start and end to have the same number of rows. Got {points.shape[0]}, {start.shape[0]}, {end.shape[0]}"
+        )
+    if points.shape[1] != start.shape[1] or points.shape[1] != end.shape[1]:
+        raise ValueError(
+            f"Expected points, start and end to have the same number of columns. Got {points.shape[1]}, {start.shape[1]}, {end.shape[1]}"
+        )
+
+    start_to_end = end - start
+    start_to_point = points - start
+    return (
+        start
+        + np.einsum("ij,ij->j", start_to_point, start_to_end)
+        / np.einsum("ij,ij->j", start_to_end, start_to_end)
+        * start_to_end
+    )

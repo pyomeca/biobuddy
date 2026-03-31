@@ -9,7 +9,8 @@ from .marker import Marker
 from ...real.biomechanical_model_real import BiomechanicalModelReal
 from ...real.rigidbody.axis_real import AxisReal
 from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
-from ....utils.marker_data import MarkerData, DictData
+from ....utils.aliases import Points, Point
+from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
 from ....model_modifiers.joint_center_tool import Score, Sara
 
@@ -328,15 +329,39 @@ class SegmentCoordinateSystemUtils:
         return partial(collapse, visualize=visualize)
 
     @staticmethod
+    def _original_rotation_axis(original_axis_global: Axis, static_markers: MarkerData) -> np.ndarray:
+        """
+        Estimate the original axis of rotation to make sure that the axis is in the right direction.
+        """
+        if not isinstance(original_axis_global.start, Marker) or not isinstance(original_axis_global.end, Marker):
+            raise NotImplementedError("The original_axis_global should be an Axis with start and end as Markers.")
+        if (
+            original_axis_global.start.name not in static_markers.marker_names
+            or original_axis_global.end.name not in static_markers.marker_names
+        ):
+            raise NotImplementedError(
+                f"The markers defining the original_axis_global should be present in the static markers, got start: {original_axis_global.start.name} and end: {original_axis_global.end.name}"
+            )
+
+        start_marker_global = static_markers.mean_marker_position(original_axis_global.start.name)
+        end_marker_global = static_markers.mean_marker_position(original_axis_global.end.name)
+        global_axis = end_marker_global - start_marker_global
+
+        return global_axis[:3]
+
+    @staticmethod
     def sara(
         name: int,
         functional_data: MarkerData,
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
+        expected_rotation_axis_orientation: Axis | None = None,
+        origin_positions_global: Callable | None = None,
         visualize: bool = False,
     ) -> Axis:
         """
         Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
+        # TODO: SARA should also change the origin of the axis, not only the direction.
 
         Parameters
         ----------
@@ -344,6 +369,13 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the parent segment to compute the SARA axis from
         child_marker_names
             The names of the markers on the child segment to compute the SARA axis from
+        expected_rotation_axis_orientation: Axis | None
+            The original axis in the global reference frame, of shape (3,). It is used to reorient the SARA axis if
+            it points in the opposite direction of the original axis. If None, the original axis is not used and the SARA axis is not reoriented.
+        origin_positions_global: Callable | None
+            The function defining the positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
+            The origin_positions_global points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed COR value.
         visualize
             If True, a 3D visualization of the SARA axis computation will be shown. Plotly is required for this.
 
@@ -355,7 +387,7 @@ class SegmentCoordinateSystemUtils:
         sara_cache = {}  # We only need to perform SARA once. So we store the result here.
 
         def collapse(
-            static_markers: MarkerData, _: BiomechanicalModelReal, visualize: bool
+            static_markers: MarkerData, bio_model: BiomechanicalModelReal, visualize: bool
         ) -> tuple[np.ndarray, np.ndarray]:
             static_markers_hash = _markers_fingerprint(static_markers)
 
@@ -381,7 +413,21 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
-                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(rt_parent_func, rt_child_func)
+                if expected_rotation_axis_orientation is not None:
+                    original_axis_global = SegmentCoordinateSystemUtils._original_rotation_axis(
+                        expected_rotation_axis_orientation, static_markers
+                    )
+                else:
+                    original_axis_global = None
+                origin_positions_global_evaluated = (
+                    origin_positions_global(functional_data, bio_model) if origin_positions_global is not None else None
+                )
+                _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
+                    rt_parent=rt_parent_func,
+                    rt_child=rt_child_func,
+                    original_axis_global=original_axis_global,
+                    origin_positions_global=origin_positions_global_evaluated,
+                )
                 sara_cache[static_markers_hash] = [
                     rt_parent_static,
                     rt_parent_func,

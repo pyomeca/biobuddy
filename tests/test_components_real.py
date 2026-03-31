@@ -302,7 +302,7 @@ def test_axis_real_axis():
 
     # Test axis vector calculation
     axis_vector = axis.axis()
-    npt.assert_array_equal(axis_vector, np.array([[1.0], [0.0], [0.0], [0.0]]))
+    npt.assert_array_equal(axis_vector, np.array([[1.0], [0.0], [0.0], [1.0]]))
 
     # Test with different positions
     start_marker = MarkerReal(name="start", parent_name="segment1", position=np.array([[0.0], [0.0], [0.0], [1.0]]))
@@ -310,7 +310,7 @@ def test_axis_real_axis():
 
     axis = AxisReal(name=AxisReal.Name.Y, start=start_marker, end=end_marker)
     axis_vector = axis.axis()
-    npt.assert_array_equal(axis_vector, np.array([[0.0], [1.0], [0.0], [0.0]]))
+    npt.assert_array_equal(axis_vector, np.array([[0.0], [1.0], [0.0], [1.0]]))
 
 
 # ------- SegmentCoordinateSystemReal ------- #
