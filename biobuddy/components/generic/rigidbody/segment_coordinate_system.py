@@ -410,7 +410,7 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SARA axis
-                original_axis_global, _ = SegmentCoordinateSystemUtils._original_rotation_axis(
+                original_axis_global = SegmentCoordinateSystemUtils._original_rotation_axis(
                     expected_rotation_axis_orientation,
                     static_markers)
                 origin_positions_global_evaluated = origin_positions_global(static_markers, bio_model) if origin_positions_global is not None else None

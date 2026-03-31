@@ -939,6 +939,9 @@ class Sara(RigidSegmentIdentification):
 
         if origin_positions_global is not None:
             origins_global = points_to_array(origin_positions_global)
+            if origins_global.shape[1] == 1:
+                # If only one is defined (like the mean), repeat for all frames
+                origins_global = np.repeat(origins_global, nb_frames, axis=1)
             if origins_global.shape[1] != nb_frames:
                 raise RuntimeError(
                     f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
