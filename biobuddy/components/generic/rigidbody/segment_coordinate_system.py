@@ -415,7 +415,7 @@ class SegmentCoordinateSystemUtils:
                 # Compute the SARA axis
                 if expected_rotation_axis_orientation is not None:
                     original_axis_global = SegmentCoordinateSystemUtils._original_rotation_axis(
-                        expected_rotation_axis_orientation, static_markers
+                        expected_rotation_axis_orientation, functional_data
                     )
                 else:
                     original_axis_global = None
