@@ -917,8 +917,7 @@ class Sara(RigidSegmentIdentification):
         aor_child_local /= np.linalg.norm(aor_child_local)
 
         # Compute pseudo-inverse solution
-        # cor = V[:, :5] @ np.diag(1.0 / S[:5]) @ U[:, :5].T @ b_valid  # TODO: make a breaking PR for this change !!!
-        cor = V @ np.diag(1.0 / S) @ U.T @ b_valid
+        cor = V[:, :5] @ np.diag(1.0 / S[:5]) @ U[:, :5].T @ b_valid
         cor_parent_local = cor[3:]
         cor_child_local = cor[:3]
 
