@@ -1674,7 +1674,7 @@ def test_sara():
         result_aor.start_point.position.reshape(
             4,
         ),
-        np.array([0.23814297, 0.41019945, 0.57167098, 1.]),
+        np.array([0.23814297, 0.41019945, 0.57167098, 1.0]),
     )
     npt.assert_almost_equal(
         result_aor.end_point.position.reshape(
@@ -1686,7 +1686,7 @@ def test_sara():
         result_aor.axis().reshape(
             4,
         ),
-        np.array([0.3032919 , 0.38028092, 0.51495484, 1.]),
+        np.array([0.3032919, 0.38028092, 0.51495484, 1.0]),
     )
 
     # Test that calling twice returns the same result (caching)
@@ -1824,7 +1824,7 @@ def test_sara_with_expected_rotation_axis():
 
     # The axis should be aligned with the expected direction (negative)
     axis_vector = result_aor.axis()[:3, 0]
-    npt.assert_almost_equal(axis_vector, np.array([-1.20366083,  0.4501699 ,  0.46319628]))
+    npt.assert_almost_equal(axis_vector, np.array([-1.20366083, 0.4501699, 0.46319628]))
 
     # TODO: this test should be updated when the scs origin is modified by SARA as well.
 
