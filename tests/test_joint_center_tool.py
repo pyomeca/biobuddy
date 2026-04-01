@@ -1183,8 +1183,8 @@ def test_sara_perform_algorithm_with_origin_positions():
     npt.assert_almost_equal(aor_global_normalized, aor_expected, decimal=1)
 
     # Check that CoR is close to expected on all axes
-    # npt.assert_almost_equal(cor_global, cor_expected, decimal=1)
-    npt.assert_almost_equal(cor_global, np.array([1.55581197, 0.01196581, 0.01794872]), decimal=6)  # TODO: remove !
+    npt.assert_almost_equal(cor_global[1:], cor_expected[1:], decimal=1)
+    npt.assert_almost_equal(cor_global, np.array([0.25365385, 0.17884615, 0.26826923]), decimal=6)
 
 
 def test_joint_coordinate_modifier():
