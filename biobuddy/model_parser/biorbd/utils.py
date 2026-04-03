@@ -70,6 +70,30 @@ def read_int(next_token: Callable) -> int:
 def read_float(next_token: Callable) -> float:
     return float(next_token())
 
+def read_pi_expression(next_token: Callable) -> float:
+    token = next_token().strip().lower()
+    expr = token.replace("pi", "np.pi")
+    try:
+        value = eval(expr, {"np": np}, {})
+    except (SyntaxError, NameError, TypeError, ZeroDivisionError) as e:
+        raise ValueError(f"Invalid pi expression: {token}") from e
+    return float(value)
+
+
+def read_float_or_pi_expression(next_token: Callable) -> float:
+    token = next_token().strip()
+    try:
+        return float(token)
+    except ValueError:
+        token_lower = token.lower()
+        if "pi" not in token_lower:
+            raise
+        expr = token_lower.replace("pi", "np.pi")
+        try:
+            value = eval(expr, {"np": np}, {})
+        except (SyntaxError, NameError, TypeError, ZeroDivisionError) as e:
+            raise ValueError(f"Invalid float/pi expression: {token}") from e
+        return float(value)
 
 def read_bool(next_token: Callable) -> bool:
     return next_token() == "1"
@@ -77,3 +101,6 @@ def read_bool(next_token: Callable) -> bool:
 
 def read_float_vector(next_token: Callable, length: int) -> np.ndarray:
     return np.array([read_float(next_token=next_token) for _ in range(length)])
+
+def read_float_or_pi_expression_vector(next_token: Callable, length: int) -> np.ndarray:
+    return np.array([read_float_or_pi_expression(next_token=next_token) for _ in range(length)])

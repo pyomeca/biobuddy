@@ -31,6 +31,7 @@ from .utils import (
     read_float,
     read_bool,
     read_float_vector,
+    read_float_or_pi_expression_vector,
 )
 from ...utils.enums import Translations
 
@@ -80,6 +81,44 @@ class BiomodModelParser(AbstractModelParser):
                 except ValueError:
                     break
                 count += 1
+            return count - 1
+
+        def nb_float_or_pi_operator_tokens_until_next_str() -> int:
+            """
+            Count the number of numeric-like tokens until the next non-numeric token.
+            Accepted forms:
+            \- float literals (e.g. 1, \-2.3, 4e\-2)
+            \- pi expressions (e.g. pi, 2\*pi, pi/2, \-pi)
+            """
+            nonlocal token_index
+            count = 1
+
+            while True:
+                token = tokens[token_index + count]
+                token_lower = token.lower()
+
+                # Case 1: float standard
+                try:
+                    float(token)
+                    count += 1
+                    continue
+                except ValueError:
+                    pass
+
+                # Case 2: expression pi
+                if "pi" in token_lower:
+                    expr = token_lower.replace("pi", "np.pi")
+                    try:
+                        value = eval(expr, {"np": np}, {})
+                        float(value)
+                        count += 1
+                        continue
+                    except (ValueError, SyntaxError, NameError, TypeError, ZeroDivisionError):
+                        break
+
+                # Sinon: prochain token considéré comme non numérique
+                break
+
             return count - 1
 
         # Parse the model
@@ -192,10 +231,11 @@ class BiomodModelParser(AbstractModelParser):
                     elif token.lower() == "rotations":
                         current_component.rotations = read_str(next_token=next_token)
                     elif token.lower() == "rangesq" or token.lower() == "ranges" or token.lower() == "rangesqdot":
-                        length = nb_float_tokens_until_next_str()
+                        length = nb_float_or_pi_operator_tokens_until_next_str()
+                        print(next_token)
                         if length % 2 != 0:
                             raise ValueError(f"Length of range_q is not even: {length}")
-                        min_max = read_float_vector(next_token=next_token, length=length)
+                        min_max = read_float_or_pi_expression_vector(next_token=next_token, length=length)
                         min_bound = min_max[0::2]
                         max_bound = min_max[1::2]
                         if token.lower() == "rangesq" or token.lower() == "ranges":
