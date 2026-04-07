@@ -24,8 +24,9 @@ def test_pi_parsing():
     # Check the pi values
     q_min = model.segments["Seg1"].q_ranges.min_bound
     q_max = model.segments["Seg1"].q_ranges.max_bound
-    npt.assert_almost_equal(q_min, np.array([-1, -2*np.pi]))
-    npt.assert_almost_equal(q_max, np.array([5, 2*np.pi]))
+    npt.assert_almost_equal(q_min, np.array([-1, -2 * np.pi]))
+    npt.assert_almost_equal(q_max, np.array([5, 2 * np.pi]))
+
 
 def test_problematic_parsing():
     """

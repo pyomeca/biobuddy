@@ -81,6 +81,7 @@ def read_float(next_token: Callable) -> float:
             except:
                 raise ValueError(f"Invalid expression detected in your biomod file: {token}")
 
+
 def read_bool(next_token: Callable) -> bool:
     return next_token() == "1"
 
