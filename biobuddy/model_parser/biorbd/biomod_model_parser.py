@@ -31,6 +31,9 @@ from .utils import (
     read_float,
     read_bool,
     read_float_vector,
+    replace_variables,
+    is_correct_expression,
+    add_variables,
 )
 from ...utils.enums import Translations
 
@@ -70,16 +73,37 @@ class BiomodModelParser(AbstractModelParser):
 
         def nb_float_tokens_until_next_str() -> int:
             """
-            Count the number of float tokens until the next str token.
+            Count the number of numeric-like tokens until the next non-numeric token.
+            Accepted forms:
+            - float literals (ex: 1, -2.3, 4e-2)
+            - pi expressions (ex: pi, 2*pi, pi/2, -pi)
+            - variable expressions (ex: 0, variable_name, 4.2)
             """
             nonlocal token_index
             count = 1
+
             while True:
+                token = tokens[token_index + count]
+                token_lower = token.lower()
+
+                # Case 1: float standard
                 try:
-                    float(tokens[token_index + count])
+                    float(token)
+                    count += 1
+                    continue
                 except ValueError:
+                    pass
+
+                # Case 2: expression pi
+                token_lower = replace_variables(token_lower)
+                if is_correct_expression(token_lower):
+                    count += 1
+                    continue
+                else:
                     break
-                count += 1
+
+                # Otherwise: numerical expression
+
             return count - 1
 
         # Parse the model
@@ -103,6 +127,8 @@ class BiomodModelParser(AbstractModelParser):
                         if gravity is not None:
                             raise ValueError("Gravity already defined")
                         self.gravity = read_float_vector(next_token=next_token, length=3)
+                    elif token.lower() == "variables":
+                        current_component = {}
                     elif token.lower() == "segment":
                         check_if_version_defined(biomod_version)
                         current_component = SegmentReal(name=read_str(next_token=next_token))
@@ -172,6 +198,19 @@ class BiomodModelParser(AbstractModelParser):
                         token_index += 2
                     else:
                         raise ValueError(f"Unknown component {token}")
+
+                elif isinstance(current_component, dict):
+                    if token.lower() == "endvariables":
+                        add_variables(current_component)
+                        current_component = None
+                    else:
+                        value = read_float(next_token=next_token)
+                        if token[0] != "$":
+                            raise ValueError(
+                                f"The variable name should start with a $ sign, please check your biomod file: {token}"
+                            )
+                        variable_name = token[1:]  # Remove the mandatory $ at the begining of the variable name
+                        current_component[variable_name] = value
 
                 elif isinstance(current_component, SegmentReal):
                     if token.lower() == "endsegment":
