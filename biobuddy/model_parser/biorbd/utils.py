@@ -87,13 +87,12 @@ def read_float_or_pi_expression(next_token: Callable) -> float:
     except ValueError:
         token_lower = token.lower()
         if "pi" not in token_lower:
-            raise
-        expr = token_lower.replace("pi", "np.pi")
-        try:
-            value = eval(expr, {"np": np}, {})
-        except (SyntaxError, NameError, TypeError, ZeroDivisionError) as e:
-            raise ValueError(f"Invalid float/pi expression: {token}") from e
-        return float(value)
+            raise ValueError(f"Invalid expression detected in your biomod file: {token}")
+        else:
+            try:
+                return np.float64(eval(token_lower.replace("pi", "np.pi")))
+            except:
+                raise ValueError(f"Invalid expression detected in your biomod file: {token}")
 
 def read_bool(next_token: Callable) -> bool:
     return next_token() == "1"
