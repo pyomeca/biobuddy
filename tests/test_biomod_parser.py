@@ -47,14 +47,20 @@ def test_variable_parsing():
 
     inertia = model.segments["Seg1"].inertia_parameters.inertia
     npt.assert_almost_equal(inertia[0, 0], 0.0391)
-    npt.assert_almost_equal(inertia, np.array([[ 0.0391,  0.    ,  0.    ,  0.    ],
-                                       [ 0.    ,  0.0335, -0.0032,  0.    ],
-                                       [ 0.    , -0.0032,  0.009 ,  0.    ],
-                                       [ 0.    ,  0.    ,  0.    ,  1.    ]]))
+    npt.assert_almost_equal(
+        inertia,
+        np.array(
+            [[0.0391, 0.0, 0.0, 0.0], [0.0, 0.0335, -0.0032, 0.0], [0.0, -0.0032, 0.009, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        ),
+    )
 
     marker = model.segments["Seg1"].markers["marker_1"].position
-    npt.assert_almost_equal(marker.reshape(4, ), np.array([-1.2, 0, 0, 1]))
-
+    npt.assert_almost_equal(
+        marker.reshape(
+            4,
+        ),
+        np.array([-1.2, 0, 0, 1]),
+    )
 
 
 def test_block_comment_parsing():
@@ -72,7 +78,7 @@ def test_block_comment_parsing():
 
     # Check that there is only one segment, because the second one is between block comment
     assert model.nb_segments == 2
-    assert model.segment_names == ['root', 'Seg1']
+    assert model.segment_names == ["root", "Seg1"]
 
 
 def test_problematic_parsing():

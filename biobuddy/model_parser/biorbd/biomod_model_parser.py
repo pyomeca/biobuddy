@@ -205,8 +205,10 @@ class BiomodModelParser(AbstractModelParser):
                         current_component = None
                     else:
                         value = read_float(next_token=next_token)
-                        if token[0] != '$':
-                            raise ValueError(f"The variable name should start with a $ sign, please check your biomod file: {token}")
+                        if token[0] != "$":
+                            raise ValueError(
+                                f"The variable name should start with a $ sign, please check your biomod file: {token}"
+                            )
                         variable_name = token[1:]  # Remove the mandatory $ at the begining of the variable name
                         current_component[variable_name] = value
 

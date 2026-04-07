@@ -2,13 +2,14 @@ from typing import Callable
 
 import numpy as np
 
-
 VARIABLES = {"pi": np.pi}  # Only hard coded value in biorbd
+
 
 def add_variables(variables_dict: dict[str, float | int]) -> None:
     global VARIABLES
     for key in variables_dict:
         VARIABLES[key] = variables_dict[key]
+
 
 def tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
@@ -60,11 +61,13 @@ def check_if_version_defined(biomod_version: int):
         raise ValueError("Version not defined")
     return
 
+
 def replace_variables(token: str):
     for key in VARIABLES:
         if key.lower() in token.lower():
             token = token.replace(key, f"VARIABLES['{key}']")
     return token
+
 
 def is_correct_expression(token: str):
     try:
@@ -72,6 +75,7 @@ def is_correct_expression(token: str):
         return True
     except:
         return False
+
 
 def read_str(next_token: Callable) -> str:
     return next_token()
@@ -89,6 +93,7 @@ def read_int(next_token: Callable) -> int:
         return int(eval(token_with_variables))
     except:
         raise ValueError(f"Invalid expression detected in your biomod file: {token_with_variables}")
+
 
 def read_float(next_token: Callable) -> float:
     global VARIABLES
