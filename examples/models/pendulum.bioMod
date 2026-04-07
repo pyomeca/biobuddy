@@ -1,14 +1,23 @@
 version 4
 
+
+// Define some variables
+variables
+    $my_first_variable_is_an_int 1
+    $my_second_variable_is_a_double 0.0391
+    $myThirdVariableIsCamelCase -1.2
+endvariables
+
+
 segment Seg1
     translations	y
     rotations	x
     ranges
         -1 5
         -2*pi 2*pi
-    mass 1
+    mass my_first_variable_is_an_int
     inertia
-        0.0391  0.0000	0.0000
+        my_second_variable_is_a_double  0.0000	0.0000
 	    0.0000	0.0335	-0.0032
 	    0.0000	-0.0032	0.0090
     com  -0.0005 0.0688 -0.9542
@@ -18,7 +27,7 @@ endsegment
     // Marker 1
     marker marker_1
         parent Seg1
-        position 0 0 0
+        position myThirdVariableIsCamelCase 0 0
     endmarker
 
     // Marker 2
@@ -26,3 +35,20 @@ endsegment
         parent Seg1
         position -0.0005 0.0688 -0.9542
     endmarker
+    
+/*
+segment commented_segment
+    translations	y
+    rotations	x
+    ranges
+        -1 5
+        -2*pi 2*pi
+    mass my_first_variable_is_an_int
+    inertia
+        my_second_variable_is_a_double  0.0000	0.0000
+	    0.0000	0.0335	-0.0032
+	    0.0000	-0.0032	0.0090
+    com  -0.0005 0.0688 -0.9542
+    meshfile meshes/pendulum.STL
+endsegment
+*/

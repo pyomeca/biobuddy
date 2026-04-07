@@ -3,6 +3,13 @@ from typing import Callable
 import numpy as np
 
 
+VARIABLES = {"pi": np.pi}  # Only hard coded value in biorbd
+
+def add_variables(variables_dict: dict[str, float | int]) -> None:
+    global VARIABLES
+    for key in variables_dict:
+        VARIABLES[key] = variables_dict[key]
+
 def tokenize_biomod(filepath: str) -> list[str]:
     # Load the model from the filepath
     with open(filepath, "r") as f:
@@ -53,6 +60,18 @@ def check_if_version_defined(biomod_version: int):
         raise ValueError("Version not defined")
     return
 
+def replace_variables(token: str):
+    for key in VARIABLES:
+        if key.lower() in token.lower():
+            token = token.replace(key, f"VARIABLES['{key}']")
+    return token
+
+def is_correct_expression(token: str):
+    try:
+        float(eval(token))
+        return True
+    except:
+        return False
 
 def read_str(next_token: Callable) -> str:
     return next_token()
@@ -64,26 +83,26 @@ def read_str_list(next_token: Callable, length: int) -> list[str]:
 
 
 def read_int(next_token: Callable) -> int:
-    return int(next_token())
-
+    global VARIABLES
+    token_with_variables = replace_variables(token=next_token())
+    try:
+        return int(eval(token_with_variables))
+    except:
+        raise ValueError(f"Invalid expression detected in your biomod file: {token_with_variables}")
 
 def read_float(next_token: Callable) -> float:
+    global VARIABLES
     token = next_token().strip()
+    token_with_variables = replace_variables(token=token)
     try:
-        return float(token)
-    except ValueError:
-        token_lower = token.lower()
-        if "pi" not in token_lower:
-            raise ValueError(f"Invalid expression detected in your biomod file: {token}")
-        else:
-            try:
-                return np.float64(eval(token_lower.replace("pi", "np.pi")))
-            except:
-                raise ValueError(f"Invalid expression detected in your biomod file: {token}")
+        return float(eval(token_with_variables))
+    except:
+        raise ValueError(f"Invalid expression detected in your biomod file: {token_with_variables}")
 
 
 def read_bool(next_token: Callable) -> bool:
-    return next_token() == "1"
+    token_with_variables = replace_variables(token=next_token())
+    return token_with_variables == "1"
 
 
 def read_float_vector(next_token: Callable, length: int) -> np.ndarray:
