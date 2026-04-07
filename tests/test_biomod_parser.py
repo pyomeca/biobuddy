@@ -47,7 +47,7 @@ def test_problematic_parsing():
         f.write(content)
 
     # Load the model
-    with pytest.raises(ValueError, match="could not convert string to float: 'bad_name'"):
+    with pytest.raises(ValueError, match="Invalid expression detected in your biomod file: bad_name"):
         model = BiomechanicalModelReal().from_biomod(filepath=bad_file_name)
 
     # Delete the bad file created

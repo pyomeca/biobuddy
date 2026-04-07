@@ -31,7 +31,6 @@ from .utils import (
     read_float,
     read_bool,
     read_float_vector,
-    read_float_or_pi_expression_vector,
 )
 from ...utils.enums import Translations
 
@@ -235,7 +234,7 @@ class BiomodModelParser(AbstractModelParser):
                         print(next_token)
                         if length % 2 != 0:
                             raise ValueError(f"Length of range_q is not even: {length}")
-                        min_max = read_float_or_pi_expression_vector(next_token=next_token, length=length)
+                        min_max = read_float_vector(next_token=next_token, length=length)
                         min_bound = min_max[0::2]
                         max_bound = min_max[1::2]
                         if token.lower() == "rangesq" or token.lower() == "ranges":
