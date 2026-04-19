@@ -112,7 +112,7 @@ class ScaleTool:
         Print the marker weights in a human-readable format for debugging purposes.
         """
         for marker_weight in self.marker_weights:
-            print(f"{marker_weight.name} : {marker_weight.weight:.2f}")
+            _logger.info("%s : %.2f", marker_weight.name, marker_weight.weight)
 
     def scale(
         self,
