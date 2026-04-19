@@ -462,7 +462,7 @@ class RigidSegmentIdentification(ABC):
                     show_marker_labels=False,
                 )
             except:
-                print("You need to install Pyorerun to see the animation.")
+                _logger.warning("You need to install Pyorerun to see the animation.")
 
             if problematic_indices_parent.shape[0] > 0:
                 problematic_markers = np.where(np.nanmax(marker_movement_parent, axis=1) > 0.03)[0]
@@ -605,7 +605,7 @@ class RigidSegmentIdentification(ABC):
                 else:
                     # If the optimization fails, we use the initial rt matrix to initialize the next frame
                     init = rt_init[0].rt_matrix
-                    print(f"The optimization failed: {sol.message}")
+                    _logger.warning("The optimization failed: %s", sol.message)
                     continue
 
             # Setup for the next frame
