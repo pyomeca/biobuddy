@@ -395,7 +395,7 @@ class ModelDynamics:
         for i_frame in range(nb_frames):
 
             if i_frame % 100 == 0 and i_frame != 0:
-                print(f"{i_frame}/{nb_frames} frames")
+                _logger.debug("%d/%d frames", i_frame, nb_frames)
 
             if i_frame > 0:
                 last_q = optimal_q[:, i_frame - 1]

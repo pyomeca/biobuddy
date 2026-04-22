@@ -1,10 +1,13 @@
+import logging
+import subprocess
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-from pathlib import Path
-import subprocess
 
 from ..utils.enums import Translations, Rotations
+
+_logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from .real.rigidbody.segment_real import SegmentReal
@@ -512,7 +515,7 @@ class ModelUtils:
 
             subprocess.run(["dot", "-Tpng", str(path_dot_file), "-o", str(png_file)], check=True)
 
-            print(f"A graph has been created here: {png_file}")
+            _logger.info("A graph has been created here: %s", png_file)
 
             return
 
@@ -683,6 +686,6 @@ class ModelUtils:
 
             f.write("\n}\n")
 
-        print(f"A graph have been created for the model here : {out_path}")
+        _logger.info("A graph has been created for the model here: %s", out_path)
 
         convert_dot_to_png(out_path)
