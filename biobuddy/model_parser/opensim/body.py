@@ -82,16 +82,18 @@ class Body:
             mesh_list = _extend_mesh_list_with_extra_components(mesh_list, element)
 
             for mesh_tp in mesh_list:
-                mesh.append(mesh_tp[0].find("mesh_file").text)
-                virtual_body.append(mesh_tp[0].attrib["name"])
-                mesh_scale_factor_tp = mesh_tp[0].find("scale_factors")
-                mesh_scale_factor.append(mesh_scale_factor_tp.text if mesh_scale_factor_tp is not None else None)
-                if mesh_tp[0].find("Appearance") is not None:
-                    mesh_color_tp = mesh_tp[0].find("Appearance").find("color")
-                    mesh_color.append(mesh_color_tp.text if mesh_color_tp is not None else None)
-                else:
-                    mesh_color.append(None)
-                mesh_offset.append(mesh_tp[1])
+                mesh_file_name = mesh_tp[0].find("mesh_file").text
+                if mesh_file_name != "Unassigned":
+                    mesh.append(mesh_file_name)
+                    virtual_body.append(mesh_tp[0].attrib["name"])
+                    mesh_scale_factor_tp = mesh_tp[0].find("scale_factors")
+                    mesh_scale_factor.append(mesh_scale_factor_tp.text if mesh_scale_factor_tp is not None else None)
+                    if mesh_tp[0].find("Appearance") is not None:
+                        mesh_color_tp = mesh_tp[0].find("Appearance").find("color")
+                        mesh_color.append(mesh_color_tp.text if mesh_color_tp is not None else None)
+                    else:
+                        mesh_color.append(None)
+                    mesh_offset.append(mesh_tp[1])
 
         return Body(
             name=name,

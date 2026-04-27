@@ -24,6 +24,7 @@ from biobuddy import (
     Sara,
     Score,
     MarkerWeight,
+    Axis,
 )
 
 
@@ -146,6 +147,7 @@ def main(visualization):
             child_marker_names=["RATT", "RLM", "RSPH"] + technical_marker_to_add["tibia_r"],
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             initialize_whole_trial_reconstruction=True,
             animate_rt=False,

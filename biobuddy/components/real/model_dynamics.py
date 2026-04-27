@@ -70,7 +70,7 @@ class ModelDynamics:
             parent_name = self.segments[segment_name].parent_name
             parent_scs = self.segment_coordinate_system_in_global(segment_name=parent_name)
             scs_in_local = parent_scs.inverse @ self.segments[segment_name].segment_coordinate_system.scs
-            return scs_in_local
+            return RotoTransMatrix.from_closest_rt_matrix(scs_in_local.rt_matrix)
 
     @requires_initialization
     def segment_coordinate_system_in_global(self, segment_name: str) -> RotoTransMatrix:
@@ -103,7 +103,7 @@ class ModelDynamics:
                 current_segment = self.segments[current_parent_name]
                 rt_to_global = current_segment.segment_coordinate_system.scs @ rt_to_global
 
-            return rt_to_global
+            return RotoTransMatrix.from_closest_rt_matrix(rt_to_global.rt_matrix)
 
     @requires_initialization
     def rt_from_parent_offset_to_real_segment(self, segment_name: str) -> RotoTransMatrix:
@@ -307,7 +307,7 @@ class ModelDynamics:
 
             current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/../temporary_models"
             temporary_model_path = current_path + "/temporary_rt.bioMod"
-            mesh_relative_path = "../../examples/models/Geometry_cleaned"
+            mesh_relative_path = "Geometry_cleaned"
             if os.path.exists(current_path + "/" + mesh_relative_path):
                 self.change_mesh_directories(mesh_relative_path)
                 self.to_biomod(temporary_model_path)
@@ -395,7 +395,7 @@ class ModelDynamics:
         for i_frame in range(nb_frames):
 
             if i_frame % 100 == 0 and i_frame != 0:
-                print(f"{i_frame}/{nb_frames} frames")
+                _logger.debug("%d/%d frames", i_frame, nb_frames)
 
             if i_frame > 0:
                 last_q = optimal_q[:, i_frame - 1]
@@ -500,11 +500,12 @@ class ModelDynamics:
                     parent_rt = segment_rt_in_global[parent_name][i_frame]
 
                 if self.segments[segment_name].nb_q == 0:
-                    segment_rt_in_global[segment_name][i_frame] = parent_rt @ segment_rt
+                    full_rt = parent_rt @ segment_rt
                 else:
                     local_q = q[self.dof_indices(segment_name), i_frame]
                     rt_caused_by_q = self.segments[segment_name].rt_from_local_q(local_q)
-                    segment_rt_in_global[segment_name][i_frame] = parent_rt @ segment_rt @ rt_caused_by_q
+                    full_rt = parent_rt @ segment_rt @ rt_caused_by_q
+                segment_rt_in_global[segment_name][i_frame] = RotoTransMatrix.from_closest_rt_matrix(full_rt.rt_matrix)
 
         return segment_rt_in_global
 
@@ -904,7 +905,7 @@ class ModelDynamics:
                     _logger.error("pyorerun is not installed. Cannot animate the model.")
                     return
 
-                animation = pyorerun.LiveModelAnimation(model_path, with_q_charts=True)
+                animation = pyorerun.LiveModelAnimation.from_file(model_path, with_q_charts=True)
                 animation.options.set_all_labels(False)
                 animation.rerun()
                 return

@@ -1,6 +1,6 @@
 from .aliases import Point, Points
 from .marker_data import MarkerData, C3dData, CsvData, DictData, ReferenceFrame
-from .enums import Rotations, Translations, ViewAs
+from .enums import Rotations, Translations, ViewAs, ViewerType
 from .linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, RotationMatrix
 
 __all__ = [
@@ -14,6 +14,7 @@ __all__ = [
     Rotations.__name__,
     Translations.__name__,
     ViewAs.__name__,
+    ViewerType.__name__,
     RotoTransMatrix.__name__,
     RotoTransMatrixTimeSeries.__name__,
     RotationMatrix.__name__,

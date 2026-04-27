@@ -67,10 +67,10 @@ def points_to_array(points: Points, name: str = "unknown") -> np.ndarray:
         The points as a numpy array
     """
     if points is None:
-        return np.ndarray((4, 0))
+        return np.ndarray((4, 0), dtype=np.float64)
 
     if isinstance(points, list):
-        points = np.array(points)
+        points = np.array(points, dtype=np.float64)
         if points.shape[0] != 3 and points.shape[0] != 4:
             if points.shape[1] == 3 or points.shape[1] == 4:
                 points = points.T
@@ -81,7 +81,7 @@ def points_to_array(points: Points, name: str = "unknown") -> np.ndarray:
 
     if isinstance(points, np.ndarray):
         if len(points.shape) == 1:
-            points = points[:, None]
+            points = np.array(points[:, None], dtype=np.float64)
 
         if len(points.shape) != 2:
             raise RuntimeError(
@@ -89,7 +89,7 @@ def points_to_array(points: Points, name: str = "unknown") -> np.ndarray:
             )
         elif points.shape[0] not in (3, 4):
             if points.shape[1] == 3 or points.shape[1] == 4:
-                points = points.T
+                points = np.array(points.T, dtype=np.float64)
             else:
                 raise RuntimeError(
                     f"The {name} must be a np.ndarray of shape (3,), (3, x) (4,) or (4, x), but received: {points.shape}"

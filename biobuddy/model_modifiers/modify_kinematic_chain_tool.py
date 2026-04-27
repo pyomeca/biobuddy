@@ -115,7 +115,7 @@ class ChangeFirstSegment:
 
         # Inertia stays the same, as it is expressed around the com, but is rotated if needed
         rt_to_new_scs = original_model.segments[segment_name].segment_coordinate_system.scs.inverse @ current_scs_global
-        if np.any(rt_to_new_scs.rotation_matrix != RotationMatrix().rotation_matrix):
+        if np.any(rt_to_new_scs.rotation_matrix.rotation_matrix != RotationMatrix().rotation_matrix):
             raise NotImplementedError("The rotation of inertia matrix is not implemented yet.")
         modified_inertia = deepcopy(original_model.segments[segment_name].inertia_parameters.inertia)
 

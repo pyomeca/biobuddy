@@ -126,14 +126,15 @@ class MeshFileReal:
     def to_biomod(self):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
-        out_string += f"\tmeshfile\t{self.mesh_file_directory}/{self.mesh_file_name}\n"
-        if self.mesh_color is not None:
-            out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
-        out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"
-        if self.mesh_rotation is not None and self.mesh_translation is not None:
-            out_string += f"\tmeshrt\t{self.mesh_rotation[0, 0]}\t{self.mesh_rotation[1, 0]}\t{self.mesh_rotation[2, 0]}\txyz\t{self.mesh_translation[0, 0]}\t{self.mesh_translation[1, 0]}\t{self.mesh_translation[2, 0]}\n"
-        elif self.mesh_rotation is not None or self.mesh_translation is not None:
-            raise RuntimeError("The mesh_rotation and mesh_translation must be both defined or both undefined")
+        if self.mesh_file_directory and self.mesh_file_name:
+            out_string += f"\tmeshfile\t{self.mesh_file_directory}/{self.mesh_file_name}\n"
+            if self.mesh_color is not None:
+                out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
+            out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"
+            if self.mesh_rotation is not None and self.mesh_translation is not None:
+                out_string += f"\tmeshrt\t{self.mesh_rotation[0, 0]}\t{self.mesh_rotation[1, 0]}\t{self.mesh_rotation[2, 0]}\txyz\t{self.mesh_translation[0, 0]}\t{self.mesh_translation[1, 0]}\t{self.mesh_translation[2, 0]}\n"
+            elif self.mesh_rotation is not None or self.mesh_translation is not None:
+                raise RuntimeError("The mesh_rotation and mesh_translation must be both defined or both undefined")
         return out_string
 
     def to_urdf(self, urdf_model: etree.Element, link: etree.Element):

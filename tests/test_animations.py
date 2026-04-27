@@ -11,6 +11,7 @@ from biobuddy import (
     Score,
     Sara,
     ScaleTool,
+    Axis,
 )
 
 from biobuddy.utils.named_list import NamedList
@@ -138,6 +139,7 @@ def test_animate_joint_center_tool():
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
             initialize_whole_trial_reconstruction=True,
             animate_rt=True,
         )

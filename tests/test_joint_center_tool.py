@@ -1,8 +1,9 @@
 import os
 
 from biobuddy.utils.named_list import NamedList
-from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations
-from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification
+from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations, Axis
+from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification, JointCoordinateModifier, get_svd
+from biobuddy.utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries
 import numpy as np
 import numpy.testing as npt
 import pytest
@@ -109,6 +110,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             initialize_whole_trial_reconstruction=initialize_whole_trial_reconstruction,
             animate_rt=False,
         )
@@ -127,9 +129,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             # The rotation part did not change, only the translation part was modified
             np.array(
                 [
-                    [0.94106637, 0.33488294, 0.04740786, -0.07073665],
-                    [-0.33553695, 0.90675222, 0.25537299, -0.02090582],
-                    [0.04253287, -0.25623002, 0.96567962, 0.09795824],
+                    [0.941067, 0.334883, 0.047408, -0.07073673],
+                    [-0.335537, 0.906752, 0.255373, -0.02090609],
+                    [0.042533, -0.25623, 0.96568, 0.09795744],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -140,9 +142,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             score_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
             np.array(
                 [
-                    [0.94106637, 0.33488294, 0.04740786, -0.07167729],
-                    [-0.33553695, 0.90675222, 0.25537299, -0.02279122],
-                    [0.04253287, -0.25623002, 0.96567962, 0.09659234],
+                    [0.941067, 0.334883, 0.047408, -0.07167729],
+                    [-0.335537, 0.906752, 0.255373, -0.02279122],
+                    [0.042533, -0.25623, 0.96568, 0.09659233],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             ),
@@ -155,18 +157,18 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         npt.assert_almost_equal(
             score_model.segments["tibia_r"].segment_coordinate_system.scs.translation,
             # Both rotation and translation parts were modified
-            np.array([0.02126479, -0.40906061, -0.03103533]),
+            np.array([0.0212648, -0.40906054, -0.03103454]),
             decimal=5,
         )
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             # Both rotation and translation parts were modified
             np.array(
                 [
-                    [-0.99777447, 0.06656149, 0.00396018],
-                    [0.06658715, 0.99151884, 0.11160891],
-                    [0.00350226, 0.11162422, -0.99374432],
+                    [-0.99777445, 0.06656196, 0.00395634],
+                    [0.06658717, 0.9915182, 0.11161452],
+                    [0.0035065, 0.11162956, -0.9937437],
                 ]
             ),
             decimal=5,
@@ -180,12 +182,12 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
         )
         # The rotation is the result from SARA (and is less stable numerically)
         npt.assert_almost_equal(
-            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix,
+            score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             np.array(
                 [
-                    [0.99777494, 0.06547161, -0.01259532],
-                    [-0.0664371, 0.99220326, -0.1054457],
-                    [0.00559341, 0.10604788, 0.99434529],
+                    [-0.99777, 0.06547, 0.01259],
+                    [0.06644, 0.9922, 0.10545],
+                    [-0.00559, 0.10605, -0.99435],
                 ]
             ),
             decimal=5,
@@ -297,7 +299,7 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
     npt.assert_almost_equal(original_marker_tracking_error, 4.705350581055244, decimal=2)
     if initialize_whole_trial_reconstruction:
-        npt.assert_almost_equal(new_marker_tracking_error, 2.956825541756167, decimal=2)
+        npt.assert_almost_equal(new_marker_tracking_error, 2.956894901165191, decimal=2)
     else:
         npt.assert_almost_equal(new_marker_tracking_error, 2.995276361344552, decimal=2)
     npt.assert_array_less(new_marker_tracking_error, original_marker_tracking_error)
@@ -349,6 +351,8 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
 
 
 def test_score_and_sara_with_ghost_segments():
+
+    animate = False  # Debugging purpose only
 
     np.random.seed(42)
 
@@ -407,6 +411,7 @@ def test_score_and_sara_with_ghost_segments():
             child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
             joint_center_markers=["RLFE", "RMFE"],
             distal_markers=["RLM", "RSPH"],
+            expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
             is_longitudinal_axis_from_jcs_to_distal_markers=False,
             initialize_whole_trial_reconstruction=False,
             animate_rt=False,
@@ -428,7 +433,7 @@ def test_score_and_sara_with_ghost_segments():
     )
     # The rotation should not change
     npt.assert_almost_equal(
-        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix,
+        score_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
         np.array(
             [
                 [1.0, 0.0, 0.0],
@@ -456,17 +461,17 @@ def test_score_and_sara_with_ghost_segments():
     # The translation is the result from SCoRE (and should not change)
     npt.assert_almost_equal(
         score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.translation,
-        np.array([0.00538483, -0.38267316, -0.00960224]),
+        np.array([0.00075506, -0.37070545, -0.00658972]),
         decimal=3,
     )
     # The rotation is the result from SARA (and is less stable numerically)
     npt.assert_almost_equal(
-        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix,
+        score_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
         np.array(
             [
-                [-0.98002501, 0.18601934, 0.07034055],
-                [0.1926391, 0.97580872, 0.10338049],
-                [-0.04940815, 0.1148658, -0.99215154],
+                [0.99736617, -0.01657078, -0.07061256],
+                [0.00918453, 0.99456928, -0.10367055],
+                [0.07194699, 0.10274896, 0.99210195],
             ]
         ),
         decimal=3,
@@ -525,8 +530,21 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff[:3, :, :] ** 2)
 
     # The error is worse because it is a small test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 8.828132000111548, decimal=2)
-    npt.assert_almost_equal(new_marker_tracking_error, 10.483350883867677, decimal=2)
+    npt.assert_almost_equal(original_marker_tracking_error, 0.28506843278583055, decimal=2)
+    npt.assert_almost_equal(new_marker_tracking_error, 1.541524705667391, decimal=2)
+
+    # Animate the output
+    if animate:
+        from pyorerun import PyoMarkers
+
+        pyomarkers = PyoMarkers(
+            data=hip_c3d.get_position(list(marker_weights.keys())),
+            channels=list(marker_weights.keys()),
+            show_labels=False,
+        )
+        visualize_modified_model_output(
+            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+        )
 
     # Knee
     marker_names = list(marker_weights.keys())
@@ -543,6 +561,15 @@ def test_score_and_sara_with_ghost_segments():
         method="lm",
     )
 
+    # Animate the results
+    if animate:
+        from pyorerun import PyoMarkers
+
+        pyomarkers = PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
+        visualize_modified_model_output(
+            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+        )
+
     markers_index = scaled_model.markers_indices(marker_names)
 
     original_markers_reconstructed = scaled_model.markers_in_global(original_optimal_q)[:3, markers_index, :]
@@ -554,8 +581,8 @@ def test_score_and_sara_with_ghost_segments():
     new_marker_tracking_error = np.sum(new_marker_position_diff**2)
 
     # The error is worse because it is a unit test (for the tests to run quickly)
-    npt.assert_almost_equal(original_marker_tracking_error, 9.064937010854072, decimal=2)
-    npt.assert_almost_equal(new_marker_tracking_error, 8.944332699977137, decimal=2)
+    npt.assert_almost_equal(original_marker_tracking_error, 0.8846482105592899, decimal=2)
+    npt.assert_almost_equal(new_marker_tracking_error, 0.9470458799111221, decimal=2)
 
     # Test replace_joint_centers
     for muscle_group in scaled_model.muscle_groups:
@@ -658,7 +685,9 @@ def test_init_rigid_segment_identification():
     rsi._check_marker_functional_trial_file()  # Should not raise an error
 
     # Test with no markers
-    with pytest.raises(RuntimeError, match=r"The marker position is empty \(shape: \(4, 1, 0\)\), cannot compute std."):
+    with pytest.raises(
+        RuntimeError, match=r"The functional trial file does not contain any frame. Please check the trial again."
+    ):
         rsi_no_markers = Score(
             MockEmptyC3dData(),
             parent_name,
@@ -792,6 +821,7 @@ def test_longitudinal_axis():
         joint_center_markers=["RLFE", "RMFE"],
         distal_markers=["RLM", "RSPH"],
         is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
         initialize_whole_trial_reconstruction=False,
         animate_rt=False,
     )
@@ -846,6 +876,142 @@ def test_longitudinal_axis():
         sara.get_rotation_index(scaled_model)
 
 
+def test_original_rotation_axis_axis():
+
+    np.random.seed(42)
+
+    # Set up
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    child_name = "tibia_r"
+    parent_name = "femur_r"
+    scaled_model = BiomechanicalModelReal().from_biomod(
+        filepath=leg_model_filepath,
+    )
+
+    marker_weights = NamedList()
+    marker_weights.append(MarkerWeight("RASIS", 1.0))
+    marker_weights.append(MarkerWeight("LASIS", 1.0))
+    marker_weights.append(MarkerWeight("LPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RPSIS", 0.5))
+    marker_weights.append(MarkerWeight("RLFE", 1.0))
+    marker_weights.append(MarkerWeight("RMFE", 1.0))
+    marker_weights.append(MarkerWeight("RGT", 0.1))
+    marker_weights.append(MarkerWeight("RTHI1", 5.0))
+    marker_weights.append(MarkerWeight("RTHI2", 5.0))
+    marker_weights.append(MarkerWeight("RTHI3", 5.0))
+    marker_weights.append(MarkerWeight("RATT", 0.5))
+    marker_weights.append(MarkerWeight("RLM", 1.0))
+    marker_weights.append(MarkerWeight("RSPH", 1.0))
+    marker_weights.append(MarkerWeight("RLEG1", 5.0))
+    marker_weights.append(MarkerWeight("RLEG2", 5.0))
+    marker_weights.append(MarkerWeight("RLEG3", 5.0))
+
+    # Test the longitudinal axis calculation
+    sara = Sara(
+        functional_trial=knee_c3d,
+        parent_name=parent_name,
+        child_name=child_name,
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RMFE", "RLFE"),
+        initialize_whole_trial_reconstruction=False,
+        animate_rt=False,
+    )
+
+    original_axis_global, original_axis_local = sara._original_rotation_axis(scaled_model)
+    npt.assert_almost_equal(
+        original_axis_global.reshape(
+            3,
+        ),
+        np.array([0.01857409, -0.09155144, 0.01915594]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        original_axis_local.reshape(
+            3,
+        ),
+        np.array([0.01996359, 0.00347809, 0.09318246]),
+        decimal=6,
+    )
+
+    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
+    joint_center_tool.add(sara)
+    score_model = joint_center_tool.replace_joint_centers(marker_weights)
+    rt_tibia = score_model.segments["tibia_r"].segment_coordinate_system.scs
+    npt.assert_almost_equal(
+        rt_tibia.rotation_matrix.rotation_matrix,
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
+    )
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
+
+    # Test the other direction
+    sara = Sara(
+        functional_trial=knee_c3d,
+        parent_name=parent_name,
+        child_name=child_name,
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
+        initialize_whole_trial_reconstruction=False,
+        animate_rt=False,
+    )
+    original_axis_global, original_axis_local = sara._original_rotation_axis(scaled_model)
+    npt.assert_almost_equal(
+        original_axis_global.reshape(
+            3,
+        ),
+        np.array([-0.01857409, 0.09155144, -0.01915594]),
+        decimal=6,
+    )
+    npt.assert_almost_equal(
+        original_axis_local.reshape(
+            3,
+        ),
+        np.array([-0.01996359, -0.00347809, -0.09318246]),
+        decimal=6,
+    )
+
+    joint_center_tool = JointCenterTool(scaled_model, animate_reconstruction=False)
+    joint_center_tool.add(sara)
+    score_model = joint_center_tool.replace_joint_centers(marker_weights)
+    rt_tibia_reverse = score_model.segments["tibia_r"].segment_coordinate_system.scs
+    npt.assert_almost_equal(
+        rt_tibia.rotation_matrix.rotation_matrix,
+        np.array(
+            [
+                [0.99778346, 0.0657014, -0.01055861],
+                [-0.06648268, 0.99106219, -0.11565378],
+                [0.00286562, 0.1160994, 0.99323347],
+            ]
+        ),
+        decimal=4,
+    )
+    npt.assert_almost_equal(rt_tibia.translation, np.array([0.00498373, -0.37616619, -0.0030206]), decimal=4)
+    # Make sure the axis are in opposite direction
+    npt.assert_almost_equal(
+        rt_tibia_reverse.rotation_matrix.rotation_matrix @ np.array([0, 0, 1]),
+        -(rt_tibia.rotation_matrix.rotation_matrix @ np.array([0, 0, 1])),
+        decimal=6,
+    )
+
+
 # Test Joint Center Tool
 def test_add():
 
@@ -862,3 +1028,376 @@ def test_add():
     # Test adding an invalid task
     with pytest.raises(RuntimeError, match="The joint center must be a Score or Sara object."):
         jct.add("not a Score or Sara object")
+
+
+def test_get_svd():
+    """Test the get_svd function"""
+    np.random.seed(42)
+
+    # Create simple test RT matrices
+    nb_frames = 10
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+
+    for i in range(nb_frames):
+        # Parent rotates slightly around X
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([i * 0.1, 0, 0]), np.array([0, 0, 0])
+        )
+        # Child rotates and translates
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([i * 0.15, 0, 0]), np.array([0.1, 0.2, 0.3])
+        )
+
+    # Test get_svd
+    U, S, V, b = get_svd(rt_parent, rt_child)
+
+    # Check values
+    assert U.shape == (30, 6)
+    assert S.shape == (6,)
+    assert V.shape == (6, 6)
+    assert b.shape == (30,)
+
+    npt.assert_almost_equal(
+        U[0, :],
+        np.array([-3.16227766e-01, -2.37286751e-33, 2.10378946e-16, -1.56853474e-34, -2.07171677e-17, 9.48683298e-01]),
+        decimal=3,
+    )
+    npt.assert_almost_equal(
+        S,
+        np.array([4.47213595e00, 4.46062656e00, 4.46062656e00, 3.20641084e-01, 3.20641084e-01, 5.40977915e-16]),
+        decimal=3,
+    )
+    npt.assert_almost_equal(V[0, :], np.array([-0.70710678, 0.0, 0.0, -0.0, 0.0, 0.70710678]), decimal=3)
+    npt.assert_almost_equal(b[:6], np.array([-0.1, -0.2, -0.3, -0.1, -0.2, -0.3]), decimal=3)
+
+
+def test_score_perform_algorithm():
+    """Test Score.perform_algorithm"""
+    np.random.seed(42)
+
+    # Create test RT matrices with a known center of rotation
+    nb_frames = 20
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+
+    # Known CoR in parent frame
+    cor_parent_expected = np.array([0.1, 0.2, 0.3])
+
+    for i in range(nb_frames):
+        # Parent stays fixed
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
+        )
+        # Child rotates around the CoR
+        angle = i * 0.1
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([angle, angle, 0]), cor_parent_expected
+        )
+
+    # Run Score algorithm
+    cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = Score.perform_algorithm(
+        rt_parent, rt_child, recursive_outlier_removal=False
+    )
+
+    # Check that CoR is close to expected
+    npt.assert_almost_equal(cor_parent, cor_parent_expected, decimal=6)
+
+    # Check that output RT matrices have same length
+    assert len(rt_parent_out) == len(rt_child_out)
+
+
+def test_sara_perform_algorithm():
+    """Test Sara.perform_algorithm"""
+    np.random.seed(42)
+
+    # Create test RT matrices with a known axis of rotation
+    nb_frames = 20
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+
+    # Known AoR and CoR
+    aor_expected = np.array([1, 0, 0])
+    cor_expected = np.array([0.1, 0.2, 0.3])
+
+    for i in range(nb_frames):
+        # Parent stays fixed
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
+        )
+        # Child rotates around X-axis through CoR
+        angle = i * 0.1
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
+
+    # Run Sara algorithm
+    aor_global, aor_parent, aor_child, cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = (
+        Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+    )
+
+    # Check that AoR is close to expected (X-axis)
+    aor_global_normalized = aor_global / np.linalg.norm(aor_global)
+    npt.assert_almost_equal(aor_global_normalized, aor_expected, decimal=1)
+
+    # Check that CoR is close to expected on the unambiguous axes
+    npt.assert_almost_equal(cor_parent[1:], cor_expected[1:], decimal=6)
+
+    # Check that output RT matrices have same length
+    assert len(rt_parent_out) == len(rt_child_out)
+
+
+def test_sara_perform_algorithm_with_origin_positions():
+    """Test Sara.perform_algorithm with origin_positions_global"""
+
+    np.random.seed(42)
+
+    # Create test RT matrices with a known axis of rotation
+    nb_frames = 20
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+
+    # Known AoR and CoR
+    aor_expected = np.array([1, 0, 0])
+    cor_expected = np.array([0.1, 0.2, 0.3])
+
+    for i in range(nb_frames):
+        # Parent stays fixed
+        rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+            "xyz", np.array([0, 0, 0]), np.array([1, 0, 0])
+        )
+        # Child rotates around X-axis through CoR
+        angle = i * 0.1
+        rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
+
+    # Run Sara algorithm
+    aor_global, aor_parent, aor_child, cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = (
+        Sara.perform_algorithm(
+            rt_parent,
+            rt_child,
+            origin_positions_global=np.repeat(cor_expected[:, np.newaxis], nb_frames, axis=1),
+            recursive_outlier_removal=False,
+        )
+    )
+
+    # Check that AoR is close to expected (X-axis)
+    aor_global_normalized = aor_global / np.linalg.norm(aor_global)
+    npt.assert_almost_equal(aor_global_normalized, aor_expected, decimal=1)
+
+    # Check that CoR is close to expected on all axes
+    npt.assert_almost_equal(cor_global[1:], cor_expected[1:], decimal=1)
+    npt.assert_almost_equal(cor_global, np.array([0.25365385, 0.17884615, 0.26826923]), decimal=6)
+
+
+def test_joint_coordinate_modifier():
+    """Test JointCoordinateModifier class"""
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    original_model = BiomechanicalModelReal().from_biomod(filepath=leg_model_filepath)
+
+    # Create modifier
+    modifier = JointCoordinateModifier(original_model)
+
+    # Test that new_model is a copy
+    assert modifier.new_model is not modifier.original_model
+    assert modifier.new_model.segments["femur_r"].name == original_model.segments["femur_r"].name
+
+    # Test set_new_model
+    new_model = BiomechanicalModelReal().from_biomod(filepath=leg_model_filepath)
+    modifier.set_new_model(new_model)
+    assert modifier.new_model is new_model
+
+
+def test_check_marker_labeling():
+    """Test check_marker_labeling method"""
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    parent_name = "femur_r"
+    child_name = "tibia_r"
+    parent_marker_names = ["RGT", "RTHI1", "RTHI2", "RTHI3"]
+    child_marker_names = ["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"]
+
+    score = Score(
+        c3d_data,
+        parent_name,
+        child_name,
+        parent_marker_names,
+        child_marker_names,
+    )
+
+    # Set up marker data
+    score.parent_markers_global = c3d_data.get_position(parent_marker_names)
+    score.child_markers_global = c3d_data.get_position(child_marker_names)
+
+    # Should not raise error with good data
+    score.check_marker_labeling()
+
+    # Test with bad data (large jump)
+    bad_data = c3d_data.get_position(parent_marker_names).copy()
+    bad_data[:, 0, 10] += 0.1  # Add large jump
+    score.parent_markers_global = bad_data
+
+    with pytest.raises(RuntimeError, match="The parent markers .* seem to be mislabeled"):
+        score.check_marker_labeling()
+
+
+def test_check_marker_positions():
+    """Test check_marker_positions method"""
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    c3d_data = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    parent_name = "femur_r"
+    child_name = "tibia_r"
+    parent_marker_names = ["RGT", "RTHI1", "RTHI2", "RTHI3"]
+    child_marker_names = ["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"]
+
+    score = Score(
+        c3d_data,
+        parent_name,
+        child_name,
+        parent_marker_names,
+        child_marker_names,
+    )
+
+    # Set up marker data
+    score.parent_static_markers_in_global = c3d_data.get_position(parent_marker_names)[:, :, 0:1]
+    score.child_static_markers_in_global = c3d_data.get_position(child_marker_names)[:, :, 0:1]
+    score.parent_markers_global = c3d_data.get_position(parent_marker_names)
+    score.child_markers_global = c3d_data.get_position(child_marker_names)
+
+    # Should not raise error with consistent data
+    score.check_marker_positions()
+
+    # Test with inconsistent data (marker moved between trials)
+    bad_static = score.parent_static_markers_in_global.copy()
+    bad_static[:, 0, 0] += 0.1  # Move marker significantly
+    score.parent_static_markers_in_global = bad_static
+
+    with pytest.raises(
+        RuntimeError,
+        match="There is a difference in marker placement of more than 1cm between the static trial and the functional trial",
+    ):
+        score.check_marker_positions()
+
+
+def test_extract_scs_from_axis():
+    """Test Sara._extract_scs_from_axis"""
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    scaled_model = BiomechanicalModelReal().from_biomod(filepath=leg_model_filepath)
+
+    sara = Sara(
+        functional_trial=knee_c3d,
+        parent_name="femur_r",
+        child_name="tibia_r",
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
+    )
+
+    # Create test axis data
+    aor_local = np.array([0, 0, 1], dtype=np.float64)  # Z-axis
+    joint_center = np.array([0.1, 0.2, 0.3, 1], dtype=np.float64).reshape(4, 1)
+    longitudinal_axis = np.array([0, 1, 0, 1], dtype=np.float64).reshape(4, 1)  # Y-axis
+
+    # Extract SCS
+    scs = sara._extract_scs_from_axis(scaled_model, aor_local, joint_center, longitudinal_axis)
+
+    # Check that result is a valid RT matrix
+    assert isinstance(scs, RotoTransMatrix)
+    npt.assert_almost_equal(scs.translation, joint_center[:3, 0])
+
+    # Check that rotation matrix is orthonormal
+    rot = scs.rotation_matrix.rotation_matrix
+    npt.assert_almost_equal(rot @ rot.T, np.eye(3), decimal=10)
+    npt.assert_almost_equal(np.linalg.det(rot), 1.0)
+
+    # Check that Z-axis is the AoR
+    npt.assert_almost_equal(rot[:, 2], aor_local)
+
+
+def test_score_with_nan_frames():
+    """Test Score algorithm with NaN frames"""
+    np.random.seed(42)
+
+    # Create test RT matrices with some NaN frames
+    nb_frames = 20
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+
+    cor_expected = np.array([0.1, 0.2, 0.3])
+
+    for i in range(nb_frames):
+        if i == 5 or i == 10:  # Add NaN frames
+            rt_parent[i] = RotoTransMatrix.from_rt_matrix(np.ones((4, 4)) * np.nan)
+            rt_child[i] = RotoTransMatrix.from_rt_matrix(np.ones((4, 4)) * np.nan)
+        else:
+            rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
+                "xyz", np.array([0, 0, 0]), np.array([0, 0, 0])
+            )
+            angle = i * 0.1
+            rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
+                "xyz", np.array([angle, 0, 0]), cor_expected
+            )
+
+    # Run Score algorithm
+    cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = Score.perform_algorithm(
+        rt_parent, rt_child, recursive_outlier_removal=False
+    )
+
+    # Check that algorithm still works
+    assert not np.any(np.isnan(cor_parent))
+    assert len(rt_parent_out) == len(rt_child_out)
+
+
+def test_sara_with_longitudinal_axis_direction():
+    """Test Sara with different longitudinal axis directions"""
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_model_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    knee_functional_trial_path = parent_path + "/examples/data/functional_trials/right_knee.c3d"
+    knee_c3d = C3dData(knee_functional_trial_path, first_frame=300, last_frame=399)
+
+    scaled_model = BiomechanicalModelReal().from_biomod(filepath=leg_model_filepath)
+
+    # Test with is_longitudinal_axis_from_jcs_to_distal_markers=True
+    sara_forward = Sara(
+        functional_trial=knee_c3d,
+        parent_name="femur_r",
+        child_name="tibia_r",
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=True,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
+    )
+
+    joint_center_forward, long_axis_forward = sara_forward._longitudinal_axis(scaled_model)
+
+    # Test with is_longitudinal_axis_from_jcs_to_distal_markers=False
+    sara_backward = Sara(
+        functional_trial=knee_c3d,
+        parent_name="femur_r",
+        child_name="tibia_r",
+        parent_marker_names=["RGT", "RTHI1", "RTHI2", "RTHI3"],
+        child_marker_names=["RATT", "RLM", "RSPH", "RLEG1", "RLEG2", "RLEG3"],
+        joint_center_markers=["RLFE", "RMFE"],
+        distal_markers=["RLM", "RSPH"],
+        is_longitudinal_axis_from_jcs_to_distal_markers=False,
+        expected_rotation_axis_orientation=Axis("right_knee_sara", "RLFE", "RMFE"),
+    )
+
+    joint_center_backward, long_axis_backward = sara_backward._longitudinal_axis(scaled_model)
+
+    # Joint centers should be the same
+    npt.assert_almost_equal(joint_center_forward, joint_center_backward)
+
+    # Longitudinal axes should be opposite
+    npt.assert_almost_equal(long_axis_forward[:3, 0], -long_axis_backward[:3, 0])

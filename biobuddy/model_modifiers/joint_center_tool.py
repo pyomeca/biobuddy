@@ -11,6 +11,7 @@ from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.marker_weight import MarkerWeight
 from ..components.real.rigidbody.segment_real import SegmentReal
 from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
 from ..utils.marker_data import MarkerData
@@ -22,9 +23,10 @@ from ..utils.linear_algebra import (
     point_from_local_to_global,
     get_vector_from_sequence,
     get_sequence_from_rotation_vector,
-    rot2eul,
+    project_points_on_axes,
 )
 from ..utils.named_list import NamedList
+from ..utils.aliases import Points, Point, points_to_array, point_to_array
 
 _logger = logging.getLogger(__name__)
 
@@ -65,7 +67,10 @@ class JointCoordinateModifier:
         inertia_parameters = self.original_model.segments[segment_name].inertia_parameters
         if inertia_parameters is not None:
             inertia = inertia_parameters.inertia[:3, :3]
-            rotation_transform = new_rt_in_global.inverse.rotation_matrix @ original_child_jcs_in_global.rotation_matrix
+            rotation_transform = (
+                new_rt_in_global.inverse.rotation_matrix.rotation_matrix
+                @ original_child_jcs_in_global.rotation_matrix.rotation_matrix
+            )
             new_inertia = rotation_transform @ inertia @ rotation_transform.T
             self.new_model.segments[segment_name].inertia_parameters.inertia = new_inertia
 
@@ -128,7 +133,9 @@ class JointCoordinateModifier:
                     new_rt = rotation_translation_transform @ mesh_rt
 
                     # Update mesh file's local rotation and translation
-                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = rot2eul(new_rt.rotation_matrix)
+                    self.new_model.segments[segment_name].mesh_file.mesh_rotation = new_rt.rotation_matrix.euler_angles(
+                        "xyz"
+                    )
                     self.new_model.segments[segment_name].mesh_file.mesh_translation = new_rt.translation
 
         # Markers
@@ -291,6 +298,8 @@ class RigidSegmentIdentification(ABC):
         Check that the file format is appropriate and that there is a functional movement in the trial (aka the markers really move).
         """
         self.marker_names = self._data.marker_names
+        if self._data.nb_frames == 0:
+            raise RuntimeError("The functional trial file does not contain any frame. Please check the trial again.")
         self.marker_positions = self._data.all_marker_positions[:3, :, :]
 
         # Check that the markers move
@@ -349,9 +358,9 @@ class RigidSegmentIdentification(ABC):
 
         for i_frame in range(nb_frames):
             parent_trans[:, i_frame] = rt_parent[i_frame].translation
-            parent_rot[:, i_frame] = rt_parent[i_frame].euler_angles("xyz")
+            parent_rot[:, i_frame] = rt_parent[i_frame].rotation_matrix.euler_angles("xyz")
             child_trans[:, i_frame] = rt_child[i_frame].translation
-            child_rot[:, i_frame] = rt_child[i_frame].euler_angles("xyz")
+            child_rot[:, i_frame] = rt_child[i_frame].rotation_matrix.euler_angles("xyz")
 
         q = np.vstack((parent_trans, parent_rot, child_trans, child_rot))
 
@@ -373,7 +382,7 @@ class RigidSegmentIdentification(ABC):
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
         temporary_model_path = current_path + "/temporary_rt.bioMod"
-        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        mesh_relative_path = "Geometry_cleaned"
         if os.path.exists(current_path + "/" + mesh_relative_path):
             joint_model.change_mesh_directories(mesh_relative_path)
             joint_model.to_biomod(temporary_model_path)
@@ -453,7 +462,7 @@ class RigidSegmentIdentification(ABC):
                     show_marker_labels=False,
                 )
             except:
-                print("You need to install Pyorerun to see the animation.")
+                _logger.warning("You need to install Pyorerun to see the animation.")
 
             if problematic_indices_parent.shape[0] > 0:
                 problematic_markers = np.where(np.nanmax(marker_movement_parent, axis=1) > 0.03)[0]
@@ -596,7 +605,7 @@ class RigidSegmentIdentification(ABC):
                 else:
                     # If the optimization fails, we use the initial rt matrix to initialize the next frame
                     init = rt_init[0].rt_matrix
-                    print(f"The optimization failed: {sol.message}")
+                    _logger.warning("The optimization failed: %s", sol.message)
                     continue
 
             # Setup for the next frame
@@ -608,7 +617,7 @@ class RigidSegmentIdentification(ABC):
                 # Use the optimal rt of the previous frame
                 init = rt_optimal[:, :, i_frame]
 
-        return RotoTransMatrixTimeSeries.from_rt_matrix(rt_optimal)
+        return RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_optimal)
 
     def rt_from_trial(
         self,
@@ -648,8 +657,8 @@ def get_svd(
     b[:] = np.nan
 
     for i_frame in range(nb_frames):
-        A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix
-        A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix
+        A[3 * i_frame : 3 * (i_frame + 1), 0:3] = rt_child[i_frame].rotation_matrix.rotation_matrix
+        A[3 * i_frame : 3 * (i_frame + 1), 3:6] = -rt_parent[i_frame].rotation_matrix.rotation_matrix
         b[3 * i_frame : 3 * (i_frame + 1)] = rt_parent[i_frame].translation - rt_child[i_frame].translation
 
     # Remove nans
@@ -722,8 +731,8 @@ class Score(RigidSegmentIdentification):
         if recursive_outlier_removal:
             valid = Score.get_good_frames(residuals, nb_frames)
             if not np.all(valid):
-                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
-                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
                 return Score.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
         # Final output
@@ -791,9 +800,40 @@ class Sara(RigidSegmentIdentification):
         joint_center_markers: list[str],
         distal_markers: list[str],
         is_longitudinal_axis_from_jcs_to_distal_markers: bool,
+        expected_rotation_axis_orientation: Axis,
         initialize_whole_trial_reconstruction: bool = False,
         animate_rt: bool = False,
     ):
+        """
+        Initialize the SARA (Symmetrical Axis of Rotation Approach) algorithm.
+
+        Parameters
+        ----------
+        functional_trial: MarkerData
+            The MarkerData containing the functional trial.
+        parent_name: str
+            The name of the joint's parent segment.
+        child_name: str
+            The name of the joint's child segment.
+        parent_marker_names: list[str]
+            The name of the markers in the parent segment to consider during the SARA algorithm.
+        child_marker_names: list[str]
+            The name of the markers in the child segment to consider during the SARA algorithm.
+        joint_center_markers: list[str]
+            The name of the markers to consider as joint center markers (i.e., markers close to the joint center).
+            # TODO: should be uniformized with origin_positions_global: Points from SegmentCoordinateSystemUtils.sara
+        distal_markers: list[str]
+            The name of the markers to consider as distal markers (i.e., markers close to the distal end of the child segment).
+        is_longitudinal_axis_from_jcs_to_distal_markers: bool
+            If True, the longitudinal axis of the child segment is defined from the joint center markers to the distal markers.
+            If False, the longitudinal axis is defined from the distal markers to the joint center markers.
+        expected_rotation_axis_orientation: Axis
+            The expected orientation of the rotation axis (e.g., Axis.X, Axis.Y, or Axis.Z). This is used to make sure the computed axis is in the expected direction.
+        initialize_whole_trial_reconstruction: bool
+            If True, the whole trial is reconstructed using whole body inverse kinematics to initialize the segments' rt in the global reference frame.
+        animate_rt: bool
+            If True, it animates the segment rt reconstruction using pyorerun.
+        """
 
         super(Sara, self).__init__(
             functional_trial=functional_trial,
@@ -808,11 +848,14 @@ class Sara(RigidSegmentIdentification):
         self.joint_center_markers = joint_center_markers
         self.distal_markers = distal_markers
         self.longitudinal_axis_sign = 1 if is_longitudinal_axis_from_jcs_to_distal_markers else -1
+        self.expected_rotation_axis_orientation = expected_rotation_axis_orientation
 
     @staticmethod
     def perform_algorithm(
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
+        original_axis_global: Point | None = None,
+        origin_positions_global: Points | None = None,
         recursive_outlier_removal: bool = True,
     ) -> Tuple[
         np.ndarray,
@@ -834,6 +877,12 @@ class Sara(RigidSegmentIdentification):
             Homogeneous transformation matrices from the global frame to the parent segment.
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformation matrices from the global frame to the child segment.
+        original_axis_global: Points | None
+            The original rotation axis direction. This axis is used to make sure the new axis is in a similar direction.
+        origin_positions_global: Points | None
+            The positions in the global reference frame used as a reference for the origin of the axis (3 x FunctionalTrialFrameCount).
+            The origin_positions_global points are projected onto the computed axis to determine the final origin of the axis; effectively
+            replacing the computed COR value.
         recursive_outlier_removal : bool
             If True, performs 95th percentile residual filtering and recomputes the axis of rotation.
 
@@ -856,6 +905,7 @@ class Sara(RigidSegmentIdentification):
         rt_child : RotoTransMatrixTimeSeries
             Homogeneous transformations of the child segment after outlier removal.
         """
+
         nb_frames = len(rt_parent)
         U, S, V, b_valid = get_svd(rt_parent, rt_child)
 
@@ -867,7 +917,7 @@ class Sara(RigidSegmentIdentification):
         aor_child_local /= np.linalg.norm(aor_child_local)
 
         # Compute pseudo-inverse solution
-        cor = V @ np.diag(1.0 / S) @ U.T @ b_valid
+        cor = V[:, :5] @ np.diag(1.0 / S[:5]) @ U[:, :5].T @ b_valid
         cor_parent_local = cor[3:]
         cor_child_local = cor[:3]
 
@@ -884,22 +934,70 @@ class Sara(RigidSegmentIdentification):
                 np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
                 / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
             )
+
             cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
             cor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((cor_child_local, 1)))[:, 0]
+
+        if origin_positions_global is not None:
+            origins_global = points_to_array(origin_positions_global)
+            if origins_global.shape[1] == 1:
+                # If only one is defined (like the mean), repeat for all frames
+                origins_global = np.repeat(origins_global, nb_frames, axis=1)
+            if origins_global.shape[1] != nb_frames:
+                raise RuntimeError(
+                    f"The number of origin positions {len(origin_positions_global)} does not match the number of frames {nb_frames}."
+                )
 
         if recursive_outlier_removal:
             valid = Sara.get_good_frames(residuals, nb_frames)
             if not np.all(valid):
-                rt_parent = RotoTransMatrixTimeSeries.from_rt_matrix(rt_parent.to_numpy()[:, :, valid])
-                rt_child = RotoTransMatrixTimeSeries.from_rt_matrix(rt_child.to_numpy()[:, :, valid])
-                return Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
+                rt_parent = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_parent.to_numpy()[:, :, valid])
+                rt_child = RotoTransMatrixTimeSeries.from_closest_rt_matrix(rt_child.to_numpy()[:, :, valid])
+                if origin_positions_global is not None:
+                    origin_positions_global = origins_global[:, valid]
+
+                return Sara.perform_algorithm(
+                    rt_parent=rt_parent,
+                    rt_child=rt_child,
+                    original_axis_global=original_axis_global,
+                    origin_positions_global=origin_positions_global,
+                    recursive_outlier_removal=False,
+                )
+
+        if origin_positions_global is not None:
+            origins_parent = np.zeros((4, nb_frames))
+            origins_child = np.zeros((4, nb_frames))
+            for i_frame in range(nb_frames):
+                origins_parent[:, i_frame] = (rt_parent[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+                origins_child[:, i_frame] = (rt_child[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
+            cor_parent_local = project_points_on_axes(
+                origins_parent.mean(axis=1)[:3], start=cor_parent_local, end=cor_parent_local + aor_parent_local
+            )
+            cor_child_local = project_points_on_axes(
+                origins_child.mean(axis=1)[:3], start=cor_child_local, end=cor_child_local + aor_child_local
+            )
+            cor_parent_global = project_points_on_axes(
+                origins_global, start=cor_parent_global, end=aor_parent_global + cor_parent_global
+            )
+            cor_child_global = project_points_on_axes(
+                origins_global, start=cor_child_global, end=aor_child_global + cor_child_global
+            )
 
         # Final output
         aor_mean_global = 0.5 * (np.mean(aor_parent_global[:3, :], axis=1) + np.mean(aor_child_global[:3, :], axis=1))
         cor_mean_global = 0.5 * (np.mean(cor_parent_global[:3, :], axis=1) + np.mean(cor_child_global[:3, :], axis=1))
 
+        if original_axis_global is not None:
+            original_axis_global = point_to_array(original_axis_global)[:3, 0]
+            if np.dot(aor_mean_global, original_axis_global) < 0:
+                # The axis is in the wrong direction
+                aor_mean_global *= -1
+                aor_parent_local *= -1
+                aor_child_local *= -1
+
         _logger.info(
-            f"\nThere is a residual angle between the parent's and the child's AoR of : {np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
+            f"\nThere is a residual angle between the parent's and the child's AoR of : "
+            f"{np.nanmean(residuals)*180/np.pi} +- {np.nanstd(residuals)*180/np.pi} degrees."
         )
 
         return (
@@ -937,6 +1035,24 @@ class Sara(RigidSegmentIdentification):
 
         return joint_center_local, longitudinal_axis_local
 
+    def _original_rotation_axis(self, original_model: BiomechanicalModelReal) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Estimate the original axis of rotation to make sure that the axis is in the right direction.
+        """
+        segment_rt_in_global = original_model.forward_kinematics()
+        parent_jcs_in_global = segment_rt_in_global[self.parent_name][0]
+
+        start_marker_index = original_model.markers_indices([self.expected_rotation_axis_orientation.start.name])
+        end_marker_index = original_model.markers_indices([self.expected_rotation_axis_orientation.end.name])
+        start_marker_global = original_model.markers_in_global()[:, start_marker_index, 0]
+        end_marker_global = original_model.markers_in_global()[:, end_marker_index, 0]
+        global_axis = end_marker_global - start_marker_global
+        start_marker_local = parent_jcs_in_global.inverse @ start_marker_global
+        end_marker_local = parent_jcs_in_global.inverse @ end_marker_global
+        local_axis = end_marker_local - start_marker_local
+
+        return global_axis[:3], local_axis[:3]
+
     def get_rotation_index(self, original_model):
         if self.child_name + "_rotation_transform" in original_model.segments.keys():
             rot = original_model.segments[self.child_name + "_rotation_transform"].rotations.value
@@ -945,7 +1061,7 @@ class Sara(RigidSegmentIdentification):
                 rotation_vector = (
                     original_model.segments[
                         self.child_name + "_reset_axis"
-                    ].segment_coordinate_system.scs.rotation_matrix
+                    ].segment_coordinate_system.scs.rotation_matrix.rotation_matrix
                     @ rotation_vector
                 )
                 rot = get_sequence_from_rotation_vector(rotation_vector)
@@ -1002,7 +1118,7 @@ class Sara(RigidSegmentIdentification):
         scs_of_child_in_local[:3, 3] = joint_center_local[:3, 0]
         scs_of_child_in_local[3, 3] = 1
 
-        return RotoTransMatrix.from_rt_matrix(scs_of_child_in_local)
+        return RotoTransMatrix.from_closest_rt_matrix(scs_of_child_in_local)
 
     def perform_task(
         self,
@@ -1010,6 +1126,7 @@ class Sara(RigidSegmentIdentification):
         new_model: BiomechanicalModelReal,
         parent_rt_init: RotoTransMatrixTimeSeries,
         child_rt_init: RotoTransMatrixTimeSeries,
+        origin_positions_global: Points = None,
     ):
 
         # Reconstruct the trial to identify the orientation of the segments
@@ -1026,8 +1143,13 @@ class Sara(RigidSegmentIdentification):
         joint_center_local, longitudinal_axis_local = self._longitudinal_axis(new_model)
 
         # Identify axis of rotation
+        original_axis_global, _ = self._original_rotation_axis(new_model)
         aor_global, _, aor_local_child, _, _, _, rt_parent_valid_frames, _ = self.perform_algorithm(
-            rt_parent_functional, rt_child_functional, recursive_outlier_removal=True
+            rt_parent_functional,
+            rt_child_functional,
+            original_axis_global,
+            origin_positions_global=origin_positions_global,
+            recursive_outlier_removal=True,
         )
 
         # Extract the joint coordinate system
@@ -1113,9 +1235,7 @@ class JointCenterTool:
             # get the filename so that we can point to the Geometry_cleaned forler
             mesh_file = None
             if self.original_model.segments[segment_name].mesh_file is not None:
-                mesh_file = self.original_model.segments[segment_name].mesh_file
-                mesh_file_name = mesh_file.mesh_file_name.split("/")[-1]
-                mesh_file.mesh_file_name = "Geometry_cleaned/" + mesh_file_name
+                mesh_file = deepcopy(self.original_model.segments[segment_name].mesh_file)
 
             if segment_name == task.parent_name:
                 # Add 6DoFs to the parent segment
@@ -1140,7 +1260,7 @@ class JointCenterTool:
 
         current_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + "/temporary_models"
         temporary_model_path = current_path + "/temporary_rt.bioMod"
-        mesh_relative_path = "../../examples/models/Geometry_cleaned"
+        mesh_relative_path = "Geometry_cleaned"
         if os.path.exists(current_path + "/" + mesh_relative_path):
             joint_model.change_mesh_directories(mesh_relative_path)
             joint_model.to_biomod(temporary_model_path)
