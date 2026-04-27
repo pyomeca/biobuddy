@@ -695,6 +695,7 @@ if __name__ == "__main__":
     # --------------------------------------------
     # Path to the model to analyze
     model_path = "examples/models/arm26_allbiceps_1dof.bioMod"
+    path_to_save = "examples/data"
 
     # Load the model
     model = BiomechanicalModelReal().from_biomod(model_path)
@@ -723,6 +724,7 @@ if __name__ == "__main__":
     plot_ranges_with_true_button(
         moment_arm_analyser.ranges_by_joint,
         moment_arm_analyser.accurate_ranges_by_joint,
+        path_to_save="examples/data",
     )
 
     # 2) Specify the expected sign of the moment arms
@@ -770,6 +772,7 @@ if __name__ == "__main__":
     plot_ranges_with_true_button(
         moment_arm_analyser.ranges_by_joint,
         moment_arm_analyser.accurate_ranges_by_joint,
+        path_to_save="examples/data",
     )
 
     # 3) Extract usable q(t)
@@ -794,4 +797,5 @@ if __name__ == "__main__":
         moment_arm_analyser.accurate_ranges_array,
         all_correct_idx,
         all_incorrect_idx,
+        path_to_save="examples/data",
     )
