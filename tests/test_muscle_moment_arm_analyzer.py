@@ -29,9 +29,7 @@ def fake_model():
 @pytest.fixture
 def analyzer(fake_model):
     with (
-        patch(
-            "examples.muscle_moment_arm_analyzer.BiomechanicalModelReal"
-        ) as mock_bio_model,
+        patch("examples.muscle_moment_arm_analyzer.BiomechanicalModelReal") as mock_bio_model,
         patch("examples.muscle_moment_arm_analyzer.biorbd.Model") as mock_biorbd,
     ):
 
@@ -603,9 +601,7 @@ def test_get_correct_part_mvt_all_correct(analyzer):
         ]
     )
 
-    correct_idx, incorrect_idx, correct_q, incorrect_q = analyzer.get_correct_part_mvt(
-        q
-    )
+    correct_idx, incorrect_idx, correct_q, incorrect_q = analyzer.get_correct_part_mvt(q)
 
     assert len(correct_idx) == 1
     assert len(incorrect_idx) == 0
@@ -630,9 +626,7 @@ def test_get_correct_part_mvt_all_incorrect(analyzer):
         ]
     )
 
-    correct_idx, incorrect_idx, correct_q, incorrect_q = analyzer.get_correct_part_mvt(
-        q
-    )
+    correct_idx, incorrect_idx, correct_q, incorrect_q = analyzer.get_correct_part_mvt(q)
 
     assert len(correct_idx) == 0
     assert len(incorrect_idx) == 1

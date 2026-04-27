@@ -81,9 +81,7 @@ class MuscleMomentArmAnalyzer:
             for idx_m, m_name in enumerate(self.model.muscle_names):
                 sign = list_sign[idx_q, idx_m]
                 if sign not in self.POSSIBLE_SIGNS:
-                    raise ValueError(
-                        f"Invalid sign {sign} at ({q_name}, {m_name}). Sign must be either -1, 0 or 1"
-                    )
+                    raise ValueError(f"Invalid sign {sign} at ({q_name}, {m_name}). Sign must be either -1, 0 or 1")
                 sign_lever_arm_user[q_name][m_name] = sign
 
         self.update_sign_lever_arm(sign_lever_arm_user)
@@ -125,9 +123,7 @@ class MuscleMomentArmAnalyzer:
                     warnings.warn(f"{key}  isn't a valid muscle name")
                     break
                 if sign_lever_arm[dof_name][key] not in self.POSSIBLE_SIGNS:
-                    warnings.warn(
-                        f"Sign must be either -1, 0 or 1, but got {sign_lever_arm[dof_name][key]}"
-                    )
+                    warnings.warn(f"Sign must be either -1, 0 or 1, but got {sign_lever_arm[dof_name][key]}")
                     break
 
         return check
@@ -153,9 +149,7 @@ class MuscleMomentArmAnalyzer:
                     nb_states,
                 )
             except:
-                raise ValueError(
-                    "Can't get dof ranges. Maybe you forgot to specify ranges in your model file ?"
-                )
+                raise ValueError("Can't get dof ranges. Maybe you forgot to specify ranges in your model file ?")
         return joint_states
 
     def compute_moment_arm(self, states) -> np.ndarray:
@@ -173,13 +167,9 @@ class MuscleMomentArmAnalyzer:
 
         # TODO: change this to allow for other dynamics engines
         nb_states = states.shape[1]
-        muscle_moment_arm = np.ndarray(
-            (self.model.nb_q, self.model.nb_muscles, nb_states)
-        )
+        muscle_moment_arm = np.ndarray((self.model.nb_q, self.model.nb_muscles, nb_states))
         for i in range(nb_states):
-            bio_moment_arm_array = self.biorbd_model.musclesLengthJacobian(
-                states[:, i]
-            ).to_array()
+            bio_moment_arm_array = self.biorbd_model.musclesLengthJacobian(states[:, i]).to_array()
             for m in range(self.model.nb_muscles):
                 muscle_moment_arm[:, m, i] = bio_moment_arm_array[m]
         return muscle_moment_arm
@@ -264,11 +254,7 @@ class MuscleMomentArmAnalyzer:
                     zeros = sorted(zeros)
 
                     # 3. bounds
-                    bounds = (
-                        [self.model.get_dof_ranges()[0, idx_q]]
-                        + zeros
-                        + [self.model.get_dof_ranges()[1, idx_q]]
-                    )
+                    bounds = [self.model.get_dof_ranges()[0, idx_q]] + zeros + [self.model.get_dof_ranges()[1, idx_q]]
 
                     # 4. Determine the sign of the moment arm in each interval between detected zero crossings
                     for a, b in zip(bounds[:-1], bounds[1:]):
@@ -278,17 +264,13 @@ class MuscleMomentArmAnalyzer:
                         q_test = np.zeros(n_q)
                         q_test[idx_q] = mid
 
-                        r = self.biorbd_model.musclesLengthJacobian(q_test).to_array()[
-                            idx_m, idx_q
-                        ]
+                        r = self.biorbd_model.musclesLengthJacobian(q_test).to_array()[idx_m, idx_q]
                         s = int(np.sign(r))
 
                         # Explicitly handle zero sign intervals for robustness
                         ranges.append({"range": (a, b), "sign": s})
 
-                result[self.model.dof_names[idx_q]][
-                    self.model.muscle_names[idx_m]
-                ] = ranges
+                result[self.model.dof_names[idx_q]][self.model.muscle_names[idx_m]] = ranges
 
         return dict(result)
 
@@ -339,14 +321,9 @@ class MuscleMomentArmAnalyzer:
                 expected_sign = self.sign_lever_arm[q_name][m_name]
 
                 if expected_sign not in [item["sign"] for item in all_items]:
-                    warnings.warn(
-                        f"There is no range with the sign {expected_sign} "
-                        f"for {q_name} {m_name}"
-                    )
+                    warnings.warn(f"There is no range with the sign {expected_sign} " f"for {q_name} {m_name}")
                 else:
-                    accurate_ranges[q_name][m_name] = [
-                        item for item in all_items if item["sign"] == expected_sign
-                    ]
+                    accurate_ranges[q_name][m_name] = [item for item in all_items if item["sign"] == expected_sign]
 
         print("\nComparison with user sign : ")
         self.compare_ranges_and_user_sign(accurate_ranges)
@@ -378,8 +355,7 @@ class MuscleMomentArmAnalyzer:
                         continue
                     else:
                         warnings.warn(
-                            f"{m_name} missing in accurate_ranges[{q_name}] "
-                            f"but expected sign is {expected_sign}"
+                            f"{m_name} missing in accurate_ranges[{q_name}] " f"but expected sign is {expected_sign}"
                         )
                         difference = True
                         continue
@@ -432,9 +408,7 @@ class MuscleMomentArmAnalyzer:
     def get_correct_part_mvt(self, q):
 
         if q.shape[0] != self.model.nb_q:
-            raise ValueError(
-                f"Incorrect shape, must have {self.model.nb_q} but got {q.shape[0]}"
-            )
+            raise ValueError(f"Incorrect shape, must have {self.model.nb_q} but got {q.shape[0]}")
 
         if np.allclose(self.accurate_ranges_array, np.zeros((self.model.nb_q, 2))):
             self.create_accurate_rom()
@@ -446,8 +420,7 @@ class MuscleMomentArmAnalyzer:
         # sort idx
         for n in range(N):
             is_correct = np.all(
-                (self.accurate_ranges_array[:, 0] <= q[:, n])
-                & (q[:, n] <= self.accurate_ranges_array[:, 1])
+                (self.accurate_ranges_array[:, 0] <= q[:, n]) & (q[:, n] <= self.accurate_ranges_array[:, 1])
             )
             if is_correct:
                 idx_correct.append(n)
@@ -476,18 +449,14 @@ class MuscleMomentArmAnalyzer:
         return all_correct_idx, all_incorrect_idx, all_correct_q, all_incorrect_q
 
 
-def plot_ranges_with_true_button(
-    ranges_by_joint, accurate_ranges, path_to_save="", show_plot=True
-):
+def plot_ranges_with_true_button(ranges_by_joint, accurate_ranges, path_to_save="", show_plot=True):
 
     n_q = len(ranges_by_joint)
     nb_line, nb_column = n_q, 1
     fig = make_subplots(
         rows=nb_line,
         cols=nb_column,
-        subplot_titles=[
-            f"q{idx} - {q_name}" for idx, q_name in enumerate(ranges_by_joint)
-        ],
+        subplot_titles=[f"q{idx} - {q_name}" for idx, q_name in enumerate(ranges_by_joint)],
     )
 
     legend_added = {"pos": False, "neg": False, "zero": False}
@@ -510,10 +479,7 @@ def plot_ranges_with_true_button(
                 # marquer si cette trace est "vraie"
                 if accurate_ranges != {}:
 
-                    is_true = any(
-                        tr["range"] == r["range"] and tr["sign"] == r["sign"]
-                        for tr in true_ranges
-                    )
+                    is_true = any(tr["range"] == r["range"] and tr["sign"] == r["sign"] for tr in true_ranges)
                     trace_indices_true.append(is_true)
                 else:
                     is_true = True
@@ -573,11 +539,7 @@ def plot_ranges_with_true_button(
             label="All ROM",
             method="update",
             args=[
-                {
-                    "marker.color": [
-                        fig.data[i].marker.color for i in range(len(fig.data))
-                    ]
-                },
+                {"marker.color": [fig.data[i].marker.color for i in range(len(fig.data))]},
                 {"title": "All ROM"},
             ],
         ),
@@ -591,11 +553,7 @@ def plot_ranges_with_true_button(
                 args=[
                     {
                         "marker.color": [
-                            (
-                                fig.data[i].marker.color
-                                if trace_indices_true[i]
-                                else "black"
-                            )
+                            (fig.data[i].marker.color if trace_indices_true[i] else "black")
                             for i in range(len(fig.data))
                         ]
                     },
@@ -750,26 +708,16 @@ if __name__ == "__main__":
     print(moment_arm_analyser.ranges_by_joint)
 
     # Get the ranges for a specific DOF and muscle
-    print(
-        moment_arm_analyser.ranges_by_joint[model.dof_names[0]][model.muscle_names[0]]
-    )
+    print(moment_arm_analyser.ranges_by_joint[model.dof_names[0]][model.muscle_names[0]])
 
     # Alternative way using indices
-    print(
-        moment_arm_analyser.get_ranges_from_idx_q_and_m(
-            moment_arm_analyser.ranges_by_joint, 0, 0
-        )
-    )
+    print(moment_arm_analyser.get_ranges_from_idx_q_and_m(moment_arm_analyser.ranges_by_joint, 0, 0))
 
     # Get all muscle ranges for one DOF
     print(moment_arm_analyser.ranges_by_joint[model.dof_names[0]])
 
     # Alternative way using DOF index only
-    print(
-        moment_arm_analyser.get_ranges_from_idx_q(
-            moment_arm_analyser.ranges_by_joint, 0
-        )
-    )
+    print(moment_arm_analyser.get_ranges_from_idx_q(moment_arm_analyser.ranges_by_joint, 0))
 
     # Visualize the computed ranges
     plot_ranges_with_true_button(
@@ -836,9 +784,7 @@ if __name__ == "__main__":
         q[idx_q, :] = np.linspace(0.0, np.pi, N)
 
     # Get indices and values of valid and invalid portions of q(t)
-    all_correct_idx, all_incorrect_idx, all_correct_q, all_incorrect_q = (
-        moment_arm_analyser.get_correct_part_mvt(q)
-    )
+    all_correct_idx, all_incorrect_idx, all_correct_q, all_incorrect_q = moment_arm_analyser.get_correct_part_mvt(q)
 
     # Visualize q(t) together with ROM and valid/invalid segments
     plot_q_qdot_rom(
