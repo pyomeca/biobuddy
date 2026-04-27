@@ -561,7 +561,7 @@ def plot_ranges_with_true_button(ranges_by_joint, accurate_ranges, path_to_save=
                 ],
             ),
         )
-    title = f"Sign moment arm\n{path_to_save.replace('/', '_')}"
+    title = f"sign_moment_arm_{path_to_save.replace('/', '_')}"
     fig.update_layout(
         title=title,
         barmode="overlay",
@@ -694,7 +694,7 @@ if __name__ == "__main__":
     # 1) Create a moment arm analyzer for a model
     # --------------------------------------------
     # Path to the model to analyze
-    model_path = "examples/models/arm26_allbiceps_1dof.bioMod"
+    model_path = "models/arm26_allbiceps_1dof.bioMod"
     path_to_save = "examples/data"
 
     # Load the model
@@ -724,7 +724,7 @@ if __name__ == "__main__":
     plot_ranges_with_true_button(
         moment_arm_analyser.ranges_by_joint,
         moment_arm_analyser.accurate_ranges_by_joint,
-        path_to_save="examples/data",
+        path_to_save="data",
     )
 
     # 2) Specify the expected sign of the moment arms
@@ -772,7 +772,7 @@ if __name__ == "__main__":
     plot_ranges_with_true_button(
         moment_arm_analyser.ranges_by_joint,
         moment_arm_analyser.accurate_ranges_by_joint,
-        path_to_save="examples/data",
+        path_to_save="data",
     )
 
     # 3) Extract usable q(t)
@@ -797,5 +797,5 @@ if __name__ == "__main__":
         moment_arm_analyser.accurate_ranges_array,
         all_correct_idx,
         all_incorrect_idx,
-        path_to_save="examples/data",
+        path_to_save="data",
     )
