@@ -364,7 +364,9 @@ python -m biobuddy.gui
 The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment
 parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar parameters, and fixed via points, then
 saving the result as `.bioMod`. A synchronized 3D preview shows the kinematic chain, markers, and muscle paths while
-the user edits the model.
+the user edits the model. The muscle tab also exposes editable origin and insertion points, the validation tab reports
+model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
+tree.
 ![model_graph](docs/images/model_graph.png)
 
 
