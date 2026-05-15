@@ -32,7 +32,7 @@ from .validation_panel import validate_model_for_editor
 
 def launch_model_editor() -> None:
     """
-    Launch the PySide6 desktop model editor.
+    Launch the Qt desktop model editor.
     """
     try:
         from PySide6.QtCore import QPointF, Qt
@@ -56,8 +56,46 @@ def launch_model_editor() -> None:
             QVBoxLayout,
             QWidget,
         )
-    except ImportError as error:
-        raise ImportError("The model editor requires PySide6. Install BioBuddy with `pip install biobuddy[gui]`.") from error
+        qt_alignment_center = Qt.AlignmentFlag.AlignCenter
+        qt_horizontal = Qt.Orientation.Horizontal
+        qt_match_exact = Qt.MatchFlag.MatchExactly
+        qt_match_recursive = Qt.MatchFlag.MatchRecursive
+        qpaint_antialiasing = QPainter.RenderHint.Antialiasing
+        get_event_position = lambda event: event.position()
+    except ImportError:
+        try:
+            from PyQt5.QtCore import QPointF, Qt
+            from PyQt5.QtGui import QColor, QPainter, QPen
+            from PyQt5.QtWidgets import (
+                QApplication,
+                QFileDialog,
+                QFormLayout,
+                QHBoxLayout,
+                QCheckBox,
+                QLabel,
+                QLineEdit,
+                QListWidget,
+                QMainWindow,
+                QMessageBox,
+                QPushButton,
+                QSplitter,
+                QTabWidget,
+                QTreeWidget,
+                QTreeWidgetItem,
+                QVBoxLayout,
+                QWidget,
+            )
+            qt_alignment_center = Qt.AlignCenter
+            qt_horizontal = Qt.Horizontal
+            qt_match_exact = Qt.MatchExactly
+            qt_match_recursive = Qt.MatchRecursive
+            qpaint_antialiasing = QPainter.Antialiasing
+            get_event_position = lambda event: event.localPos()
+        except ImportError as error:
+            raise ImportError(
+                "The model editor requires a working Qt binding. Install BioBuddy with `pip install biobuddy[gui]` "
+                "or use an environment where PyQt5 is available."
+            ) from error
 
     class ModelPreviewWidget(QWidget):
         """
@@ -83,10 +121,10 @@ def launch_model_editor() -> None:
 
         def paintEvent(self, event) -> None:
             painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(qpaint_antialiasing)
             painter.fillRect(self.rect(), QColor("white"))
             if self.scene is None or not self.scene.joints:
-                painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Open a model to preview it")
+                painter.drawText(self.rect(), qt_alignment_center, "Open a model to preview it")
                 return
 
             projected_joints = {name: _project_point(point) for name, point in self.scene.joints.items()}
@@ -121,7 +159,7 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
         def mousePressEvent(self, event) -> None:
-            clicked = event.position()
+            clicked = get_event_position(event)
             marker_name = _nearest_projected_segment(self._projected_marker_positions, clicked)
             if marker_name is not None and self.on_marker_selected is not None:
                 self.on_marker_selected(marker_name)
@@ -309,7 +347,7 @@ def launch_model_editor() -> None:
             right_layout = QVBoxLayout(right_panel)
             right_layout.addWidget(tabs)
 
-            splitter = QSplitter(Qt.Orientation.Horizontal)
+            splitter = QSplitter(qt_horizontal)
             splitter.addWidget(self.tree)
             splitter.addWidget(right_panel)
             splitter.setSizes([350, 750])
@@ -386,7 +424,7 @@ def launch_model_editor() -> None:
             self.tree.expandAll()
 
         def _select_segment_from_preview(self, segment_name: str) -> None:
-            items = self.tree.findItems(segment_name, Qt.MatchFlag.MatchRecursive | Qt.MatchFlag.MatchExactly)
+            items = self.tree.findItems(segment_name, qt_match_recursive | qt_match_exact)
             if items:
                 self.tree.setCurrentItem(items[0])
 
@@ -396,7 +434,7 @@ def launch_model_editor() -> None:
             for segment in self.model.segments:
                 if marker_name in segment.markers.keys():
                     self._select_segment_from_preview(segment.name)
-                    items = self.marker_list.findItems(marker_name, Qt.MatchFlag.MatchExactly)
+                    items = self.marker_list.findItems(marker_name, qt_match_exact)
                     if items:
                         self.marker_list.setCurrentItem(items[0])
                     return
