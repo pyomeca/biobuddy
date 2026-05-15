@@ -7,6 +7,7 @@ from .segment_editor import (
     load_model,
     validate_parent_name,
 )
+from .marker_editor import MarkerEditorData, add_marker, apply_marker_editor_data, get_marker_editor_data, remove_marker
 
 
 def launch_model_editor() -> None:
@@ -20,12 +21,15 @@ def launch_model_editor() -> None:
             QFileDialog,
             QFormLayout,
             QHBoxLayout,
+            QCheckBox,
             QLabel,
             QLineEdit,
+            QListWidget,
             QMainWindow,
             QMessageBox,
             QPushButton,
             QSplitter,
+            QTabWidget,
             QTreeWidget,
             QTreeWidgetItem,
             QVBoxLayout,
@@ -74,11 +78,47 @@ def launch_model_editor() -> None:
             form.addRow("Inertia diagonal", self.inertia_diagonal)
 
             right_panel = QWidget()
+            segment_tab = QWidget()
+            segment_layout = QVBoxLayout(segment_tab)
+            segment_layout.addWidget(QLabel("Segment properties"))
+            segment_layout.addLayout(form)
+            segment_layout.addWidget(self.apply_button)
+            segment_layout.addStretch()
+
+            self.marker_list = QListWidget()
+            self.marker_list.itemSelectionChanged.connect(self._on_marker_selection_changed)
+            self.marker_name = QLineEdit()
+            self.marker_position = QLineEdit()
+            self.marker_technical = QCheckBox("Technical")
+            self.marker_anatomical = QCheckBox("Anatomical")
+            self.apply_marker_button = QPushButton("Apply marker changes")
+            self.apply_marker_button.clicked.connect(self._apply_marker_changes)
+            self.add_marker_button = QPushButton("Add marker")
+            self.add_marker_button.clicked.connect(self._add_marker)
+            self.remove_marker_button = QPushButton("Remove marker")
+            self.remove_marker_button.clicked.connect(self._remove_marker)
+
+            marker_form = QFormLayout()
+            marker_form.addRow("Name", self.marker_name)
+            marker_form.addRow("Position", self.marker_position)
+            marker_form.addRow("", self.marker_technical)
+            marker_form.addRow("", self.marker_anatomical)
+
+            marker_tab = QWidget()
+            marker_layout = QVBoxLayout(marker_tab)
+            marker_layout.addWidget(QLabel("Markers on selected segment"))
+            marker_layout.addWidget(self.marker_list)
+            marker_layout.addLayout(marker_form)
+            marker_layout.addWidget(self.apply_marker_button)
+            marker_layout.addWidget(self.add_marker_button)
+            marker_layout.addWidget(self.remove_marker_button)
+
+            tabs = QTabWidget()
+            tabs.addTab(segment_tab, "Segment")
+            tabs.addTab(marker_tab, "Markers")
+
             right_layout = QVBoxLayout(right_panel)
-            right_layout.addWidget(QLabel("Segment properties"))
-            right_layout.addLayout(form)
-            right_layout.addWidget(self.apply_button)
-            right_layout.addStretch()
+            right_layout.addWidget(tabs)
 
             splitter = QSplitter(Qt.Orientation.Horizontal)
             splitter.addWidget(self.tree)
@@ -159,6 +199,66 @@ def launch_model_editor() -> None:
             self.mass.setText("" if data.mass is None else str(data.mass))
             self.center_of_mass.setText(_format_float_list(data.center_of_mass))
             self.inertia_diagonal.setText(_format_float_list(data.inertia_diagonal))
+            self._populate_marker_list()
+
+        def _populate_marker_list(self) -> None:
+            self.marker_list.clear()
+            if self.model is None or self.current_segment_name is None:
+                return
+            segment = self.model.segments[self.current_segment_name]
+            self.marker_list.addItems(list(segment.markers.keys()))
+
+        def _on_marker_selection_changed(self) -> None:
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
+                return
+            marker_name = self.marker_list.selectedItems()[0].text()
+            marker = self.model.segments[self.current_segment_name].markers[marker_name]
+            data = get_marker_editor_data(marker)
+            self.marker_name.setText(data.name)
+            self.marker_position.setText(_format_float_list(data.position))
+            self.marker_technical.setChecked(data.is_technical)
+            self.marker_anatomical.setChecked(data.is_anatomical)
+
+        def _marker_data_from_form(self) -> MarkerEditorData:
+            return MarkerEditorData(
+                name=self.marker_name.text().strip(),
+                position=_parse_vector(self.marker_position.text(), expected_length=3),
+                is_technical=self.marker_technical.isChecked(),
+                is_anatomical=self.marker_anatomical.isChecked(),
+            )
+
+        def _apply_marker_changes(self) -> None:
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
+                return
+            try:
+                old_name = self.marker_list.selectedItems()[0].text()
+                segment = self.model.segments[self.current_segment_name]
+                marker = segment.markers[old_name]
+                data = self._marker_data_from_form()
+                if old_name != data.name:
+                    segment.markers._remove(old_name)
+                apply_marker_editor_data(marker, data)
+                if old_name != data.name:
+                    segment.markers._append(marker)
+                self._populate_marker_list()
+            except Exception as error:
+                QMessageBox.critical(self, "Invalid marker values", str(error))
+
+        def _add_marker(self) -> None:
+            if self.model is None or self.current_segment_name is None:
+                return
+            try:
+                add_marker(self.model.segments[self.current_segment_name], self._marker_data_from_form())
+                self._populate_marker_list()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add marker", str(error))
+
+        def _remove_marker(self) -> None:
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
+                return
+            marker_name = self.marker_list.selectedItems()[0].text()
+            remove_marker(self.model.segments[self.current_segment_name], marker_name)
+            self._populate_marker_list()
 
         def _apply_segment_changes(self) -> None:
             if self.model is None or self.current_segment_name is None:
