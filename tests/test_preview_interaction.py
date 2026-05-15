@@ -33,3 +33,13 @@ def test_nearest_projected_segment_ignores_far_clicks():
     clicked = _Point(100, 100)
 
     assert _nearest_projected_segment(projected, clicked) is None
+
+
+def test_nearest_projected_segment_can_be_reused_for_markers():
+    """
+    The same helper can resolve marker hits before segment hits.
+    """
+    projected_markers = {"LASI": _Point(5, 5)}
+    clicked = _Point(6, 6)
+
+    assert _nearest_projected_segment(projected_markers, clicked) == "LASI"

@@ -3,7 +3,9 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..components.real.force.muscle_real import MuscleReal
+from ..components.real.force.muscle_group_real import MuscleGroupReal
 from ..components.real.force.via_point_real import ViaPointReal
+from ..components.muscle_utils import MuscleStateType, MuscleType
 
 
 @dataclass
@@ -129,3 +131,55 @@ def apply_insertion_editor_data(muscle: MuscleReal, data: ViaPointEditorData) ->
     Apply edited insertion values to a muscle.
     """
     apply_via_point_editor_data(muscle.insertion_position, data)
+
+
+def add_muscle_group(model, name: str, origin_parent_name: str, insertion_parent_name: str) -> MuscleGroupReal:
+    """
+    Create and append a muscle group to a model.
+    """
+    if name in model.muscle_group_names:
+        raise ValueError(f"Muscle group '{name}' already exists.")
+    muscle_group = MuscleGroupReal(name, origin_parent_name, insertion_parent_name)
+    model.add_muscle_group(muscle_group)
+    return muscle_group
+
+
+def remove_muscle_group(model, muscle_group_name: str) -> None:
+    """
+    Remove a muscle group from a model.
+    """
+    model.remove_muscle_group(muscle_group_name)
+
+
+def add_muscle(muscle_group: MuscleGroupReal, name: str) -> MuscleReal:
+    """
+    Create a minimal editable muscle inside a muscle group.
+    """
+    if name in muscle_group.muscle_names:
+        raise ValueError(f"Muscle '{name}' already exists in group '{muscle_group.name}'.")
+    muscle = MuscleReal(
+        name=name,
+        muscle_type=MuscleType.HILL_DE_GROOTE,
+        state_type=MuscleStateType.DEGROOTE,
+        muscle_group=muscle_group.name,
+        origin_position=ViaPointReal(
+            name=f"{name}_origin",
+            parent_name=muscle_group.origin_parent_name,
+            position=np.zeros(3),
+        ),
+        insertion_position=ViaPointReal(
+            name=f"{name}_insertion",
+            parent_name=muscle_group.insertion_parent_name,
+            position=np.zeros(3),
+        ),
+        maximal_force=1.0,
+    )
+    muscle_group.add_muscle(muscle)
+    return muscle
+
+
+def remove_muscle(muscle_group: MuscleGroupReal, muscle_name: str) -> None:
+    """
+    Remove a muscle from a muscle group.
+    """
+    muscle_group.remove_muscle(muscle_name)

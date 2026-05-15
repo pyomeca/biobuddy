@@ -6,6 +6,8 @@ from biobuddy import (
     MuscleEditorData,
     ViaPointEditorData,
     add_via_point,
+    add_muscle,
+    add_muscle_group,
     apply_insertion_editor_data,
     apply_muscle_editor_data,
     apply_origin_editor_data,
@@ -15,10 +17,14 @@ from biobuddy import (
     get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
+    remove_muscle,
+    remove_muscle_group,
 )
 from biobuddy.components.muscle_utils import MuscleStateType, MuscleType
 from biobuddy.components.real.force.muscle_real import MuscleReal
 from biobuddy.components.real.force.via_point_real import ViaPointReal
+from biobuddy.components.real.biomechanical_model_real import BiomechanicalModelReal
+from biobuddy.components.real.rigidbody.segment_real import SegmentReal
 
 
 def _build_muscle() -> MuscleReal:
@@ -107,3 +113,25 @@ def test_origin_and_insertion_editor_round_trip():
     assert muscle.origin_position.parent_name == "Humerus"
     assert muscle.insertion_position.name == "insertion2"
     assert muscle.insertion_position.parent_name == "Ulna"
+
+
+def test_add_and_remove_muscle_group_and_muscle():
+    """
+    Create and remove muscle containers from the editor helpers.
+    """
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="Scapula"))
+    model.add_segment(SegmentReal(name="Radius", parent_name="Scapula"))
+
+    muscle_group = add_muscle_group(model, "Arm", "Scapula", "Radius")
+    muscle = add_muscle(muscle_group, "Biceps")
+
+    assert model.muscle_group_names == ["Arm"]
+    assert muscle_group.muscle_names == ["Biceps"]
+    assert muscle.origin_position.parent_name == "Scapula"
+    assert muscle.insertion_position.parent_name == "Radius"
+
+    remove_muscle(muscle_group, "Biceps")
+    assert muscle_group.muscle_names == []
+    remove_muscle_group(model, "Arm")
+    assert model.muscle_group_names == []

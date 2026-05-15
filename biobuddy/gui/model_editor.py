@@ -11,6 +11,8 @@ from .marker_editor import MarkerEditorData, add_marker, apply_marker_editor_dat
 from .muscle_editor import (
     MuscleEditorData,
     ViaPointEditorData,
+    add_muscle,
+    add_muscle_group,
     add_via_point,
     apply_insertion_editor_data,
     apply_muscle_editor_data,
@@ -21,6 +23,8 @@ from .muscle_editor import (
     get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
+    remove_muscle,
+    remove_muscle_group,
 )
 from .preview_scene import build_preview_scene
 from .validation_panel import validate_model_for_editor
@@ -65,7 +69,9 @@ def launch_model_editor() -> None:
             self.scene = None
             self.selected_segment_name = None
             self.on_segment_selected = None
+            self.on_marker_selected = None
             self._projected_joint_positions = {}
+            self._projected_marker_positions = {}
 
         def set_model(self, model) -> None:
             self.scene = None if model is None else build_preview_scene(model)
@@ -90,6 +96,7 @@ def launch_model_editor() -> None:
                 all_points.extend(_project_point(point) for point in path)
             transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
             self._projected_joint_positions = {name: transform(point) for name, point in projected_joints.items()}
+            self._projected_marker_positions = {name: transform(point) for name, point in projected_markers.items()}
 
             painter.setPen(QPen(QColor("#6b7280"), 2))
             for parent, child in self.scene.bones:
@@ -114,11 +121,13 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
         def mousePressEvent(self, event) -> None:
-            if not self._projected_joint_positions or self.on_segment_selected is None:
-                return
             clicked = event.position()
+            marker_name = _nearest_projected_segment(self._projected_marker_positions, clicked)
+            if marker_name is not None and self.on_marker_selected is not None:
+                self.on_marker_selected(marker_name)
+                return
             segment_name = _nearest_projected_segment(self._projected_joint_positions, clicked)
-            if segment_name is not None:
+            if segment_name is not None and self.on_segment_selected is not None:
                 self.on_segment_selected(segment_name)
 
     class ModelEditorWindow(QMainWindow):
@@ -135,6 +144,7 @@ def launch_model_editor() -> None:
             self.current_segment_name: str | None = None
             self.preview = ModelPreviewWidget()
             self.preview.on_segment_selected = self._select_segment_from_preview
+            self.preview.on_marker_selected = self._select_marker_from_preview
             self.validation_messages = QListWidget()
             self.validate_button = QPushButton("Validate model")
             self.validate_button.clicked.connect(self._validate_model)
@@ -212,6 +222,18 @@ def launch_model_editor() -> None:
             self.maximal_excitation = QLineEdit()
             self.apply_muscle_button = QPushButton("Apply muscle changes")
             self.apply_muscle_button.clicked.connect(self._apply_muscle_changes)
+            self.group_name = QLineEdit()
+            self.group_origin_parent = QLineEdit()
+            self.group_insertion_parent = QLineEdit()
+            self.add_group_button = QPushButton("Add muscle group")
+            self.add_group_button.clicked.connect(self._add_muscle_group)
+            self.remove_group_button = QPushButton("Remove selected group")
+            self.remove_group_button.clicked.connect(self._remove_muscle_group)
+            self.new_muscle_name = QLineEdit()
+            self.add_muscle_button = QPushButton("Add muscle")
+            self.add_muscle_button.clicked.connect(self._add_muscle)
+            self.remove_muscle_button = QPushButton("Remove selected muscle")
+            self.remove_muscle_button.clicked.connect(self._remove_muscle)
             self.origin_name = QLineEdit()
             self.origin_parent = QLineEdit()
             self.origin_position = QLineEdit()
@@ -222,6 +244,9 @@ def launch_model_editor() -> None:
             self.apply_path_endpoints_button.clicked.connect(self._apply_path_endpoint_changes)
 
             muscle_form = QFormLayout()
+            muscle_form.addRow("New group name", self.group_name)
+            muscle_form.addRow("Group origin parent", self.group_origin_parent)
+            muscle_form.addRow("Group insertion parent", self.group_insertion_parent)
             muscle_form.addRow("Optimal length", self.optimal_length)
             muscle_form.addRow("Maximal force", self.maximal_force)
             muscle_form.addRow("Tendon slack length", self.tendon_slack_length)
@@ -255,6 +280,11 @@ def launch_model_editor() -> None:
             muscle_tab = QWidget()
             muscle_layout = QVBoxLayout(muscle_tab)
             muscle_layout.addWidget(self.muscle_tree)
+            muscle_layout.addWidget(self.add_group_button)
+            muscle_layout.addWidget(self.remove_group_button)
+            muscle_layout.addWidget(self.new_muscle_name)
+            muscle_layout.addWidget(self.add_muscle_button)
+            muscle_layout.addWidget(self.remove_muscle_button)
             muscle_layout.addLayout(muscle_form)
             muscle_layout.addWidget(self.apply_muscle_button)
             muscle_layout.addWidget(self.apply_path_endpoints_button)
@@ -337,6 +367,7 @@ def launch_model_editor() -> None:
                 self.validation_messages.addItem("Open a model before validation.")
                 return
             report = validate_model_for_editor(self.model)
+            self.validation_messages.addItem(f"[{report.category}]")
             self.validation_messages.addItems(report.messages)
 
         def _populate_tree(self) -> None:
@@ -358,6 +389,17 @@ def launch_model_editor() -> None:
             items = self.tree.findItems(segment_name, Qt.MatchFlag.MatchRecursive | Qt.MatchFlag.MatchExactly)
             if items:
                 self.tree.setCurrentItem(items[0])
+
+        def _select_marker_from_preview(self, marker_name: str) -> None:
+            if self.model is None:
+                return
+            for segment in self.model.segments:
+                if marker_name in segment.markers.keys():
+                    self._select_segment_from_preview(segment.name)
+                    items = self.marker_list.findItems(marker_name, Qt.MatchFlag.MatchExactly)
+                    if items:
+                        self.marker_list.setCurrentItem(items[0])
+                    return
 
         def _on_segment_selection_changed(self) -> None:
             if self.model is None or not self.tree.selectedItems():
@@ -459,6 +501,13 @@ def launch_model_editor() -> None:
             muscle_name = item.text(0)
             return self.model.muscle_groups[muscle_group_name].muscles[muscle_name]
 
+        def _selected_muscle_group(self):
+            if self.model is None or not self.muscle_tree.selectedItems():
+                return None
+            item = self.muscle_tree.selectedItems()[0]
+            muscle_group_name = item.text(0) if item.parent() is None else item.parent().text(0)
+            return self.model.muscle_groups[muscle_group_name]
+
         def _on_muscle_selection_changed(self) -> None:
             muscle = self._selected_muscle()
             if muscle is None:
@@ -499,6 +548,49 @@ def launch_model_editor() -> None:
                 self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Invalid muscle values", str(error))
+
+        def _add_muscle_group(self) -> None:
+            if self.model is None:
+                return
+            try:
+                add_muscle_group(
+                    self.model,
+                    self.group_name.text().strip(),
+                    self.group_origin_parent.text().strip(),
+                    self.group_insertion_parent.text().strip(),
+                )
+                self._populate_muscle_tree()
+                self.preview.set_model(self.model)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add muscle group", str(error))
+
+        def _remove_muscle_group(self) -> None:
+            muscle_group = self._selected_muscle_group()
+            if muscle_group is None:
+                return
+            remove_muscle_group(self.model, muscle_group.name)
+            self._populate_muscle_tree()
+            self.preview.set_model(self.model)
+
+        def _add_muscle(self) -> None:
+            muscle_group = self._selected_muscle_group()
+            if muscle_group is None:
+                return
+            try:
+                add_muscle(muscle_group, self.new_muscle_name.text().strip())
+                self._populate_muscle_tree()
+                self.preview.set_model(self.model)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add muscle", str(error))
+
+        def _remove_muscle(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            muscle_group = self.model.muscle_groups[muscle.muscle_group]
+            remove_muscle(muscle_group, muscle.name)
+            self._populate_muscle_tree()
+            self.preview.set_model(self.model)
 
         def _populate_via_point_list(self) -> None:
             self.via_point_list.clear()

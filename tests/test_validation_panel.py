@@ -13,6 +13,7 @@ def test_validate_model_for_editor_reports_success():
 
     assert report.is_valid is True
     assert report.messages == ["Model validation passed."]
+    assert report.category == "ok"
 
 
 def test_validate_model_for_editor_reports_errors():
@@ -27,3 +28,4 @@ def test_validate_model_for_editor_reports_errors():
 
     assert report.is_valid is False
     assert report.messages
+    assert report.category == "kinematic_chain"

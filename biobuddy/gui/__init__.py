@@ -17,6 +17,8 @@ from .muscle_editor import (
     MuscleEditorData,
     ViaPointEditorData,
     add_via_point,
+    add_muscle,
+    add_muscle_group,
     apply_insertion_editor_data,
     apply_muscle_editor_data,
     apply_origin_editor_data,
@@ -26,6 +28,8 @@ from .muscle_editor import (
     get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
+    remove_muscle,
+    remove_muscle_group,
 )
 from .preview_scene import PreviewScene, build_preview_scene
 from .validation_panel import ValidationReport, validate_model_for_editor
@@ -45,6 +49,8 @@ __all__ = [
     MuscleEditorData.__name__,
     ViaPointEditorData.__name__,
     add_via_point.__name__,
+    add_muscle.__name__,
+    add_muscle_group.__name__,
     apply_insertion_editor_data.__name__,
     apply_muscle_editor_data.__name__,
     apply_origin_editor_data.__name__,
@@ -54,6 +60,8 @@ __all__ = [
     get_origin_editor_data.__name__,
     get_via_point_editor_data.__name__,
     remove_via_point.__name__,
+    remove_muscle.__name__,
+    remove_muscle_group.__name__,
     PreviewScene.__name__,
     build_preview_scene.__name__,
     ValidationReport.__name__,
