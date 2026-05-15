@@ -23,6 +23,7 @@ from .muscle_editor import (
     get_via_point_editor_data,
     remove_via_point,
 )
+from .preview_scene import PreviewScene, build_preview_scene
 
 __all__ = [
     SegmentEditorData.__name__,
@@ -44,4 +45,6 @@ __all__ = [
     get_muscle_editor_data.__name__,
     get_via_point_editor_data.__name__,
     remove_via_point.__name__,
+    PreviewScene.__name__,
+    build_preview_scene.__name__,
 ]

@@ -18,6 +18,7 @@ from .muscle_editor import (
     get_via_point_editor_data,
     remove_via_point,
 )
+from .preview_scene import build_preview_scene
 
 
 def launch_model_editor() -> None:
@@ -25,7 +26,8 @@ def launch_model_editor() -> None:
     Launch the PySide6 desktop model editor.
     """
     try:
-        from PySide6.QtCore import Qt
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QColor, QPainter, QPen
         from PySide6.QtWidgets import (
             QApplication,
             QFileDialog,
@@ -48,6 +50,61 @@ def launch_model_editor() -> None:
     except ImportError as error:
         raise ImportError("The model editor requires PySide6. Install BioBuddy with `pip install biobuddy[gui]`.") from error
 
+    class ModelPreviewWidget(QWidget):
+        """
+        Lightweight 3D-aware preview rendered with an isometric projection.
+        """
+
+        def __init__(self):
+            super().__init__()
+            self.scene = None
+            self.selected_segment_name = None
+
+        def set_model(self, model) -> None:
+            self.scene = None if model is None else build_preview_scene(model)
+            self.update()
+
+        def set_selected_segment(self, segment_name: str | None) -> None:
+            self.selected_segment_name = segment_name
+            self.update()
+
+        def paintEvent(self, event) -> None:
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.fillRect(self.rect(), QColor("white"))
+            if self.scene is None or not self.scene.joints:
+                painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Open a model to preview it")
+                return
+
+            projected_joints = {name: _project_point(point) for name, point in self.scene.joints.items()}
+            projected_markers = {name: _project_point(point) for name, point in self.scene.markers.items()}
+            all_points = list(projected_joints.values()) + list(projected_markers.values())
+            for path in self.scene.muscles.values():
+                all_points.extend(_project_point(point) for point in path)
+            transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
+
+            painter.setPen(QPen(QColor("#6b7280"), 2))
+            for parent, child in self.scene.bones:
+                painter.drawLine(transform(projected_joints[parent]), transform(projected_joints[child]))
+
+            painter.setPen(QPen(QColor("#dc2626"), 2))
+            for path in self.scene.muscles.values():
+                for start, end in zip(path, path[1:]):
+                    painter.drawLine(transform(_project_point(start)), transform(_project_point(end)))
+
+            painter.setPen(QPen(QColor("#2563eb"), 1))
+            painter.setBrush(QColor("#2563eb"))
+            for marker_point in projected_markers.values():
+                center = transform(marker_point)
+                painter.drawEllipse(center, 4, 4)
+
+            for name, point in projected_joints.items():
+                center = transform(point)
+                is_selected = name == self.selected_segment_name
+                painter.setPen(QPen(QColor("#111827"), 1))
+                painter.setBrush(QColor("#f59e0b" if is_selected else "#111827"))
+                painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
+
     class ModelEditorWindow(QMainWindow):
         """
         Minimal desktop editor for inspecting and editing segment properties.
@@ -60,6 +117,7 @@ def launch_model_editor() -> None:
             self.model = None
             self.current_filepath: Path | None = None
             self.current_segment_name: str | None = None
+            self.preview = ModelPreviewWidget()
 
             self.tree = QTreeWidget()
             self.tree.setHeaderLabel("Segments")
@@ -176,6 +234,7 @@ def launch_model_editor() -> None:
             tabs.addTab(segment_tab, "Segment")
             tabs.addTab(marker_tab, "Markers")
             tabs.addTab(muscle_tab, "Muscles")
+            tabs.addTab(self.preview, "3D preview")
 
             right_layout = QVBoxLayout(right_panel)
             right_layout.addWidget(tabs)
@@ -215,6 +274,7 @@ def launch_model_editor() -> None:
                 self.current_filepath = Path(filepath)
                 self._populate_tree()
                 self._populate_muscle_tree()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to open model", str(error))
 
@@ -261,6 +321,7 @@ def launch_model_editor() -> None:
             self.center_of_mass.setText(_format_float_list(data.center_of_mass))
             self.inertia_diagonal.setText(_format_float_list(data.inertia_diagonal))
             self._populate_marker_list()
+            self.preview.set_selected_segment(self.current_segment_name)
 
         def _populate_marker_list(self) -> None:
             self.marker_list.clear()
@@ -302,6 +363,7 @@ def launch_model_editor() -> None:
                 if old_name != data.name:
                     segment.markers._append(marker)
                 self._populate_marker_list()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Invalid marker values", str(error))
 
@@ -311,6 +373,7 @@ def launch_model_editor() -> None:
             try:
                 add_marker(self.model.segments[self.current_segment_name], self._marker_data_from_form())
                 self._populate_marker_list()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to add marker", str(error))
 
@@ -320,6 +383,7 @@ def launch_model_editor() -> None:
             marker_name = self.marker_list.selectedItems()[0].text()
             remove_marker(self.model.segments[self.current_segment_name], marker_name)
             self._populate_marker_list()
+            self.preview.set_model(self.model)
 
         def _populate_muscle_tree(self) -> None:
             self.muscle_tree.clear()
@@ -371,6 +435,7 @@ def launch_model_editor() -> None:
                         maximal_excitation=_parse_optional_float(self.maximal_excitation.text()),
                     ),
                 )
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Invalid muscle values", str(error))
 
@@ -412,6 +477,7 @@ def launch_model_editor() -> None:
                 if old_name != data.name:
                     muscle.via_points._append(via_point)
                 self._populate_via_point_list()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Invalid via-point values", str(error))
 
@@ -422,6 +488,7 @@ def launch_model_editor() -> None:
             try:
                 add_via_point(muscle, self._via_point_data_from_form())
                 self._populate_via_point_list()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to add via point", str(error))
 
@@ -431,6 +498,7 @@ def launch_model_editor() -> None:
                 return
             remove_via_point(muscle, self.via_point_list.selectedItems()[0].text())
             self._populate_via_point_list()
+            self.preview.set_model(self.model)
 
         def _apply_segment_changes(self) -> None:
             if self.model is None or self.current_segment_name is None:
@@ -453,6 +521,7 @@ def launch_model_editor() -> None:
                 )
                 apply_segment_editor_data(self.model.segments[self.current_segment_name], data)
                 self._populate_tree()
+                self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Invalid segment values", str(error))
 
@@ -502,3 +571,31 @@ def _format_optional_float(value: float | None) -> str:
     Format an optional float for display in a line edit.
     """
     return "" if value is None else str(value)
+
+
+def _project_point(point) -> tuple[float, float]:
+    """
+    Project one 3D point into a simple isometric 2D view.
+    """
+    x, y, z = point[:3]
+    return (x - 0.6 * y, z + 0.4 * y)
+
+
+def _fit_projection(points: list[tuple[float, float]], width: int, height: int, point_type):
+    """
+    Build a transform that fits projected points inside a widget rectangle.
+    """
+    min_x = min(point[0] for point in points)
+    max_x = max(point[0] for point in points)
+    min_y = min(point[1] for point in points)
+    max_y = max(point[1] for point in points)
+    span_x = max(max_x - min_x, 1e-9)
+    span_y = max(max_y - min_y, 1e-9)
+    scale = 0.8 * min(width / span_x, height / span_y)
+    offset_x = (width - scale * (min_x + max_x)) / 2
+    offset_y = (height + scale * (min_y + max_y)) / 2
+
+    def transform(point: tuple[float, float]):
+        return point_type(offset_x + scale * point[0], offset_y - scale * point[1])
+
+    return transform
