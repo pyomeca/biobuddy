@@ -366,7 +366,8 @@ parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar 
 saving the result as `.bioMod`. A synchronized 3D preview shows the kinematic chain, markers, and muscle paths while
 the user edits the model. The muscle tab also exposes editable origin and insertion points, the validation tab reports
 model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
-tree.
+tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
+selects it in the marker editor.
 ![model_graph](docs/images/model_graph.png)
 
 
