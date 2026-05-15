@@ -6,9 +6,13 @@ from biobuddy import (
     MuscleEditorData,
     ViaPointEditorData,
     add_via_point,
+    apply_insertion_editor_data,
     apply_muscle_editor_data,
+    apply_origin_editor_data,
     apply_via_point_editor_data,
+    get_insertion_editor_data,
     get_muscle_editor_data,
+    get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
 )
@@ -85,3 +89,21 @@ def test_via_point_editor_rejects_moving_or_conditional_points():
 
     with pytest.raises(ValueError, match="Only fixed via points"):
         apply_via_point_editor_data(via_point, ViaPointEditorData("vp1", "Humerus", [1.0, 2.0, 3.0]))
+
+
+def test_origin_and_insertion_editor_round_trip():
+    """
+    Edit muscle origin and insertion values through dedicated helpers.
+    """
+    muscle = _build_muscle()
+
+    assert get_origin_editor_data(muscle).parent_name == "Scapula"
+    assert get_insertion_editor_data(muscle).parent_name == "Radius"
+
+    apply_origin_editor_data(muscle, ViaPointEditorData("origin2", "Humerus", [0.1, 0.2, 0.3]))
+    apply_insertion_editor_data(muscle, ViaPointEditorData("insertion2", "Ulna", [0.4, 0.5, 0.6]))
+
+    assert muscle.origin_position.name == "origin2"
+    assert muscle.origin_position.parent_name == "Humerus"
+    assert muscle.insertion_position.name == "insertion2"
+    assert muscle.insertion_position.parent_name == "Ulna"

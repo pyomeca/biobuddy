@@ -17,13 +17,18 @@ from .muscle_editor import (
     MuscleEditorData,
     ViaPointEditorData,
     add_via_point,
+    apply_insertion_editor_data,
     apply_muscle_editor_data,
+    apply_origin_editor_data,
     apply_via_point_editor_data,
+    get_insertion_editor_data,
     get_muscle_editor_data,
+    get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
 )
 from .preview_scene import PreviewScene, build_preview_scene
+from .validation_panel import ValidationReport, validate_model_for_editor
 
 __all__ = [
     SegmentEditorData.__name__,
@@ -40,11 +45,17 @@ __all__ = [
     MuscleEditorData.__name__,
     ViaPointEditorData.__name__,
     add_via_point.__name__,
+    apply_insertion_editor_data.__name__,
     apply_muscle_editor_data.__name__,
+    apply_origin_editor_data.__name__,
     apply_via_point_editor_data.__name__,
+    get_insertion_editor_data.__name__,
     get_muscle_editor_data.__name__,
+    get_origin_editor_data.__name__,
     get_via_point_editor_data.__name__,
     remove_via_point.__name__,
     PreviewScene.__name__,
     build_preview_scene.__name__,
+    ValidationReport.__name__,
+    validate_model_for_editor.__name__,
 ]

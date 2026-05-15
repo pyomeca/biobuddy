@@ -101,3 +101,31 @@ def remove_via_point(muscle: MuscleReal, via_point_name: str) -> None:
     Remove a via point from a muscle.
     """
     muscle.remove_via_point(via_point_name)
+
+
+def get_origin_editor_data(muscle: MuscleReal) -> ViaPointEditorData:
+    """
+    Return editable origin values for a muscle.
+    """
+    return get_via_point_editor_data(muscle.origin_position)
+
+
+def get_insertion_editor_data(muscle: MuscleReal) -> ViaPointEditorData:
+    """
+    Return editable insertion values for a muscle.
+    """
+    return get_via_point_editor_data(muscle.insertion_position)
+
+
+def apply_origin_editor_data(muscle: MuscleReal, data: ViaPointEditorData) -> None:
+    """
+    Apply edited origin values to a muscle.
+    """
+    apply_via_point_editor_data(muscle.origin_position, data)
+
+
+def apply_insertion_editor_data(muscle: MuscleReal, data: ViaPointEditorData) -> None:
+    """
+    Apply edited insertion values to a muscle.
+    """
+    apply_via_point_editor_data(muscle.insertion_position, data)

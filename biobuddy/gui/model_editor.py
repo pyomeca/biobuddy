@@ -12,13 +12,18 @@ from .muscle_editor import (
     MuscleEditorData,
     ViaPointEditorData,
     add_via_point,
+    apply_insertion_editor_data,
     apply_muscle_editor_data,
+    apply_origin_editor_data,
     apply_via_point_editor_data,
+    get_insertion_editor_data,
     get_muscle_editor_data,
+    get_origin_editor_data,
     get_via_point_editor_data,
     remove_via_point,
 )
 from .preview_scene import build_preview_scene
+from .validation_panel import validate_model_for_editor
 
 
 def launch_model_editor() -> None:
@@ -59,6 +64,8 @@ def launch_model_editor() -> None:
             super().__init__()
             self.scene = None
             self.selected_segment_name = None
+            self.on_segment_selected = None
+            self._projected_joint_positions = {}
 
         def set_model(self, model) -> None:
             self.scene = None if model is None else build_preview_scene(model)
@@ -82,6 +89,7 @@ def launch_model_editor() -> None:
             for path in self.scene.muscles.values():
                 all_points.extend(_project_point(point) for point in path)
             transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
+            self._projected_joint_positions = {name: transform(point) for name, point in projected_joints.items()}
 
             painter.setPen(QPen(QColor("#6b7280"), 2))
             for parent, child in self.scene.bones:
@@ -99,11 +107,19 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 4, 4)
 
             for name, point in projected_joints.items():
-                center = transform(point)
+                center = self._projected_joint_positions[name]
                 is_selected = name == self.selected_segment_name
                 painter.setPen(QPen(QColor("#111827"), 1))
                 painter.setBrush(QColor("#f59e0b" if is_selected else "#111827"))
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
+
+        def mousePressEvent(self, event) -> None:
+            if not self._projected_joint_positions or self.on_segment_selected is None:
+                return
+            clicked = event.position()
+            segment_name = _nearest_projected_segment(self._projected_joint_positions, clicked)
+            if segment_name is not None:
+                self.on_segment_selected(segment_name)
 
     class ModelEditorWindow(QMainWindow):
         """
@@ -118,6 +134,10 @@ def launch_model_editor() -> None:
             self.current_filepath: Path | None = None
             self.current_segment_name: str | None = None
             self.preview = ModelPreviewWidget()
+            self.preview.on_segment_selected = self._select_segment_from_preview
+            self.validation_messages = QListWidget()
+            self.validate_button = QPushButton("Validate model")
+            self.validate_button.clicked.connect(self._validate_model)
 
             self.tree = QTreeWidget()
             self.tree.setHeaderLabel("Segments")
@@ -192,6 +212,14 @@ def launch_model_editor() -> None:
             self.maximal_excitation = QLineEdit()
             self.apply_muscle_button = QPushButton("Apply muscle changes")
             self.apply_muscle_button.clicked.connect(self._apply_muscle_changes)
+            self.origin_name = QLineEdit()
+            self.origin_parent = QLineEdit()
+            self.origin_position = QLineEdit()
+            self.insertion_name = QLineEdit()
+            self.insertion_parent = QLineEdit()
+            self.insertion_position = QLineEdit()
+            self.apply_path_endpoints_button = QPushButton("Apply origin/insertion changes")
+            self.apply_path_endpoints_button.clicked.connect(self._apply_path_endpoint_changes)
 
             muscle_form = QFormLayout()
             muscle_form.addRow("Optimal length", self.optimal_length)
@@ -200,6 +228,12 @@ def launch_model_editor() -> None:
             muscle_form.addRow("Pennation angle", self.pennation_angle)
             muscle_form.addRow("Maximal velocity", self.maximal_velocity)
             muscle_form.addRow("Maximal excitation", self.maximal_excitation)
+            muscle_form.addRow("Origin name", self.origin_name)
+            muscle_form.addRow("Origin parent", self.origin_parent)
+            muscle_form.addRow("Origin position", self.origin_position)
+            muscle_form.addRow("Insertion name", self.insertion_name)
+            muscle_form.addRow("Insertion parent", self.insertion_parent)
+            muscle_form.addRow("Insertion position", self.insertion_position)
 
             self.via_point_list = QListWidget()
             self.via_point_list.itemSelectionChanged.connect(self._on_via_point_selection_changed)
@@ -223,6 +257,7 @@ def launch_model_editor() -> None:
             muscle_layout.addWidget(self.muscle_tree)
             muscle_layout.addLayout(muscle_form)
             muscle_layout.addWidget(self.apply_muscle_button)
+            muscle_layout.addWidget(self.apply_path_endpoints_button)
             muscle_layout.addWidget(QLabel("Via points"))
             muscle_layout.addWidget(self.via_point_list)
             muscle_layout.addLayout(via_point_form)
@@ -235,6 +270,11 @@ def launch_model_editor() -> None:
             tabs.addTab(marker_tab, "Markers")
             tabs.addTab(muscle_tab, "Muscles")
             tabs.addTab(self.preview, "3D preview")
+            validation_tab = QWidget()
+            validation_layout = QVBoxLayout(validation_tab)
+            validation_layout.addWidget(self.validate_button)
+            validation_layout.addWidget(self.validation_messages)
+            tabs.addTab(validation_tab, "Validation")
 
             right_layout = QVBoxLayout(right_panel)
             right_layout.addWidget(tabs)
@@ -291,6 +331,14 @@ def launch_model_editor() -> None:
             except Exception as error:
                 QMessageBox.critical(self, "Unable to save model", str(error))
 
+        def _validate_model(self) -> None:
+            self.validation_messages.clear()
+            if self.model is None:
+                self.validation_messages.addItem("Open a model before validation.")
+                return
+            report = validate_model_for_editor(self.model)
+            self.validation_messages.addItems(report.messages)
+
         def _populate_tree(self) -> None:
             self.tree.clear()
             if self.model is None:
@@ -305,6 +353,11 @@ def launch_model_editor() -> None:
                 else:
                     self.tree.addTopLevelItem(item)
             self.tree.expandAll()
+
+        def _select_segment_from_preview(self, segment_name: str) -> None:
+            items = self.tree.findItems(segment_name, Qt.MatchFlag.MatchRecursive | Qt.MatchFlag.MatchExactly)
+            if items:
+                self.tree.setCurrentItem(items[0])
 
         def _on_segment_selection_changed(self) -> None:
             if self.model is None or not self.tree.selectedItems():
@@ -417,6 +470,14 @@ def launch_model_editor() -> None:
             self.pennation_angle.setText(_format_optional_float(data.pennation_angle))
             self.maximal_velocity.setText(_format_optional_float(data.maximal_velocity))
             self.maximal_excitation.setText(_format_optional_float(data.maximal_excitation))
+            origin = get_origin_editor_data(muscle)
+            insertion = get_insertion_editor_data(muscle)
+            self.origin_name.setText(origin.name)
+            self.origin_parent.setText(origin.parent_name)
+            self.origin_position.setText(_format_float_list(origin.position))
+            self.insertion_name.setText(insertion.name)
+            self.insertion_parent.setText(insertion.parent_name)
+            self.insertion_position.setText(_format_float_list(insertion.position))
             self._populate_via_point_list()
 
         def _apply_muscle_changes(self) -> None:
@@ -445,6 +506,31 @@ def launch_model_editor() -> None:
             if muscle is None:
                 return
             self.via_point_list.addItems(list(muscle.via_points.keys()))
+
+        def _apply_path_endpoint_changes(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            try:
+                apply_origin_editor_data(
+                    muscle,
+                    ViaPointEditorData(
+                        name=self.origin_name.text().strip(),
+                        parent_name=self.origin_parent.text().strip(),
+                        position=_parse_vector(self.origin_position.text(), expected_length=3),
+                    ),
+                )
+                apply_insertion_editor_data(
+                    muscle,
+                    ViaPointEditorData(
+                        name=self.insertion_name.text().strip(),
+                        parent_name=self.insertion_parent.text().strip(),
+                        position=_parse_vector(self.insertion_position.text(), expected_length=3),
+                    ),
+                )
+                self.preview.set_model(self.model)
+            except Exception as error:
+                QMessageBox.critical(self, "Invalid origin/insertion values", str(error))
 
         def _on_via_point_selection_changed(self) -> None:
             muscle = self._selected_muscle()
@@ -599,3 +685,21 @@ def _fit_projection(points: list[tuple[float, float]], width: int, height: int, 
         return point_type(offset_x + scale * point[0], offset_y - scale * point[1])
 
     return transform
+
+
+def _nearest_projected_segment(projected_positions: dict[str, object], clicked_point, max_distance: float = 12.0):
+    """
+    Return the nearest projected segment if the click lands close enough.
+    """
+    nearest_name = None
+    nearest_distance = None
+    for name, point in projected_positions.items():
+        dx = point.x() - clicked_point.x()
+        dy = point.y() - clicked_point.y()
+        distance = (dx**2 + dy**2) ** 0.5
+        if nearest_distance is None or distance < nearest_distance:
+            nearest_name = name
+            nearest_distance = distance
+    if nearest_distance is None or nearest_distance > max_distance:
+        return None
+    return nearest_name
