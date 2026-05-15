@@ -8,6 +8,16 @@ from .segment_editor import (
     validate_parent_name,
 )
 from .marker_editor import MarkerEditorData, add_marker, apply_marker_editor_data, get_marker_editor_data, remove_marker
+from .muscle_editor import (
+    MuscleEditorData,
+    ViaPointEditorData,
+    add_via_point,
+    apply_muscle_editor_data,
+    apply_via_point_editor_data,
+    get_muscle_editor_data,
+    get_via_point_editor_data,
+    remove_via_point,
+)
 
 
 def launch_model_editor() -> None:
@@ -113,9 +123,59 @@ def launch_model_editor() -> None:
             marker_layout.addWidget(self.add_marker_button)
             marker_layout.addWidget(self.remove_marker_button)
 
+            self.muscle_tree = QTreeWidget()
+            self.muscle_tree.setHeaderLabel("Muscles")
+            self.muscle_tree.itemSelectionChanged.connect(self._on_muscle_selection_changed)
+            self.optimal_length = QLineEdit()
+            self.maximal_force = QLineEdit()
+            self.tendon_slack_length = QLineEdit()
+            self.pennation_angle = QLineEdit()
+            self.maximal_velocity = QLineEdit()
+            self.maximal_excitation = QLineEdit()
+            self.apply_muscle_button = QPushButton("Apply muscle changes")
+            self.apply_muscle_button.clicked.connect(self._apply_muscle_changes)
+
+            muscle_form = QFormLayout()
+            muscle_form.addRow("Optimal length", self.optimal_length)
+            muscle_form.addRow("Maximal force", self.maximal_force)
+            muscle_form.addRow("Tendon slack length", self.tendon_slack_length)
+            muscle_form.addRow("Pennation angle", self.pennation_angle)
+            muscle_form.addRow("Maximal velocity", self.maximal_velocity)
+            muscle_form.addRow("Maximal excitation", self.maximal_excitation)
+
+            self.via_point_list = QListWidget()
+            self.via_point_list.itemSelectionChanged.connect(self._on_via_point_selection_changed)
+            self.via_point_name = QLineEdit()
+            self.via_point_parent = QLineEdit()
+            self.via_point_position = QLineEdit()
+            self.apply_via_point_button = QPushButton("Apply via-point changes")
+            self.apply_via_point_button.clicked.connect(self._apply_via_point_changes)
+            self.add_via_point_button = QPushButton("Add via point")
+            self.add_via_point_button.clicked.connect(self._add_via_point)
+            self.remove_via_point_button = QPushButton("Remove via point")
+            self.remove_via_point_button.clicked.connect(self._remove_via_point)
+
+            via_point_form = QFormLayout()
+            via_point_form.addRow("Via-point name", self.via_point_name)
+            via_point_form.addRow("Parent", self.via_point_parent)
+            via_point_form.addRow("Position", self.via_point_position)
+
+            muscle_tab = QWidget()
+            muscle_layout = QVBoxLayout(muscle_tab)
+            muscle_layout.addWidget(self.muscle_tree)
+            muscle_layout.addLayout(muscle_form)
+            muscle_layout.addWidget(self.apply_muscle_button)
+            muscle_layout.addWidget(QLabel("Via points"))
+            muscle_layout.addWidget(self.via_point_list)
+            muscle_layout.addLayout(via_point_form)
+            muscle_layout.addWidget(self.apply_via_point_button)
+            muscle_layout.addWidget(self.add_via_point_button)
+            muscle_layout.addWidget(self.remove_via_point_button)
+
             tabs = QTabWidget()
             tabs.addTab(segment_tab, "Segment")
             tabs.addTab(marker_tab, "Markers")
+            tabs.addTab(muscle_tab, "Muscles")
 
             right_layout = QVBoxLayout(right_panel)
             right_layout.addWidget(tabs)
@@ -154,6 +214,7 @@ def launch_model_editor() -> None:
                 self.model = load_model(filepath)
                 self.current_filepath = Path(filepath)
                 self._populate_tree()
+                self._populate_muscle_tree()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to open model", str(error))
 
@@ -260,6 +321,117 @@ def launch_model_editor() -> None:
             remove_marker(self.model.segments[self.current_segment_name], marker_name)
             self._populate_marker_list()
 
+        def _populate_muscle_tree(self) -> None:
+            self.muscle_tree.clear()
+            if self.model is None:
+                return
+            for muscle_group in self.model.muscle_groups:
+                group_item = QTreeWidgetItem([muscle_group.name])
+                for muscle in muscle_group.muscles:
+                    group_item.addChild(QTreeWidgetItem([muscle.name]))
+                self.muscle_tree.addTopLevelItem(group_item)
+            self.muscle_tree.expandAll()
+
+        def _selected_muscle(self):
+            if self.model is None or not self.muscle_tree.selectedItems():
+                return None
+            item = self.muscle_tree.selectedItems()[0]
+            if item.parent() is None:
+                return None
+            muscle_group_name = item.parent().text(0)
+            muscle_name = item.text(0)
+            return self.model.muscle_groups[muscle_group_name].muscles[muscle_name]
+
+        def _on_muscle_selection_changed(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            data = get_muscle_editor_data(muscle)
+            self.optimal_length.setText(_format_optional_float(data.optimal_length))
+            self.maximal_force.setText(_format_optional_float(data.maximal_force))
+            self.tendon_slack_length.setText(_format_optional_float(data.tendon_slack_length))
+            self.pennation_angle.setText(_format_optional_float(data.pennation_angle))
+            self.maximal_velocity.setText(_format_optional_float(data.maximal_velocity))
+            self.maximal_excitation.setText(_format_optional_float(data.maximal_excitation))
+            self._populate_via_point_list()
+
+        def _apply_muscle_changes(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            try:
+                apply_muscle_editor_data(
+                    muscle,
+                    MuscleEditorData(
+                        optimal_length=_parse_optional_float(self.optimal_length.text()),
+                        maximal_force=_parse_optional_float(self.maximal_force.text()),
+                        tendon_slack_length=_parse_optional_float(self.tendon_slack_length.text()),
+                        pennation_angle=_parse_optional_float(self.pennation_angle.text()),
+                        maximal_velocity=_parse_optional_float(self.maximal_velocity.text()),
+                        maximal_excitation=_parse_optional_float(self.maximal_excitation.text()),
+                    ),
+                )
+            except Exception as error:
+                QMessageBox.critical(self, "Invalid muscle values", str(error))
+
+        def _populate_via_point_list(self) -> None:
+            self.via_point_list.clear()
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            self.via_point_list.addItems(list(muscle.via_points.keys()))
+
+        def _on_via_point_selection_changed(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None or not self.via_point_list.selectedItems():
+                return
+            via_point_name = self.via_point_list.selectedItems()[0].text()
+            data = get_via_point_editor_data(muscle.via_points[via_point_name])
+            self.via_point_name.setText(data.name)
+            self.via_point_parent.setText(data.parent_name)
+            self.via_point_position.setText(_format_float_list(data.position))
+
+        def _via_point_data_from_form(self) -> ViaPointEditorData:
+            return ViaPointEditorData(
+                name=self.via_point_name.text().strip(),
+                parent_name=self.via_point_parent.text().strip(),
+                position=_parse_vector(self.via_point_position.text(), expected_length=3),
+            )
+
+        def _apply_via_point_changes(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None or not self.via_point_list.selectedItems():
+                return
+            try:
+                old_name = self.via_point_list.selectedItems()[0].text()
+                via_point = muscle.via_points[old_name]
+                data = self._via_point_data_from_form()
+                if old_name != data.name:
+                    muscle.via_points._remove(old_name)
+                apply_via_point_editor_data(via_point, data)
+                if old_name != data.name:
+                    muscle.via_points._append(via_point)
+                self._populate_via_point_list()
+            except Exception as error:
+                QMessageBox.critical(self, "Invalid via-point values", str(error))
+
+        def _add_via_point(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None:
+                return
+            try:
+                add_via_point(muscle, self._via_point_data_from_form())
+                self._populate_via_point_list()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add via point", str(error))
+
+        def _remove_via_point(self) -> None:
+            muscle = self._selected_muscle()
+            if muscle is None or not self.via_point_list.selectedItems():
+                return
+            remove_via_point(muscle, self.via_point_list.selectedItems()[0].text())
+            self._populate_via_point_list()
+
         def _apply_segment_changes(self) -> None:
             if self.model is None or self.current_segment_name is None:
                 return
@@ -323,3 +495,10 @@ def _format_float_list(values: list[float]) -> str:
     Format a float list for display in a line edit.
     """
     return " ".join(str(value) for value in values)
+
+
+def _format_optional_float(value: float | None) -> str:
+    """
+    Format an optional float for display in a line edit.
+    """
+    return "" if value is None else str(value)

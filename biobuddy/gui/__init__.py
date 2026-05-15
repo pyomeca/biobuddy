@@ -13,6 +13,16 @@ from .marker_editor import (
     get_marker_editor_data,
     remove_marker,
 )
+from .muscle_editor import (
+    MuscleEditorData,
+    ViaPointEditorData,
+    add_via_point,
+    apply_muscle_editor_data,
+    apply_via_point_editor_data,
+    get_muscle_editor_data,
+    get_via_point_editor_data,
+    remove_via_point,
+)
 
 __all__ = [
     SegmentEditorData.__name__,
@@ -26,4 +36,12 @@ __all__ = [
     apply_marker_editor_data.__name__,
     get_marker_editor_data.__name__,
     remove_marker.__name__,
+    MuscleEditorData.__name__,
+    ViaPointEditorData.__name__,
+    add_via_point.__name__,
+    apply_muscle_editor_data.__name__,
+    apply_via_point_editor_data.__name__,
+    get_muscle_editor_data.__name__,
+    get_via_point_editor_data.__name__,
+    remove_via_point.__name__,
 ]
