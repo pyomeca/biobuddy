@@ -361,9 +361,10 @@ pip install biobuddy[gui]
 python -m biobuddy.gui
 ```
 
-The first version supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing
-segment parents, DoFs, joint ranges, and segment inertia parameters, then saving the result as `.bioMod`. Marker and
-muscle editing are planned as follow-up additions to the same interface.
+The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment
+parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar parameters, and fixed via points, then
+saving the result as `.bioMod`. A synchronized 3D preview shows the kinematic chain, markers, and muscle paths while
+the user edits the model.
 ![model_graph](docs/images/model_graph.png)
 
 
