@@ -477,6 +477,17 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
+    def from_bvh(self, filepath: str) -> "BiomechanicalModelReal":
+        """
+        Create a biomechanical model from a BVH file.
+        """
+        from ...model_parser.bvh import BvhModelParser
+
+        self.filepath = filepath
+        model = BvhModelParser(filepath=filepath).to_real()
+        model.validate_model()
+        return model
+
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
         Write the bioMod file.
