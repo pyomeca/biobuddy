@@ -137,3 +137,22 @@ def apply_segment_editor_data(segment: SegmentReal, data: SegmentEditorData) -> 
         center_of_mass=np.array(data.center_of_mass),
         inertia=np.diag(data.inertia_diagonal),
     )
+
+
+def validate_parent_name(model: BiomechanicalModelReal, segment_name: str, parent_name: str) -> None:
+    """
+    Validate that a parent assignment stays inside the model hierarchy.
+
+    Parameters
+    ----------
+    model
+        The edited biomechanical model.
+    segment_name
+        The segment whose parent is being edited.
+    parent_name
+        The requested parent segment.
+    """
+    if parent_name == segment_name:
+        raise ValueError("A segment cannot be its own parent.")
+    if parent_name != "base" and parent_name not in model.segment_names:
+        raise ValueError(f"Unknown parent segment '{parent_name}'.")

@@ -2,7 +2,8 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from biobuddy import SegmentEditorData, apply_segment_editor_data, get_segment_editor_data
+from biobuddy import BiomechanicalModelReal, SegmentEditorData, apply_segment_editor_data, get_segment_editor_data
+from biobuddy.gui.segment_editor import validate_parent_name
 from biobuddy.components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
 from biobuddy.components.real.rigidbody.segment_real import SegmentReal
@@ -85,3 +86,18 @@ def test_apply_segment_editor_data_rejects_incompatible_ranges():
 
     with pytest.raises(ValueError, match="Expected either 0 or 2 range values"):
         apply_segment_editor_data(segment, data)
+
+
+def test_validate_parent_name_rejects_unknown_and_self_parents():
+    """
+    Reject parent choices that would make the edited hierarchy invalid.
+    """
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="Pelvis"))
+    model.add_segment(SegmentReal(name="Thigh", parent_name="Pelvis"))
+
+    with pytest.raises(ValueError, match="Unknown parent segment"):
+        validate_parent_name(model=model, segment_name="Thigh", parent_name="Missing")
+
+    with pytest.raises(ValueError, match="cannot be its own parent"):
+        validate_parent_name(model=model, segment_name="Thigh", parent_name="Thigh")

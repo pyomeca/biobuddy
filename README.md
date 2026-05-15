@@ -351,6 +351,19 @@ model.animate(
     model_path=model_path,
 )
 ```
+
+## Desktop model editor
+BioBuddy also includes an early desktop editor for interactive model cleanup. Install the optional GUI dependency and
+launch it with:
+
+```bash
+pip install biobuddy[gui]
+python -m biobuddy.gui
+```
+
+The first version supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing
+segment parents, DoFs, joint ranges, and segment inertia parameters, then saving the result as `.bioMod`. Marker and
+muscle editing are planned as follow-up additions to the same interface.
 ![model_graph](docs/images/model_graph.png)
 
 

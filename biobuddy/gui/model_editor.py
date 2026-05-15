@@ -1,6 +1,12 @@
 from pathlib import Path
 
-from .segment_editor import SegmentEditorData, apply_segment_editor_data, get_segment_editor_data, load_model
+from .segment_editor import (
+    SegmentEditorData,
+    apply_segment_editor_data,
+    get_segment_editor_data,
+    load_model,
+    validate_parent_name,
+)
 
 
 def launch_model_editor() -> None:
@@ -167,6 +173,11 @@ def launch_model_editor() -> None:
                     mass=_parse_optional_float(self.mass.text()),
                     center_of_mass=_parse_vector(self.center_of_mass.text(), expected_length=3),
                     inertia_diagonal=_parse_vector(self.inertia_diagonal.text(), expected_length=3),
+                )
+                validate_parent_name(
+                    model=self.model,
+                    segment_name=self.current_segment_name,
+                    parent_name=data.parent_name,
                 )
                 apply_segment_editor_data(self.model.segments[self.current_segment_name], data)
                 self._populate_tree()
