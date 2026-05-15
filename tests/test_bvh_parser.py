@@ -71,6 +71,23 @@ def test_bvh_parser_converts_channels_to_biobuddy_segments(tmp_path):
     npt.assert_array_equal(model.segments["Knee"].segment_coordinate_system.scs.translation, np.array([0, -1, 0]))
 
 
+def test_bvh_model_can_be_exported_to_biomod(tmp_path):
+    """
+    Export a converted BVH hierarchy to a biorbd-compatible ``.bioMod`` file.
+    """
+    bvh_filepath = tmp_path / "minimal.bvh"
+    biomod_filepath = tmp_path / "minimal.bioMod"
+    bvh_filepath.write_text(BVH_CONTENT)
+
+    model = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
+    model.to_biomod(filepath=str(biomod_filepath), with_mesh=False)
+
+    content = biomod_filepath.read_text()
+    assert "segment\tHips" in content
+    assert "\ttranslations\txyz" in content
+    assert "\trotations\tzxy" in content
+
+
 def test_bvh_parser_rejects_motion_rows_with_wrong_channel_count(tmp_path):
     """
     Reject BVH motion data when the sample width does not match the hierarchy channels.
