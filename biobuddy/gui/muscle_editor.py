@@ -70,12 +70,16 @@ def get_via_point_editor_data(via_point: ViaPointReal) -> ViaPointEditorData:
     )
 
 
-def apply_via_point_editor_data(via_point: ViaPointReal, data: ViaPointEditorData) -> None:
+def apply_via_point_editor_data(
+    via_point: ViaPointReal, data: ViaPointEditorData
+) -> None:
     """
     Apply edited fixed via-point values.
     """
     if via_point.condition is not None or via_point.movement is not None:
-        raise ValueError("Only fixed via points can be edited in the desktop editor MVP.")
+        raise ValueError(
+            "Only fixed via points can be edited in the desktop editor MVP."
+        )
     via_point.name = data.name
     via_point.parent_name = data.parent_name
     via_point.position = np.array(data.position)
@@ -86,7 +90,9 @@ def add_via_point(muscle: MuscleReal, data: ViaPointEditorData) -> ViaPointReal:
     Create and attach a fixed via point to a muscle.
     """
     if data.name in muscle.via_points.keys():
-        raise ValueError(f"Via point '{data.name}' already exists on muscle '{muscle.name}'.")
+        raise ValueError(
+            f"Via point '{data.name}' already exists on muscle '{muscle.name}'."
+        )
     via_point = ViaPointReal(
         name=data.name,
         parent_name=data.parent_name,
@@ -133,7 +139,9 @@ def apply_insertion_editor_data(muscle: MuscleReal, data: ViaPointEditorData) ->
     apply_via_point_editor_data(muscle.insertion_position, data)
 
 
-def add_muscle_group(model, name: str, origin_parent_name: str, insertion_parent_name: str) -> MuscleGroupReal:
+def add_muscle_group(
+    model, name: str, origin_parent_name: str, insertion_parent_name: str
+) -> MuscleGroupReal:
     """
     Create and append a muscle group to a model.
     """
@@ -156,7 +164,9 @@ def add_muscle(muscle_group: MuscleGroupReal, name: str) -> MuscleReal:
     Create a minimal editable muscle inside a muscle group.
     """
     if name in muscle_group.muscle_names:
-        raise ValueError(f"Muscle '{name}' already exists in group '{muscle_group.name}'.")
+        raise ValueError(
+            f"Muscle '{name}' already exists in group '{muscle_group.name}'."
+        )
     muscle = MuscleReal(
         name=name,
         muscle_type=MuscleType.HILL_DE_GROOTE,

@@ -45,7 +45,9 @@ def add_marker(segment: SegmentReal, data: MarkerEditorData) -> MarkerReal:
     Create and attach a marker to a segment.
     """
     if data.name in segment.markers.keys():
-        raise ValueError(f"Marker '{data.name}' already exists on segment '{segment.name}'.")
+        raise ValueError(
+            f"Marker '{data.name}' already exists on segment '{segment.name}'."
+        )
     marker = MarkerReal(
         name=data.name,
         parent_name=segment.name,

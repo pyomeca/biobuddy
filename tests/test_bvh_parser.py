@@ -6,7 +6,6 @@ from biobuddy import BiomechanicalModelReal
 from biobuddy.model_parser.bvh import BvhModelParser
 from biobuddy.utils.enums import Rotations, Translations
 
-
 BVH_CONTENT = """HIERARCHY
 ROOT Hips
 {
@@ -68,7 +67,10 @@ def test_bvh_parser_converts_channels_to_biobuddy_segments(tmp_path):
     assert model.segments["Hips"].rotations == Rotations.ZXY
     assert model.segments["Knee"].translations == Translations.NONE
     assert model.segments["Knee"].rotations == Rotations.XYZ
-    npt.assert_array_equal(model.segments["Knee"].segment_coordinate_system.scs.translation, np.array([0, -1, 0]))
+    npt.assert_array_equal(
+        model.segments["Knee"].segment_coordinate_system.scs.translation,
+        np.array([0, -1, 0]),
+    )
 
 
 def test_bvh_model_can_be_exported_to_biomod(tmp_path):
@@ -95,5 +97,7 @@ def test_bvh_parser_rejects_motion_rows_with_wrong_channel_count(tmp_path):
     filepath = tmp_path / "bad_motion.bvh"
     filepath.write_text(BVH_CONTENT.replace("4 5 6", "4 5"))
 
-    with pytest.raises(ValueError, match="Each BVH motion row must contain 9 channel values."):
+    with pytest.raises(
+        ValueError, match="Each BVH motion row must contain 9 channel values."
+    ):
         BvhModelParser(filepath=str(filepath))

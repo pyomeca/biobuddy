@@ -66,7 +66,11 @@ def load_model(filepath: str) -> BiomechanicalModelReal:
         return BiomechanicalModelReal().from_osim(filepath=filepath)
     if extension == ".urdf":
         return BiomechanicalModelReal().from_urdf(filepath=filepath)
-    raise ValueError(f"Unsupported model format '{extension}'. Expected .bioMod, .osim, or .urdf.")
+    if extension == ".bvh":
+        return BiomechanicalModelReal().from_bvh(filepath=filepath)
+    raise ValueError(
+        f"Unsupported model format '{extension}'. Expected .bioMod, .osim, .urdf, or .bvh."
+    )
 
 
 def get_segment_editor_data(segment: SegmentReal) -> SegmentEditorData:
@@ -87,13 +91,21 @@ def get_segment_editor_data(segment: SegmentReal) -> SegmentEditorData:
         inertia_diagonal = [0.0, 0.0, 0.0]
     else:
         mass = segment.inertia_parameters.mass
-        center_of_mass = np.nanmean(segment.inertia_parameters.center_of_mass, axis=1)[:3].tolist()
+        center_of_mass = np.nanmean(segment.inertia_parameters.center_of_mass, axis=1)[
+            :3
+        ].tolist()
         inertia_diagonal = np.diag(segment.inertia_parameters.inertia)[:3].tolist()
 
     return SegmentEditorData(
         parent_name=segment.parent_name,
-        translations="" if segment.translations == Translations.NONE else segment.translations.value,
-        rotations="" if segment.rotations == Rotations.NONE else segment.rotations.value,
+        translations=(
+            ""
+            if segment.translations == Translations.NONE
+            else segment.translations.value
+        ),
+        rotations=(
+            "" if segment.rotations == Rotations.NONE else segment.rotations.value
+        ),
         q_min=q_min,
         q_max=q_max,
         mass=mass,
@@ -113,7 +125,11 @@ def apply_segment_editor_data(segment: SegmentReal, data: SegmentEditorData) -> 
     data
         The edited values.
     """
-    translations = Translations.NONE if data.translations == "" else Translations(data.translations)
+    translations = (
+        Translations.NONE
+        if data.translations == ""
+        else Translations(data.translations)
+    )
     rotations = Rotations.NONE if data.rotations == "" else Rotations(data.rotations)
 
     segment.parent_name = data.parent_name
@@ -122,12 +138,22 @@ def apply_segment_editor_data(segment: SegmentReal, data: SegmentEditorData) -> 
     segment.dof_names = None
 
     if len(data.q_min) != len(data.q_max):
-        raise ValueError("The minimum and maximum range vectors must have the same length.")
+        raise ValueError(
+            "The minimum and maximum range vectors must have the same length."
+        )
     if len(data.q_min) not in {0, segment.nb_q}:
-        raise ValueError(f"Expected either 0 or {segment.nb_q} range values, got {len(data.q_min)}.")
-    segment.q_ranges = None if len(data.q_min) == 0 else RangeOfMotion(Ranges.Q, data.q_min, data.q_max)
+        raise ValueError(
+            f"Expected either 0 or {segment.nb_q} range values, got {len(data.q_min)}."
+        )
+    segment.q_ranges = (
+        None
+        if len(data.q_min) == 0
+        else RangeOfMotion(Ranges.Q, data.q_min, data.q_max)
+    )
 
-    has_inertia = data.mass is not None or any(data.center_of_mass) or any(data.inertia_diagonal)
+    has_inertia = (
+        data.mass is not None or any(data.center_of_mass) or any(data.inertia_diagonal)
+    )
     if not has_inertia:
         segment.inertia_parameters = None
         return
@@ -139,7 +165,9 @@ def apply_segment_editor_data(segment: SegmentReal, data: SegmentEditorData) -> 
     )
 
 
-def validate_parent_name(model: BiomechanicalModelReal, segment_name: str, parent_name: str) -> None:
+def validate_parent_name(
+    model: BiomechanicalModelReal, segment_name: str, parent_name: str
+) -> None:
     """
     Validate that a parent assignment stays inside the model hierarchy.
 

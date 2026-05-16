@@ -2,10 +2,18 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
-from biobuddy import BiomechanicalModelReal, SegmentEditorData, apply_segment_editor_data, get_segment_editor_data
+from biobuddy import (
+    BiomechanicalModelReal,
+    SegmentEditorData,
+    apply_segment_editor_data,
+    get_segment_editor_data,
+)
 from biobuddy.gui.segment_editor import validate_parent_name
+from biobuddy.gui.segment_editor import load_model
 from biobuddy.components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from biobuddy.components.real.rigidbody.inertia_parameters_real import InertiaParametersReal
+from biobuddy.components.real.rigidbody.inertia_parameters_real import (
+    InertiaParametersReal,
+)
 from biobuddy.components.real.rigidbody.segment_real import SegmentReal
 from biobuddy.utils.enums import Rotations, Translations
 
@@ -64,8 +72,12 @@ def test_apply_segment_editor_data_updates_segment():
     assert segment.q_ranges.min_bound == [-1.0, -2.0]
     assert segment.q_ranges.max_bound == [1.0, 2.0]
     assert segment.inertia_parameters.mass == 4.5
-    npt.assert_array_equal(segment.inertia_parameters.center_of_mass[:3, 0], np.array([0.0, -0.2, 0.0]))
-    npt.assert_array_equal(np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.1, 0.2, 0.3]))
+    npt.assert_array_equal(
+        segment.inertia_parameters.center_of_mass[:3, 0], np.array([0.0, -0.2, 0.0])
+    )
+    npt.assert_array_equal(
+        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.1, 0.2, 0.3])
+    )
 
 
 def test_apply_segment_editor_data_rejects_incompatible_ranges():
@@ -101,3 +113,31 @@ def test_validate_parent_name_rejects_unknown_and_self_parents():
 
     with pytest.raises(ValueError, match="cannot be its own parent"):
         validate_parent_name(model=model, segment_name="Thigh", parent_name="Thigh")
+
+
+def test_load_model_supports_bvh(tmp_path):
+    """
+    Load a minimal BVH file through the GUI-facing loader.
+    """
+    filepath = tmp_path / "minimal.bvh"
+    filepath.write_text(
+        "\n".join(
+            [
+                "HIERARCHY",
+                "ROOT Hips",
+                "{",
+                "    OFFSET 0 0 0",
+                "    CHANNELS 6 Xposition Yposition Zposition Xrotation Yrotation Zrotation",
+                "}",
+                "MOTION",
+                "Frames: 1",
+                "Frame Time: 0.01",
+                "0 0 0 0 0 0",
+            ]
+        )
+    )
+
+    model = load_model(str(filepath))
+
+    assert isinstance(model, BiomechanicalModelReal)
+    assert "Hips" in model.segment_names
