@@ -524,3 +524,21 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         writer = UrdfModelWriter(filepath=filepath, with_mesh=with_mesh)
         self.validate_model()
         writer.write(self)
+
+    def to_bvh(self, filepath: str, with_mesh: bool = False) -> None:
+        """
+        Write the .bvh file.
+
+        Parameters
+        ----------
+        filepath
+            The path to save the BVH file.
+        with_mesh
+            Kept for consistency with the other writers. Meshes are not part of
+            the BVH format and are therefore ignored.
+        """
+        from ...model_writer.bvh.bvh_model_writer import BvhModelWriter
+
+        writer = BvhModelWriter(filepath=filepath, with_mesh=with_mesh)
+        self.validate_model()
+        writer.write(self)
