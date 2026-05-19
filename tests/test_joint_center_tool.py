@@ -1060,7 +1060,7 @@ def test_get_svd():
 
     npt.assert_almost_equal(
         U[1, :],
-        np.array([ 0.        , -0.03536723,  0.31304802,  0.49212874,  0.05456451, 0.        ]),
+        np.array([0.0, -0.03536723, 0.31304802, 0.49212874, 0.05456451, 0.0]),
         decimal=2,
     )
     npt.assert_almost_equal(
