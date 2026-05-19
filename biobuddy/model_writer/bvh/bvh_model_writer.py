@@ -36,19 +36,6 @@ class BvhModelWriter(AbstractModelWriter):
             channels.extend(f"{axis.upper()}rotation" for axis in segment.rotations.value)
         return channels
 
-    @staticmethod
-    def _offset_string(segment: "SegmentReal") -> str:
-        """
-        Format the local segment translation into a BVH ``OFFSET`` line.
-
-        Parameters
-        ----------
-        segment
-            The segment whose local translation should be exported.
-        """
-        translation = segment.segment_coordinate_system.scs.translation
-        return f"OFFSET {translation[0]:0.6f} {translation[1]:0.6f} {translation[2]:0.6f}"
-
     def _validate_segment(self, segment: "SegmentReal") -> None:
         """
         Ensure the segment can be represented in BVH.
@@ -104,62 +91,6 @@ class BvhModelWriter(AbstractModelWriter):
         for segment in model.segments:
             self._validate_segment(segment)
 
-    @staticmethod
-    def _children(model: "BiomechanicalModelReal", parent_name: str) -> list["SegmentReal"]:
-        """
-        Get the direct child segments of a parent segment.
-
-        Parameters
-        ----------
-        model
-            The model containing the hierarchy.
-        parent_name
-            The name of the parent segment.
-        """
-        return [segment for segment in model.segments if segment.parent_name == parent_name]
-
-    def _write_joint(self, model: "BiomechanicalModelReal", segment: "SegmentReal", level: int, joint_type: str) -> str:
-        """
-        Write one BVH joint block recursively.
-
-        Parameters
-        ----------
-        model
-            The model containing the hierarchy.
-        segment
-            The segment to export.
-        level
-            The indentation level.
-        joint_type
-            The BVH joint type, either ``ROOT`` or ``JOINT``.
-        """
-        indent = "    " * level
-        channels = self._channel_names(segment)
-        children = self._children(model=model, parent_name=segment.name)
-
-        lines = [
-            f"{indent}{joint_type} {segment.name}",
-            f"{indent}{{",
-            f"{indent}    {self._offset_string(segment)}",
-            f"{indent}    CHANNELS {len(channels)} {' '.join(channels)}" if channels else f"{indent}    CHANNELS 0",
-        ]
-
-        if children:
-            for child in children:
-                lines.append(self._write_joint(model=model, segment=child, level=level + 1, joint_type="JOINT"))
-        else:
-            lines.extend(
-                [
-                    f"{indent}    End Site",
-                    f"{indent}    {{",
-                    f"{indent}        OFFSET 0.000000 0.000000 0.000000",
-                    f"{indent}    }}",
-                ]
-            )
-
-        lines.append(f"{indent}}}")
-        return "\n".join(lines)
-
     def _motion_line(self, model: "BiomechanicalModelReal") -> str:
         """
         Create one neutral BVH motion sample matching the exported channels.
@@ -174,6 +105,43 @@ class BvhModelWriter(AbstractModelWriter):
             values.extend(["0.000000"] * len(self._channel_names(segment)))
         return " ".join(values)
 
+    def recursive_write_children(self, model: "BiomechanicalModelReal", segment: "SegmentReal", level: int, joint_type: str, out_string: str) -> str:
+        """
+        Recursively traverse the segment tree, building a BVH hierarchy string.
+        Each recursive call naturally 'resets' level when it returns to the parent.
+        """
+        channel_names = self._channel_names(segment)
+        out_string += segment.to_bvh(channel_names=channel_names, level=level, joint_type=joint_type)
+
+        if segment.name in ["root", "base"]:
+            # root and base are skipped
+            return out_string
+
+        else:
+            children = model.children_segments(parent_name=segment.name)
+
+            if children:
+                for child in children:
+                    # level+1 is scoped to this call only — backtracks automatically on return
+                    out_string = self.recursive_write_children(
+                        model, child, level=level + 1, joint_type="JOINT", out_string=out_string
+                    )
+            else:
+                # Leaf node: emit End Site block
+                indent = "    " * level
+                out_string += "\n".join([
+                    f"{indent}    End Site",
+                    f"{indent}    {{",
+                    f"{indent}        OFFSET 0.000000 0.000000 0.000000",
+                    f"{indent}    }}",
+                ])
+
+            # Close this segment's brace
+            indent = "    " * level
+            out_string += f"\n{indent}}}\n"
+
+            return out_string
+
     def write(self, model: "BiomechanicalModelReal") -> None:
         """
         Write the model into a ``.bvh`` file.
@@ -185,17 +153,23 @@ class BvhModelWriter(AbstractModelWriter):
         """
         self._validate_model(model)
 
-        root_candidates = self._children(model=model, parent_name="base")
+        if "root" not in model.segment_names:
+            raise RuntimeError("BHV export assumes a root segment. No segment named 'root' was found.")
+        root_candidates =  model.children_segments(parent_name="root")
         if len(root_candidates) != 1:
-            raise RuntimeError("BVH export requires exactly one root segment attached to base.")
+            raise RuntimeError("BVH export requires exactly one segment attached to root.")
 
+        # Initialize the model with the root segment
         root_segment = root_candidates[0]
         out_string = "HIERARCHY\n"
-        out_string += self._write_joint(model=model, segment=root_segment, level=0, joint_type="ROOT")
+        out_string = self.recursive_write_children(model, root_segment, level=0, joint_type="ROOT", out_string=out_string)
+        # out_string += root_segment.to_bvh(channel_names=channel_names, level=0, joint_type="ROOT")
+
+        # Add a mock motion
         out_string += "\nMOTION\n"
         out_string += "Frames: 1\n"
-        out_string += "Frame Time: 0.0333333\n"
-        out_string += self._motion_line(model) + "\n"
+        out_string += "Frame Time: 0.0333333\n"  # Arbitrary, but cannot be zero
+        out_string += self._motion_line(model) + "\n"  # Posture at the model's zero
 
         with open(self.filepath, "w") as file:
             file.write(out_string)
