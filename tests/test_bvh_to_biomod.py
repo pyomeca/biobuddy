@@ -4,10 +4,17 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from biobuddy import BiomechanicalModelReal, MarkerReal, SegmentCoordinateSystemReal, SegmentReal
-from biobuddy.components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
-from biobuddy.model_parser.bvh import BvhModelParser
-from biobuddy.utils.enums import Translations
+from biobuddy import (
+    BiomechanicalModelReal,
+    MarkerReal,
+    SegmentCoordinateSystemReal,
+    SegmentReal,
+    RangeOfMotion,
+    Ranges,
+    BvhModelParser,
+    Translations,
+    RotoTransMatrix,
+)
 
 from test_utils import compare_models
 
@@ -15,45 +22,50 @@ from test_utils import compare_models
 def test_translation_bvh_to_biomod():
     """Test comprehensive BVH to BioMod translation."""
 
-    parent_path = Path(__file__).resolve().parent.parent
-    bvh_filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
-    biomod_reference_filepath = parent_path / "examples" / "models" / "fullbody_model_from_bvh.bioMod"
-    biomod_translated_filepath = bvh_filepath.with_name("fullbody_model_translated.bioMod")
-    bvh_translated_filepath = bvh_filepath.with_name("fullbody_model_translated.bvh")
+    np.random.seed(42)
 
-    if biomod_translated_filepath.exists():
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    bvh_filepath = parent_path + f"/examples/models/fullbody_model.bvh"
+    biomod_reference_filepath = parent_path + f"/examples/models/fullbody_model_from_bvh.bioMod"
+    biomod_translated_filepath = biomod_reference_filepath.replace(".bioMod", "_translated.bioMod")
+    bvh_translated_filepath = bvh_filepath.replace(".bvh", "_translated.bvh")
+
+    if os.path.exists(biomod_translated_filepath):
         os.remove(biomod_translated_filepath)
-    if bvh_translated_filepath.exists():
+    if os.path.exists(bvh_translated_filepath):
         os.remove(bvh_translated_filepath)
 
     # Convert BVH to biomod and check that the converted model matches the reference.
-    model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
-    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=str(biomod_reference_filepath))
+    model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=bvh_filepath)
+    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=biomod_reference_filepath)
     compare_models(model_from_bvh, model_from_biomod, decimal=5)
 
     # Test that the model created can be exported into .bioMod.
-    model_from_bvh.to_biomod(filepath=str(biomod_translated_filepath), with_mesh=False)
-    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(filepath=str(biomod_translated_filepath))
+    model_from_bvh.to_biomod(filepath=biomod_translated_filepath, with_mesh=False)
+    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(filepath=biomod_translated_filepath)
     compare_models(model_from_bvh, model_from_biomod_2, decimal=5)
 
     # Test that the .bioMod can be reconverted into .bvh.
-    model_from_biomod.to_bvh(filepath=str(bvh_translated_filepath), with_mesh=False)
-    model_from_bvh_2 = BiomechanicalModelReal().from_bvh(filepath=str(bvh_translated_filepath))
+    model_from_biomod.to_bvh(filepath=bvh_translated_filepath, with_mesh=False)
+    model_from_bvh_2 = BiomechanicalModelReal().from_bvh(filepath=bvh_translated_filepath)
     compare_models(model_from_bvh, model_from_bvh_2, decimal=5)
 
-    if biomod_translated_filepath.exists():
+    if os.path.exists(biomod_translated_filepath):
         os.remove(biomod_translated_filepath)
-    if bvh_translated_filepath.exists():
+    if os.path.exists(bvh_translated_filepath):
         os.remove(bvh_translated_filepath)
 
 
 def test_bvh_parser_reads_hierarchy_and_motion():
-    """Parse the real BVH example and expose both the hierarchy and motion data."""
+    """
+    Parse the real BVH example and expose both the hierarchy and motion data.
+    NOTE: these are not used in BioBuddy, yet.
+    """
 
-    parent_path = Path(__file__).resolve().parent.parent
-    filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    filepath = parent_path + f"/examples/models/fullbody_model.bvh"
 
-    parser = BvhModelParser(filepath=str(filepath))
+    parser = BvhModelParser(filepath=filepath)
 
     assert parser.root is not None
     assert parser.root.name == "Hips"
@@ -163,9 +175,9 @@ ROOT root
 def test_bvh_writer_exports_a_minimal_root_hierarchy(tmp_path: Path):
     """Export a minimal root-only model to BVH."""
 
-    filepath = tmp_path / "minimal.bvh"
+    filepath = tmp_path / "one_segment.bvh"
     model = BiomechanicalModelReal()
-    model.add_segment(SegmentReal(name="root"))
+    model.add_segment(SegmentReal(name="root_segment"))
 
     model.to_bvh(filepath=str(filepath), with_mesh=False)
 
@@ -175,34 +187,44 @@ def test_bvh_writer_exports_a_minimal_root_hierarchy(tmp_path: Path):
     assert "Frames: 1" in content
 
 
-@pytest.mark.parametrize(
-    "model_factory, expected_message",
-    [
-        (
-            lambda: BiomechanicalModelReal(gravity=np.array([0.0, -9.81, 0.0])),
-            "BVH export does not support gravity metadata.",
-        ),
-        (
-            lambda: _model_with_marker(),
-            "BVH export does not support segment markers. Segment root cannot be exported.",
-        ),
-        (
-            lambda: _model_with_segment_rotation(),
-            "BVH export currently only supports identity local segment rotations. Segment root is rotated.",
-        ),
-        (
-            lambda: _model_with_multiple_roots(),
-            "BVH export requires exactly one root segment attached to base.",
-        ),
-    ],
-)
-def test_bvh_writer_rejects_unsupported_model_features(tmp_path: Path, model_factory, expected_message: str):
+def test_bvh_writer_rejects_unsupported_model_features(tmp_path: Path):
     """Reject model structures that cannot be represented faithfully in BVH."""
 
     filepath = tmp_path / "unsupported.bvh"
-    model = model_factory()
 
-    with pytest.raises((RuntimeError, NotImplementedError), match=expected_message):
+    # no root
+    model = BiomechanicalModelReal()
+    with pytest.raises(RuntimeError, match="BHV export assumes a root segment. No segment named 'root' was found."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # multiple roots
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root_segment", parent_name="root"))
+    model.add_segment(SegmentReal(name="root_segment2", parent_name="root"))
+    with pytest.raises(RuntimeError,
+                       match="BVH export requires exactly one segment attached to root."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # gravity
+    model = BiomechanicalModelReal(gravity=np.array([0.0, -9.81, 0.0]))
+    model.add_segment(SegmentReal(name="root_segment"))
+    with pytest.raises(NotImplementedError, match="BVH export does not support gravity metadata."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # marker
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root_segment"))
+    model.segments["root_segment"].add_marker(MarkerReal(name="root_marker", position=np.zeros(3)))
+    with pytest.raises(NotImplementedError, match="BVH export does not support segment markers. Segment root_segment cannot be exported."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # segment RT
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(
+        name="root_segment",
+        segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix.from_rt_matrix(np.array([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]))),
+    ))
+    with pytest.raises(NotImplementedError, match="BVH export currently only supports identity local segment rotations. Segment root_segment is rotated."):
         model.to_bvh(filepath=str(filepath), with_mesh=False)
 
 
@@ -248,9 +270,3 @@ def _model_with_segment_rotation() -> BiomechanicalModelReal:
     )
     return model
 
-
-def _model_with_multiple_roots() -> BiomechanicalModelReal:
-    model = BiomechanicalModelReal()
-    model.add_segment(SegmentReal(name="root"))
-    model.add_segment(SegmentReal(name="other_root", parent_name="base"))
-    return model
