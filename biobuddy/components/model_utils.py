@@ -139,6 +139,13 @@ class ModelUtils:
                 children.append(segment_name)
         return children
 
+    def children_segments(self, parent_name: str):
+        children = []
+        for segment in self.segments:
+            if self.segments[segment.name].parent_name == parent_name:
+                children.append(segment)
+        return children
+
     def get_chain_between_segments(self, first_segment_name: str, last_segment_name: str) -> list[str]:
         """
         Get the name of the segments in the kinematic chain between first_segment_name and last_segment_name.
