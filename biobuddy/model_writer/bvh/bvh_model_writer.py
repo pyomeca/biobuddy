@@ -105,7 +105,9 @@ class BvhModelWriter(AbstractModelWriter):
             values.extend(["0.000000"] * len(self._channel_names(segment)))
         return " ".join(values)
 
-    def recursive_write_children(self, model: "BiomechanicalModelReal", segment: "SegmentReal", level: int, joint_type: str, out_string: str) -> str:
+    def recursive_write_children(
+        self, model: "BiomechanicalModelReal", segment: "SegmentReal", level: int, joint_type: str, out_string: str
+    ) -> str:
         """
         Recursively traverse the segment tree, building a BVH hierarchy string.
         Each recursive call naturally 'resets' level when it returns to the parent.
@@ -129,12 +131,14 @@ class BvhModelWriter(AbstractModelWriter):
             else:
                 # Leaf node: emit End Site block
                 indent = "    " * level
-                out_string += "\n".join([
-                    f"{indent}    End Site",
-                    f"{indent}    {{",
-                    f"{indent}        OFFSET 0.000000 0.000000 0.000000",
-                    f"{indent}    }}",
-                ])
+                out_string += "\n".join(
+                    [
+                        f"{indent}    End Site",
+                        f"{indent}    {{",
+                        f"{indent}        OFFSET 0.000000 0.000000 0.000000",
+                        f"{indent}    }}",
+                    ]
+                )
 
             # Close this segment's brace
             indent = "    " * level
@@ -155,14 +159,16 @@ class BvhModelWriter(AbstractModelWriter):
 
         if "root" not in model.segment_names:
             raise RuntimeError("BHV export assumes a root segment. No segment named 'root' was found.")
-        root_candidates =  model.children_segments(parent_name="root")
+        root_candidates = model.children_segments(parent_name="root")
         if len(root_candidates) != 1:
             raise RuntimeError("BVH export requires exactly one segment attached to root.")
 
         # Initialize the model with the root segment
         root_segment = root_candidates[0]
         out_string = "HIERARCHY\n"
-        out_string = self.recursive_write_children(model, root_segment, level=0, joint_type="ROOT", out_string=out_string)
+        out_string = self.recursive_write_children(
+            model, root_segment, level=0, joint_type="ROOT", out_string=out_string
+        )
         # out_string += root_segment.to_bvh(channel_names=channel_names, level=0, joint_type="ROOT")
 
         # Add a mock motion

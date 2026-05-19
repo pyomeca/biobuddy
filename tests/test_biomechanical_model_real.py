@@ -597,6 +597,7 @@ def test_children_segments():
     assert children[1].name == "child2"
     assert children[2].name == "child3"
 
+
 def test_get_chain_between_segments():
     # Create a simple model
     model = create_simple_model()
