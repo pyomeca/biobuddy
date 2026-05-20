@@ -2,7 +2,7 @@
 
 ![biobuddy](https://github.com/user-attachments/assets/c8689155-0b26-4e13-835c-cdb6696e1acb)
 
-`BioBuddy` is an open-source tool for [translating](#model-translation), [creating](#model-creation) and [personalizing](#model-personalization) musculoskeletal models across different formats (e.g., .osim, .bioMod). By enabling reliable interoperability between modeling environments, BioBuddy allows researchers to focus on scientific questions rather than technical constraints.
+`BioBuddy` is an open-source tool for [translating](#model-translation), [creating](#model-creation) and [personalizing](#model-personalization) musculoskeletal models across different formats (e.g., .osim, .bioMod, ...). By enabling reliable interoperability between modeling environments, BioBuddy allows researchers to focus on scientific questions rather than technical constraints.
 
 <!---
 [![Actions Status](https://github.com/pyomeca/biobuddy/workflows/CI/badge.svg)](https://github.com/pyomeca/biobuddy/actions)
@@ -82,18 +82,23 @@ pip install biobuddy
 ## Model translation
 You can load the original model using one of the `BiomechanicalModelReal().from_[format]` methods, and then export it 
 into another format using the `BiomechanicalModelReal.to_[format]` method (see [example](examples/read_and_write_models.py)).
+
+The available formats for now are:
+- OpenSim (.osim)
+- biorbd (.bioMod)
+- BVH (.bvh)
+- URDF (.urdf), without muscles for now, but this will be added in the future.
+
 ```python3
 from biobuddy import BiomechanicalModelReal
 
 # Read an .osim file
-model = BiomechanicalModelReal().from_osim(
-    filepath=osim_filepath,
-    # Other optional parameters here
-)
+model = BiomechanicalModelReal().from_osim(filepath=osim_filepath)
 
 # Translate it into a .bioMod file
 model.to_biomod(biomod_filepath)
 ```
+
 See the example [read_and_write_models.py](examples/read_and_write_models.py) for more details.
 
 ## Model creation
