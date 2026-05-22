@@ -643,7 +643,7 @@ class FbxModelParser(AbstractModelParser):
         self, faces: np.ndarray, clusters: list[_FbxSkinCluster]
     ) -> dict[str, np.ndarray]:
         """
-        Assign each face of the skinned mesh to one segment.
+        Assign each face of the skinned mesh to one or more segments.
 
         Parameters
         ----------
@@ -651,6 +651,13 @@ class FbxModelParser(AbstractModelParser):
             The triangle faces built from ``PolygonVertexIndex``.
         clusters
             The per-segment skin clusters.
+
+        Notes
+        -----
+        Faces fully owned by one segment are assigned only to that segment.
+        Faces spanning several segments are duplicated across the involved
+        segments so the exported per-segment meshes remain visually closed
+        around inter-segment boundaries.
         """
         weights_by_control_point = {}
         for cluster in clusters:
@@ -678,8 +685,14 @@ class FbxModelParser(AbstractModelParser):
                     )
             if not segment_scores:
                 continue
-            best_segment = max(segment_scores.items(), key=lambda item: item[1])[0]
-            segment_faces.setdefault(best_segment, []).append(face.tolist())
+
+            if len(segment_scores) == 1:
+                owner_segments = [next(iter(segment_scores.keys()))]
+            else:
+                owner_segments = sorted(segment_scores.keys())
+
+            for owner_segment in owner_segments:
+                segment_faces.setdefault(owner_segment, []).append(face.tolist())
 
         return {
             segment_name: np.asarray(face_values, dtype=int)

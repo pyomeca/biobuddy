@@ -1,7 +1,10 @@
 from pathlib import Path
 
+import numpy as np
+
 from biobuddy import BiomechanicalModelReal
 from biobuddy.model_parser.fbx import FbxModelParser
+from biobuddy.model_parser.fbx.fbx_model_parser import _FbxSkinCluster
 
 
 def test_fbx_parser_extracts_the_fullbody_skeleton():
@@ -111,3 +114,33 @@ def test_fbx_visual_mesh_is_written_in_biomod(tmp_path: Path):
     content = biomod_filepath.read_text()
     assert "\tmeshfile\t" in content
     assert "segment_meshes/hips.ply" in content.replace("\\", "/")
+
+
+def test_fbx_shared_faces_are_kept_on_boundary_segments():
+    """
+    Duplicate shared boundary faces across the segments involved in the skinning.
+    """
+    parent_path = Path(__file__).resolve().parent.parent
+    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+    parser = FbxModelParser(filepath=str(fbx_filepath))
+
+    faces = np.asarray([[0, 1, 2], [3, 4, 5]], dtype=int)
+    clusters = [
+        _FbxSkinCluster(
+            segment_name="Pelvis",
+            control_point_indices=np.asarray([0, 1, 3, 4, 5], dtype=int),
+            weights=np.asarray([1.0, 0.7, 1.0, 1.0, 1.0]),
+        ),
+        _FbxSkinCluster(
+            segment_name="Trunk",
+            control_point_indices=np.asarray([1, 2], dtype=int),
+            weights=np.asarray([0.3, 1.0]),
+        ),
+    ]
+
+    segment_faces = parser._segment_faces_from_skin(faces=faces, clusters=clusters)
+
+    np.testing.assert_array_equal(
+        segment_faces["Pelvis"], np.asarray([[0, 1, 2], [3, 4, 5]])
+    )
+    np.testing.assert_array_equal(segment_faces["Trunk"], np.asarray([[0, 1, 2]]))
