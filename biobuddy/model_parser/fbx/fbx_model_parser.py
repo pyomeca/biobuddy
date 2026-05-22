@@ -1,10 +1,15 @@
 from dataclasses import dataclass, field
+from pathlib import Path
 import struct
+import zlib
 
 import numpy as np
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ...components.real.rigidbody.mesh_file_real import MeshFileReal
+from ...components.real.rigidbody.segment_coordinate_system_real import (
+    SegmentCoordinateSystemReal,
+)
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
@@ -59,6 +64,26 @@ class _FbxSkeletonNode:
     children_ids: list[int] = field(default_factory=list)
 
 
+@dataclass
+class _FbxSkinCluster:
+    """
+    Internal representation of one FBX skin cluster.
+
+    Parameters
+    ----------
+    segment_name
+        The skeleton segment driven by this cluster.
+    control_point_indices
+        The control-point indices influenced by the cluster.
+    weights
+        The influence weights associated with ``control_point_indices``.
+    """
+
+    segment_name: str
+    control_point_indices: np.ndarray
+    weights: np.ndarray
+
+
 class FbxModelParser(AbstractModelParser):
     """
     Parse a binary FBX skeleton into a :class:`BiomechanicalModelReal`.
@@ -75,7 +100,12 @@ class FbxModelParser(AbstractModelParser):
     staying dependency-free.
     """
 
-    def __init__(self, filepath: str):
+    def __init__(
+        self,
+        filepath: str,
+        load_visual_meshes: bool = False,
+        mesh_output_dir: str = None,
+    ):
         """
         Load the FBX skeleton hierarchy from a file.
 
@@ -83,8 +113,16 @@ class FbxModelParser(AbstractModelParser):
         ----------
         filepath
             The path to the FBX file to parse.
+        load_visual_meshes
+            Whether the skinned FBX mesh should be split into per-segment mesh files.
+        mesh_output_dir
+            The directory where the generated per-segment mesh files should be written.
+            If ``None`` and ``load_visual_meshes`` is ``True``, a ``<fbx_stem>_meshes``
+            directory is created next to the FBX file.
         """
         super().__init__(filepath)
+        self.load_visual_meshes = load_visual_meshes
+        self.mesh_output_dir = mesh_output_dir
         self.version: int | None = None
         self._top_level_records: list[_FbxNodeRecord] = []
         self.skeleton_nodes: dict[int, _FbxSkeletonNode] = {}
@@ -112,7 +150,9 @@ class FbxModelParser(AbstractModelParser):
 
         self._extract_skeleton()
 
-    def _parse_record(self, data: bytes, start_offset: int) -> tuple[_FbxNodeRecord | None, int]:
+    def _parse_record(
+        self, data: bytes, start_offset: int
+    ) -> tuple[_FbxNodeRecord | None, int]:
         """
         Parse one binary FBX record recursively.
 
@@ -132,11 +172,15 @@ class FbxModelParser(AbstractModelParser):
             raise RuntimeError("The FBX version must be known before parsing records.")
 
         if self.version >= 7500:
-            end_offset, prop_count, prop_list_length = struct.unpack_from("<QQQ", data, start_offset)
+            end_offset, prop_count, prop_list_length = struct.unpack_from(
+                "<QQQ", data, start_offset
+            )
             cursor = start_offset + 24
             null_record_size = 25
         else:
-            end_offset, prop_count, prop_list_length = struct.unpack_from("<III", data, start_offset)
+            end_offset, prop_count, prop_list_length = struct.unpack_from(
+                "<III", data, start_offset
+            )
             cursor = start_offset + 12
             null_record_size = 13
 
@@ -150,7 +194,9 @@ class FbxModelParser(AbstractModelParser):
 
         properties = []
         for _ in range(prop_count):
-            property_value, cursor = self._parse_property(data=data, start_offset=cursor)
+            property_value, cursor = self._parse_property(
+                data=data, start_offset=cursor
+            )
             properties.append(property_value)
 
         children = []
@@ -159,7 +205,10 @@ class FbxModelParser(AbstractModelParser):
             if child_record is not None:
                 children.append(child_record)
 
-        return _FbxNodeRecord(name=name, properties=properties, children=children), end_offset
+        return (
+            _FbxNodeRecord(name=name, properties=properties, children=children),
+            end_offset,
+        )
 
     @staticmethod
     def _parse_property(data: bytes, start_offset: int) -> tuple[object, int]:
@@ -198,10 +247,52 @@ class FbxModelParser(AbstractModelParser):
             length = struct.unpack_from("<I", data, cursor)[0]
             cursor += 4
             return {"raw_length": length}, cursor + length
-        if property_type in "fdiilbc":
-            array_length, encoding, compressed_length = struct.unpack_from("<III", data, cursor)
+        if property_type in "fdibc":
+            array_length, encoding, compressed_length = struct.unpack_from(
+                "<III", data, cursor
+            )
             cursor += 12
-            return {"array_length": array_length, "encoding": encoding}, cursor + compressed_length
+            array_bytes = data[cursor : cursor + compressed_length]
+            cursor += compressed_length
+            if encoding == 1:
+                array_bytes = zlib.decompress(array_bytes)
+
+            format_characters = {
+                "f": "f",
+                "d": "d",
+                "i": "i",
+                "l": "q",
+                "b": "?",
+                "c": "b",
+            }
+            format_character = format_characters[property_type]
+            item_size = struct.calcsize(f"<{format_character}")
+            expected_size = array_length * item_size
+            values = struct.unpack(
+                f"<{array_length}{format_character}",
+                array_bytes[:expected_size],
+            )
+            return {
+                "array_length": array_length,
+                "encoding": encoding,
+                "values": values,
+            }, cursor
+
+        if property_type == "l":
+            array_length, encoding, compressed_length = struct.unpack_from(
+                "<III", data, cursor
+            )
+            cursor += 12
+            array_bytes = data[cursor : cursor + compressed_length]
+            cursor += compressed_length
+            if encoding == 1:
+                array_bytes = zlib.decompress(array_bytes)
+            values = struct.unpack(f"<{array_length}q", array_bytes[: array_length * 8])
+            return {
+                "array_length": array_length,
+                "encoding": encoding,
+                "values": values,
+            }, cursor
 
         raise NotImplementedError(f"Unsupported FBX property type '{property_type}'.")
 
@@ -229,7 +320,10 @@ class FbxModelParser(AbstractModelParser):
             The ``Model`` record containing the property block.
         """
         properties = {}
-        properties_record = next((child for child in model_record.children if child.name == "Properties70"), None)
+        properties_record = next(
+            (child for child in model_record.children if child.name == "Properties70"),
+            None,
+        )
         if properties_record is None:
             return properties
 
@@ -253,18 +347,34 @@ class FbxModelParser(AbstractModelParser):
             The name of the property to retrieve.
         """
         values = properties.get(property_name, [0.0, 0.0, 0.0])
-        return np.array([float(values[0]), float(values[1]), float(values[2])], dtype=float)
+        return np.array(
+            [float(values[0]), float(values[1]), float(values[2])], dtype=float
+        )
 
     def _extract_skeleton(self) -> None:
         """
         Build the skeleton hierarchy from ``Objects`` and ``Connections``.
         """
-        objects_record = next((record for record in self._top_level_records if record.name == "Objects"), None)
-        connections_record = next((record for record in self._top_level_records if record.name == "Connections"), None)
+        objects_record = next(
+            (record for record in self._top_level_records if record.name == "Objects"),
+            None,
+        )
+        connections_record = next(
+            (
+                record
+                for record in self._top_level_records
+                if record.name == "Connections"
+            ),
+            None,
+        )
         if objects_record is None or connections_record is None:
-            raise ValueError("The FBX file must contain both Objects and Connections sections.")
+            raise ValueError(
+                "The FBX file must contain both Objects and Connections sections."
+            )
 
-        raw_models = [child for child in objects_record.children if child.name == "Model"]
+        raw_models = [
+            child for child in objects_record.children if child.name == "Model"
+        ]
         skeleton_types = {"Root", "LimbNode"}
         scene_models = {}
         for record in raw_models:
@@ -279,13 +389,18 @@ class FbxModelParser(AbstractModelParser):
                 name=node_name,
                 node_type=node_type,
                 translation=self._vector3(properties, "Lcl Translation"),
-                rotation=self._vector3(properties, "PreRotation") + self._vector3(properties, "Lcl Rotation"),
+                rotation=self._vector3(properties, "PreRotation")
+                + self._vector3(properties, "Lcl Rotation"),
             )
 
         parent_lookup = {}
         children_lookup = {}
         for connection in connections_record.children:
-            if connection.name != "C" or len(connection.properties) < 3 or connection.properties[0] != "OO":
+            if (
+                connection.name != "C"
+                or len(connection.properties) < 3
+                or connection.properties[0] != "OO"
+            ):
                 continue
             child_id = int(connection.properties[1])
             parent_id = int(connection.properties[2])
@@ -295,7 +410,10 @@ class FbxModelParser(AbstractModelParser):
             children_lookup.setdefault(parent_id, []).append(child_id)
 
         def first_skeleton_descendants(node_id: int) -> list[int]:
-            if node_id in scene_models and scene_models[node_id].node_type in skeleton_types:
+            if (
+                node_id in scene_models
+                and scene_models[node_id].node_type in skeleton_types
+            ):
                 return [node_id]
 
             descendants = []
@@ -316,7 +434,10 @@ class FbxModelParser(AbstractModelParser):
         def collect_skeleton(node_id: int) -> None:
             if node_id in included_node_ids:
                 return
-            if node_id not in scene_models or scene_models[node_id].node_type not in skeleton_types:
+            if (
+                node_id not in scene_models
+                or scene_models[node_id].node_type not in skeleton_types
+            ):
                 return
             included_node_ids.add(node_id)
             for child_id in children_lookup.get(node_id, []):
@@ -332,11 +453,348 @@ class FbxModelParser(AbstractModelParser):
                 child_id
                 for child_id in children_lookup.get(node_id, [])
                 if child_id in included_node_ids
-                and not (scene_models[child_id].node_type == "Root" and len(children_lookup.get(child_id, [])) == 0)
+                and not (
+                    scene_models[child_id].node_type == "Root"
+                    and len(children_lookup.get(child_id, [])) == 0
+                )
             ]
-            if node.node_type == "Root" and node_id not in self.root_ids and len(node.children_ids) == 0:
+            if (
+                node.node_type == "Root"
+                and node_id not in self.root_ids
+                and len(node.children_ids) == 0
+            ):
                 continue
             self.skeleton_nodes[node_id] = node
+
+    @staticmethod
+    def _array_values(record: _FbxNodeRecord) -> tuple:
+        """
+        Extract the decoded values from an FBX array record.
+
+        Parameters
+        ----------
+        record
+            The record storing one array-valued property.
+        """
+        if (
+            len(record.properties) != 1
+            or not isinstance(record.properties[0], dict)
+            or "values" not in record.properties[0]
+        ):
+            raise ValueError(
+                f"Record '{record.name}' does not contain a decoded FBX array."
+            )
+        return record.properties[0]["values"]
+
+    @staticmethod
+    def _polygon_indices_to_faces(polygon_indices: tuple[int, ...]) -> np.ndarray:
+        """
+        Convert FBX polygon vertex indices to triangle faces.
+
+        Parameters
+        ----------
+        polygon_indices
+            The FBX ``PolygonVertexIndex`` sequence.
+        """
+        faces = []
+        current_face = []
+        for index in polygon_indices:
+            if index < 0:
+                current_face.append(-index - 1)
+                if len(current_face) < 3:
+                    raise ValueError("FBX faces must contain at least three vertices.")
+                for face_index in range(1, len(current_face) - 1):
+                    faces.append(
+                        [
+                            current_face[0],
+                            current_face[face_index],
+                            current_face[face_index + 1],
+                        ]
+                    )
+                current_face = []
+            else:
+                current_face.append(index)
+
+        if current_face:
+            raise ValueError(
+                "The FBX PolygonVertexIndex array ended before closing the last polygon."
+            )
+
+        return np.asarray(faces, dtype=int)
+
+    def _visual_output_directory(self) -> Path:
+        """
+        Resolve the output directory used for generated segment meshes.
+        """
+        if self.mesh_output_dir is not None:
+            return Path(self.mesh_output_dir).resolve()
+        filepath = Path(self.filepath)
+        return (filepath.parent / f"{filepath.stem}_meshes").resolve()
+
+    def _visual_geometry_record(self) -> _FbxNodeRecord | None:
+        """
+        Retrieve the first mesh geometry record from the FBX objects block.
+        """
+        objects_record = next(
+            (record for record in self._top_level_records if record.name == "Objects"),
+            None,
+        )
+        if objects_record is None:
+            return None
+
+        for child in objects_record.children:
+            if (
+                child.name == "Geometry"
+                and len(child.properties) >= 3
+                and child.properties[2] == "Mesh"
+            ):
+                return child
+        return None
+
+    def _cluster_records(self) -> tuple[dict[int, _FbxNodeRecord], dict[int, str]]:
+        """
+        Extract cluster records and their associated segment names.
+        """
+        objects_record = next(
+            (record for record in self._top_level_records if record.name == "Objects"),
+            None,
+        )
+        connections_record = next(
+            (
+                record
+                for record in self._top_level_records
+                if record.name == "Connections"
+            ),
+            None,
+        )
+        if objects_record is None or connections_record is None:
+            return {}, {}
+
+        object_lookup = {}
+        cluster_records = {}
+        for child in objects_record.children:
+            if len(child.properties) >= 3 and isinstance(child.properties[0], int):
+                object_lookup[int(child.properties[0])] = child
+                if child.name == "Deformer" and child.properties[2] == "Cluster":
+                    cluster_records[int(child.properties[0])] = child
+
+        cluster_to_segment = {}
+        for connection in connections_record.children:
+            if (
+                connection.name != "C"
+                or len(connection.properties) < 3
+                or connection.properties[0] != "OO"
+            ):
+                continue
+            child_id = int(connection.properties[1])
+            parent_id = int(connection.properties[2])
+            if parent_id not in cluster_records or child_id not in object_lookup:
+                continue
+            child_record = object_lookup[child_id]
+            if len(child_record.properties) < 3 or child_record.properties[2] not in {
+                "Root",
+                "LimbNode",
+            }:
+                continue
+            cluster_to_segment[parent_id] = self._clean_name(child_record.properties[1])
+
+        return cluster_records, cluster_to_segment
+
+    def _skin_clusters(self) -> list[_FbxSkinCluster]:
+        """
+        Build the list of FBX skin clusters attached to skeleton segments.
+        """
+        cluster_records, cluster_to_segment = self._cluster_records()
+        skin_clusters = []
+        for cluster_id, cluster_record in cluster_records.items():
+            segment_name = cluster_to_segment.get(cluster_id)
+            if segment_name is None or segment_name not in self.segment_names():
+                continue
+            indices_record = next(
+                (child for child in cluster_record.children if child.name == "Indexes"),
+                None,
+            )
+            weights_record = next(
+                (child for child in cluster_record.children if child.name == "Weights"),
+                None,
+            )
+            if indices_record is None or weights_record is None:
+                continue
+            control_point_indices = np.asarray(
+                self._array_values(indices_record), dtype=int
+            )
+            weights = np.asarray(self._array_values(weights_record), dtype=float)
+            skin_clusters.append(
+                _FbxSkinCluster(
+                    segment_name=segment_name,
+                    control_point_indices=control_point_indices,
+                    weights=weights,
+                )
+            )
+        return skin_clusters
+
+    def segment_names(self) -> set[str]:
+        """
+        Return the parsed skeleton segment names.
+        """
+        return {node.name for node in self.skeleton_nodes.values()}
+
+    def _segment_faces_from_skin(
+        self, faces: np.ndarray, clusters: list[_FbxSkinCluster]
+    ) -> dict[str, np.ndarray]:
+        """
+        Assign each face of the skinned mesh to one segment.
+
+        Parameters
+        ----------
+        faces
+            The triangle faces built from ``PolygonVertexIndex``.
+        clusters
+            The per-segment skin clusters.
+        """
+        weights_by_control_point = {}
+        for cluster in clusters:
+            for control_point_index, weight in zip(
+                cluster.control_point_indices, cluster.weights
+            ):
+                if control_point_index not in weights_by_control_point:
+                    weights_by_control_point[control_point_index] = {}
+                previous_weight = weights_by_control_point[control_point_index].get(
+                    cluster.segment_name, 0.0
+                )
+                weights_by_control_point[control_point_index][cluster.segment_name] = (
+                    previous_weight + float(weight)
+                )
+
+        segment_faces = {cluster.segment_name: [] for cluster in clusters}
+        for face in faces:
+            segment_scores = {}
+            for control_point_index in face:
+                for segment_name, weight in weights_by_control_point.get(
+                    int(control_point_index), {}
+                ).items():
+                    segment_scores[segment_name] = (
+                        segment_scores.get(segment_name, 0.0) + weight
+                    )
+            if not segment_scores:
+                continue
+            best_segment = max(segment_scores.items(), key=lambda item: item[1])[0]
+            segment_faces.setdefault(best_segment, []).append(face.tolist())
+
+        return {
+            segment_name: np.asarray(face_values, dtype=int)
+            for segment_name, face_values in segment_faces.items()
+            if face_values
+        }
+
+    @staticmethod
+    def _write_ascii_ply(
+        filepath: Path, vertices: np.ndarray, faces: np.ndarray
+    ) -> None:
+        """
+        Write one triangle mesh as an ASCII PLY file.
+
+        Parameters
+        ----------
+        filepath
+            The path where the PLY file should be written.
+        vertices
+            The mesh vertices with shape ``(n_vertices, 3)``.
+        faces
+            The triangle faces with shape ``(n_faces, 3)``.
+        """
+        with open(filepath, "w", encoding="utf-8") as file:
+            file.write("ply\n")
+            file.write("format ascii 1.0\n")
+            file.write(f"element vertex {vertices.shape[0]}\n")
+            file.write("property float x\n")
+            file.write("property float y\n")
+            file.write("property float z\n")
+            file.write(f"element face {faces.shape[0]}\n")
+            file.write("property list uchar int vertex_indices\n")
+            file.write("end_header\n")
+            for vertex in vertices:
+                file.write(f"{vertex[0]} {vertex[1]} {vertex[2]}\n")
+            for face in faces:
+                file.write(f"3 {face[0]} {face[1]} {face[2]}\n")
+
+    def _attach_visual_meshes(self, model: BiomechanicalModelReal) -> None:
+        """
+        Extract the FBX skinned mesh, split it by segment and attach per-segment
+        mesh files to the biomechanical model.
+
+        Parameters
+        ----------
+        model
+            The biomechanical model being built from the FBX skeleton.
+        """
+        geometry_record = self._visual_geometry_record()
+        if geometry_record is None:
+            return
+
+        vertices_record = next(
+            (child for child in geometry_record.children if child.name == "Vertices"),
+            None,
+        )
+        polygon_record = next(
+            (
+                child
+                for child in geometry_record.children
+                if child.name == "PolygonVertexIndex"
+            ),
+            None,
+        )
+        if vertices_record is None or polygon_record is None:
+            return
+
+        control_points = np.asarray(
+            self._array_values(vertices_record), dtype=float
+        ).reshape((-1, 3))
+        faces = self._polygon_indices_to_faces(self._array_values(polygon_record))
+        skin_clusters = self._skin_clusters()
+        if not skin_clusters:
+            return
+
+        segment_faces = self._segment_faces_from_skin(
+            faces=faces, clusters=skin_clusters
+        )
+        if not segment_faces:
+            return
+
+        output_directory = self._visual_output_directory()
+        output_directory.mkdir(parents=True, exist_ok=True)
+
+        for segment_name, segment_mesh_faces in segment_faces.items():
+            used_indices, inverse_indices = np.unique(
+                segment_mesh_faces.reshape(-1), return_inverse=True
+            )
+            segment_faces_local = inverse_indices.reshape((-1, 3))
+            segment_vertices_global = control_points[used_indices]
+
+            segment_rt_global = model.segment_coordinate_system_in_global(
+                segment_name=segment_name
+            )
+            homogeneous_vertices = np.hstack(
+                (
+                    segment_vertices_global,
+                    np.ones((segment_vertices_global.shape[0], 1)),
+                )
+            )
+            segment_vertices_local = (
+                segment_rt_global.inverse.rt_matrix @ homogeneous_vertices.T
+            ).T[:, :3]
+
+            mesh_filename = f"{segment_name.lower()}.ply"
+            mesh_filepath = output_directory / mesh_filename
+            self._write_ascii_ply(
+                filepath=mesh_filepath,
+                vertices=segment_vertices_local,
+                faces=segment_faces_local,
+            )
+            model.segments[segment_name].mesh_file = MeshFileReal(
+                mesh_file_name=mesh_filename,
+                mesh_file_directory=str(output_directory),
+            )
 
     @staticmethod
     def _translations_for_root(is_root: bool) -> Translations:
@@ -350,7 +808,13 @@ class FbxModelParser(AbstractModelParser):
         """
         return Translations.XYZ if is_root else Translations.NONE
 
-    def _append_node(self, model: BiomechanicalModelReal, node_id: int, parent_name: str, is_root: bool) -> None:
+    def _append_node(
+        self,
+        model: BiomechanicalModelReal,
+        node_id: int,
+        parent_name: str,
+        is_root: bool,
+    ) -> None:
         """
         Append one FBX skeleton node and its descendants to the biomechanical model.
 
@@ -382,7 +846,9 @@ class FbxModelParser(AbstractModelParser):
         )
 
         for child_id in node.children_ids:
-            self._append_node(model=model, node_id=child_id, parent_name=node.name, is_root=False)
+            self._append_node(
+                model=model, node_id=child_id, parent_name=node.name, is_root=False
+            )
 
     def to_real(self) -> BiomechanicalModelReal:
         """
@@ -393,5 +859,9 @@ class FbxModelParser(AbstractModelParser):
 
         model = BiomechanicalModelReal()
         for root_id in self.root_ids:
-            self._append_node(model=model, node_id=root_id, parent_name="base", is_root=True)
+            self._append_node(
+                model=model, node_id=root_id, parent_name="base", is_root=True
+            )
+        if self.load_visual_meshes:
+            self._attach_visual_meshes(model=model)
         return model

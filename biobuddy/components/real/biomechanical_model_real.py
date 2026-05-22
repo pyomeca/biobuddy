@@ -36,7 +36,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.warnings = ""
 
         # Meta-data
-        self.filepath = None  # The path to the file from which the model was read, if any
+        self.filepath = (
+            None  # The path to the file from which the model was read, if any
+        )
         self.height = None
 
     def add_segment(self, segment: "SegmentReal") -> None:
@@ -55,7 +57,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             self.segments._append(SegmentReal(name="root"))
             segment.parent_name = "root"
 
-        if segment.parent_name != "base" and segment.parent_name not in self.segment_names:
+        if (
+            segment.parent_name != "base"
+            and segment.parent_name not in self.segment_names
+        ):
             raise ValueError(
                 f"Parent segment should be declared before the child segments. "
                 f"Please declare the parent {segment.parent_name} before declaring the child segment {segment.name}."
@@ -82,12 +87,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_group
             The muscle group to add
         """
-        if muscle_group.origin_parent_name not in self.segment_names and muscle_group.origin_parent_name != "base":
+        if (
+            muscle_group.origin_parent_name not in self.segment_names
+            and muscle_group.origin_parent_name != "base"
+        ):
             raise ValueError(
                 f"The origin segment of a muscle group must be declared before the muscle group."
                 f"Please declare the segment {muscle_group.origin_parent_name} before declaring the muscle group {muscle_group.name}."
             )
-        if muscle_group.insertion_parent_name not in self.segment_names and muscle_group.origin_parent_name != "base":
+        if (
+            muscle_group.insertion_parent_name not in self.segment_names
+            and muscle_group.origin_parent_name != "base"
+        ):
             raise ValueError(
                 f"The insertion segment of a muscle group must be declared before the muscle group."
                 f"Please declare the segment {muscle_group.insertion_parent_name} before declaring the muscle group {muscle_group.name}."
@@ -177,7 +188,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         Make sure all scs are expressed in the local reference frame before moving on to the next step.
         This method should be called everytime a model is returned to the user to avoid any confusion.
         """
-        from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+        from ..real.rigidbody.segment_coordinate_system_real import (
+            SegmentCoordinateSystemReal,
+        )
 
         for segment in self.segments:
             segment.segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -195,13 +208,15 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                     f"The number of DoF names ({len(segment.dof_names)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
                 )
             if segment.q_ranges is not None and (
-                len(segment.q_ranges.min_bound) != segment.nb_q or len(segment.q_ranges.max_bound) != segment.nb_q
+                len(segment.q_ranges.min_bound) != segment.nb_q
+                or len(segment.q_ranges.max_bound) != segment.nb_q
             ):
                 raise RuntimeError(
                     f"The number of q_ranges (min: {len(segment.q_ranges.min_bound)}, max: {len(segment.q_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
                 )
             if segment.qdot_ranges is not None and (
-                len(segment.qdot_ranges.min_bound) != segment.nb_q or len(segment.qdot_ranges.max_bound) != segment.nb_q
+                len(segment.qdot_ranges.min_bound) != segment.nb_q
+                or len(segment.qdot_ranges.max_bound) != segment.nb_q
             ):
                 raise RuntimeError(
                     f"The number of qdot_ranges (min: {len(segment.qdot_ranges.min_bound)}, max: {len(segment.qdot_ranges.max_bound)}) does not match the number of DoFs ({segment.nb_q}) in segment {segment.name}."
@@ -213,11 +228,17 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
-                if muscle.origin_position.parent_name != muscle_group.origin_parent_name:
+                if (
+                    muscle.origin_position.parent_name
+                    != muscle_group.origin_parent_name
+                ):
                     raise ValueError(
                         f"The origin position of the muscle {muscle.name} must be the same as the origin parent segment {muscle_group.origin_parent_name}."
                     )
-                if muscle.insertion_position.parent_name != muscle_group.insertion_parent_name:
+                if (
+                    muscle.insertion_position.parent_name
+                    != muscle_group.insertion_parent_name
+                ):
                     raise ValueError(
                         f"The insertion position of the muscle {muscle.name} must be the same as the insertion parent segment {muscle_group.insertion_parent_name}."
                     )
@@ -235,12 +256,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def validate_moving_via_points(self):
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
-                for via_point in muscle.via_points + [muscle.origin_position, muscle.insertion_position]:
+                for via_point in muscle.via_points + [
+                    muscle.origin_position,
+                    muscle.insertion_position,
+                ]:
                     if via_point.movement is not None and via_point.position.size != 0:
                         raise RuntimeError(
                             f"A via point can either have a position or a movement, but not both at the same time, {via_point.name} has both."
                         )
-                    if via_point.movement is not None and via_point.condition is not None:
+                    if (
+                        via_point.movement is not None
+                        and via_point.condition is not None
+                    ):
                         raise RuntimeError(
                             f"A via point can either have a movement or a condition, but not both at the same time, {via_point.name} has both."
                         )
@@ -263,7 +290,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
             else:
                 # There exists another muscle group with the insertion and origin inverted.
                 # So we merge the two muscle groups together
-                good_muscle_group_idx = list(pairs.values()).index((insertion_parent, origin_parent))
+                good_muscle_group_idx = list(pairs.values()).index(
+                    (insertion_parent, origin_parent)
+                )
                 good_muscle_group_name = list(pairs.keys())[good_muscle_group_idx]
                 for muscle in muscle_group.muscles:
                     muscle_to_add = deepcopy(muscle)
@@ -296,7 +325,9 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                             f" Please verify the parent-child relationships in yor model."
                         )
                     if current != "base" and current not in self.segment_names:
-                        raise RuntimeError(f"The segment {current} was not found in the model.")
+                        raise RuntimeError(
+                            f"The segment {current} was not found in the model."
+                        )
 
                     if current == "base":
                         current = None
@@ -320,7 +351,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_names = []
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
-                if self.muscle_groups[muscle.muscle_group].origin_parent_name == segment_name:
+                if (
+                    self.muscle_groups[muscle.muscle_group].origin_parent_name
+                    == segment_name
+                ):
                     muscle_names += [muscle.name]
         return muscle_names
 
@@ -331,7 +365,10 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         muscle_names = []
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
-                if self.muscle_groups[muscle.muscle_group].insertion_parent_name == segment_name:
+                if (
+                    self.muscle_groups[muscle.muscle_group].insertion_parent_name
+                    == segment_name
+                ):
                     muscle_names += [muscle.name]
         return muscle_names
 
@@ -372,15 +409,25 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                 # Moving origin
                 if muscle.origin_position.movement is not None:
                     # Get the position of the via point in this configuration
-                    dof_indices = [self.dof_index(name) for name in muscle.origin_position.movement.dof_names]
-                    muscle.origin_position.position = muscle.origin_position.movement.evaluate(q[dof_indices])
+                    dof_indices = [
+                        self.dof_index(name)
+                        for name in muscle.origin_position.movement.dof_names
+                    ]
+                    muscle.origin_position.position = (
+                        muscle.origin_position.movement.evaluate(q[dof_indices])
+                    )
                     muscle.origin_position.movement = None
 
                 # Moving insertion
                 if muscle.insertion_position.movement is not None:
                     # Get the position of the via point in this configuration
-                    dof_indices = [self.dof_index(name) for name in muscle.insertion_position.movement.dof_names]
-                    muscle.insertion_position.position = muscle.insertion_position.movement.evaluate(q[dof_indices])
+                    dof_indices = [
+                        self.dof_index(name)
+                        for name in muscle.insertion_position.movement.dof_names
+                    ]
+                    muscle.insertion_position.position = (
+                        muscle.insertion_position.movement.evaluate(q[dof_indices])
+                    )
                     muscle.insertion_position.movement = None
 
                 #  Via points
@@ -400,11 +447,18 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                     # Moving via points
                     elif via_point.movement is not None:
                         # Get the position of the via point in this configuration
-                        dof_indices = [self.dof_index(name) for name in via_point.movement.dof_names]
-                        muscle.via_points[via_point.name].position = via_point.movement.evaluate(q[dof_indices])
+                        dof_indices = [
+                            self.dof_index(name)
+                            for name in via_point.movement.dof_names
+                        ]
+                        muscle.via_points[via_point.name].position = (
+                            via_point.movement.evaluate(q[dof_indices])
+                        )
                         muscle.via_points[via_point.name].movement = None
 
-    def approximate_ligaments(self, desired_ligament_type: LigamentType, plot_approximation: bool = True) -> None:
+    def approximate_ligaments(
+        self, desired_ligament_type: LigamentType, plot_approximation: bool = True
+    ) -> None:
         old_model = deepcopy(self)
         new_model = deepcopy(self)
         ligament_length_ranges = self.get_ligament_length_ranges()
@@ -488,7 +542,12 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
-    def from_fbx(self, filepath: str) -> "BiomechanicalModelReal":
+    def from_fbx(
+        self,
+        filepath: str,
+        load_visual_meshes: bool = False,
+        mesh_output_dir: str = None,
+    ) -> "BiomechanicalModelReal":
         """
         Create a biomechanical model from an FBX file.
 
@@ -496,11 +555,22 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ----------
         filepath
             The path to the FBX file to parse.
+        load_visual_meshes
+            Whether the skinned FBX visual mesh should be split into one mesh file
+            per segment and attached to the resulting model.
+        mesh_output_dir
+            The directory where the generated per-segment mesh files should be
+            written. If ``None`` and ``load_visual_meshes`` is ``True``, a
+            ``<fbx_stem>_meshes`` directory is created next to the FBX file.
         """
         from ...model_parser.fbx import FbxModelParser
 
         self.filepath = filepath
-        model = FbxModelParser(filepath=filepath).to_real()
+        model = FbxModelParser(
+            filepath=filepath,
+            load_visual_meshes=load_visual_meshes,
+            mesh_output_dir=mesh_output_dir,
+        ).to_real()
         model.validate_model()
         return model
 
