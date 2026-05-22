@@ -488,6 +488,22 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
+    def from_fbx(self, filepath: str) -> "BiomechanicalModelReal":
+        """
+        Create a biomechanical model from an FBX file.
+
+        Parameters
+        ----------
+        filepath
+            The path to the FBX file to parse.
+        """
+        from ...model_parser.fbx import FbxModelParser
+
+        self.filepath = filepath
+        model = FbxModelParser(filepath=filepath).to_real()
+        model.validate_model()
+        return model
+
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
         Write the bioMod file.
