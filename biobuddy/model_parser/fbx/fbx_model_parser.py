@@ -425,26 +425,6 @@ class FbxModelParser(AbstractModelParser):
         rt_matrix[:3, 3] = translation[:3]
         return rt_matrix
 
-    @staticmethod
-    def _fbx_euler_xyz_to_biobuddy_xyz(angles: np.ndarray) -> np.ndarray:
-        """
-        Convert FBX animated Euler angles to BioBuddy generalized coordinates.
-
-        Parameters
-        ----------
-        angles
-            FBX extrinsic XYZ Euler angles in degrees with shape
-            ``(n_frames, 3)``.
-
-        Returns
-        -------
-        numpy.ndarray
-            BioBuddy XYZ Euler angles in radians with shape ``(n_frames, 3)``.
-        """
-        return Rotation.from_euler("xyz", angles, degrees=True).as_euler(
-            "XYZ", degrees=False
-        )
-
     def _extract_skeleton(self) -> None:
         """
         Build the skeleton hierarchy from ``Objects`` and ``Connections``.
@@ -776,7 +756,7 @@ class FbxModelParser(AbstractModelParser):
                     ]
                 )
             dof_names.extend(
-                [f"{node.name}_rotX", f"{node.name}_rotY", f"{node.name}_rotZ"]
+                [f"{node.name}_rot{axis.upper()}" for axis in Rotations.ZYX.value]
             )
         return dof_names
 
@@ -1208,7 +1188,7 @@ class FbxModelParser(AbstractModelParser):
                     is_scs_local=True,
                 ),
                 translations=self._translations_for_root(is_root=is_root),
-                rotations=Rotations.XYZ,
+                rotations=Rotations.ZYX,
             )
         )
 
@@ -1270,25 +1250,6 @@ class FbxModelParser(AbstractModelParser):
 
             if property_name == "Lcl Rotation":
                 q[dof_index, :] = np.deg2rad(q[dof_index, :])
-
-        dof_name_to_index = {
-            dof_name: index for index, dof_name in enumerate(dof_names)
-        }
-        for node in self._ordered_skeleton_nodes():
-            rotation_dof_names = [
-                f"{node.name}_rotX",
-                f"{node.name}_rotY",
-                f"{node.name}_rotZ",
-            ]
-            if not all(
-                dof_name in dof_name_to_index for dof_name in rotation_dof_names
-            ):
-                continue
-            rotation_indices = [
-                dof_name_to_index[dof_name] for dof_name in rotation_dof_names
-            ]
-            fbx_angles = np.rad2deg(q[rotation_indices, :]).T
-            q[rotation_indices, :] = self._fbx_euler_xyz_to_biobuddy_xyz(fbx_angles).T
 
         return ParsedAnimation(q=q, time=time, dof_names=dof_names)
 

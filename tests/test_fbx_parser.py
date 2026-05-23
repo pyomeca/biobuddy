@@ -62,7 +62,7 @@ def test_fbx_model_can_be_exported_to_biomod(tmp_path: Path):
     content = biomod_filepath.read_text()
     assert "segment\tHips" in content
     assert "\ttranslations\txyz" in content
-    assert "\trotations\txyz" in content
+    assert "\trotations\tzyx" in content
 
 
 def test_fbx_parser_maps_animation_to_biorbd_q():
@@ -82,9 +82,9 @@ def test_fbx_parser_maps_animation_to_biorbd_q():
         "Hips_transX",
         "Hips_transY",
         "Hips_transZ",
-        "Hips_rotX",
-        "Hips_rotY",
         "Hips_rotZ",
+        "Hips_rotY",
+        "Hips_rotX",
     ]
     np.testing.assert_allclose(
         animation.q[:6, 0],
@@ -93,9 +93,9 @@ def test_fbx_parser_maps_animation_to_biorbd_q():
                 1425.986572265625,
                 557.1002197265625,
                 1308.45849609375,
-                0.9833342491946506,
-                -1.0668626610501026,
-                0.41029399558656127,
+                np.deg2rad(-45.29030990600586),
+                np.deg2rad(-50.993621826171875),
+                np.deg2rad(64.83574676513672),
             ]
         ),
         atol=1e-8,
