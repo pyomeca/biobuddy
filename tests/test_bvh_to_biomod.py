@@ -12,7 +12,7 @@ from biobuddy import (
 )
 from biobuddy.components.generic.rigidbody.range_of_motion import RangeOfMotion, Ranges
 from biobuddy.model_parser.bvh import BvhModelParser
-from biobuddy.utils.enums import Translations
+from biobuddy.utils.enums import Rotations, Translations
 
 from test_utils import compare_models
 
@@ -112,6 +112,27 @@ def test_bvh_parser_maps_motion_to_biorbd_q():
         ),
         atol=1e-5,
     )
+
+
+def test_bvh_model_uses_native_rotation_channel_order():
+    """Keep the BVH rotation sequence aligned with the file channel order."""
+
+    parent_path = Path(__file__).resolve().parent.parent
+    filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
+
+    parser = BvhModelParser(filepath=str(filepath))
+    model = BiomechanicalModelReal().from_bvh(filepath=str(filepath))
+
+    assert parser.root.channels == [
+        "Xposition",
+        "Yposition",
+        "Zposition",
+        "Xrotation",
+        "Yrotation",
+        "Zrotation",
+    ]
+    assert model.segments["Hips"].rotations == Rotations.XYZ
+    assert model.dof_names[:6] == parser.to_q().dof_names[:6]
 
 
 def test_bvh_root_offset_is_preserved_in_model_and_biomod(tmp_path: Path):
