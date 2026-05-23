@@ -93,9 +93,9 @@ def test_fbx_parser_maps_animation_to_biorbd_q():
                 1425.986572265625,
                 557.1002197265625,
                 1308.45849609375,
-                np.deg2rad(64.83574676513672),
-                np.deg2rad(-50.993621826171875),
-                np.deg2rad(-45.29030990600586),
+                0.9833342491946506,
+                -1.0668626610501026,
+                0.41029399558656127,
             ]
         ),
         atol=1e-8,
@@ -127,20 +127,14 @@ def test_fbx_parser_reports_animation_diagnostics():
     } in diagnostics.ignored_animated_model_nodes
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "FBX animation currently maps raw Lcl Rotation curves directly to q. "
-        "It must be upgraded to evaluate the FBX transform stack before it can "
-        "match the BVH reference kinematics."
-    ),
-)
 def test_fbx_and_bvh_animation_reconstruct_the_same_joint_positions():
     """
     Compare joint positions reconstructed from coherent BVH and FBX animations.
 
     The comparison is expressed relative to ``Hips`` so the test validates the
-    articulated pose, not the global root trajectory.
+    articulated pose, not the global root trajectory. This validates both the
+    FBX rest pose convention and the conversion from FBX Euler animation curves
+    to BioBuddy generalized coordinates.
     """
     parent_path = Path(__file__).resolve().parent.parent
     fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"

@@ -4,6 +4,7 @@ import struct
 import zlib
 
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
@@ -52,7 +53,8 @@ class _FbxSkeletonNode:
     translation
         The local translation with respect to the parent node.
     rotation
-        The local rest rotation used to orient the segment coordinate system.
+        The local rest rotation used to orient the segment coordinate system,
+        expressed in FBX extrinsic XYZ Euler angles in degrees.
     children_ids
         The direct child skeleton node identifiers.
     """
@@ -391,6 +393,56 @@ class FbxModelParser(AbstractModelParser):
         values = properties.get(property_name, [0.0, 0.0, 0.0])
         return np.array(
             [float(values[0]), float(values[1]), float(values[2])], dtype=float
+        )
+
+    @staticmethod
+    def _fbx_euler_xyz_rt_matrix(
+        angles: np.ndarray, translation: np.ndarray
+    ) -> np.ndarray:
+        """
+        Convert an FBX XYZ Euler transform into a homogeneous matrix.
+
+        FBX stores the skeleton rest pose in ``PreRotation``/``Lcl Rotation``
+        properties using extrinsic XYZ Euler angles in degrees. BioBuddy's
+        generic Euler helper uses the internal generalized-coordinate
+        convention instead, so the FBX rest transform must be materialized as a
+        matrix before it is attached to the segment coordinate system.
+
+        Parameters
+        ----------
+        angles
+            FBX Euler angles in degrees.
+        translation
+            Local FBX translation.
+
+        Returns
+        -------
+        numpy.ndarray
+            The 4x4 homogeneous transform represented by the FBX properties.
+        """
+        rt_matrix = np.eye(4)
+        rt_matrix[:3, :3] = Rotation.from_euler("xyz", angles, degrees=True).as_matrix()
+        rt_matrix[:3, 3] = translation[:3]
+        return rt_matrix
+
+    @staticmethod
+    def _fbx_euler_xyz_to_biobuddy_xyz(angles: np.ndarray) -> np.ndarray:
+        """
+        Convert FBX animated Euler angles to BioBuddy generalized coordinates.
+
+        Parameters
+        ----------
+        angles
+            FBX extrinsic XYZ Euler angles in degrees with shape
+            ``(n_frames, 3)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            BioBuddy XYZ Euler angles in radians with shape ``(n_frames, 3)``.
+        """
+        return Rotation.from_euler("xyz", angles, degrees=True).as_euler(
+            "XYZ", degrees=False
         )
 
     def _extract_skeleton(self) -> None:
@@ -1144,14 +1196,15 @@ class FbxModelParser(AbstractModelParser):
             Whether the node is a skeleton root.
         """
         node = self.skeleton_nodes[node_id]
+        rt_matrix = self._fbx_euler_xyz_rt_matrix(
+            angles=node.rotation, translation=node.translation
+        )
         model.add_segment(
             SegmentReal(
                 name=node.name,
                 parent_name=parent_name,
-                segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                    angles=np.deg2rad(node.rotation),
-                    angle_sequence="xyz",
-                    translation=node.translation,
+                segment_coordinate_system=SegmentCoordinateSystemReal.from_rt_matrix(
+                    rt_matrix=rt_matrix,
                     is_scs_local=True,
                 ),
                 translations=self._translations_for_root(is_root=is_root),
@@ -1217,6 +1270,25 @@ class FbxModelParser(AbstractModelParser):
 
             if property_name == "Lcl Rotation":
                 q[dof_index, :] = np.deg2rad(q[dof_index, :])
+
+        dof_name_to_index = {
+            dof_name: index for index, dof_name in enumerate(dof_names)
+        }
+        for node in self._ordered_skeleton_nodes():
+            rotation_dof_names = [
+                f"{node.name}_rotX",
+                f"{node.name}_rotY",
+                f"{node.name}_rotZ",
+            ]
+            if not all(
+                dof_name in dof_name_to_index for dof_name in rotation_dof_names
+            ):
+                continue
+            rotation_indices = [
+                dof_name_to_index[dof_name] for dof_name in rotation_dof_names
+            ]
+            fbx_angles = np.rad2deg(q[rotation_indices, :]).T
+            q[rotation_indices, :] = self._fbx_euler_xyz_to_biobuddy_xyz(fbx_angles).T
 
         return ParsedAnimation(q=q, time=time, dof_names=dof_names)
 
