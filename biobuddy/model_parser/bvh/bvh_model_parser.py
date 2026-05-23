@@ -3,10 +3,13 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ...components.real.rigidbody.segment_coordinate_system_real import (
+    SegmentCoordinateSystemReal,
+)
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
+from ..parsed_animation import ParsedAnimation
 
 
 @dataclass
@@ -95,7 +98,9 @@ class BvhModelParser(AbstractModelParser):
         """
         declaration = lines[start_index].split()
         if len(declaration) < 2 or declaration[0] not in {"ROOT", "JOINT"}:
-            raise ValueError(f"Expected a ROOT or JOINT declaration, got: {lines[start_index]}")
+            raise ValueError(
+                f"Expected a ROOT or JOINT declaration, got: {lines[start_index]}"
+            )
 
         joint = _BvhJoint(name=declaration[1])
         index = start_index + 1
@@ -167,7 +172,11 @@ class BvhModelParser(AbstractModelParser):
         """
         Parse the BVH motion metadata and samples.
         """
-        if len(lines) < 2 or not lines[0].startswith("Frames:") or not lines[1].startswith("Frame Time:"):
+        if (
+            len(lines) < 2
+            or not lines[0].startswith("Frames:")
+            or not lines[1].startswith("Frame Time:")
+        ):
             raise ValueError("A BVH MOTION block must define Frames and Frame Time.")
 
         self.frame_count = int(lines[0].split(":", maxsplit=1)[1].strip())
@@ -175,11 +184,15 @@ class BvhModelParser(AbstractModelParser):
 
         motion_rows = [[float(value) for value in line.split()] for line in lines[2:]]
         if len(motion_rows) != self.frame_count:
-            raise ValueError(f"Expected {self.frame_count} BVH motion rows, got {len(motion_rows)}.")
+            raise ValueError(
+                f"Expected {self.frame_count} BVH motion rows, got {len(motion_rows)}."
+            )
 
         expected_channels = self._count_channels(self.root)
         if any(len(row) != expected_channels for row in motion_rows):
-            raise ValueError(f"Each BVH motion row must contain {expected_channels} channel values.")
+            raise ValueError(
+                f"Each BVH motion row must contain {expected_channels} channel values."
+            )
 
         self.motion_data = np.array(motion_rows, dtype=float)
 
@@ -189,14 +202,18 @@ class BvhModelParser(AbstractModelParser):
         """
         if joint is None:
             return 0
-        return len(joint.channels) + sum(self._count_channels(child) for child in joint.children)
+        return len(joint.channels) + sum(
+            self._count_channels(child) for child in joint.children
+        )
 
     @staticmethod
     def _get_translations(channels: list[str]) -> Translations:
         """
         Convert BVH translation channels into a biobuddy translation sequence.
         """
-        translations = "".join(channel[0].lower() for channel in channels if channel.endswith("position"))
+        translations = "".join(
+            channel[0].lower() for channel in channels if channel.endswith("position")
+        )
         return Translations(translations) if translations else Translations.NONE
 
     @staticmethod
@@ -204,10 +221,14 @@ class BvhModelParser(AbstractModelParser):
         """
         Convert BVH rotation channels into a biobuddy rotation sequence.
         """
-        rotations = "".join(channel[0].lower() for channel in channels if channel.endswith("rotation"))
+        rotations = "".join(
+            channel[0].lower() for channel in channels if channel.endswith("rotation")
+        )
         return Rotations(rotations) if rotations else Rotations.NONE
 
-    def _append_joint(self, model: BiomechanicalModelReal, joint: _BvhJoint, parent_name: str) -> None:
+    def _append_joint(
+        self, model: BiomechanicalModelReal, joint: _BvhJoint, parent_name: str
+    ) -> None:
         """
         Append one BVH joint and all its descendants to a biomechanical model.
         """
@@ -228,6 +249,89 @@ class BvhModelParser(AbstractModelParser):
 
         for child in joint.children:
             self._append_joint(model=model, joint=child, parent_name=joint.name)
+
+    def _motion_channel_names(self, joint: _BvhJoint | None) -> list[str]:
+        """
+        Return the BVH channel names in file order.
+
+        Parameters
+        ----------
+        joint
+            The hierarchy node from which to collect channels.
+        """
+        if joint is None:
+            return []
+
+        channel_names = []
+        for channel in joint.channels:
+            if channel.endswith("position"):
+                channel_names.append(f"{joint.name}_trans{channel[0].upper()}")
+            elif channel.endswith("rotation"):
+                channel_names.append(f"{joint.name}_rot{channel[0].upper()}")
+            else:
+                raise ValueError(
+                    f"Unsupported BVH channel '{channel}' in joint {joint.name}."
+                )
+
+        for child in joint.children:
+            channel_names.extend(self._motion_channel_names(child))
+        return channel_names
+
+    def _q_dof_names(self, joint: _BvhJoint | None) -> list[str]:
+        """
+        Return the biorbd-compatible DoF names implied by the BVH hierarchy.
+
+        Parameters
+        ----------
+        joint
+            The hierarchy node from which to collect DoFs.
+        """
+        if joint is None:
+            return []
+
+        dof_names = []
+        for channel in joint.channels:
+            if channel.endswith("position"):
+                dof_names.append(f"{joint.name}_trans{channel[0].upper()}")
+        for channel in joint.channels:
+            if channel.endswith("rotation"):
+                dof_names.append(f"{joint.name}_rot{channel[0].upper()}")
+
+        for child in joint.children:
+            dof_names.extend(self._q_dof_names(child))
+        return dof_names
+
+    def to_q(self) -> ParsedAnimation:
+        """
+        Convert the BVH motion block into biorbd-compatible generalized coordinates.
+
+        Returns
+        -------
+        ParsedAnimation
+            The extracted generalized coordinates. Rotational DoFs are converted
+            from degrees to radians to match biorbd conventions.
+        """
+        if self.root is None:
+            raise RuntimeError("The BVH hierarchy has not been parsed.")
+        if self.motion_data is None or self.frame_time is None:
+            raise RuntimeError("The BVH file does not contain motion samples.")
+
+        source_dof_names = self._motion_channel_names(self.root)
+        target_dof_names = self._q_dof_names(self.root)
+        source_index_by_name = {
+            dof_name: dof_index for dof_index, dof_name in enumerate(source_dof_names)
+        }
+        reordered_indices = [
+            source_index_by_name[dof_name] for dof_name in target_dof_names
+        ]
+
+        q = self.motion_data[:, reordered_indices].T.astype(float)
+        for dof_index, dof_name in enumerate(target_dof_names):
+            if "_rot" in dof_name:
+                q[dof_index, :] = np.deg2rad(q[dof_index, :])
+
+        time = np.arange(self.frame_count, dtype=float) * self.frame_time
+        return ParsedAnimation(q=q, time=time, dof_names=target_dof_names)
 
     def to_real(self) -> BiomechanicalModelReal:
         """

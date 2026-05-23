@@ -78,6 +78,42 @@ def test_bvh_parser_reads_hierarchy_and_motion():
     assert parser.motion_data.shape == (1977, parser._count_channels(parser.root))
 
 
+def test_bvh_parser_maps_motion_to_biorbd_q():
+    """Map the BVH motion block to biorbd-compatible generalized coordinates."""
+
+    parent_path = Path(__file__).resolve().parent.parent
+    filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
+
+    animation = BvhModelParser(filepath=str(filepath)).to_q()
+
+    assert animation.q.shape == (165, 1977)
+    assert animation.time.shape == (1977,)
+    assert animation.time[0] == pytest.approx(0.0)
+    assert animation.time[1] == pytest.approx(0.038462)
+    assert animation.dof_names[:6] == [
+        "Hips_transX",
+        "Hips_transY",
+        "Hips_transZ",
+        "Hips_rotX",
+        "Hips_rotY",
+        "Hips_rotZ",
+    ]
+    np.testing.assert_allclose(
+        animation.q[:6, 0],
+        np.array(
+            [
+                1425.99,
+                557.1,
+                1308.46,
+                np.deg2rad(56.3409),
+                np.deg2rad(-61.1267),
+                np.deg2rad(23.5081),
+            ]
+        ),
+        atol=1e-5,
+    )
+
+
 def test_bvh_root_offset_is_preserved_in_model_and_biomod(tmp_path: Path):
     """Preserve the BVH root offset on the exported root joint segment."""
 

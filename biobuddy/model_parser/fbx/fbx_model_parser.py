@@ -13,6 +13,7 @@ from ...components.real.rigidbody.segment_coordinate_system_real import (
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
+from ..parsed_animation import ParsedAnimation
 
 
 @dataclass
@@ -99,6 +100,8 @@ class FbxModelParser(AbstractModelParser):
     This keeps the implementation aligned with the existing BVH parser while
     staying dependency-free.
     """
+
+    _FBX_TIME_UNIT = 46186158000.0
 
     def __init__(
         self,
@@ -600,6 +603,23 @@ class FbxModelParser(AbstractModelParser):
 
         return cluster_records, cluster_to_segment
 
+    def _object_records_by_id(self) -> dict[int, _FbxNodeRecord]:
+        """
+        Return the FBX object records indexed by their object identifier.
+        """
+        objects_record = next(
+            (record for record in self._top_level_records if record.name == "Objects"),
+            None,
+        )
+        if objects_record is None:
+            return {}
+
+        records_by_id = {}
+        for child in objects_record.children:
+            if len(child.properties) >= 1 and isinstance(child.properties[0], int):
+                records_by_id[int(child.properties[0])] = child
+        return records_by_id
+
     def _skin_clusters(self) -> list[_FbxSkinCluster]:
         """
         Build the list of FBX skin clusters attached to skeleton segments.
@@ -632,6 +652,158 @@ class FbxModelParser(AbstractModelParser):
                 )
             )
         return skin_clusters
+
+    def _ordered_skeleton_nodes(self) -> list[_FbxSkeletonNode]:
+        """
+        Return the parsed skeleton nodes in the same traversal order as the model.
+        """
+        ordered_nodes = []
+
+        def append_descendants(node_id: int) -> None:
+            node = self.skeleton_nodes[node_id]
+            ordered_nodes.append(node)
+            for child_id in node.children_ids:
+                append_descendants(child_id)
+
+        for root_id in self.root_ids:
+            append_descendants(root_id)
+        return ordered_nodes
+
+    def _q_dof_names(self) -> list[str]:
+        """
+        Return the biorbd-compatible DoF names implied by the FBX skeleton.
+        """
+        dof_names = []
+        root_ids = set(self.root_ids)
+        for node in self._ordered_skeleton_nodes():
+            if node.node_id in root_ids:
+                dof_names.extend(
+                    [
+                        f"{node.name}_transX",
+                        f"{node.name}_transY",
+                        f"{node.name}_transZ",
+                    ]
+                )
+            dof_names.extend(
+                [f"{node.name}_rotX", f"{node.name}_rotY", f"{node.name}_rotZ"]
+            )
+        return dof_names
+
+    @staticmethod
+    def _parse_dof_name(dof_name: str) -> tuple[str, str, str]:
+        """
+        Split a DoF name into segment name, quantity kind and axis.
+        """
+        segment_name, quantity = dof_name.rsplit("_", maxsplit=1)
+        if quantity.startswith("trans"):
+            return segment_name, "Lcl Translation", quantity[-1].lower()
+        if quantity.startswith("rot"):
+            return segment_name, "Lcl Rotation", quantity[-1].lower()
+        raise ValueError(f"Unsupported DoF name '{dof_name}'.")
+
+    def _curve_key_values(
+        self, curve_record: _FbxNodeRecord
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Extract the key times and values stored in one FBX animation curve.
+        """
+        key_time_record = next(
+            (child for child in curve_record.children if child.name == "KeyTime"),
+            None,
+        )
+        key_value_record = next(
+            (child for child in curve_record.children if child.name == "KeyValueFloat"),
+            None,
+        )
+        if key_time_record is None or key_value_record is None:
+            raise ValueError(
+                "An FBX animation curve must contain KeyTime and KeyValueFloat arrays."
+            )
+
+        key_times = np.asarray(self._array_values(key_time_record), dtype=np.int64)
+        key_values = np.asarray(self._array_values(key_value_record), dtype=float)
+        if key_times.shape[0] != key_values.shape[0]:
+            raise ValueError(
+                "FBX animation curve times and values must have the same length."
+            )
+        return key_times, key_values
+
+    def _animation_curves(
+        self,
+    ) -> dict[tuple[str, str, str], tuple[np.ndarray, np.ndarray]]:
+        """
+        Extract the animation curves attached to the parsed skeleton.
+
+        Returns
+        -------
+        dict[tuple[str, str, str], tuple[np.ndarray, np.ndarray]]
+            A mapping from ``(segment_name, property_name, axis)`` to the raw
+            FBX key times and values.
+        """
+        object_records_by_id = self._object_records_by_id()
+        connections_record = next(
+            (
+                record
+                for record in self._top_level_records
+                if record.name == "Connections"
+            ),
+            None,
+        )
+        if connections_record is None:
+            return {}
+
+        node_id_to_name = {
+            node.node_id: node.name for node in self.skeleton_nodes.values()
+        }
+
+        curve_node_targets = {}
+        for connection in connections_record.children:
+            if (
+                connection.name != "C"
+                or len(connection.properties) < 4
+                or connection.properties[0] != "OP"
+            ):
+                continue
+            child_id = int(connection.properties[1])
+            parent_id = int(connection.properties[2])
+            property_name = str(connection.properties[3])
+            child_record = object_records_by_id.get(child_id)
+            if (
+                child_record is None
+                or child_record.name != "AnimationCurveNode"
+                or parent_id not in node_id_to_name
+                or property_name not in {"Lcl Translation", "Lcl Rotation"}
+            ):
+                continue
+            curve_node_targets[child_id] = (node_id_to_name[parent_id], property_name)
+
+        animation_curves = {}
+        for connection in connections_record.children:
+            if (
+                connection.name != "C"
+                or len(connection.properties) < 4
+                or connection.properties[0] != "OP"
+            ):
+                continue
+            curve_id = int(connection.properties[1])
+            curve_node_id = int(connection.properties[2])
+            axis_property = str(connection.properties[3])
+            curve_record = object_records_by_id.get(curve_id)
+            if (
+                curve_record is None
+                or curve_record.name != "AnimationCurve"
+                or curve_node_id not in curve_node_targets
+                or not axis_property.startswith("d|")
+            ):
+                continue
+
+            segment_name, property_name = curve_node_targets[curve_node_id]
+            axis = axis_property[-1].lower()
+            animation_curves[(segment_name, property_name, axis)] = (
+                self._curve_key_values(curve_record)
+            )
+
+        return animation_curves
 
     def segment_names(self) -> set[str]:
         """
@@ -862,6 +1034,62 @@ class FbxModelParser(AbstractModelParser):
             self._append_node(
                 model=model, node_id=child_id, parent_name=node.name, is_root=False
             )
+
+    def to_q(self) -> ParsedAnimation:
+        """
+        Convert the FBX animation curves into biorbd-compatible generalized coordinates.
+
+        Returns
+        -------
+        ParsedAnimation
+            The extracted generalized coordinates. Rotational DoFs are converted
+            from degrees to radians to match biorbd conventions.
+        """
+        animation_curves = self._animation_curves()
+        if not animation_curves:
+            raise RuntimeError(
+                "The FBX file does not contain any animation curve attached to the skeleton."
+            )
+
+        raw_time_arrays = [curve_data[0] for curve_data in animation_curves.values()]
+        start_time = min(int(times[0]) for times in raw_time_arrays if times.size > 0)
+        time = np.unique(
+            np.concatenate(
+                [
+                    (times.astype(float) - start_time) / self._FBX_TIME_UNIT
+                    for times in raw_time_arrays
+                    if times.size > 0
+                ]
+            )
+        )
+
+        dof_names = self._q_dof_names()
+        q = np.zeros((len(dof_names), time.shape[0]), dtype=float)
+        for dof_index, dof_name in enumerate(dof_names):
+            segment_name, property_name, axis = self._parse_dof_name(dof_name)
+            curve_data = animation_curves.get((segment_name, property_name, axis))
+            if curve_data is None:
+                continue
+
+            key_times, key_values = curve_data
+            normalized_times = (
+                key_times.astype(float) - start_time
+            ) / self._FBX_TIME_UNIT
+            if normalized_times.shape[0] == 1:
+                q[dof_index, :] = key_values[0]
+            else:
+                q[dof_index, :] = np.interp(
+                    x=time,
+                    xp=normalized_times,
+                    fp=key_values,
+                    left=key_values[0],
+                    right=key_values[-1],
+                )
+
+            if property_name == "Lcl Rotation":
+                q[dof_index, :] = np.deg2rad(q[dof_index, :])
+
+        return ParsedAnimation(q=q, time=time, dof_names=dof_names)
 
     def to_real(self) -> BiomechanicalModelReal:
         """

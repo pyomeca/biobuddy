@@ -4,10 +4,12 @@ from .fbx import *
 from .opensim import *
 from .urdf import *
 from .abstract_model_parser import AbstractModelParser
+from .parsed_animation import ParsedAnimation
 
 __all__ = (
     [
         AbstractModelParser.__name__,
+        ParsedAnimation.__name__,
     ]
     + biorbd.__all__
     + bvh.__all__

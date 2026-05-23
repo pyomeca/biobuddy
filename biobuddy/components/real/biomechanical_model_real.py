@@ -542,6 +542,20 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
+    @staticmethod
+    def q_from_bvh(filepath: str):
+        """
+        Extract BVH motion samples as biorbd-compatible generalized coordinates.
+
+        Parameters
+        ----------
+        filepath
+            The path to the BVH file to parse.
+        """
+        from ...model_parser.bvh import BvhModelParser
+
+        return BvhModelParser(filepath=filepath).to_q()
+
     def from_fbx(
         self,
         filepath: str,
@@ -573,6 +587,20 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ).to_real()
         model.validate_model()
         return model
+
+    @staticmethod
+    def q_from_fbx(filepath: str):
+        """
+        Extract FBX animation samples as biorbd-compatible generalized coordinates.
+
+        Parameters
+        ----------
+        filepath
+            The path to the FBX file to parse.
+        """
+        from ...model_parser.fbx import FbxModelParser
+
+        return FbxModelParser(filepath=filepath).to_q()
 
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """

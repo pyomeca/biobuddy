@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from biobuddy import BiomechanicalModelReal
 from biobuddy.model_parser.fbx import FbxModelParser
@@ -60,6 +61,43 @@ def test_fbx_model_can_be_exported_to_biomod(tmp_path: Path):
     assert "segment\tHips" in content
     assert "\ttranslations\txyz" in content
     assert "\trotations\txyz" in content
+
+
+def test_fbx_parser_maps_animation_to_biorbd_q():
+    """
+    Map the FBX animation curves to biorbd-compatible generalized coordinates.
+    """
+    parent_path = Path(__file__).resolve().parent.parent
+    filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+
+    animation = FbxModelParser(filepath=str(filepath)).to_q()
+
+    assert animation.q.shape == (165, 1977)
+    assert animation.time.shape == (1977,)
+    assert animation.time[0] == pytest.approx(0.0)
+    assert animation.time[1] == pytest.approx(1 / 26, abs=1e-6)
+    assert animation.dof_names[:6] == [
+        "Hips_transX",
+        "Hips_transY",
+        "Hips_transZ",
+        "Hips_rotX",
+        "Hips_rotY",
+        "Hips_rotZ",
+    ]
+    np.testing.assert_allclose(
+        animation.q[:6, 0],
+        np.array(
+            [
+                1425.986572265625,
+                557.1002197265625,
+                1308.45849609375,
+                np.deg2rad(64.83574676513672),
+                np.deg2rad(-50.993621826171875),
+                np.deg2rad(-45.29030990600586),
+            ]
+        ),
+        atol=1e-8,
+    )
 
 
 def test_fbx_visual_mesh_can_be_split_per_segment(tmp_path: Path):
