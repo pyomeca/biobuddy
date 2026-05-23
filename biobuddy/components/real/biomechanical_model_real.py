@@ -661,7 +661,11 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         shutil.copy2(source_path, source_directory / source_path.name)
 
         if with_animation:
-            animation = BiomechanicalModelReal.q_from_fbx(filepath=str(source_path))
+            from ...model_parser.fbx import FbxModelParser
+
+            parser = FbxModelParser(filepath=str(source_path))
+            animation = parser.to_q()
+            diagnostics = parser.animation_diagnostics()
             animation_path = animations_directory / f"{package_stem}_q.npz"
             np.savez(
                 animation_path,
@@ -678,6 +682,16 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
                         "nb_q": int(animation.q.shape[0]),
                         "duration_seconds": (
                             float(animation.time[-1]) if animation.time.size else 0.0
+                        ),
+                        "mapped_dof_count": diagnostics.mapped_dof_count,
+                        "missing_dof_names": diagnostics.missing_dof_names,
+                        "zero_dof_names": diagnostics.zero_dof_names,
+                        "constant_dof_names": diagnostics.constant_dof_names,
+                        "ignored_animated_model_nodes": (
+                            diagnostics.ignored_animated_model_nodes
+                        ),
+                        "segments_without_visual_meshes": (
+                            diagnostics.segments_without_visual_meshes
                         ),
                     },
                     indent=2,

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -100,6 +101,31 @@ def test_fbx_parser_maps_animation_to_biorbd_q():
     )
 
 
+def test_fbx_parser_reports_animation_diagnostics():
+    """
+    Report whether FBX animation curves, DoFs and generated meshes are complete.
+    """
+    parent_path = Path(__file__).resolve().parent.parent
+    filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+
+    diagnostics = FbxModelParser(filepath=str(filepath)).animation_diagnostics()
+
+    assert diagnostics.frame_count == 1977
+    assert diagnostics.dof_count == 165
+    assert diagnostics.mapped_dof_count == 165
+    assert diagnostics.missing_dof_names == []
+    assert "LeftHandIndex2_rotX" in diagnostics.zero_dof_names
+    assert "LeftHandIndex2_rotX" in diagnostics.constant_dof_names
+    assert "Spine3" in diagnostics.segments_without_visual_meshes
+    assert "LeftShoulder" in diagnostics.segments_without_visual_meshes
+    assert "RightShoulder" in diagnostics.segments_without_visual_meshes
+    assert {
+        "name": "HeadEE",
+        "node_type": "Root",
+        "animated_properties": ["Lcl Rotation"],
+    } in diagnostics.ignored_animated_model_nodes
+
+
 def test_fbx_visual_mesh_can_be_split_per_segment(tmp_path: Path):
     """
     Split the skinned FBX mesh into one generated mesh file per segment.
@@ -185,6 +211,13 @@ def test_fbx_package_export_creates_a_portable_biomod_bundle(tmp_path: Path):
 
     biomod_content = (package_directory / "fullbody_bundle.bioMod").read_text()
     assert "meshes/hips.ply" in biomod_content.replace("\\", "/")
+
+    metadata = json.loads(
+        (package_directory / "animations" / "metadata.json").read_text()
+    )
+    assert metadata["mapped_dof_count"] == 165
+    assert metadata["missing_dof_names"] == []
+    assert "Spine3" in metadata["segments_without_visual_meshes"]
 
 
 def test_fbx_shared_faces_are_kept_on_boundary_segments():

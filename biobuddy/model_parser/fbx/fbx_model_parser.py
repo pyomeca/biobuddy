@@ -85,6 +85,45 @@ class _FbxSkinCluster:
     weights: np.ndarray
 
 
+@dataclass
+class FbxAnimationDiagnostics:
+    """
+    Summary of the FBX animation data mapped by :class:`FbxModelParser`.
+
+    Parameters
+    ----------
+    frame_count
+        The number of animation samples extracted from the FBX curves.
+    duration_seconds
+        The extracted animation duration in seconds.
+    dof_count
+        The number of DoFs expected by the parsed biomechanical model.
+    mapped_dof_count
+        The number of DoFs backed by an FBX animation curve.
+    missing_dof_names
+        The DoFs without a matching FBX animation curve.
+    zero_dof_names
+        The DoFs whose extracted values are zero for all frames.
+    constant_dof_names
+        The DoFs whose extracted values are constant for all frames.
+    ignored_animated_model_nodes
+        FBX model nodes carrying animation curve nodes but not included in the
+        parsed biomechanical skeleton.
+    segments_without_visual_meshes
+        Parsed skeleton segments that do not receive a generated visual mesh.
+    """
+
+    frame_count: int
+    duration_seconds: float
+    dof_count: int
+    mapped_dof_count: int
+    missing_dof_names: list[str]
+    zero_dof_names: list[str]
+    constant_dof_names: list[str]
+    ignored_animated_model_nodes: list[dict[str, object]]
+    segments_without_visual_meshes: list[str]
+
+
 class FbxModelParser(AbstractModelParser):
     """
     Parse a binary FBX skeleton into a :class:`BiomechanicalModelReal`.
@@ -805,11 +844,101 @@ class FbxModelParser(AbstractModelParser):
 
         return animation_curves
 
+    def _ignored_animated_model_nodes(self) -> list[dict[str, object]]:
+        """
+        Return animated FBX model nodes ignored by the skeleton parser.
+        """
+        object_records_by_id = self._object_records_by_id()
+        connections_record = next(
+            (
+                record
+                for record in self._top_level_records
+                if record.name == "Connections"
+            ),
+            None,
+        )
+        if connections_record is None:
+            return []
+
+        parsed_segment_names = self.segment_names()
+        ignored_nodes = {}
+        for connection in connections_record.children:
+            if (
+                connection.name != "C"
+                or len(connection.properties) < 4
+                or connection.properties[0] != "OP"
+            ):
+                continue
+            child_record = object_records_by_id.get(int(connection.properties[1]))
+            parent_record = object_records_by_id.get(int(connection.properties[2]))
+            property_name = str(connection.properties[3])
+            if (
+                child_record is None
+                or parent_record is None
+                or child_record.name != "AnimationCurveNode"
+                or parent_record.name != "Model"
+                or property_name not in {"Lcl Translation", "Lcl Rotation"}
+            ):
+                continue
+
+            model_name = self._clean_name(parent_record.properties[1])
+            if model_name in parsed_segment_names:
+                continue
+
+            model_type = str(parent_record.properties[2])
+            ignored_node = ignored_nodes.setdefault(
+                model_name,
+                {
+                    "name": model_name,
+                    "node_type": model_type,
+                    "animated_properties": set(),
+                },
+            )
+            ignored_node["animated_properties"].add(property_name)
+
+        return [
+            {
+                "name": node["name"],
+                "node_type": node["node_type"],
+                "animated_properties": sorted(node["animated_properties"]),
+            }
+            for node in sorted(ignored_nodes.values(), key=lambda value: value["name"])
+        ]
+
     def segment_names(self) -> set[str]:
         """
         Return the parsed skeleton segment names.
         """
         return {node.name for node in self.skeleton_nodes.values()}
+
+    def _segment_names_with_visual_meshes(self) -> set[str]:
+        """
+        Return the parsed segment names that would receive generated visual meshes.
+        """
+        geometry_record = self._visual_geometry_record()
+        if geometry_record is None:
+            return set()
+
+        polygon_record = next(
+            (
+                child
+                for child in geometry_record.children
+                if child.name == "PolygonVertexIndex"
+            ),
+            None,
+        )
+        if polygon_record is None:
+            return set()
+
+        faces = self._polygon_indices_to_faces(self._array_values(polygon_record))
+        skin_clusters = self._skin_clusters()
+        if not skin_clusters:
+            return set()
+
+        segment_faces = self._segment_faces_from_skin(
+            faces=faces, clusters=skin_clusters
+        )
+        return set(segment_faces.keys())
 
     def _segment_faces_from_skin(
         self, faces: np.ndarray, clusters: list[_FbxSkinCluster]
@@ -1090,6 +1219,63 @@ class FbxModelParser(AbstractModelParser):
                 q[dof_index, :] = np.deg2rad(q[dof_index, :])
 
         return ParsedAnimation(q=q, time=time, dof_names=dof_names)
+
+    def animation_diagnostics(
+        self, tolerance: float = 1e-12
+    ) -> FbxAnimationDiagnostics:
+        """
+        Inspect the completeness of the FBX animation import.
+
+        Parameters
+        ----------
+        tolerance
+            Numerical tolerance used to detect zero and constant DoF trajectories.
+
+        Returns
+        -------
+        FbxAnimationDiagnostics
+            A compact diagnostic report for the animation and visual mesh coverage.
+        """
+        animation_curves = self._animation_curves()
+        dof_names = self._q_dof_names()
+        mapped_dof_names = []
+        for dof_name in dof_names:
+            segment_name, property_name, axis = self._parse_dof_name(dof_name)
+            if (segment_name, property_name, axis) in animation_curves:
+                mapped_dof_names.append(dof_name)
+
+        missing_dof_names = [
+            dof_name for dof_name in dof_names if dof_name not in mapped_dof_names
+        ]
+
+        animation = self.to_q()
+        zero_dof_names = []
+        constant_dof_names = []
+        for dof_index, dof_name in enumerate(animation.dof_names):
+            values = animation.q[dof_index, :]
+            if np.all(np.abs(values) <= tolerance):
+                zero_dof_names.append(dof_name)
+            if np.all(np.abs(values - values[0]) <= tolerance):
+                constant_dof_names.append(dof_name)
+
+        segment_names_with_meshes = self._segment_names_with_visual_meshes()
+        segments_without_visual_meshes = [
+            node.name
+            for node in self._ordered_skeleton_nodes()
+            if node.name not in segment_names_with_meshes
+        ]
+
+        return FbxAnimationDiagnostics(
+            frame_count=animation.frame_count,
+            duration_seconds=float(animation.time[-1]) if animation.time.size else 0.0,
+            dof_count=len(dof_names),
+            mapped_dof_count=len(mapped_dof_names),
+            missing_dof_names=missing_dof_names,
+            zero_dof_names=zero_dof_names,
+            constant_dof_names=constant_dof_names,
+            ignored_animated_model_nodes=self._ignored_animated_model_nodes(),
+            segments_without_visual_meshes=segments_without_visual_meshes,
+        )
 
     def to_real(self) -> BiomechanicalModelReal:
         """
