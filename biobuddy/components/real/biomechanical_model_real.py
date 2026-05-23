@@ -1,4 +1,7 @@
+import json
+import shutil
 from copy import deepcopy
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -601,6 +604,88 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_parser.fbx import FbxModelParser
 
         return FbxModelParser(filepath=filepath).to_q()
+
+    @staticmethod
+    def package_from_fbx(
+        filepath: str,
+        output_directory: str,
+        package_name: str = None,
+        with_animation: bool = True,
+    ) -> Path:
+        """
+        Convert an FBX file into a portable BioBuddy package directory.
+
+        The generated package contains:
+
+        - one ``.bioMod`` file,
+        - one ``meshes`` directory with per-segment ``.ply`` files,
+        - one ``animations`` directory with the extracted generalized coordinates,
+        - one ``source`` directory containing a copy of the original FBX file.
+
+        Parameters
+        ----------
+        filepath
+            The FBX file to convert.
+        output_directory
+            The parent directory where the package should be created.
+        package_name
+            The package folder name. If ``None``, the FBX stem is used.
+        with_animation
+            Whether the extracted FBX animation should be saved alongside the model.
+
+        Returns
+        -------
+        Path
+            The created package directory.
+        """
+        source_path = Path(filepath).resolve()
+        package_stem = package_name or source_path.stem
+        package_directory = Path(output_directory).resolve() / package_stem
+        meshes_directory = package_directory / "meshes"
+        animations_directory = package_directory / "animations"
+        source_directory = package_directory / "source"
+
+        package_directory.mkdir(parents=True, exist_ok=True)
+        meshes_directory.mkdir(parents=True, exist_ok=True)
+        animations_directory.mkdir(parents=True, exist_ok=True)
+        source_directory.mkdir(parents=True, exist_ok=True)
+
+        model = BiomechanicalModelReal().from_fbx(
+            filepath=str(source_path),
+            load_visual_meshes=True,
+            mesh_output_dir=str(meshes_directory),
+        )
+        biomod_path = package_directory / f"{package_stem}.bioMod"
+        model.to_biomod(filepath=str(biomod_path), with_mesh=True)
+
+        shutil.copy2(source_path, source_directory / source_path.name)
+
+        if with_animation:
+            animation = BiomechanicalModelReal.q_from_fbx(filepath=str(source_path))
+            animation_path = animations_directory / f"{package_stem}_q.npz"
+            np.savez(
+                animation_path,
+                q=animation.q,
+                time=animation.time,
+                dof_names=np.asarray(animation.dof_names, dtype=object),
+            )
+            metadata_path = animations_directory / "metadata.json"
+            metadata_path.write_text(
+                json.dumps(
+                    {
+                        "source_file": source_path.name,
+                        "frame_count": int(animation.q.shape[1]),
+                        "nb_q": int(animation.q.shape[0]),
+                        "duration_seconds": (
+                            float(animation.time[-1]) if animation.time.size else 0.0
+                        ),
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+        return package_directory
 
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """

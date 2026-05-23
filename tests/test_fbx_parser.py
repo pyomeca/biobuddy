@@ -154,6 +154,39 @@ def test_fbx_visual_mesh_is_written_in_biomod(tmp_path: Path):
     assert "segment_meshes/hips.ply" in content.replace("\\", "/")
 
 
+def test_fbx_package_export_creates_a_portable_biomod_bundle(tmp_path: Path):
+    """
+    Export an FBX conversion package with bioMod, meshes, animation and source copy.
+    """
+    parent_path = Path(__file__).resolve().parent.parent
+    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+
+    package_directory = BiomechanicalModelReal.package_from_fbx(
+        filepath=str(fbx_filepath),
+        output_directory=str(tmp_path),
+        package_name="fullbody_bundle",
+        with_animation=True,
+    )
+
+    assert package_directory == (tmp_path / "fullbody_bundle").resolve()
+    assert (package_directory / "fullbody_bundle.bioMod").exists()
+    assert (package_directory / "meshes" / "hips.ply").exists()
+    assert (package_directory / "source" / "fullbody_model.fbx").exists()
+    assert (package_directory / "animations" / "fullbody_bundle_q.npz").exists()
+    assert (package_directory / "animations" / "metadata.json").exists()
+
+    animation_npz = np.load(
+        package_directory / "animations" / "fullbody_bundle_q.npz",
+        allow_pickle=True,
+    )
+    assert animation_npz["q"].shape == (165, 1977)
+    assert animation_npz["time"].shape == (1977,)
+    assert animation_npz["dof_names"][0] == "Hips_transX"
+
+    biomod_content = (package_directory / "fullbody_bundle.bioMod").read_text()
+    assert "meshes/hips.ply" in biomod_content.replace("\\", "/")
+
+
 def test_fbx_shared_faces_are_kept_on_boundary_segments():
     """
     Duplicate shared boundary faces across the segments involved in the skinning.
