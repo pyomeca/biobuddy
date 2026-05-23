@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from biobuddy import BiomechanicalModelReal
+from biobuddy.model_parser.bvh import BvhModelParser
 from biobuddy.model_parser.fbx import FbxModelParser
 from biobuddy.model_parser.fbx.fbx_model_parser import _FbxSkinCluster
 
@@ -124,6 +125,83 @@ def test_fbx_parser_reports_animation_diagnostics():
         "node_type": "Root",
         "animated_properties": ["Lcl Rotation"],
     } in diagnostics.ignored_animated_model_nodes
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "FBX animation currently maps raw Lcl Rotation curves directly to q. "
+        "It must be upgraded to evaluate the FBX transform stack before it can "
+        "match the BVH reference kinematics."
+    ),
+)
+def test_fbx_and_bvh_animation_reconstruct_the_same_joint_positions():
+    """
+    Compare joint positions reconstructed from coherent BVH and FBX animations.
+
+    The comparison is expressed relative to ``Hips`` so the test validates the
+    articulated pose, not the global root trajectory.
+    """
+    parent_path = Path(__file__).resolve().parent.parent
+    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+    bvh_filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
+
+    model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
+    model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
+    animation_from_fbx = FbxModelParser(filepath=str(fbx_filepath)).to_q()
+    animation_from_bvh = BvhModelParser(filepath=str(bvh_filepath)).to_q()
+
+    frame_indices = np.asarray([0, 250, 500, 1000, 1500, 1976], dtype=int)
+    fbx_kinematics = model_from_fbx.forward_kinematics(
+        animation_from_fbx.q[:, frame_indices]
+    )
+    bvh_kinematics = model_from_bvh.forward_kinematics(
+        animation_from_bvh.q[:, frame_indices]
+    )
+
+    shared_segments = [
+        segment_name
+        for segment_name in model_from_bvh.segment_names
+        if segment_name in model_from_fbx.segment_names and segment_name != "root"
+    ]
+    fbx_hips = np.column_stack(
+        [
+            fbx_kinematics["Hips"][frame_index].rt_matrix[:3, 3]
+            for frame_index in range(frame_indices.shape[0])
+        ]
+    )
+    bvh_hips = np.column_stack(
+        [
+            bvh_kinematics["Hips"][frame_index].rt_matrix[:3, 3]
+            for frame_index in range(frame_indices.shape[0])
+        ]
+    )
+
+    errors = []
+    for segment_name in shared_segments:
+        fbx_positions = np.column_stack(
+            [
+                fbx_kinematics[segment_name][frame_index].rt_matrix[:3, 3]
+                for frame_index in range(frame_indices.shape[0])
+            ]
+        )
+        bvh_positions = np.column_stack(
+            [
+                bvh_kinematics[segment_name][frame_index].rt_matrix[:3, 3]
+                for frame_index in range(frame_indices.shape[0])
+            ]
+        )
+        errors.extend(
+            np.linalg.norm(
+                (fbx_positions - fbx_hips) - (bvh_positions - bvh_hips),
+                axis=0,
+            )
+        )
+
+    errors = np.asarray(errors)
+    assert np.mean(errors) < 50.0
+    assert np.percentile(errors, 95) < 150.0
+    assert np.max(errors) < 250.0
 
 
 def test_fbx_visual_mesh_can_be_split_per_segment(tmp_path: Path):
