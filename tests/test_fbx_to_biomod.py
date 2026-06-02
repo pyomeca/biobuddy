@@ -204,6 +204,6 @@ def test_fbx_parser_property_helpers():
 
     properties = FbxModelParser._properties70_dict(model_record)
 
-    assert FbxModelParser._clean_name("Model\x00\x01:RightArm") == "RightArm"
+    assert FbxModelParser._clean_name("Model:RightArm\x00\x01") == "RightArm"
     assert np.allclose(FbxModelParser._vector3(properties, "Lcl Translation"), [1.0, 2.0, 3.0])
     assert np.allclose(FbxModelParser._vector3(properties, "Missing"), [0.0, 0.0, 0.0])

@@ -80,7 +80,7 @@ class FbxModelWriter(AbstractModelWriter):
         """
         Return the Python script executed by Blender to create and export an armature.
         """
-        return r'''
+        return r"""
 import json
 import sys
 
@@ -156,7 +156,7 @@ bpy.ops.export_scene.fbx(
     bake_anim=False,
     armature_nodetype="ROOT",
 )
-'''
+"""
 
     def _validate_model(self, model: "BiomechanicalModelReal") -> None:
         """
