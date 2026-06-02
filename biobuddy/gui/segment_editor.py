@@ -34,6 +34,7 @@ class SegmentEditorData:
     inertia_diagonal
         The segment diagonal inertia terms.
     """
+    # TODO: add name, segment_coordinate_system, dof_names, qdot_ranges, mesh, mesh_file
 
     parent_name: str
     translations: str

@@ -28,6 +28,7 @@
       - [Modifying the kinematic chain](#modifying-the-kinematic-chain)
       - [Flattening the model](#flattening-the-model)
   - [Model visualization](#model-visualization)
+  - [Desktop model editor](#desktop-model-editor)
 - [Note](#note)
 - [How to cite](#how-to-cite)
 - [How to contribute](#how-to-contribute)

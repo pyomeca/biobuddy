@@ -13,7 +13,7 @@ class MuscleEditorData:
     """
     Editable values exposed for an existing muscle.
     """
-
+    # TODO: Add name, muscle_type, state_type,
     optimal_length: float | None
     maximal_force: float | None
     tendon_slack_length: float | None

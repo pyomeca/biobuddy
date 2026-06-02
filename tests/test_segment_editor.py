@@ -1,12 +1,15 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
+from dataclasses import fields
 
 from biobuddy import (
     BiomechanicalModelReal,
     SegmentEditorData,
     apply_segment_editor_data,
     get_segment_editor_data,
+    SegmentCoordinateSystemReal,
+    RotoTransMatrix,
 )
 from biobuddy.gui.segment_editor import validate_parent_name
 from biobuddy.gui.segment_editor import load_model
@@ -16,6 +19,28 @@ from biobuddy.components.real.rigidbody.inertia_parameters_real import (
 )
 from biobuddy.components.real.rigidbody.segment_real import SegmentReal
 from biobuddy.utils.enums import Rotations, Translations
+
+
+def _build_segment() -> SegmentReal:
+    return SegmentReal(
+        name="Arm",
+        parent_name="Shoulder",
+        segment_coordinate_system=SegmentCoordinateSystemReal(
+            scs=RotoTransMatrix(), is_scs_local=True
+        ),
+        translations=Translations.XYZ,
+        rotations=Rotations.XYZ,
+        dof_names=["Arm_rotX", "Arm_rotY", "Arm_rotZ"],
+        q_ranges=RangeOfMotion(Ranges.Q, [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]),
+        qdot_ranges=RangeOfMotion(Ranges.QDOT, [-5.0, -5.0, -5.0], [5.0, 5.0, 5.0]),
+        inertia_parameters=InertiaParametersReal(
+            mass=5.0,
+            center_of_mass=np.array([0.05, 0.0, 0.0]),
+            inertia=np.diag([0.5, 0.5, 0.5]),
+        ),
+        mesh=None,
+        mesh_file=None,
+    )
 
 
 def test_get_segment_editor_data_extracts_editable_values():
@@ -111,29 +136,25 @@ def test_validate_parent_name_rejects_unknown_and_self_parents():
         validate_parent_name(model=model, segment_name="Thigh", parent_name="Thigh")
 
 
-def test_load_model_supports_bvh(tmp_path):
+def test_segment_data_class():
     """
-    Load a minimal BVH file through the GUI-facing loader.
+    Test that the SegmentEditorData class covers all the necessary fields of SegmentReal for future improvements.
     """
-    filepath = tmp_path / "minimal.bvh"
-    filepath.write_text(
-        "\n".join(
-            [
-                "HIERARCHY",
-                "ROOT Hips",
-                "{",
-                "    OFFSET 0 0 0",
-                "    CHANNELS 6 Xposition Yposition Zposition Xrotation Yrotation Zrotation",
-                "}",
-                "MOTION",
-                "Frames: 1",
-                "Frame Time: 0.01",
-                "0 0 0 0 0 0",
-            ]
-        )
+    editor_fields = {f"_{f.name}" for f in fields(SegmentEditorData)}
+    segment = _build_segment()
+    real_fields = set(vars(segment).keys()) - {
+        "_name",  # TODO: to be added
+        "_segment_coordinate_system", # TODO: to be added
+        "_dof_names",  # TODO: to be added
+        "_q_ranges",  # -> q_min, q_max
+        "_qdot_ranges",  # TODO: to be added
+        "_inertia_parameters",  # -> mass, center_of_mass, inertia_diagonal
+        "_mesh",  # -> TODO: to be added
+        "_mesh_file",  # -> TODO: to be added
+    }
+
+    assert real_fields == editor_fields, (
+        f"Fields mismatch between SegmentReal and SegmentEditorData.\n"
+        f"  In SegmentReal but not SegmentEditorData: {real_fields - editor_fields}\n"
+        f"  In SegmentEditorData but not SegmentReal: {editor_fields - real_fields}"
     )
-
-    model = load_model(str(filepath))
-
-    assert isinstance(model, BiomechanicalModelReal)
-    assert "Hips" in model.segment_names

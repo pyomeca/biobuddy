@@ -1,5 +1,6 @@
 import numpy as np
 import numpy.testing as npt
+from dataclasses import fields
 
 from biobuddy import (
     MarkerEditorData,
@@ -44,3 +45,17 @@ def test_add_and_remove_marker():
     assert list(segment.markers.keys()) == ["RASI"]
     remove_marker(segment, "RASI")
     assert list(segment.markers.keys()) == []
+
+
+def test_marker_data_class():
+    """
+    Test that the MarkerEditorData class covers all the necessary fields of MarkerReal for future improvements.
+    """
+    editor_fields = {f"_{f.name}" for f in fields(MarkerEditorData)}
+    real_fields = set(vars(MarkerReal("dummy")).keys()) - {"_parent_name"}
+
+    assert real_fields == editor_fields, (
+        f"Fields mismatch between MarkerReal and MarkerEditorData.\n"
+        f"  In MarkerReal but not MarkerEditorData: {real_fields - editor_fields}\n"
+        f"  In MarkerEditorData but not MarkerReal: {editor_fields - real_fields}"
+    )
