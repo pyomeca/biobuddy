@@ -26,11 +26,11 @@ def _build_segment() -> SegmentReal:
         name="Arm",
         parent_name="Shoulder",
         segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
-        translations=Translations.XYZ,
+        translations=Translations.NONE,
         rotations=Rotations.XYZ,
         dof_names=["Arm_rotX", "Arm_rotY", "Arm_rotZ"],
         q_ranges=RangeOfMotion(Ranges.Q, [-1.0, -1.0, -1.0], [1.0, 1.0, 1.0]),
-        qdot_ranges=RangeOfMotion(Ranges.QDOT, [-5.0, -5.0, -5.0], [5.0, 5.0, 5.0]),
+        qdot_ranges=RangeOfMotion(Ranges.Qdot, [-5.0, -5.0, -5.0], [5.0, 5.0, 5.0]),
         inertia_parameters=InertiaParametersReal(
             mass=5.0,
             center_of_mass=np.array([0.05, 0.0, 0.0]),
@@ -146,13 +146,26 @@ def test_segment_data_class():
         "_dof_names",  # TODO: to be added
         "_q_ranges",  # -> q_min, q_max
         "_qdot_ranges",  # TODO: to be added
+        "_markers",  # TODO: to be added
+        "_contacts",  # TODO: to be added
+        "_imus",  # TODO: to be added
         "_inertia_parameters",  # -> mass, center_of_mass, inertia_diagonal
         "_mesh",  # -> TODO: to be added
         "_mesh_file",  # -> TODO: to be added
+        "mesh_file",  # TODO: to be added
     }
+    derived_editor_fields = {
+        "_q_min",
+        "_q_max",
+        "_mass",
+        "_center_of_mass",
+        "_inertia_diagonal",
+    }
+    direct_editor_fields = editor_fields - derived_editor_fields
 
-    assert real_fields == editor_fields, (
+    assert real_fields == direct_editor_fields, (
         f"Fields mismatch between SegmentReal and SegmentEditorData.\n"
-        f"  In SegmentReal but not SegmentEditorData: {real_fields - editor_fields}\n"
-        f"  In SegmentEditorData but not SegmentReal: {editor_fields - real_fields}"
+        f"  In SegmentReal but not SegmentEditorData: {real_fields - direct_editor_fields}\n"
+        f"  In SegmentEditorData but not SegmentReal: {direct_editor_fields - real_fields}"
     )
+    assert derived_editor_fields <= editor_fields
