@@ -26,9 +26,7 @@ def validate_model_for_editor(model: BiomechanicalModelReal) -> ValidationReport
             messages=[str(error)],
             category=_categorize_validation_error(str(error)),
         )
-    return ValidationReport(
-        is_valid=True, messages=["Model validation passed."], category="ok"
-    )
+    return ValidationReport(is_valid=True, messages=["Model validation passed."], category="ok")
 
 
 def _categorize_validation_error(message: str) -> str:
@@ -38,11 +36,7 @@ def _categorize_validation_error(message: str) -> str:
     lower_message = message.lower()
     if "dof" in lower_message or "q_ranges" in lower_message:
         return "degrees_of_freedom"
-    if (
-        "origin" in lower_message
-        or "insertion" in lower_message
-        or "via point" in lower_message
-    ):
+    if "origin" in lower_message or "insertion" in lower_message or "via point" in lower_message:
         return "muscles"
     if "kinematic chain" in lower_message or "segment" in lower_message:
         return "kinematic_chain"

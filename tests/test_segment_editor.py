@@ -72,12 +72,8 @@ def test_apply_segment_editor_data_updates_segment():
     assert segment.q_ranges.min_bound == [-1.0, -2.0]
     assert segment.q_ranges.max_bound == [1.0, 2.0]
     assert segment.inertia_parameters.mass == 4.5
-    npt.assert_array_equal(
-        segment.inertia_parameters.center_of_mass[:3, 0], np.array([0.0, -0.2, 0.0])
-    )
-    npt.assert_array_equal(
-        np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.1, 0.2, 0.3])
-    )
+    npt.assert_array_equal(segment.inertia_parameters.center_of_mass[:3, 0], np.array([0.0, -0.2, 0.0]))
+    npt.assert_array_equal(np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.1, 0.2, 0.3]))
 
 
 def test_apply_segment_editor_data_rejects_incompatible_ranges():

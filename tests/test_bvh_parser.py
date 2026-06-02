@@ -97,7 +97,5 @@ def test_bvh_parser_rejects_motion_rows_with_wrong_channel_count(tmp_path):
     filepath = tmp_path / "bad_motion.bvh"
     filepath.write_text(BVH_CONTENT.replace("4 5 6", "4 5"))
 
-    with pytest.raises(
-        ValueError, match="Each BVH motion row must contain 9 channel values."
-    ):
+    with pytest.raises(ValueError, match="Each BVH motion row must contain 9 channel values."):
         BvhModelParser(filepath=str(filepath))

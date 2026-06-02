@@ -132,32 +132,17 @@ def launch_model_editor() -> None:
             painter.setRenderHint(qpaint_antialiasing)
             painter.fillRect(self.rect(), QColor("white"))
             if self.scene is None or not self.scene.joints:
-                painter.drawText(
-                    self.rect(), qt_alignment_center, "Open a model to preview it"
-                )
+                painter.drawText(self.rect(), qt_alignment_center, "Open a model to preview it")
                 return
 
-            projected_joints = {
-                name: _project_point(point) for name, point in self.scene.joints.items()
-            }
-            projected_markers = {
-                name: _project_point(point)
-                for name, point in self.scene.markers.items()
-            }
-            all_points = list(projected_joints.values()) + list(
-                projected_markers.values()
-            )
+            projected_joints = {name: _project_point(point) for name, point in self.scene.joints.items()}
+            projected_markers = {name: _project_point(point) for name, point in self.scene.markers.items()}
+            all_points = list(projected_joints.values()) + list(projected_markers.values())
             for path in self.scene.muscles.values():
                 all_points.extend(_project_point(point) for point in path)
-            transform = _fit_projection(
-                all_points, self.width(), self.height(), QPointF
-            )
-            self._projected_joint_positions = {
-                name: transform(point) for name, point in projected_joints.items()
-            }
-            self._projected_marker_positions = {
-                name: transform(point) for name, point in projected_markers.items()
-            }
+            transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
+            self._projected_joint_positions = {name: transform(point) for name, point in projected_joints.items()}
+            self._projected_marker_positions = {name: transform(point) for name, point in projected_markers.items()}
 
             painter.setPen(QPen(QColor("#6b7280"), 2))
             for parent, child in self.scene.bones:
@@ -169,9 +154,7 @@ def launch_model_editor() -> None:
             painter.setPen(QPen(QColor("#dc2626"), 2))
             for path in self.scene.muscles.values():
                 for start, end in zip(path, path[1:]):
-                    painter.drawLine(
-                        transform(_project_point(start)), transform(_project_point(end))
-                    )
+                    painter.drawLine(transform(_project_point(start)), transform(_project_point(end)))
 
             painter.setPen(QPen(QColor("#2563eb"), 1))
             painter.setBrush(QColor("#2563eb"))
@@ -184,21 +167,15 @@ def launch_model_editor() -> None:
                 is_selected = name == self.selected_segment_name
                 painter.setPen(QPen(QColor("#111827"), 1))
                 painter.setBrush(QColor("#f59e0b" if is_selected else "#111827"))
-                painter.drawEllipse(
-                    center, 5 if is_selected else 3, 5 if is_selected else 3
-                )
+                painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
         def mousePressEvent(self, event) -> None:
             clicked = get_event_position(event)
-            marker_name = _nearest_projected_segment(
-                self._projected_marker_positions, clicked
-            )
+            marker_name = _nearest_projected_segment(self._projected_marker_positions, clicked)
             if marker_name is not None and self.on_marker_selected is not None:
                 self.on_marker_selected(marker_name)
                 return
-            segment_name = _nearest_projected_segment(
-                self._projected_joint_positions, clicked
-            )
+            segment_name = _nearest_projected_segment(self._projected_joint_positions, clicked)
             if segment_name is not None and self.on_segment_selected is not None:
                 self.on_segment_selected(segment_name)
 
@@ -256,9 +233,7 @@ def launch_model_editor() -> None:
             segment_layout.addStretch()
 
             self.marker_list = QListWidget()
-            self.marker_list.itemSelectionChanged.connect(
-                self._on_marker_selection_changed
-            )
+            self.marker_list.itemSelectionChanged.connect(self._on_marker_selection_changed)
             self.marker_name = QLineEdit()
             self.marker_position = QLineEdit()
             self.marker_technical = QCheckBox("Technical")
@@ -287,9 +262,7 @@ def launch_model_editor() -> None:
 
             self.muscle_tree = QTreeWidget()
             self.muscle_tree.setHeaderLabel("Muscles")
-            self.muscle_tree.itemSelectionChanged.connect(
-                self._on_muscle_selection_changed
-            )
+            self.muscle_tree.itemSelectionChanged.connect(self._on_muscle_selection_changed)
             self.optimal_length = QLineEdit()
             self.maximal_force = QLineEdit()
             self.tendon_slack_length = QLineEdit()
@@ -316,12 +289,8 @@ def launch_model_editor() -> None:
             self.insertion_name = QLineEdit()
             self.insertion_parent = QLineEdit()
             self.insertion_position = QLineEdit()
-            self.apply_path_endpoints_button = QPushButton(
-                "Apply origin/insertion changes"
-            )
-            self.apply_path_endpoints_button.clicked.connect(
-                self._apply_path_endpoint_changes
-            )
+            self.apply_path_endpoints_button = QPushButton("Apply origin/insertion changes")
+            self.apply_path_endpoints_button.clicked.connect(self._apply_path_endpoint_changes)
 
             muscle_form = QFormLayout()
             muscle_form.addRow("New group name", self.group_name)
@@ -341,9 +310,7 @@ def launch_model_editor() -> None:
             muscle_form.addRow("Insertion position", self.insertion_position)
 
             self.via_point_list = QListWidget()
-            self.via_point_list.itemSelectionChanged.connect(
-                self._on_via_point_selection_changed
-            )
+            self.via_point_list.itemSelectionChanged.connect(self._on_via_point_selection_changed)
             self.via_point_name = QLineEdit()
             self.via_point_parent = QLineEdit()
             self.via_point_position = QLineEdit()
@@ -434,14 +401,8 @@ def launch_model_editor() -> None:
             if self.model is None:
                 QMessageBox.information(self, "No model", "Open a model before saving.")
                 return
-            default_name = (
-                ""
-                if self.current_filepath is None
-                else str(self.current_filepath.with_suffix(".bioMod"))
-            )
-            filepath, _ = QFileDialog.getSaveFileName(
-                self, "Save model", default_name, "BioMod files (*.bioMod)"
-            )
+            default_name = "" if self.current_filepath is None else str(self.current_filepath.with_suffix(".bioMod"))
+            filepath, _ = QFileDialog.getSaveFileName(self, "Save model", default_name, "BioMod files (*.bioMod)")
             if not filepath:
                 return
             try:
@@ -474,9 +435,7 @@ def launch_model_editor() -> None:
             self.tree.expandAll()
 
         def _select_segment_from_preview(self, segment_name: str) -> None:
-            items = self.tree.findItems(
-                segment_name, qt_match_recursive | qt_match_exact
-            )
+            items = self.tree.findItems(segment_name, qt_match_recursive | qt_match_exact)
             if items:
                 self.tree.setCurrentItem(items[0])
 
@@ -516,11 +475,7 @@ def launch_model_editor() -> None:
             self.marker_list.addItems(list(segment.markers.keys()))
 
         def _on_marker_selection_changed(self) -> None:
-            if (
-                self.model is None
-                or self.current_segment_name is None
-                or not self.marker_list.selectedItems()
-            ):
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
                 return
             marker_name = self.marker_list.selectedItems()[0].text()
             marker = self.model.segments[self.current_segment_name].markers[marker_name]
@@ -539,11 +494,7 @@ def launch_model_editor() -> None:
             )
 
         def _apply_marker_changes(self) -> None:
-            if (
-                self.model is None
-                or self.current_segment_name is None
-                or not self.marker_list.selectedItems()
-            ):
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
                 return
             try:
                 old_name = self.marker_list.selectedItems()[0].text()
@@ -574,11 +525,7 @@ def launch_model_editor() -> None:
                 QMessageBox.critical(self, "Unable to add marker", str(error))
 
         def _remove_marker(self) -> None:
-            if (
-                self.model is None
-                or self.current_segment_name is None
-                or not self.marker_list.selectedItems()
-            ):
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
                 return
             marker_name = self.marker_list.selectedItems()[0].text()
             remove_marker(self.model.segments[self.current_segment_name], marker_name)
@@ -610,9 +557,7 @@ def launch_model_editor() -> None:
             if self.model is None or not self.muscle_tree.selectedItems():
                 return None
             item = self.muscle_tree.selectedItems()[0]
-            muscle_group_name = (
-                item.text(0) if item.parent() is None else item.parent().text(0)
-            )
+            muscle_group_name = item.text(0) if item.parent() is None else item.parent().text(0)
             return self.model.muscle_groups[muscle_group_name]
 
         def _on_muscle_selection_changed(self) -> None:
@@ -622,14 +567,10 @@ def launch_model_editor() -> None:
             data = get_muscle_editor_data(muscle)
             self.optimal_length.setText(_format_optional_float(data.optimal_length))
             self.maximal_force.setText(_format_optional_float(data.maximal_force))
-            self.tendon_slack_length.setText(
-                _format_optional_float(data.tendon_slack_length)
-            )
+            self.tendon_slack_length.setText(_format_optional_float(data.tendon_slack_length))
             self.pennation_angle.setText(_format_optional_float(data.pennation_angle))
             self.maximal_velocity.setText(_format_optional_float(data.maximal_velocity))
-            self.maximal_excitation.setText(
-                _format_optional_float(data.maximal_excitation)
-            )
+            self.maximal_excitation.setText(_format_optional_float(data.maximal_excitation))
             origin = get_origin_editor_data(muscle)
             insertion = get_insertion_editor_data(muscle)
             self.origin_name.setText(origin.name)
@@ -648,22 +589,12 @@ def launch_model_editor() -> None:
                 apply_muscle_editor_data(
                     muscle,
                     MuscleEditorData(
-                        optimal_length=_parse_optional_float(
-                            self.optimal_length.text()
-                        ),
+                        optimal_length=_parse_optional_float(self.optimal_length.text()),
                         maximal_force=_parse_optional_float(self.maximal_force.text()),
-                        tendon_slack_length=_parse_optional_float(
-                            self.tendon_slack_length.text()
-                        ),
-                        pennation_angle=_parse_optional_float(
-                            self.pennation_angle.text()
-                        ),
-                        maximal_velocity=_parse_optional_float(
-                            self.maximal_velocity.text()
-                        ),
-                        maximal_excitation=_parse_optional_float(
-                            self.maximal_excitation.text()
-                        ),
+                        tendon_slack_length=_parse_optional_float(self.tendon_slack_length.text()),
+                        pennation_angle=_parse_optional_float(self.pennation_angle.text()),
+                        maximal_velocity=_parse_optional_float(self.maximal_velocity.text()),
+                        maximal_excitation=_parse_optional_float(self.maximal_excitation.text()),
                     ),
                 )
                 self.preview.set_model(self.model)
@@ -730,9 +661,7 @@ def launch_model_editor() -> None:
                     ViaPointEditorData(
                         name=self.origin_name.text().strip(),
                         parent_name=self.origin_parent.text().strip(),
-                        position=_parse_vector(
-                            self.origin_position.text(), expected_length=3
-                        ),
+                        position=_parse_vector(self.origin_position.text(), expected_length=3),
                     ),
                 )
                 apply_insertion_editor_data(
@@ -740,16 +669,12 @@ def launch_model_editor() -> None:
                     ViaPointEditorData(
                         name=self.insertion_name.text().strip(),
                         parent_name=self.insertion_parent.text().strip(),
-                        position=_parse_vector(
-                            self.insertion_position.text(), expected_length=3
-                        ),
+                        position=_parse_vector(self.insertion_position.text(), expected_length=3),
                     ),
                 )
                 self.preview.set_model(self.model)
             except Exception as error:
-                QMessageBox.critical(
-                    self, "Invalid origin/insertion values", str(error)
-                )
+                QMessageBox.critical(self, "Invalid origin/insertion values", str(error))
 
         def _on_via_point_selection_changed(self) -> None:
             muscle = self._selected_muscle()
@@ -765,9 +690,7 @@ def launch_model_editor() -> None:
             return ViaPointEditorData(
                 name=self.via_point_name.text().strip(),
                 parent_name=self.via_point_parent.text().strip(),
-                position=_parse_vector(
-                    self.via_point_position.text(), expected_length=3
-                ),
+                position=_parse_vector(self.via_point_position.text(), expected_length=3),
             )
 
         def _apply_via_point_changes(self) -> None:
@@ -818,21 +741,15 @@ def launch_model_editor() -> None:
                     q_min=_parse_float_list(self.q_min.text()),
                     q_max=_parse_float_list(self.q_max.text()),
                     mass=_parse_optional_float(self.mass.text()),
-                    center_of_mass=_parse_vector(
-                        self.center_of_mass.text(), expected_length=3
-                    ),
-                    inertia_diagonal=_parse_vector(
-                        self.inertia_diagonal.text(), expected_length=3
-                    ),
+                    center_of_mass=_parse_vector(self.center_of_mass.text(), expected_length=3),
+                    inertia_diagonal=_parse_vector(self.inertia_diagonal.text(), expected_length=3),
                 )
                 validate_parent_name(
                     model=self.model,
                     segment_name=self.current_segment_name,
                     parent_name=data.parent_name,
                 )
-                apply_segment_editor_data(
-                    self.model.segments[self.current_segment_name], data
-                )
+                apply_segment_editor_data(self.model.segments[self.current_segment_name], data)
                 self._populate_tree()
                 self.preview.set_model(self.model)
             except Exception as error:
@@ -894,9 +811,7 @@ def _project_point(point) -> tuple[float, float]:
     return (x - 0.6 * y, z + 0.4 * y)
 
 
-def _fit_projection(
-    points: list[tuple[float, float]], width: int, height: int, point_type
-):
+def _fit_projection(points: list[tuple[float, float]], width: int, height: int, point_type):
     """
     Build a transform that fits projected points inside a widget rectangle.
     """
@@ -916,9 +831,7 @@ def _fit_projection(
     return transform
 
 
-def _nearest_projected_segment(
-    projected_positions: dict[str, object], clicked_point, max_distance: float = 12.0
-):
+def _nearest_projected_segment(projected_positions: dict[str, object], clicked_point, max_distance: float = 12.0):
     """
     Return the nearest projected segment if the click lands close enough.
     """

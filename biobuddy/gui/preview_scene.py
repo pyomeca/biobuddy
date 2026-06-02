@@ -33,9 +33,7 @@ def build_preview_scene(model: BiomechanicalModelReal) -> PreviewScene:
     for segment in model.segments:
         rt = global_jcs[segment.name][0]
         for marker in segment.markers:
-            markers[marker.name] = np.asarray((rt @ marker.mean_position)[:3]).reshape(
-                3
-            )
+            markers[marker.name] = np.asarray((rt @ marker.mean_position)[:3]).reshape(3)
 
     muscles = {}
     for muscle_group in model.muscle_groups:

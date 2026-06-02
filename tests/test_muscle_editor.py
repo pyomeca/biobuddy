@@ -33,12 +33,8 @@ def _build_muscle() -> MuscleReal:
         muscle_type=MuscleType.HILL_DE_GROOTE,
         state_type=MuscleStateType.DEGROOTE,
         muscle_group="Arm",
-        origin_position=ViaPointReal(
-            "origin", "Scapula", position=np.array([0.0, 0.0, 0.0])
-        ),
-        insertion_position=ViaPointReal(
-            "insertion", "Radius", position=np.array([1.0, 0.0, 0.0])
-        ),
+        origin_position=ViaPointReal("origin", "Scapula", position=np.array([0.0, 0.0, 0.0])),
+        insertion_position=ViaPointReal("insertion", "Radius", position=np.array([1.0, 0.0, 0.0])),
         optimal_length=0.1,
         maximal_force=100.0,
         tendon_slack_length=0.2,
@@ -78,16 +74,10 @@ def test_via_point_editor_add_apply_remove():
     Add, edit, and remove fixed via points from a muscle.
     """
     muscle = _build_muscle()
-    via_point = add_via_point(
-        muscle, ViaPointEditorData("vp1", "Humerus", [0.1, 0.2, 0.3])
-    )
+    via_point = add_via_point(muscle, ViaPointEditorData("vp1", "Humerus", [0.1, 0.2, 0.3]))
 
-    assert get_via_point_editor_data(via_point) == ViaPointEditorData(
-        "vp1", "Humerus", [0.1, 0.2, 0.3]
-    )
-    apply_via_point_editor_data(
-        via_point, ViaPointEditorData("vp2", "Ulna", [1.0, 2.0, 3.0])
-    )
+    assert get_via_point_editor_data(via_point) == ViaPointEditorData("vp1", "Humerus", [0.1, 0.2, 0.3])
+    apply_via_point_editor_data(via_point, ViaPointEditorData("vp2", "Ulna", [1.0, 2.0, 3.0]))
     assert via_point.name == "vp2"
     npt.assert_array_equal(via_point.position[:3, 0], np.array([1.0, 2.0, 3.0]))
 
@@ -100,15 +90,11 @@ def test_via_point_editor_rejects_moving_or_conditional_points():
     Keep the MVP limited to fixed via points.
     """
     muscle = _build_muscle()
-    via_point = add_via_point(
-        muscle, ViaPointEditorData("vp1", "Humerus", [0.1, 0.2, 0.3])
-    )
+    via_point = add_via_point(muscle, ViaPointEditorData("vp1", "Humerus", [0.1, 0.2, 0.3]))
     via_point.movement = object()
 
     with pytest.raises(ValueError, match="Only fixed via points"):
-        apply_via_point_editor_data(
-            via_point, ViaPointEditorData("vp1", "Humerus", [1.0, 2.0, 3.0])
-        )
+        apply_via_point_editor_data(via_point, ViaPointEditorData("vp1", "Humerus", [1.0, 2.0, 3.0]))
 
 
 def test_origin_and_insertion_editor_round_trip():
@@ -120,12 +106,8 @@ def test_origin_and_insertion_editor_round_trip():
     assert get_origin_editor_data(muscle).parent_name == "Scapula"
     assert get_insertion_editor_data(muscle).parent_name == "Radius"
 
-    apply_origin_editor_data(
-        muscle, ViaPointEditorData("origin2", "Humerus", [0.1, 0.2, 0.3])
-    )
-    apply_insertion_editor_data(
-        muscle, ViaPointEditorData("insertion2", "Ulna", [0.4, 0.5, 0.6])
-    )
+    apply_origin_editor_data(muscle, ViaPointEditorData("origin2", "Humerus", [0.1, 0.2, 0.3]))
+    apply_insertion_editor_data(muscle, ViaPointEditorData("insertion2", "Ulna", [0.4, 0.5, 0.6]))
 
     assert muscle.origin_position.name == "origin2"
     assert muscle.origin_position.parent_name == "Humerus"

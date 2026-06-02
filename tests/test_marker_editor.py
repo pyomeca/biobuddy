@@ -27,9 +27,7 @@ def test_marker_editor_round_trip():
     data = get_marker_editor_data(marker)
     assert data == MarkerEditorData("LASI", [0.1, 0.2, 0.3], False, True)
 
-    apply_marker_editor_data(
-        marker, MarkerEditorData("LASI2", [1.0, 2.0, 3.0], True, False)
-    )
+    apply_marker_editor_data(marker, MarkerEditorData("LASI2", [1.0, 2.0, 3.0], True, False))
     assert marker.name == "LASI2"
     npt.assert_array_equal(marker.mean_position[:3], np.array([1.0, 2.0, 3.0]))
     assert marker.is_technical is True
