@@ -1,4 +1,3 @@
-
 from biobuddy import (
     BiomechanicalModelReal,
 )
@@ -31,4 +30,3 @@ def test_load_model_supports_bvh(tmp_path):
 
     assert isinstance(model, BiomechanicalModelReal)
     assert "Hips" in model.segment_names
-

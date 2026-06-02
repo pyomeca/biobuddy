@@ -25,9 +25,7 @@ def _build_segment() -> SegmentReal:
     return SegmentReal(
         name="Arm",
         parent_name="Shoulder",
-        segment_coordinate_system=SegmentCoordinateSystemReal(
-            scs=RotoTransMatrix(), is_scs_local=True
-        ),
+        segment_coordinate_system=SegmentCoordinateSystemReal(scs=RotoTransMatrix(), is_scs_local=True),
         translations=Translations.XYZ,
         rotations=Rotations.XYZ,
         dof_names=["Arm_rotX", "Arm_rotY", "Arm_rotZ"],
@@ -144,7 +142,7 @@ def test_segment_data_class():
     segment = _build_segment()
     real_fields = set(vars(segment).keys()) - {
         "_name",  # TODO: to be added
-        "_segment_coordinate_system", # TODO: to be added
+        "_segment_coordinate_system",  # TODO: to be added
         "_dof_names",  # TODO: to be added
         "_q_ranges",  # -> q_min, q_max
         "_qdot_ranges",  # TODO: to be added

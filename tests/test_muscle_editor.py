@@ -44,6 +44,7 @@ def _build_muscle() -> MuscleReal:
         maximal_excitation=1.0,
     )
 
+
 def _build_via_point() -> ViaPointReal:
     return ViaPointReal(
         name="via_point",
