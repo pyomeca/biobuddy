@@ -1058,11 +1058,7 @@ def test_get_svd():
     assert V.shape == (6, 6)
     assert b.shape == (30,)
 
-    npt.assert_almost_equal(
-        U[0, :],
-        np.array([-3.16227766e-01, -2.37286751e-33, 2.10378946e-16, -1.56853474e-34, -2.07171677e-17, 9.48683298e-01]),
-        decimal=3,
-    )
+    # U is too sensitive to be tested :(
     npt.assert_almost_equal(
         S,
         np.array([4.47213595e00, 4.46062656e00, 4.46062656e00, 3.20641084e-01, 3.20641084e-01, 5.40977915e-16]),

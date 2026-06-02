@@ -390,6 +390,33 @@ class SegmentReal(SegmentUtils):
 
         return
 
+    def to_bvh(self, channel_names: list[str], level: int, joint_type: str):
+        """
+        Define the print function, so it automatically formats things in the file properly
+
+        Parameters
+        ----------
+        level
+            The indentation level.
+        joint_type
+            The BVH joint type, either ``ROOT`` or ``JOINT``.
+        """
+        indent = "    " * level
+        translation = self.segment_coordinate_system.scs.translation
+        offset_string = f"OFFSET {translation[0]:0.6f} {translation[1]:0.6f} {translation[2]:0.6f}"
+        lines = [
+            f"{indent}{joint_type} {self.name}",
+            f"{indent}{{",
+            f"{indent}    {offset_string}",
+            (
+                f"{indent}    CHANNELS {len(channel_names)} {' '.join(channel_names)}"
+                if channel_names
+                else f"{indent}    CHANNELS 0"
+            ),
+        ]
+        lines.append("")
+        return "\n".join(lines)
+
     def to_osim(self, with_mesh: bool = False):
         """Generate OpenSim XML representation of the segment (Body element)"""
 
