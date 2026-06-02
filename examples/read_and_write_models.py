@@ -223,6 +223,7 @@ def fbx_biomod_convertion():
     current_path_file = Path(__file__).parent
     biomod_filepath = f"{current_path_file}/models/fullbody_model_from_fbx.bioMod"
     fbx_filepath = f"{current_path_file}/models/fullbody_model.fbx"
+    translated_fbx_filepath = fbx_filepath.replace(".fbx", "_translated.fbx")
 
     # --- Reading an .fbx model and translating it to a .bioMod model --- #
     model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
@@ -239,6 +240,10 @@ def fbx_biomod_convertion():
 
     if visualization_flag:
         model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
+
+    # --- Reading an .bioMod model and translating it back to an .fbx model --- #
+    model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
+    model.to_fbx(translated_fbx_filepath, with_mesh=False)
 
 
 if __name__ == "__main__":
