@@ -177,9 +177,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         Make sure all scs are expressed in the local reference frame before moving on to the next step.
         This method should be called everytime a model is returned to the user to avoid any confusion.
         """
-        from ..real.rigidbody.segment_coordinate_system_real import (
-            SegmentCoordinateSystemReal,
-        )
+        from ..real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 
         for segment in self.segments:
             segment.segment_coordinate_system = SegmentCoordinateSystemReal(
@@ -237,10 +235,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def validate_moving_via_points(self):
         for muscle_group in self.muscle_groups:
             for muscle in muscle_group.muscles:
-                for via_point in muscle.via_points + [
-                    muscle.origin_position,
-                    muscle.insertion_position,
-                ]:
+                for via_point in muscle.via_points + [muscle.origin_position, muscle.insertion_position]:
                     if via_point.movement is not None and via_point.position.size != 0:
                         raise RuntimeError(
                             f"A via point can either have a position or a movement, but not both at the same time, {via_point.name} has both."

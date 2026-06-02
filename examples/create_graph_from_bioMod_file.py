@@ -14,12 +14,12 @@ from pathlib import Path
 from biobuddy import BiomechanicalModelReal
 
 
-def create_graph_from_biomod_file(output_path: str | None = None):
+def create_graph_from_biomod_file():
     # Get the model
     current_path_file = Path(__file__).parent
     base_name = "arm26_allbiceps_1dof"
     biomod_path = f"{current_path_file}/models/{base_name}.bioMod"
-    output_path = output_path or f"{current_path_file}/data/{base_name}"
+    output_path = f"{current_path_file}/data/{base_name}"
 
     # Load the model from the .bioMod file
     model = BiomechanicalModelReal().from_biomod(biomod_path)

@@ -469,28 +469,28 @@ def test_has_mesh_file():
     assert model.has_mesh_files
 
 
-def test_write_graphviz(tmp_path: Path):
+def test_write_graphviz():
     from examples.create_graph_from_bioMod_file import create_graph_from_biomod_file
 
     # Create the dot and png
-    output_path = tmp_path / "arm26_allbiceps_1dof"
-    create_graph_from_biomod_file(str(output_path))
+    create_graph_from_biomod_file()
 
     # Check that the files have been created
     current_path_file = Path(__file__).parent
     base_name = "arm26_allbiceps_1dof"
+    output_path = f"{current_path_file}/../examples/data/{base_name}"
     assert os.path.isfile(f"{output_path}.dot")
     assert os.path.isfile(f"{output_path}.png")
 
     # Check that the dot is the same as the reference
-    reference_path = f"{current_path_file}/../examples/data/{base_name}_reference.dot"
-    with open(reference_path, "r") as f:
+    with open(f"{output_path}_reference.dot", "r") as f:
         reference_dot = f.read()
 
     with open(f"{output_path}.dot", "r") as f:
         output_dot = f.read()
 
     assert reference_dot == output_dot
+    assert len(output_dot) > 4700  #  Actually 4766
 
 
 def test_segment_has_ghost_parents():

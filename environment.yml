@@ -9,7 +9,7 @@ dependencies:
   - pandas
   - graphviz
   - opensim=4.5.1
-  - biorbd=1.11.2
+  - biorbd=1.11.2=py311h52b9107_1
   - deepdiff
   - pinocchio
   - pip:
