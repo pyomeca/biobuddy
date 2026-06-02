@@ -31,7 +31,7 @@ from .muscle_editor import (
     remove_muscle,
     remove_muscle_group,
 )
-from .preview_scene import PreviewScene, build_preview_scene
+from .preview_scene import PreviewScene, SegmentAxis, build_preview_scene
 from .validation_panel import ValidationReport, validate_model_for_editor
 
 __all__ = [
@@ -63,6 +63,7 @@ __all__ = [
     remove_muscle.__name__,
     remove_muscle_group.__name__,
     PreviewScene.__name__,
+    SegmentAxis.__name__,
     build_preview_scene.__name__,
     ValidationReport.__name__,
     validate_model_for_editor.__name__,

@@ -55,6 +55,7 @@ def launch_model_editor() -> None:
             QMainWindow,
             QMessageBox,
             QPushButton,
+            QScrollArea,
             QSplitter,
             QTabWidget,
             QTreeWidget,
@@ -85,6 +86,7 @@ def launch_model_editor() -> None:
                 QMainWindow,
                 QMessageBox,
                 QPushButton,
+                QScrollArea,
                 QSplitter,
                 QTabWidget,
                 QTreeWidget,
@@ -104,6 +106,43 @@ def launch_model_editor() -> None:
                 "The model editor requires a working Qt binding. Install BioBuddy with `pip install biobuddy[gui]` "
                 "or use an environment where PyQt5 is available."
             ) from error
+
+    def _draw_legend_point(painter, center, color, label: str, text_x: int, text_y: int) -> None:
+        """
+        Draw one point-style legend entry.
+        """
+        painter.setPen(QPen(color, 1))
+        painter.setBrush(color)
+        painter.drawEllipse(center, 4, 4)
+        painter.setPen(QPen(QColor("#111827"), 1))
+        painter.drawText(text_x, text_y, label)
+
+    def _draw_legend_line(
+        painter,
+        color,
+        width: int,
+        start_x: int,
+        y: int,
+        label: str,
+        text_x: int,
+        text_y: int,
+    ) -> None:
+        """
+        Draw one line-style legend entry.
+        """
+        painter.setPen(QPen(color, width))
+        painter.drawLine(start_x, y, start_x + 24, y)
+        painter.setPen(QPen(QColor("#111827"), 1))
+        painter.drawText(text_x, text_y, label)
+
+    def _scrollable_widget(widget):
+        """
+        Wrap a form-heavy tab so all controls remain reachable on smaller screens.
+        """
+        scroll_area = QScrollArea()
+        scroll_area.setWidget(widget)
+        scroll_area.setWidgetResizable(True)
+        return scroll_area
 
     class ModelPreviewWidget(QWidget):
         """
@@ -137,9 +176,14 @@ def launch_model_editor() -> None:
 
             projected_joints = {name: _project_point(point) for name, point in self.scene.joints.items()}
             projected_markers = {name: _project_point(point) for name, point in self.scene.markers.items()}
+            projected_axes = [
+                (axis, _project_point(axis.start), _project_point(axis.end)) for axis in self.scene.segment_axes
+            ]
             all_points = list(projected_joints.values()) + list(projected_markers.values())
             for path in self.scene.muscles.values():
                 all_points.extend(_project_point(point) for point in path)
+            for _, start, end in projected_axes:
+                all_points.extend([start, end])
             transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
             self._projected_joint_positions = {name: transform(point) for name, point in projected_joints.items()}
             self._projected_marker_positions = {name: transform(point) for name, point in projected_markers.items()}
@@ -156,6 +200,11 @@ def launch_model_editor() -> None:
                 for start, end in zip(path, path[1:]):
                     painter.drawLine(transform(_project_point(start)), transform(_project_point(end)))
 
+            axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb"}
+            for axis, start, end in projected_axes:
+                painter.setPen(QPen(QColor(axis_colors[axis.axis]), 4 if axis.is_rotation_axis else 1))
+                painter.drawLine(transform(start), transform(end))
+
             painter.setPen(QPen(QColor("#2563eb"), 1))
             painter.setBrush(QColor("#2563eb"))
             for marker_point in projected_markers.values():
@@ -168,6 +217,36 @@ def launch_model_editor() -> None:
                 painter.setPen(QPen(QColor("#111827"), 1))
                 painter.setBrush(QColor("#f59e0b" if is_selected else "#111827"))
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
+
+            self._draw_legend(painter)
+
+        def _draw_legend(self, painter) -> None:
+            """
+            Draw the preview color legend in the top-left corner.
+            """
+            x = 12
+            y = 18
+            line_gap = 18
+            painter.setPen(QPen(QColor("#111827"), 1))
+            painter.setBrush(QColor(255, 255, 255, 225))
+            painter.drawRect(8, 8, 230, 148)
+
+            painter.setPen(QPen(QColor("#111827"), 1))
+            painter.drawText(x, y, "Legend")
+            y += line_gap
+            _draw_legend_point(painter, QPointF(x + 6, y - 4), QColor("#2563eb"), "Markers", x + 20, y)
+            y += line_gap
+            _draw_legend_point(painter, QPointF(x + 6, y - 4), QColor("#111827"), "Joint centers", x + 20, y)
+            y += line_gap
+            _draw_legend_line(painter, QColor("#6b7280"), 2, x, y - 4, "Bones", x + 36, y)
+            y += line_gap
+            _draw_legend_line(painter, QColor("#dc2626"), 2, x, y - 4, "Muscles", x + 36, y)
+            y += line_gap
+            _draw_legend_line(painter, QColor("#dc2626"), 1, x, y - 4, "x axis", x + 36, y)
+            y += line_gap
+            _draw_legend_line(painter, QColor("#16a34a"), 1, x, y - 4, "y axis", x + 36, y)
+            y += line_gap
+            _draw_legend_line(painter, QColor("#2563eb"), 4, x, y - 4, "Rotational axis", x + 36, y)
 
         def mousePressEvent(self, event) -> None:
             clicked = get_event_position(event)
@@ -187,7 +266,7 @@ def launch_model_editor() -> None:
         def __init__(self):
             super().__init__()
             self.setWindowTitle("BioBuddy Model Editor")
-            self.resize(1100, 700)
+            self._resize_to_available_screen(QApplication)
             self.model = None
             self.current_filepath: Path | None = None
             self.current_segment_name: str | None = None
@@ -235,7 +314,9 @@ def launch_model_editor() -> None:
             self.marker_list = QListWidget()
             self.marker_list.itemSelectionChanged.connect(self._on_marker_selection_changed)
             self.marker_name = QLineEdit()
+            self.marker_name.setPlaceholderText("New or selected marker name")
             self.marker_position = QLineEdit()
+            self.marker_position.setPlaceholderText("x y z")
             self.marker_technical = QCheckBox("Technical")
             self.marker_anatomical = QCheckBox("Anatomical")
             self.apply_marker_button = QPushButton("Apply marker changes")
@@ -312,8 +393,11 @@ def launch_model_editor() -> None:
             self.via_point_list = QListWidget()
             self.via_point_list.itemSelectionChanged.connect(self._on_via_point_selection_changed)
             self.via_point_name = QLineEdit()
+            self.via_point_name.setPlaceholderText("New or selected via-point name")
             self.via_point_parent = QLineEdit()
+            self.via_point_parent.setPlaceholderText("Parent segment")
             self.via_point_position = QLineEdit()
+            self.via_point_position.setPlaceholderText("x y z")
             self.apply_via_point_button = QPushButton("Apply via-point changes")
             self.apply_via_point_button.clicked.connect(self._apply_via_point_changes)
             self.add_via_point_button = QPushButton("Add via point")
@@ -345,9 +429,9 @@ def launch_model_editor() -> None:
             muscle_layout.addWidget(self.remove_via_point_button)
 
             tabs = QTabWidget()
-            tabs.addTab(segment_tab, "Segment")
-            tabs.addTab(marker_tab, "Markers")
-            tabs.addTab(muscle_tab, "Muscles")
+            tabs.addTab(_scrollable_widget(segment_tab), "Segment")
+            tabs.addTab(_scrollable_widget(marker_tab), "Markers")
+            tabs.addTab(_scrollable_widget(muscle_tab), "Muscles")
             tabs.addTab(self.preview, "3D preview")
             validation_tab = QWidget()
             validation_layout = QVBoxLayout(validation_tab)
@@ -378,6 +462,23 @@ def launch_model_editor() -> None:
             layout.addLayout(toolbar)
             layout.addWidget(splitter)
             self.setCentralWidget(central_widget)
+
+        def _resize_to_available_screen(self, application) -> None:
+            """
+            Keep the editor inside the usable screen area.
+            """
+            screen = self.screen() or application.primaryScreen()
+            if screen is None:
+                self.resize(1100, 700)
+                return
+            available_geometry = screen.availableGeometry()
+            width = min(1100, int(available_geometry.width() * 0.9))
+            height = min(700, int(available_geometry.height() * 0.9))
+            self.resize(width, height)
+            self.move(
+                available_geometry.x() + (available_geometry.width() - width) // 2,
+                available_geometry.y() + (available_geometry.height() - height) // 2,
+            )
 
         def _open_model(self) -> None:
             filepath, _ = QFileDialog.getOpenFileName(

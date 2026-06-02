@@ -11,6 +11,7 @@ from biobuddy.components.real.rigidbody.segment_coordinate_system_real import (
     SegmentCoordinateSystemReal,
 )
 from biobuddy.components.real.rigidbody.segment_real import SegmentReal
+from biobuddy.utils.enums import Rotations
 
 
 def test_build_preview_scene_collects_joints_markers_and_muscles():
@@ -29,6 +30,7 @@ def test_build_preview_scene_collects_joints_markers_and_muscles():
                 translation=np.array([0.0, -1.0, 0.0]),
                 is_scs_local=True,
             ),
+            rotations=Rotations.X,
         )
     )
     model.segments["Pelvis"].add_marker(MarkerReal("LASI", "Pelvis", np.array([1.0, 0.0, 0.0])))
@@ -53,3 +55,10 @@ def test_build_preview_scene_collects_joints_markers_and_muscles():
     npt.assert_array_equal(scene.joints["Thigh"], np.array([0.0, -1.0, 0.0]))
     npt.assert_array_equal(scene.markers["LASI"], np.array([1.0, 0.0, 0.0]))
     assert list(scene.muscles.keys()) == ["Flexor"]
+
+    thigh_axes = {axis.axis: axis for axis in scene.segment_axes if axis.segment_name == "Thigh"}
+    assert set(thigh_axes) == {"x", "y", "z"}
+    assert thigh_axes["x"].is_rotation_axis is True
+    assert thigh_axes["y"].is_rotation_axis is False
+    npt.assert_array_equal(thigh_axes["x"].start, scene.joints["Thigh"])
+    assert np.linalg.norm(thigh_axes["x"].end - thigh_axes["x"].start) > 0.0
