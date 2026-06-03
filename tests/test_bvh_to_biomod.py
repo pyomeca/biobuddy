@@ -22,12 +22,8 @@ def test_translation_bvh_to_biomod():
 
     parent_path = Path(__file__).resolve().parent.parent
     bvh_filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
-    biomod_reference_filepath = (
-        parent_path / "examples" / "models" / "fullbody_model_from_bvh.bioMod"
-    )
-    biomod_translated_filepath = bvh_filepath.with_name(
-        "fullbody_model_translated.bioMod"
-    )
+    biomod_reference_filepath = parent_path / "examples" / "models" / "fullbody_model_from_bvh.bioMod"
+    biomod_translated_filepath = bvh_filepath.with_name("fullbody_model_translated.bioMod")
     bvh_translated_filepath = bvh_filepath.with_name("fullbody_model_translated.bvh")
 
     if biomod_translated_filepath.exists():
@@ -37,23 +33,17 @@ def test_translation_bvh_to_biomod():
 
     # Convert BVH to biomod and check that the converted model matches the reference.
     model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
-    model_from_biomod = BiomechanicalModelReal().from_biomod(
-        filepath=str(biomod_reference_filepath)
-    )
+    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=str(biomod_reference_filepath))
     compare_models(model_from_bvh, model_from_biomod, decimal=5)
 
     # Test that the model created can be exported into .bioMod.
     model_from_bvh.to_biomod(filepath=str(biomod_translated_filepath), with_mesh=False)
-    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(
-        filepath=str(biomod_translated_filepath)
-    )
+    model_from_biomod_2 = BiomechanicalModelReal().from_biomod(filepath=str(biomod_translated_filepath))
     compare_models(model_from_bvh, model_from_biomod_2, decimal=5)
 
     # Test that the .bioMod can be reconverted into .bvh.
     model_from_biomod.to_bvh(filepath=str(bvh_translated_filepath), with_mesh=False)
-    model_from_bvh_2 = BiomechanicalModelReal().from_bvh(
-        filepath=str(bvh_translated_filepath)
-    )
+    model_from_bvh_2 = BiomechanicalModelReal().from_bvh(filepath=str(bvh_translated_filepath))
     compare_models(model_from_bvh, model_from_bvh_2, decimal=5)
 
     if biomod_translated_filepath.exists():
@@ -185,9 +175,7 @@ Frame Time: 0.0333333
 1 2 3 40 50 60 4 5
 """)
 
-    with pytest.raises(
-        ValueError, match="Each BVH motion row must contain 9 channel values."
-    ):
+    with pytest.raises(ValueError, match="Each BVH motion row must contain 9 channel values."):
         BvhModelParser(filepath=str(filepath))
 
 
@@ -197,9 +185,7 @@ def test_bvh_parser_rejects_files_without_hierarchy(tmp_path: Path):
     filepath = tmp_path / "bad_header.bvh"
     filepath.write_text("MOTION\nFrames: 0\nFrame Time: 0.0333333\n")
 
-    with pytest.raises(
-        ValueError, match="A BVH file must start with a HIERARCHY block."
-    ):
+    with pytest.raises(ValueError, match="A BVH file must start with a HIERARCHY block."):
         BvhModelParser(filepath=str(filepath))
 
 
@@ -215,9 +201,7 @@ ROOT root
 }
 """)
 
-    with pytest.raises(
-        ValueError, match="Joint root declares 6 channels but provides 5."
-    ):
+    with pytest.raises(ValueError, match="Joint root declares 6 channels but provides 5."):
         BvhModelParser(filepath=str(filepath))
 
 
@@ -267,7 +251,7 @@ def test_bvh_writer_exports_a_minimal_root_hierarchy(tmp_path: Path):
 
     filepath = tmp_path / "minimal.bvh"
     model = BiomechanicalModelReal()
-    model.add_segment(SegmentReal(name="root"))
+    model.add_segment(SegmentReal(name="root_segment"))
 
     model.to_bvh(filepath=str(filepath), with_mesh=False)
 
@@ -294,13 +278,11 @@ def test_bvh_writer_exports_a_minimal_root_hierarchy(tmp_path: Path):
         ),
         (
             lambda: _model_with_multiple_roots(),
-            "BVH export requires exactly one root segment attached to base.",
+            "BVH export requires exactly one segment attached to root.",
         ),
     ],
 )
-def test_bvh_writer_rejects_unsupported_model_features(
-    tmp_path: Path, model_factory, expected_message: str
-):
+def test_bvh_writer_rejects_unsupported_model_features(tmp_path: Path, model_factory, expected_message: str):
     """Reject model structures that cannot be represented faithfully in BVH."""
 
     filepath = tmp_path / "unsupported.bvh"
@@ -319,9 +301,7 @@ def test_bvh_writer_rejects_segment_ranges(tmp_path: Path):
         SegmentReal(
             name="root",
             translations=Translations.X,
-            q_ranges=RangeOfMotion(
-                range_type=Ranges.Q, min_bound=[-1.0], max_bound=[1.0]
-            ),
+            q_ranges=RangeOfMotion(range_type=Ranges.Q, min_bound=[-1.0], max_bound=[1.0]),
         )
     )
 
@@ -358,6 +338,6 @@ def _model_with_segment_rotation() -> BiomechanicalModelReal:
 
 def _model_with_multiple_roots() -> BiomechanicalModelReal:
     model = BiomechanicalModelReal()
-    model.add_segment(SegmentReal(name="root"))
-    model.add_segment(SegmentReal(name="other_root", parent_name="base"))
+    model.add_segment(SegmentReal(name="root_segment", parent_name="root"))
+    model.add_segment(SegmentReal(name="other_root", parent_name="root"))
     return model

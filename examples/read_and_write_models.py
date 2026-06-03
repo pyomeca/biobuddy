@@ -76,9 +76,7 @@ def osim_biomod_convertion():
         try:
             import pyorerun
         except:
-            raise ImportError(
-                "You must install pyorerun to visualize the model (visualization_flag=True)"
-            )
+            raise ImportError("You must install pyorerun to visualize the model (visualization_flag=True)")
 
         # Visualization
         t = np.linspace(0, 1, 10)
@@ -94,9 +92,7 @@ def osim_biomod_convertion():
         viz.add_animated_model(model, q)
 
         # Biomod model reference
-        reference_model = pyorerun.BiorbdModel(
-            biomod_filepath.replace(".bioMod", "_reference.bioMod")
-        )
+        reference_model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_reference.bioMod"))
         reference_model.options.transparent_mesh = False
         reference_model.options.show_gravity = True
         reference_model.options.show_marker_labels = False
@@ -123,9 +119,7 @@ def osim_biomod_convertion():
             biomod_filepath.replace(".bioMod", "_from_osim_translated.bioMod"),
             with_mesh=True,
         )
-        model = pyorerun.BiorbdModel(
-            biomod_filepath.replace(".bioMod", "_from_osim_translated.bioMod")
-        )
+        model = pyorerun.BiorbdModel(biomod_filepath.replace(".bioMod", "_from_osim_translated.bioMod"))
         model.options.transparent_mesh = False
         model.options.show_gravity = True
         model.options.show_marker_labels = False
@@ -185,9 +179,7 @@ def urdf_biomod_convertion():
     model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # And convert it to an .urdf file
-    model.to_urdf(
-        urdf_filepath.replace(".urdf", "_translated.urdf"), with_mesh=visualization_flag
-    )
+    model.to_urdf(urdf_filepath.replace(".urdf", "_translated.urdf"), with_mesh=visualization_flag)
 
 
 def bvh_biomod_convertion():
@@ -223,9 +215,7 @@ def bvh_biomod_convertion():
     model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # And convert it to an .bvh file
-    model.to_bvh(
-        bvh_filepath.replace(".bvh", "_translated.bvh"), with_mesh=visualization_flag
-    )
+    model.to_bvh(bvh_filepath.replace(".bvh", "_translated.bvh"), with_mesh=visualization_flag)
 
 
 def fbx_biomod_convertion():

@@ -194,9 +194,7 @@ class FbxModelParser(AbstractModelParser):
 
         self._extract_skeleton()
 
-    def _parse_record(
-        self, data: bytes, start_offset: int
-    ) -> tuple[_FbxNodeRecord | None, int]:
+    def _parse_record(self, data: bytes, start_offset: int) -> tuple[_FbxNodeRecord | None, int]:
         """
         Parse one binary FBX record recursively.
 
@@ -216,15 +214,11 @@ class FbxModelParser(AbstractModelParser):
             raise RuntimeError("The FBX version must be known before parsing records.")
 
         if self.version >= 7500:
-            end_offset, prop_count, prop_list_length = struct.unpack_from(
-                "<QQQ", data, start_offset
-            )
+            end_offset, prop_count, prop_list_length = struct.unpack_from("<QQQ", data, start_offset)
             cursor = start_offset + 24
             null_record_size = 25
         else:
-            end_offset, prop_count, prop_list_length = struct.unpack_from(
-                "<III", data, start_offset
-            )
+            end_offset, prop_count, prop_list_length = struct.unpack_from("<III", data, start_offset)
             cursor = start_offset + 12
             null_record_size = 13
 
@@ -238,9 +232,7 @@ class FbxModelParser(AbstractModelParser):
 
         properties = []
         for _ in range(prop_count):
-            property_value, cursor = self._parse_property(
-                data=data, start_offset=cursor
-            )
+            property_value, cursor = self._parse_property(data=data, start_offset=cursor)
             properties.append(property_value)
 
         children = []
@@ -292,9 +284,7 @@ class FbxModelParser(AbstractModelParser):
             cursor += 4
             return {"raw_length": length}, cursor + length
         if property_type in "fdibc":
-            array_length, encoding, compressed_length = struct.unpack_from(
-                "<III", data, cursor
-            )
+            array_length, encoding, compressed_length = struct.unpack_from("<III", data, cursor)
             cursor += 12
             array_bytes = data[cursor : cursor + compressed_length]
             cursor += compressed_length
@@ -323,9 +313,7 @@ class FbxModelParser(AbstractModelParser):
             }, cursor
 
         if property_type == "l":
-            array_length, encoding, compressed_length = struct.unpack_from(
-                "<III", data, cursor
-            )
+            array_length, encoding, compressed_length = struct.unpack_from("<III", data, cursor)
             cursor += 12
             array_bytes = data[cursor : cursor + compressed_length]
             cursor += compressed_length
@@ -391,14 +379,10 @@ class FbxModelParser(AbstractModelParser):
             The name of the property to retrieve.
         """
         values = properties.get(property_name, [0.0, 0.0, 0.0])
-        return np.array(
-            [float(values[0]), float(values[1]), float(values[2])], dtype=float
-        )
+        return np.array([float(values[0]), float(values[1]), float(values[2])], dtype=float)
 
     @staticmethod
-    def _fbx_euler_xyz_rt_matrix(
-        angles: np.ndarray, translation: np.ndarray
-    ) -> np.ndarray:
+    def _fbx_euler_xyz_rt_matrix(angles: np.ndarray, translation: np.ndarray) -> np.ndarray:
         """
         Convert an FBX XYZ Euler transform into a homogeneous matrix.
 
@@ -434,21 +418,13 @@ class FbxModelParser(AbstractModelParser):
             None,
         )
         connections_record = next(
-            (
-                record
-                for record in self._top_level_records
-                if record.name == "Connections"
-            ),
+            (record for record in self._top_level_records if record.name == "Connections"),
             None,
         )
         if objects_record is None or connections_record is None:
-            raise ValueError(
-                "The FBX file must contain both Objects and Connections sections."
-            )
+            raise ValueError("The FBX file must contain both Objects and Connections sections.")
 
-        raw_models = [
-            child for child in objects_record.children if child.name == "Model"
-        ]
+        raw_models = [child for child in objects_record.children if child.name == "Model"]
         skeleton_types = {"Root", "LimbNode"}
         scene_models = {}
         for record in raw_models:
@@ -463,18 +439,13 @@ class FbxModelParser(AbstractModelParser):
                 name=node_name,
                 node_type=node_type,
                 translation=self._vector3(properties, "Lcl Translation"),
-                rotation=self._vector3(properties, "PreRotation")
-                + self._vector3(properties, "Lcl Rotation"),
+                rotation=self._vector3(properties, "PreRotation") + self._vector3(properties, "Lcl Rotation"),
             )
 
         parent_lookup = {}
         children_lookup = {}
         for connection in connections_record.children:
-            if (
-                connection.name != "C"
-                or len(connection.properties) < 3
-                or connection.properties[0] != "OO"
-            ):
+            if connection.name != "C" or len(connection.properties) < 3 or connection.properties[0] != "OO":
                 continue
             child_id = int(connection.properties[1])
             parent_id = int(connection.properties[2])
@@ -484,10 +455,7 @@ class FbxModelParser(AbstractModelParser):
             children_lookup.setdefault(parent_id, []).append(child_id)
 
         def first_skeleton_descendants(node_id: int) -> list[int]:
-            if (
-                node_id in scene_models
-                and scene_models[node_id].node_type in skeleton_types
-            ):
+            if node_id in scene_models and scene_models[node_id].node_type in skeleton_types:
                 return [node_id]
 
             descendants = []
@@ -508,10 +476,7 @@ class FbxModelParser(AbstractModelParser):
         def collect_skeleton(node_id: int) -> None:
             if node_id in included_node_ids:
                 return
-            if (
-                node_id not in scene_models
-                or scene_models[node_id].node_type not in skeleton_types
-            ):
+            if node_id not in scene_models or scene_models[node_id].node_type not in skeleton_types:
                 return
             included_node_ids.add(node_id)
             for child_id in children_lookup.get(node_id, []):
@@ -527,16 +492,9 @@ class FbxModelParser(AbstractModelParser):
                 child_id
                 for child_id in children_lookup.get(node_id, [])
                 if child_id in included_node_ids
-                and not (
-                    scene_models[child_id].node_type == "Root"
-                    and len(children_lookup.get(child_id, [])) == 0
-                )
+                and not (scene_models[child_id].node_type == "Root" and len(children_lookup.get(child_id, [])) == 0)
             ]
-            if (
-                node.node_type == "Root"
-                and node_id not in self.root_ids
-                and len(node.children_ids) == 0
-            ):
+            if node.node_type == "Root" and node_id not in self.root_ids and len(node.children_ids) == 0:
                 continue
             self.skeleton_nodes[node_id] = node
 
@@ -555,9 +513,7 @@ class FbxModelParser(AbstractModelParser):
             or not isinstance(record.properties[0], dict)
             or "values" not in record.properties[0]
         ):
-            raise ValueError(
-                f"Record '{record.name}' does not contain a decoded FBX array."
-            )
+            raise ValueError(f"Record '{record.name}' does not contain a decoded FBX array.")
         return record.properties[0]["values"]
 
     @staticmethod
@@ -590,9 +546,7 @@ class FbxModelParser(AbstractModelParser):
                 current_face.append(index)
 
         if current_face:
-            raise ValueError(
-                "The FBX PolygonVertexIndex array ended before closing the last polygon."
-            )
+            raise ValueError("The FBX PolygonVertexIndex array ended before closing the last polygon.")
 
         return np.asarray(faces, dtype=int)
 
@@ -617,11 +571,7 @@ class FbxModelParser(AbstractModelParser):
             return None
 
         for child in objects_record.children:
-            if (
-                child.name == "Geometry"
-                and len(child.properties) >= 3
-                and child.properties[2] == "Mesh"
-            ):
+            if child.name == "Geometry" and len(child.properties) >= 3 and child.properties[2] == "Mesh":
                 return child
         return None
 
@@ -634,11 +584,7 @@ class FbxModelParser(AbstractModelParser):
             None,
         )
         connections_record = next(
-            (
-                record
-                for record in self._top_level_records
-                if record.name == "Connections"
-            ),
+            (record for record in self._top_level_records if record.name == "Connections"),
             None,
         )
         if objects_record is None or connections_record is None:
@@ -654,11 +600,7 @@ class FbxModelParser(AbstractModelParser):
 
         cluster_to_segment = {}
         for connection in connections_record.children:
-            if (
-                connection.name != "C"
-                or len(connection.properties) < 3
-                or connection.properties[0] != "OO"
-            ):
+            if connection.name != "C" or len(connection.properties) < 3 or connection.properties[0] != "OO":
                 continue
             child_id = int(connection.properties[1])
             parent_id = int(connection.properties[2])
@@ -711,9 +653,7 @@ class FbxModelParser(AbstractModelParser):
             )
             if indices_record is None or weights_record is None:
                 continue
-            control_point_indices = np.asarray(
-                self._array_values(indices_record), dtype=int
-            )
+            control_point_indices = np.asarray(self._array_values(indices_record), dtype=int)
             weights = np.asarray(self._array_values(weights_record), dtype=float)
             skin_clusters.append(
                 _FbxSkinCluster(
@@ -755,9 +695,7 @@ class FbxModelParser(AbstractModelParser):
                         f"{node.name}_transZ",
                     ]
                 )
-            dof_names.extend(
-                [f"{node.name}_rot{axis.upper()}" for axis in Rotations.ZYX.value]
-            )
+            dof_names.extend([f"{node.name}_rot{axis.upper()}" for axis in Rotations.ZYX.value])
         return dof_names
 
     @staticmethod
@@ -772,9 +710,7 @@ class FbxModelParser(AbstractModelParser):
             return segment_name, "Lcl Rotation", quantity[-1].lower()
         raise ValueError(f"Unsupported DoF name '{dof_name}'.")
 
-    def _curve_key_values(
-        self, curve_record: _FbxNodeRecord
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _curve_key_values(self, curve_record: _FbxNodeRecord) -> tuple[np.ndarray, np.ndarray]:
         """
         Extract the key times and values stored in one FBX animation curve.
         """
@@ -787,16 +723,12 @@ class FbxModelParser(AbstractModelParser):
             None,
         )
         if key_time_record is None or key_value_record is None:
-            raise ValueError(
-                "An FBX animation curve must contain KeyTime and KeyValueFloat arrays."
-            )
+            raise ValueError("An FBX animation curve must contain KeyTime and KeyValueFloat arrays.")
 
         key_times = np.asarray(self._array_values(key_time_record), dtype=np.int64)
         key_values = np.asarray(self._array_values(key_value_record), dtype=float)
         if key_times.shape[0] != key_values.shape[0]:
-            raise ValueError(
-                "FBX animation curve times and values must have the same length."
-            )
+            raise ValueError("FBX animation curve times and values must have the same length.")
         return key_times, key_values
 
     def _animation_curves(
@@ -813,27 +745,17 @@ class FbxModelParser(AbstractModelParser):
         """
         object_records_by_id = self._object_records_by_id()
         connections_record = next(
-            (
-                record
-                for record in self._top_level_records
-                if record.name == "Connections"
-            ),
+            (record for record in self._top_level_records if record.name == "Connections"),
             None,
         )
         if connections_record is None:
             return {}
 
-        node_id_to_name = {
-            node.node_id: node.name for node in self.skeleton_nodes.values()
-        }
+        node_id_to_name = {node.node_id: node.name for node in self.skeleton_nodes.values()}
 
         curve_node_targets = {}
         for connection in connections_record.children:
-            if (
-                connection.name != "C"
-                or len(connection.properties) < 4
-                or connection.properties[0] != "OP"
-            ):
+            if connection.name != "C" or len(connection.properties) < 4 or connection.properties[0] != "OP":
                 continue
             child_id = int(connection.properties[1])
             parent_id = int(connection.properties[2])
@@ -850,11 +772,7 @@ class FbxModelParser(AbstractModelParser):
 
         animation_curves = {}
         for connection in connections_record.children:
-            if (
-                connection.name != "C"
-                or len(connection.properties) < 4
-                or connection.properties[0] != "OP"
-            ):
+            if connection.name != "C" or len(connection.properties) < 4 or connection.properties[0] != "OP":
                 continue
             curve_id = int(connection.properties[1])
             curve_node_id = int(connection.properties[2])
@@ -870,9 +788,7 @@ class FbxModelParser(AbstractModelParser):
 
             segment_name, property_name = curve_node_targets[curve_node_id]
             axis = axis_property[-1].lower()
-            animation_curves[(segment_name, property_name, axis)] = (
-                self._curve_key_values(curve_record)
-            )
+            animation_curves[(segment_name, property_name, axis)] = self._curve_key_values(curve_record)
 
         return animation_curves
 
@@ -882,11 +798,7 @@ class FbxModelParser(AbstractModelParser):
         """
         object_records_by_id = self._object_records_by_id()
         connections_record = next(
-            (
-                record
-                for record in self._top_level_records
-                if record.name == "Connections"
-            ),
+            (record for record in self._top_level_records if record.name == "Connections"),
             None,
         )
         if connections_record is None:
@@ -895,11 +807,7 @@ class FbxModelParser(AbstractModelParser):
         parsed_segment_names = self.segment_names()
         ignored_nodes = {}
         for connection in connections_record.children:
-            if (
-                connection.name != "C"
-                or len(connection.properties) < 4
-                or connection.properties[0] != "OP"
-            ):
+            if connection.name != "C" or len(connection.properties) < 4 or connection.properties[0] != "OP":
                 continue
             child_record = object_records_by_id.get(int(connection.properties[1]))
             parent_record = object_records_by_id.get(int(connection.properties[2]))
@@ -952,11 +860,7 @@ class FbxModelParser(AbstractModelParser):
             return set()
 
         polygon_record = next(
-            (
-                child
-                for child in geometry_record.children
-                if child.name == "PolygonVertexIndex"
-            ),
+            (child for child in geometry_record.children if child.name == "PolygonVertexIndex"),
             None,
         )
         if polygon_record is None:
@@ -967,14 +871,10 @@ class FbxModelParser(AbstractModelParser):
         if not skin_clusters:
             return set()
 
-        segment_faces = self._segment_faces_from_skin(
-            faces=faces, clusters=skin_clusters
-        )
+        segment_faces = self._segment_faces_from_skin(faces=faces, clusters=skin_clusters)
         return set(segment_faces.keys())
 
-    def _segment_faces_from_skin(
-        self, faces: np.ndarray, clusters: list[_FbxSkinCluster]
-    ) -> dict[str, np.ndarray]:
+    def _segment_faces_from_skin(self, faces: np.ndarray, clusters: list[_FbxSkinCluster]) -> dict[str, np.ndarray]:
         """
         Assign each face of the skinned mesh to one or more segments.
 
@@ -994,28 +894,18 @@ class FbxModelParser(AbstractModelParser):
         """
         weights_by_control_point = {}
         for cluster in clusters:
-            for control_point_index, weight in zip(
-                cluster.control_point_indices, cluster.weights
-            ):
+            for control_point_index, weight in zip(cluster.control_point_indices, cluster.weights):
                 if control_point_index not in weights_by_control_point:
                     weights_by_control_point[control_point_index] = {}
-                previous_weight = weights_by_control_point[control_point_index].get(
-                    cluster.segment_name, 0.0
-                )
-                weights_by_control_point[control_point_index][cluster.segment_name] = (
-                    previous_weight + float(weight)
-                )
+                previous_weight = weights_by_control_point[control_point_index].get(cluster.segment_name, 0.0)
+                weights_by_control_point[control_point_index][cluster.segment_name] = previous_weight + float(weight)
 
         segment_faces = {cluster.segment_name: [] for cluster in clusters}
         for face in faces:
             segment_scores = {}
             for control_point_index in face:
-                for segment_name, weight in weights_by_control_point.get(
-                    int(control_point_index), {}
-                ).items():
-                    segment_scores[segment_name] = (
-                        segment_scores.get(segment_name, 0.0) + weight
-                    )
+                for segment_name, weight in weights_by_control_point.get(int(control_point_index), {}).items():
+                    segment_scores[segment_name] = segment_scores.get(segment_name, 0.0) + weight
             if not segment_scores:
                 continue
 
@@ -1034,9 +924,7 @@ class FbxModelParser(AbstractModelParser):
         }
 
     @staticmethod
-    def _write_ascii_ply(
-        filepath: Path, vertices: np.ndarray, faces: np.ndarray
-    ) -> None:
+    def _write_ascii_ply(filepath: Path, vertices: np.ndarray, faces: np.ndarray) -> None:
         """
         Write one triangle mesh as an ASCII PLY file.
 
@@ -1083,27 +971,19 @@ class FbxModelParser(AbstractModelParser):
             None,
         )
         polygon_record = next(
-            (
-                child
-                for child in geometry_record.children
-                if child.name == "PolygonVertexIndex"
-            ),
+            (child for child in geometry_record.children if child.name == "PolygonVertexIndex"),
             None,
         )
         if vertices_record is None or polygon_record is None:
             return
 
-        control_points = np.asarray(
-            self._array_values(vertices_record), dtype=float
-        ).reshape((-1, 3))
+        control_points = np.asarray(self._array_values(vertices_record), dtype=float).reshape((-1, 3))
         faces = self._polygon_indices_to_faces(self._array_values(polygon_record))
         skin_clusters = self._skin_clusters()
         if not skin_clusters:
             return
 
-        segment_faces = self._segment_faces_from_skin(
-            faces=faces, clusters=skin_clusters
-        )
+        segment_faces = self._segment_faces_from_skin(faces=faces, clusters=skin_clusters)
         if not segment_faces:
             return
 
@@ -1111,24 +991,18 @@ class FbxModelParser(AbstractModelParser):
         output_directory.mkdir(parents=True, exist_ok=True)
 
         for segment_name, segment_mesh_faces in segment_faces.items():
-            used_indices, inverse_indices = np.unique(
-                segment_mesh_faces.reshape(-1), return_inverse=True
-            )
+            used_indices, inverse_indices = np.unique(segment_mesh_faces.reshape(-1), return_inverse=True)
             segment_faces_local = inverse_indices.reshape((-1, 3))
             segment_vertices_global = control_points[used_indices]
 
-            segment_rt_global = model.segment_coordinate_system_in_global(
-                segment_name=segment_name
-            )
+            segment_rt_global = model.segment_coordinate_system_in_global(segment_name=segment_name)
             homogeneous_vertices = np.hstack(
                 (
                     segment_vertices_global,
                     np.ones((segment_vertices_global.shape[0], 1)),
                 )
             )
-            segment_vertices_local = (
-                segment_rt_global.inverse.rt_matrix @ homogeneous_vertices.T
-            ).T[:, :3]
+            segment_vertices_local = (segment_rt_global.inverse.rt_matrix @ homogeneous_vertices.T).T[:, :3]
 
             mesh_filename = f"{segment_name.lower()}.ply"
             mesh_filepath = output_directory / mesh_filename
@@ -1176,9 +1050,7 @@ class FbxModelParser(AbstractModelParser):
             Whether the node is a skeleton root.
         """
         node = self.skeleton_nodes[node_id]
-        rt_matrix = self._fbx_euler_xyz_rt_matrix(
-            angles=node.rotation, translation=node.translation
-        )
+        rt_matrix = self._fbx_euler_xyz_rt_matrix(angles=node.rotation, translation=node.translation)
         model.add_segment(
             SegmentReal(
                 name=node.name,
@@ -1193,9 +1065,7 @@ class FbxModelParser(AbstractModelParser):
         )
 
         for child_id in node.children_ids:
-            self._append_node(
-                model=model, node_id=child_id, parent_name=node.name, is_root=False
-            )
+            self._append_node(model=model, node_id=child_id, parent_name=node.name, is_root=False)
 
     def to_q(self) -> ParsedAnimation:
         """
@@ -1209,9 +1079,7 @@ class FbxModelParser(AbstractModelParser):
         """
         animation_curves = self._animation_curves()
         if not animation_curves:
-            raise RuntimeError(
-                "The FBX file does not contain any animation curve attached to the skeleton."
-            )
+            raise RuntimeError("The FBX file does not contain any animation curve attached to the skeleton.")
 
         raw_time_arrays = [curve_data[0] for curve_data in animation_curves.values()]
         start_time = min(int(times[0]) for times in raw_time_arrays if times.size > 0)
@@ -1234,9 +1102,7 @@ class FbxModelParser(AbstractModelParser):
                 continue
 
             key_times, key_values = curve_data
-            normalized_times = (
-                key_times.astype(float) - start_time
-            ) / self._FBX_TIME_UNIT
+            normalized_times = (key_times.astype(float) - start_time) / self._FBX_TIME_UNIT
             if normalized_times.shape[0] == 1:
                 q[dof_index, :] = key_values[0]
             else:
@@ -1253,9 +1119,7 @@ class FbxModelParser(AbstractModelParser):
 
         return ParsedAnimation(q=q, time=time, dof_names=dof_names)
 
-    def animation_diagnostics(
-        self, tolerance: float = 1e-12
-    ) -> FbxAnimationDiagnostics:
+    def animation_diagnostics(self, tolerance: float = 1e-12) -> FbxAnimationDiagnostics:
         """
         Inspect the completeness of the FBX animation import.
 
@@ -1277,9 +1141,7 @@ class FbxModelParser(AbstractModelParser):
             if (segment_name, property_name, axis) in animation_curves:
                 mapped_dof_names.append(dof_name)
 
-        missing_dof_names = [
-            dof_name for dof_name in dof_names if dof_name not in mapped_dof_names
-        ]
+        missing_dof_names = [dof_name for dof_name in dof_names if dof_name not in mapped_dof_names]
 
         animation = self.to_q()
         zero_dof_names = []
@@ -1293,9 +1155,7 @@ class FbxModelParser(AbstractModelParser):
 
         segment_names_with_meshes = self._segment_names_with_visual_meshes()
         segments_without_visual_meshes = [
-            node.name
-            for node in self._ordered_skeleton_nodes()
-            if node.name not in segment_names_with_meshes
+            node.name for node in self._ordered_skeleton_nodes() if node.name not in segment_names_with_meshes
         ]
 
         return FbxAnimationDiagnostics(
@@ -1319,9 +1179,7 @@ class FbxModelParser(AbstractModelParser):
 
         model = BiomechanicalModelReal()
         for root_id in self.root_ids:
-            self._append_node(
-                model=model, node_id=root_id, parent_name="base", is_root=True
-            )
+            self._append_node(model=model, node_id=root_id, parent_name="base", is_root=True)
         if self.load_visual_meshes:
             self._attach_visual_meshes(model=model)
         return model

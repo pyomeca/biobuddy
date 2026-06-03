@@ -38,12 +38,8 @@ def test_fbx_and_bvh_share_the_same_kinematic_topology():
     model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
     model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
 
-    fbx_topology = [
-        (segment.name, segment.parent_name) for segment in model_from_fbx.segments
-    ]
-    bvh_topology = [
-        (segment.name, segment.parent_name) for segment in model_from_bvh.segments
-    ]
+    fbx_topology = [(segment.name, segment.parent_name) for segment in model_from_fbx.segments]
+    bvh_topology = [(segment.name, segment.parent_name) for segment in model_from_bvh.segments]
 
     assert fbx_topology == bvh_topology
 
@@ -146,12 +142,8 @@ def test_fbx_and_bvh_animation_reconstruct_the_same_joint_positions():
     animation_from_bvh = BvhModelParser(filepath=str(bvh_filepath)).to_q()
 
     frame_indices = np.asarray([0, 250, 500, 1000, 1500, 1976], dtype=int)
-    fbx_kinematics = model_from_fbx.forward_kinematics(
-        animation_from_fbx.q[:, frame_indices]
-    )
-    bvh_kinematics = model_from_bvh.forward_kinematics(
-        animation_from_bvh.q[:, frame_indices]
-    )
+    fbx_kinematics = model_from_fbx.forward_kinematics(animation_from_fbx.q[:, frame_indices])
+    bvh_kinematics = model_from_bvh.forward_kinematics(animation_from_bvh.q[:, frame_indices])
 
     shared_segments = [
         segment_name
@@ -159,16 +151,10 @@ def test_fbx_and_bvh_animation_reconstruct_the_same_joint_positions():
         if segment_name in model_from_fbx.segment_names and segment_name != "root"
     ]
     fbx_hips = np.column_stack(
-        [
-            fbx_kinematics["Hips"][frame_index].rt_matrix[:3, 3]
-            for frame_index in range(frame_indices.shape[0])
-        ]
+        [fbx_kinematics["Hips"][frame_index].rt_matrix[:3, 3] for frame_index in range(frame_indices.shape[0])]
     )
     bvh_hips = np.column_stack(
-        [
-            bvh_kinematics["Hips"][frame_index].rt_matrix[:3, 3]
-            for frame_index in range(frame_indices.shape[0])
-        ]
+        [bvh_kinematics["Hips"][frame_index].rt_matrix[:3, 3] for frame_index in range(frame_indices.shape[0])]
     )
 
     errors = []
@@ -213,9 +199,7 @@ def test_fbx_visual_mesh_can_be_split_per_segment(tmp_path: Path):
     )
 
     segments_with_mesh = [
-        segment
-        for segment in model.segments
-        if segment.name != "root" and segment.mesh_file is not None
+        segment for segment in model.segments if segment.name != "root" and segment.mesh_file is not None
     ]
     assert len(segments_with_mesh) >= 20
     assert (mesh_output_dir / "hips.ply").exists()
@@ -284,9 +268,7 @@ def test_fbx_package_export_creates_a_portable_biomod_bundle(tmp_path: Path):
     biomod_content = (package_directory / "fullbody_bundle.bioMod").read_text()
     assert "meshes/hips.ply" in biomod_content.replace("\\", "/")
 
-    metadata = json.loads(
-        (package_directory / "animations" / "metadata.json").read_text()
-    )
+    metadata = json.loads((package_directory / "animations" / "metadata.json").read_text())
     assert metadata["mapped_dof_count"] == 165
     assert metadata["missing_dof_names"] == []
     assert "Spine3" in metadata["segments_without_visual_meshes"]
@@ -316,7 +298,5 @@ def test_fbx_shared_faces_are_kept_on_boundary_segments():
 
     segment_faces = parser._segment_faces_from_skin(faces=faces, clusters=clusters)
 
-    np.testing.assert_array_equal(
-        segment_faces["Pelvis"], np.asarray([[0, 1, 2], [3, 4, 5]])
-    )
+    np.testing.assert_array_equal(segment_faces["Pelvis"], np.asarray([[0, 1, 2], [3, 4, 5]]))
     np.testing.assert_array_equal(segment_faces["Trunk"], np.asarray([[0, 1, 2]]))
