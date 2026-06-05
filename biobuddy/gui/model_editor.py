@@ -11,6 +11,7 @@ from .marker_editor import (
     MarkerEditorData,
     add_marker,
     apply_marker_editor_data,
+    attach_marker_to_segment,
     get_marker_editor_data,
     remove_marker,
 )
@@ -34,6 +35,9 @@ from .muscle_editor import (
 )
 from .preview_scene import build_preview_scene
 from .validation_panel import validate_model_for_editor
+from .lower_limb_template import lower_limb_template
+from .model_builder import build_real_model_from_c3d_folder, compute_frame_quality
+from ..utils.marker_data import C3dData
 
 
 def launch_model_editor() -> None:
@@ -325,12 +329,17 @@ def launch_model_editor() -> None:
             self.add_marker_button.clicked.connect(self._add_marker)
             self.remove_marker_button = QPushButton("Remove marker")
             self.remove_marker_button.clicked.connect(self._remove_marker)
+            self.marker_target_segment = QLineEdit()
+            self.marker_target_segment.setPlaceholderText("Target segment")
+            self.attach_marker_button = QPushButton("Attach marker to segment")
+            self.attach_marker_button.clicked.connect(self._attach_marker_to_segment)
 
             marker_form = QFormLayout()
             marker_form.addRow("Name", self.marker_name)
             marker_form.addRow("Position", self.marker_position)
             marker_form.addRow("", self.marker_technical)
             marker_form.addRow("", self.marker_anatomical)
+            marker_form.addRow("Target segment", self.marker_target_segment)
 
             marker_tab = QWidget()
             marker_layout = QVBoxLayout(marker_tab)
@@ -340,6 +349,7 @@ def launch_model_editor() -> None:
             marker_layout.addWidget(self.apply_marker_button)
             marker_layout.addWidget(self.add_marker_button)
             marker_layout.addWidget(self.remove_marker_button)
+            marker_layout.addWidget(self.attach_marker_button)
 
             self.muscle_tree = QTreeWidget()
             self.muscle_tree.setHeaderLabel("Muscles")
@@ -449,11 +459,14 @@ def launch_model_editor() -> None:
 
             open_button = QPushButton("Open model")
             open_button.clicked.connect(self._open_model)
+            new_lower_body_button = QPushButton("New lower-body model")
+            new_lower_body_button.clicked.connect(self._new_lower_body_model)
             save_button = QPushButton("Save as .bioMod")
             save_button.clicked.connect(self._save_model)
 
             toolbar = QHBoxLayout()
             toolbar.addWidget(open_button)
+            toolbar.addWidget(new_lower_body_button)
             toolbar.addWidget(save_button)
             toolbar.addStretch()
 
@@ -492,11 +505,37 @@ def launch_model_editor() -> None:
             try:
                 self.model = load_model(filepath)
                 self.current_filepath = Path(filepath)
-                self._populate_tree()
-                self._populate_muscle_tree()
-                self.preview.set_model(self.model)
+                self._refresh_model_views()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to open model", str(error))
+
+        def _new_lower_body_model(self) -> None:
+            calibration_folder = QFileDialog.getExistingDirectory(
+                self,
+                "Select calibration folder",
+                "",
+            )
+            if not calibration_folder:
+                return
+            try:
+                template = lower_limb_template()
+                folder_path = Path(calibration_folder)
+                self.model = build_real_model_from_c3d_folder(template=template, calibration_folder=folder_path)
+                self.current_filepath = folder_path / "lower_body.bioMod"
+                self._refresh_model_views()
+
+                static_data = _load_static_trial_for_quality(folder_path)
+                quality = compute_frame_quality(template, static_data)
+                summary = "\n".join(
+                    f"{name}: raw plane angle {metric.mean_angle_degrees:.1f} deg" for name, metric in quality.items()
+                )
+                QMessageBox.information(
+                    self,
+                    "Lower-body model generated",
+                    f"Generated {len(self.model.segments)} segments from '{folder_path}'.\n\n{summary}",
+                )
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to generate model", str(error))
 
         def _save_model(self) -> None:
             if self.model is None:
@@ -510,6 +549,18 @@ def launch_model_editor() -> None:
                 self.model.to_biomod(filepath=filepath)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to save model", str(error))
+
+        def _refresh_model_views(self) -> None:
+            """
+            Refresh all widgets that mirror the current model.
+            """
+            self.current_segment_name = None
+            self._populate_tree()
+            self._populate_muscle_tree()
+            self._populate_marker_list()
+            self.validation_messages.clear()
+            self.preview.set_selected_segment(None)
+            self.preview.set_model(self.model)
 
         def _validate_model(self) -> None:
             self.validation_messages.clear()
@@ -632,6 +683,22 @@ def launch_model_editor() -> None:
             remove_marker(self.model.segments[self.current_segment_name], marker_name)
             self._populate_marker_list()
             self.preview.set_model(self.model)
+
+        def _attach_marker_to_segment(self) -> None:
+            if self.model is None or self.current_segment_name is None or not self.marker_list.selectedItems():
+                return
+            try:
+                marker_name = self.marker_list.selectedItems()[0].text()
+                target_segment_name = self.marker_target_segment.text().strip()
+                attach_marker_to_segment(
+                    model=self.model,
+                    source_segment_name=self.current_segment_name,
+                    marker_name=marker_name,
+                    target_segment_name=target_segment_name,
+                )
+                self.preview.set_model(self.model)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to attach marker", str(error))
 
         def _populate_muscle_tree(self) -> None:
             self.muscle_tree.clear()
@@ -860,6 +927,19 @@ def launch_model_editor() -> None:
     window = ModelEditorWindow()
     window.show()
     app.exec()
+
+
+def _load_static_trial_for_quality(calibration_folder: Path):
+    """
+    Load the same static/anatomical trial used by the lower-body generator.
+    """
+    for pattern in ("*static*.c3d", "*func_anat.c3d"):
+        matches = list(calibration_folder.glob(pattern))
+        if matches:
+            if len(matches) != 1:
+                raise RuntimeError(f"Expected one static trial matching '{pattern}', found {len(matches)}.")
+            return C3dData(str(matches[0]))
+    raise RuntimeError("No static trial found. Expected '*static*.c3d' or '*func_anat.c3d'.")
 
 
 def _parse_float_list(text: str) -> list[float]:

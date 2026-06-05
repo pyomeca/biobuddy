@@ -10,6 +10,7 @@ from .marker_editor import (
     MarkerEditorData,
     add_marker,
     apply_marker_editor_data,
+    attach_marker_to_segment,
     get_marker_editor_data,
     remove_marker,
 )
@@ -33,6 +34,25 @@ from .muscle_editor import (
 )
 from .preview_scene import PreviewScene, SegmentAxis, build_preview_scene
 from .validation_panel import ValidationReport, validate_model_for_editor
+from .model_builder import (
+    AxisSpec,
+    FrameQuality,
+    FunctionalAxisSpec,
+    FunctionalCenterSpec,
+    FunctionalMethod,
+    FunctionalTrialSpec,
+    LocalFrameSpec,
+    MarkerAttachmentSpec,
+    MarkerEndpointSpec,
+    ModelTemplate,
+    SegmentSpec,
+    build_generic_model,
+    build_real_model,
+    build_real_model_from_c3d_folder,
+    compute_dynamic_segment_frames,
+    compute_frame_quality,
+)
+from .lower_limb_template import lower_limb_template
 
 __all__ = [
     SegmentEditorData.__name__,
@@ -44,6 +64,7 @@ __all__ = [
     MarkerEditorData.__name__,
     add_marker.__name__,
     apply_marker_editor_data.__name__,
+    attach_marker_to_segment.__name__,
     get_marker_editor_data.__name__,
     remove_marker.__name__,
     MuscleEditorData.__name__,
@@ -67,4 +88,21 @@ __all__ = [
     build_preview_scene.__name__,
     ValidationReport.__name__,
     validate_model_for_editor.__name__,
+    AxisSpec.__name__,
+    FrameQuality.__name__,
+    FunctionalAxisSpec.__name__,
+    FunctionalCenterSpec.__name__,
+    FunctionalMethod.__name__,
+    FunctionalTrialSpec.__name__,
+    LocalFrameSpec.__name__,
+    MarkerAttachmentSpec.__name__,
+    MarkerEndpointSpec.__name__,
+    ModelTemplate.__name__,
+    SegmentSpec.__name__,
+    build_generic_model.__name__,
+    build_real_model.__name__,
+    build_real_model_from_c3d_folder.__name__,
+    compute_dynamic_segment_frames.__name__,
+    compute_frame_quality.__name__,
+    lower_limb_template.__name__,
 ]
