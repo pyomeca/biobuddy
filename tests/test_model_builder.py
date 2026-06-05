@@ -10,6 +10,11 @@ from biobuddy.gui.model_builder import (
     build_real_model,
     compute_dynamic_segment_frames,
     compute_frame_quality,
+    marker_availability,
+    required_functional_markers,
+    required_markers,
+    required_static_markers,
+    template_marker_availability,
 )
 from biobuddy.gui.marker_editor import attach_marker_to_segment
 from biobuddy.components.generic.rigidbody.axis import Axis
@@ -32,6 +37,48 @@ def test_endpoint_and_axis_specs_average_marker_groups():
 
     np.testing.assert_allclose(endpoint.evaluate(data)[:, 0], np.array([0.0, 0.0, 1.0]))
     np.testing.assert_allclose(axis.vector(data)[:, 0], np.array([0.2, 0.0, 0.0]))
+
+
+def test_template_reports_required_markers_from_frames_and_functional_trials():
+    template = lower_limb_template()
+
+    static_markers = required_static_markers(template)
+    functional_markers = required_functional_markers(template)
+    all_required_markers = required_markers(template)
+
+    assert static_markers == tuple(sorted(set(static_markers)))
+    assert "LASI" in static_markers
+    assert "LTOE5" in static_markers
+    assert "left_knee_sara" in functional_markers
+    assert functional_markers["left_knee_sara"] == tuple(
+        sorted(("LTHI", "LTHIB", "LTHID", "LTIB", "LTIBF", "LTIBD", "LKNE", "LKNEM"))
+    )
+    assert all_required_markers["static"] == static_markers
+
+
+def test_marker_availability_reports_presence_and_valid_frame_count():
+    data = _synthetic_lower_limb_data()
+    data.marker_dict["LASI"][0, 1] = np.nan
+
+    report = marker_availability(data, ("LASI", "LPSI", "MISSING"))
+
+    assert report.total_frame_count == 3
+    assert report.complete_frame_count == 0
+    assert report.missing_markers == ("MISSING",)
+    assert report.markers["LASI"].valid_frame_count == 2
+    assert report.markers["LPSI"].valid_frame_count == 3
+    assert report.markers["MISSING"].valid_frame_count == 0
+
+
+def test_template_marker_availability_reports_static_and_functional_trials():
+    template = lower_limb_template()
+    data = _synthetic_lower_limb_data()
+
+    reports = template_marker_availability(template, data, {"left_knee_sara": data, "ignored": data})
+
+    assert set(reports) == {"static", "left_knee_sara"}
+    assert reports["static"].complete_frame_count == 3
+    assert reports["left_knee_sara"].complete_frame_count == 3
 
 
 def test_lower_limb_template_builds_expected_generic_model():
