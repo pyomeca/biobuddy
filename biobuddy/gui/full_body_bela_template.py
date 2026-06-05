@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -46,11 +47,63 @@ class BelaSegmentSpec:
         return tuple(sorted(missing_indices))
 
 
+@dataclass(frozen=True)
+class S2mMarkerSpec:
+    """
+    Marker entry read from a historical ``.s2mMod`` file.
+    """
+
+    name: str
+    parent_name: str
+    position: tuple[float, float, float]
+    is_technical: bool
+
+
+@dataclass(frozen=True)
+class S2mSegmentSpec:
+    """
+    Segment entry read from a historical ``.s2mMod`` file.
+    """
+
+    name: str
+    parent_name: str
+    rt: np.ndarray
+    translations: str | None
+    rotations: str | None
+    mass: float | None
+    center_of_mass: tuple[float, float, float] | None
+    inertia: np.ndarray | None
+    markers: tuple[S2mMarkerSpec, ...]
+
+
 def bela_segment_specs() -> tuple[BelaSegmentSpec, ...]:
     """
     Return the full-body BeLa chain extracted from the Matlab configuration.
     """
     return BELA_SEGMENTS
+
+
+def rotations_from_matlab_dof(segment: BelaSegmentSpec) -> str | None:
+    """
+    Convert Matlab rotational DoFs to a BioMod rotation sequence.
+
+    The signs in ``conf.S(s).dof`` are used by the Matlab pipeline to compare
+    left and right sides. They do not change which axes exist in the model.
+    """
+    axes = "xyz"
+    rotations = "".join(axis for axis, dof in zip(axes, segment.dof[:3]) if dof != 0)
+    return rotations or None
+
+
+def translations_from_matlab_dof(segment: BelaSegmentSpec) -> str | None:
+    """
+    Convert Matlab translational DoFs to a BioMod translation sequence.
+    """
+    if segment.name != "Pelvis":
+        return None
+    axes = "xyz"
+    translations = "".join(axis for axis, dof in zip(axes, segment.dof[:3]) if dof != 0)
+    return translations or None
 
 
 def bela_marker_names() -> tuple[str, ...]:
@@ -148,6 +201,93 @@ def subject_inertia_by_segment(subject_name: str) -> dict[str, dict[str, np.ndar
     raise ValueError(f"Unsupported subject '{subject_name}'. Expected 'BeLa' or 'GuSe'.")
 
 
+def parse_s2m_model(filepath: str | Path) -> tuple[S2mSegmentSpec, ...]:
+    """
+    Parse the subset of an old ``.s2mMod`` or BioMod-like file needed for model comparison.
+    """
+    lines = Path(filepath).read_text(errors="replace").splitlines()
+    segments = []
+    current_segment: dict | None = None
+    current_marker: dict | None = None
+    i_line = 0
+    while i_line < len(lines):
+        line = lines[i_line].strip()
+        tokens = line.split()
+        if len(tokens) == 0:
+            i_line += 1
+            continue
+
+        keyword = tokens[0]
+        if keyword == "segment":
+            current_segment = {
+                "name": tokens[1],
+                "parent_name": "base",
+                "rt": np.eye(4),
+                "translations": None,
+                "rotations": None,
+                "mass": None,
+                "center_of_mass": None,
+                "inertia": None,
+                "markers": [],
+            }
+            segments.append(current_segment)
+        elif current_segment is not None and current_marker is None and keyword == "parent":
+            current_segment["parent_name"] = tokens[1]
+        elif current_segment is not None and keyword == "RT":
+            current_segment["rt"] = np.array(
+                [[float(value) for value in lines[i_line + row].strip().split()] for row in range(1, 5)],
+                dtype=float,
+            )
+            i_line += 4
+        elif current_segment is not None and keyword == "translations":
+            current_segment["translations"] = tokens[1]
+        elif current_segment is not None and keyword == "rotations":
+            current_segment["rotations"] = tokens[1]
+        elif current_segment is not None and keyword == "mass":
+            current_segment["mass"] = float(tokens[1])
+        elif current_segment is not None and keyword == "inertia":
+            current_segment["inertia"] = np.array(
+                [[float(value) for value in lines[i_line + row].strip().split()] for row in range(1, 4)],
+                dtype=float,
+            )
+            i_line += 3
+        elif current_segment is not None and keyword == "com":
+            current_segment["center_of_mass"] = tuple(float(value) for value in tokens[1:4])
+        elif current_segment is not None and keyword == "marker":
+            current_marker = {
+                "name": tokens[1],
+                "parent_name": current_segment["name"],
+                "position": (0.0, 0.0, 0.0),
+                "is_technical": False,
+            }
+        elif current_segment is not None and current_marker is not None and keyword == "parent":
+            current_marker["parent_name"] = tokens[1]
+        elif current_segment is not None and current_marker is not None and keyword == "position":
+            current_marker["position"] = tuple(float(value) for value in tokens[1:4])
+        elif current_segment is not None and current_marker is not None and keyword == "technical":
+            current_marker["is_technical"] = bool(int(tokens[1]))
+        elif current_segment is not None and current_marker is not None and keyword == "endmarker":
+            current_segment["markers"].append(S2mMarkerSpec(**current_marker))
+            current_marker = None
+
+        i_line += 1
+
+    return tuple(
+        S2mSegmentSpec(
+            name=segment["name"],
+            parent_name=segment["parent_name"],
+            rt=segment["rt"],
+            translations=segment["translations"],
+            rotations=segment["rotations"],
+            mass=segment["mass"],
+            center_of_mass=segment["center_of_mass"],
+            inertia=segment["inertia"],
+            markers=tuple(segment["markers"]),
+        )
+        for segment in segments
+    )
+
+
 def _inertia_by_segment(
     inertial_parameters: dict[str, tuple[float, tuple[float, float, float], tuple[float, float, float]]],
 ) -> dict[str, dict[str, np.ndarray | float]]:
@@ -163,16 +303,16 @@ def _inertia_by_segment(
 
 BELA_INERTIAL_PARAMETERS = {
     "Pelvis": (11.5688, (0.0, 0.0, 0.1147), (0.0801, 0.1117, 0.0975)),
-    "Thorax": (20.8032, (0.0, 0.0, 0.3350), (0.6281, 0.7118, 0.2277)),
+    "Thorax": (20.8032, (0.0, 0.0, 0.1130523729), (0.6281, 0.7118, 0.2277)),
     "Tete": (5.8472, (0.0, 0.0, 0.128), (0.1142, 0.1142, 0.0187)),
-    "EpauleD": (1.6452, (-0.1123, 0.0, 0.0), (0.0, 0.0, 0.0)),
+    "EpauleD": (1.6452, (0.1123, 0.0, 0.0), (0.0, 0.0, 0.0)),
     "BrasD": (2.5570, (0.0, 0.0, -0.1425), (0.0203, 0.0203, 0.0036)),
     "ABrasD": (1.1968, (0.0, 0.0, -0.1216), (0.0074, 0.0074, 0.0048)),
-    "MainD": (0.5401, (0.0, -0.0839, 0.0), (0.0027, 0.0029, 0.0003)),
+    "MainD": (0.5401, (0.0201989512, -0.0490185172, -0.027307392), (0.0027, 0.0029, 0.0003)),
     "EpauleG": (1.6452, (-0.1123, 0.0, 0.0), (0.0, 0.0, 0.0)),
     "BrasG": (2.5570, (0.0, 0.0, -0.1425), (0.0203, 0.0203, 0.0036)),
     "ABrasG": (1.1968, (0.0, 0.0, -0.1216), (0.0074, 0.0074, 0.0048)),
-    "MainG": (0.5401, (0.0, -0.0839, 0.0), (0.0027, 0.0029, 0.0003)),
+    "MainG": (0.5401, (-0.0264342737, -0.0469823183, -0.0252076569), (0.0027, 0.0029, 0.0003)),
     "CuisseD": (8.5549, (0.0, 0.0, -0.1764), (0.1211, 0.1211, 0.0321)),
     "JambeD": (4.2391, (0.0, 0.0, -0.1989), (0.0835, 0.0835, 0.0064)),
     "PiedD": (1.1323, (0.0, 0.0, -0.0476), (0.0068, 0.0066, 0.0012)),

@@ -62,14 +62,19 @@ from .model_builder import (
 from .lower_limb_template import lower_limb_template
 from .full_body_bela_template import (
     BelaSegmentSpec,
+    S2mMarkerSpec,
+    S2mSegmentSpec,
     bela_inertia_by_segment,
     bela_marker_attachments,
     bela_marker_names,
     bela_segment_specs,
     bela_unresolved_marker_references,
     guse_inertia_by_segment,
+    parse_s2m_model,
+    rotations_from_matlab_dof,
     signed_marker_groups,
     subject_inertia_by_segment,
+    translations_from_matlab_dof,
 )
 
 __all__ = [
@@ -131,12 +136,17 @@ __all__ = [
     template_marker_availability.__name__,
     lower_limb_template.__name__,
     BelaSegmentSpec.__name__,
+    S2mMarkerSpec.__name__,
+    S2mSegmentSpec.__name__,
     bela_inertia_by_segment.__name__,
     bela_marker_attachments.__name__,
     bela_marker_names.__name__,
     bela_segment_specs.__name__,
     bela_unresolved_marker_references.__name__,
     guse_inertia_by_segment.__name__,
+    parse_s2m_model.__name__,
+    rotations_from_matlab_dof.__name__,
     signed_marker_groups.__name__,
     subject_inertia_by_segment.__name__,
+    translations_from_matlab_dof.__name__,
 ]
