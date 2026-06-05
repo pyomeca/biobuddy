@@ -488,6 +488,22 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
+    def from_fbx(self, filepath: str) -> "BiomechanicalModelReal":
+        """
+        Create a biomechanical model from an FBX file.
+
+        Parameters
+        ----------
+        filepath
+            The path to the FBX file to parse.
+        """
+        from ...model_parser.fbx import FbxModelParser
+
+        self.filepath = filepath
+        model = FbxModelParser(filepath=filepath).to_real()
+        model.validate_model()
+        return model
+
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
         Write the bioMod file.
@@ -540,5 +556,25 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         from ...model_writer.bvh.bvh_model_writer import BvhModelWriter
 
         writer = BvhModelWriter(filepath=filepath, with_mesh=with_mesh)
+        self.validate_model()
+        writer.write(self)
+
+    def to_fbx(self, filepath: str, with_mesh: bool = False, blender_executable: str = "blender") -> None:
+        """
+        Write the .fbx file using Blender's FBX exporter.
+
+        Parameters
+        ----------
+        filepath
+            The path to save the FBX file.
+        with_mesh
+            Whether meshes should be exported. Mesh export is not implemented
+            yet in the Blender-backed FBX writer.
+        blender_executable
+            Path or command name used to launch Blender in background mode.
+        """
+        from ...model_writer.fbx.fbx_model_writer import FbxModelWriter
+
+        writer = FbxModelWriter(filepath=filepath, with_mesh=with_mesh, blender_executable=blender_executable)
         self.validate_model()
         writer.write(self)

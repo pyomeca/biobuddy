@@ -87,6 +87,7 @@ The available formats for now are:
 - OpenSim (.osim)
 - biorbd (.bioMod)
 - BVH (.bvh)
+- FBX (.fbx) for reading skeletal hierarchies
 - URDF (.urdf), without muscles for now, but this will be added in the future.
 
 ```python3

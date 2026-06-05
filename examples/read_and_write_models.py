@@ -215,6 +215,37 @@ def bvh_biomod_convertion():
     model.to_bvh(bvh_filepath.replace(".bvh", "_translated.bvh"), with_mesh=visualization_flag)
 
 
+def fbx_biomod_convertion():
+
+    visualization_flag = True
+
+    # Paths
+    current_path_file = Path(__file__).parent
+    biomod_filepath = f"{current_path_file}/models/fullbody_model_from_fbx.bioMod"
+    fbx_filepath = f"{current_path_file}/models/fullbody_model.fbx"
+    translated_fbx_filepath = fbx_filepath.replace(".fbx", "_translated.fbx")
+
+    # --- Reading an .fbx model and translating it to a .bioMod model --- #
+    model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
+
+    # And convert it to a .bioMod file
+    model.to_biomod(biomod_filepath, with_mesh=visualization_flag)
+
+    # Test that the model created is valid
+    try:
+        import biorbd
+    except ImportError:
+        _logger.warning("You must install biorbd to load the model with biorbd")
+    biorbd.Model(biomod_filepath)
+
+    if visualization_flag:
+        model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
+
+    # --- Reading an .bioMod model and translating it back to an .fbx model --- #
+    model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
+    model.to_fbx(translated_fbx_filepath, with_mesh=False)
+
+
 if __name__ == "__main__":
 
     # Configure logging
@@ -230,3 +261,4 @@ if __name__ == "__main__":
     osim_biomod_convertion()
     urdf_biomod_convertion()
     bvh_biomod_convertion()
+    fbx_biomod_convertion()
