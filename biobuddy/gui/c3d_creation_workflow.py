@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, replace
+from itertools import combinations
 from pathlib import Path
+import re
+
+import numpy as np
 
 from ..utils.marker_data import C3dData, MarkerData
 from .c3d_model_creation import C3dModelPreset, c3d_model_preset_virtual_features
@@ -56,6 +60,35 @@ class C3dSegmentMarkerGroup:
     marker_names: tuple[str, ...]
     parent_name: str = ""
     segment_type: str = "anatomical"
+    technical_marker_names: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class C3dFourGroupsResult:
+    """
+    Best two marker vectors found by the Matlab FourGroups search.
+    """
+
+    groups: tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], tuple[int, ...]]
+    first_vector: tuple[float, float, float]
+    second_vector: tuple[float, float, float]
+    cross_product_norm_squared: float
+
+
+@dataclass(frozen=True)
+class C3dScoreReportEntry:
+    """
+    One SCORE block parsed from a Matlab model generation report.
+    """
+
+    segment_index: int
+    marker_names: tuple[str, ...]
+    kept_frame_count: int | None
+    total_frame_count: int | None
+    proximal_column: int | None
+    distal_column: int | None
+    proximal_segment_name: str
+    distal_segment_name: str
 
 
 @dataclass(frozen=True)
@@ -216,6 +249,120 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
     )
 
 
+def four_marker_groups(marker_positions: np.ndarray) -> C3dFourGroupsResult:
+    """
+    Python equivalent of Matlab ``FourGroups`` for one marker configuration.
+    """
+    positions = np.asarray(marker_positions, dtype=float)
+    if positions.ndim != 2 or positions.shape[0] != 3:
+        raise ValueError("marker_positions must have shape (3, nb_markers).")
+    nb_markers = positions.shape[1]
+    if nb_markers < 3:
+        raise ValueError("At least three markers are required.")
+    if nb_markers == 3:
+        first_vector = positions[:, 0] - positions[:, 1]
+        second_vector = positions[:, 0] - positions[:, 2]
+        return C3dFourGroupsResult(
+            groups=((0,), (1,), (0,), (2,)),
+            first_vector=tuple(float(value) for value in first_vector),
+            second_vector=tuple(float(value) for value in second_vector),
+            cross_product_norm_squared=float(np.sum(np.cross(first_vector, second_vector) ** 2)),
+        )
+
+    best_result: C3dFourGroupsResult | None = None
+    all_indices = tuple(range(nb_markers))
+    half_size = int(np.ceil(nb_markers / 2))
+    for first_half in combinations(all_indices, half_size):
+        second_half = tuple(index for index in all_indices if index not in first_half)
+        if not second_half or first_half > second_half:
+            continue
+        first_subgroup_size = int(np.ceil(len(first_half) / 2))
+        second_subgroup_size = int(np.ceil(len(second_half) / 2))
+        for first_group in combinations(first_half, first_subgroup_size):
+            second_group = tuple(index for index in first_half if index not in first_group)
+            if not second_group or first_group > second_group:
+                continue
+            for third_group in combinations(second_half, second_subgroup_size):
+                fourth_group = tuple(index for index in second_half if index not in third_group)
+                if not fourth_group or third_group > fourth_group:
+                    continue
+                first_vector = _mean_marker_group(positions, first_group) - _mean_marker_group(positions, second_group)
+                second_vector = _mean_marker_group(positions, third_group) - _mean_marker_group(positions, fourth_group)
+                cross_product_norm_squared = float(np.sum(np.cross(first_vector, second_vector) ** 2))
+                if best_result is None or cross_product_norm_squared > best_result.cross_product_norm_squared:
+                    best_result = C3dFourGroupsResult(
+                        groups=(first_group, second_group, third_group, fourth_group),
+                        first_vector=tuple(float(value) for value in first_vector),
+                        second_vector=tuple(float(value) for value in second_vector),
+                        cross_product_norm_squared=cross_product_norm_squared,
+                    )
+    if best_result is None:
+        raise ValueError("Unable to split markers into four groups.")
+    return best_result
+
+
+def parse_score_report(text: str) -> tuple[C3dScoreReportEntry, ...]:
+    """
+    Parse SCORE blocks from a Matlab model generation report.
+    """
+    entries = []
+    current: dict | None = None
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        score_match = re.match(r"SCoRE for segment\s+(\d+)", line)
+        if score_match:
+            if current is not None:
+                entries.append(_score_entry_from_dict(current))
+            current = {
+                "segment_index": int(score_match.group(1)),
+                "marker_names": (),
+                "kept_frame_count": None,
+                "total_frame_count": None,
+                "proximal_column": None,
+                "distal_column": None,
+                "segment_growth": [],
+            }
+            continue
+        if current is None:
+            continue
+        if line.startswith("Marqueurs utilises:"):
+            marker_text = line.split(":", maxsplit=1)[1]
+            current["marker_names"] = tuple(marker_text.split())
+            continue
+        frame_match = re.match(r"(\d+) frames sur (\d+) ont ete conservees", _strip_accents(line))
+        if frame_match:
+            current["kept_frame_count"] = int(frame_match.group(1))
+            current["total_frame_count"] = int(frame_match.group(2))
+            continue
+        proximal_match = re.match(r"CoR/AoR dans proximal a colonne (\d+)", _strip_accents(line))
+        if proximal_match:
+            current["proximal_column"] = int(proximal_match.group(1))
+            continue
+        distal_match = re.match(r"CoR/AoR dans distal\s+a colonne (\d+)", _strip_accents(line))
+        if distal_match:
+            current["distal_column"] = int(distal_match.group(1))
+            continue
+        growth_match = re.match(r"(.+?) passe de \d+ a \d+ marqueurs", _strip_accents(line))
+        if growth_match:
+            current["segment_growth"].append(growth_match.group(1).strip())
+    if current is not None:
+        entries.append(_score_entry_from_dict(current))
+    return tuple(entries)
+
+
+def score_virtual_marker_names_from_entry(entry: C3dScoreReportEntry) -> tuple[str, str]:
+    """
+    Return understandable virtual marker names for a parsed SCORE result.
+
+    Matlab stores the computed CoR/AoR as one new column in the proximal segment and one
+    new column in the distal segment. The two names below make that dual local-frame
+    storage explicit.
+    """
+    proximal_name = entry.proximal_segment_name or "parent"
+    distal_name = entry.distal_segment_name or f"segment_{entry.segment_index}"
+    return (f"CoR_{distal_name}_in_{proximal_name}", f"CoR_{distal_name}_in_{distal_name}")
+
+
 def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None = None) -> tuple[C3dDraftIssue, ...]:
     """
     Validate whether a C3D workflow draft has enough information to become a reusable template.
@@ -234,12 +381,12 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
             issues.append(
                 C3dDraftIssue("warning", "segments", f"Segment '{group.segment_name}' has no marker assigned.")
             )
-        if group.segment_type == "technical" and len(group.marker_names) < 3:
+        if group.segment_type == "technical" and len(group.technical_marker_names) < 3:
             issues.append(
                 C3dDraftIssue(
                     "warning",
                     "segments",
-                    f"Technical segment '{group.segment_name}' should have at least 3 markers.",
+                    f"Technical segment '{group.segment_name}' should have at least 3 technical markers.",
                 )
             )
         if (
@@ -545,7 +692,12 @@ def remove_segment_from_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3d
     )
 
 
-def assign_marker_to_segment(draft: C3dWorkflowDraft, segment_name: str, marker_name: str) -> C3dWorkflowDraft:
+def assign_marker_to_segment(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    marker_name: str,
+    is_technical: bool | None = None,
+) -> C3dWorkflowDraft:
     """
     Assign a marker to a segment. Markers may belong to several segments.
     """
@@ -560,7 +712,11 @@ def assign_marker_to_segment(draft: C3dWorkflowDraft, segment_name: str, marker_
             continue
         found_segment = True
         marker_names = group.marker_names if marker_name in group.marker_names else group.marker_names + (marker_name,)
-        groups.append(replace(group, marker_names=marker_names))
+        should_be_technical = group.segment_type == "technical" if is_technical is None else is_technical
+        technical_marker_names = group.technical_marker_names
+        if should_be_technical and marker_name not in technical_marker_names:
+            technical_marker_names = technical_marker_names + (marker_name,)
+        groups.append(replace(group, marker_names=marker_names, technical_marker_names=technical_marker_names))
     if not found_segment:
         raise ValueError(f"Segment '{segment_name}' does not exist.")
     return _replace_draft_groups(draft, tuple(groups))
@@ -570,13 +726,14 @@ def assign_markers_to_segment(
     draft: C3dWorkflowDraft,
     segment_name: str,
     marker_names: tuple[str, ...],
+    is_technical: bool | None = None,
 ) -> C3dWorkflowDraft:
     """
     Assign several markers to one segment while preserving their selection order.
     """
     updated_draft = draft
     for marker_name in marker_names:
-        updated_draft = assign_marker_to_segment(updated_draft, segment_name, marker_name)
+        updated_draft = assign_marker_to_segment(updated_draft, segment_name, marker_name, is_technical=is_technical)
     return updated_draft
 
 
@@ -588,7 +745,11 @@ def unassign_marker_from_segment(draft: C3dWorkflowDraft, segment_name: str, mar
     for group in draft.segment_marker_groups:
         if group.segment_name == segment_name:
             groups.append(
-                replace(group, marker_names=tuple(name for name in group.marker_names if name != marker_name))
+                replace(
+                    group,
+                    marker_names=tuple(name for name in group.marker_names if name != marker_name),
+                    technical_marker_names=tuple(name for name in group.technical_marker_names if name != marker_name),
+                )
             )
         else:
             groups.append(group)
@@ -607,6 +768,42 @@ def unassign_markers_from_segment(
     for marker_name in marker_names:
         updated_draft = unassign_marker_from_segment(updated_draft, segment_name, marker_name)
     return updated_draft
+
+
+def set_segment_marker_technical(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    marker_names: tuple[str, ...],
+    is_technical: bool,
+) -> C3dWorkflowDraft:
+    """
+    Mark assigned segment markers as technical or additional/anatomical.
+    """
+    requested_names = tuple(name.strip() for name in marker_names if name.strip() != "")
+    groups = []
+    found_segment = False
+    for group in draft.segment_marker_groups:
+        if group.segment_name != segment_name:
+            groups.append(group)
+            continue
+        found_segment = True
+        missing_names = sorted(set(requested_names) - set(group.marker_names))
+        if missing_names:
+            raise ValueError(
+                f"Markers must be assigned to segment '{segment_name}' before they can be marked technical: "
+                f"{', '.join(missing_names)}."
+            )
+        technical_marker_names = tuple(name for name in group.technical_marker_names if name in group.marker_names)
+        if is_technical:
+            for marker_name in requested_names:
+                if marker_name not in technical_marker_names:
+                    technical_marker_names = technical_marker_names + (marker_name,)
+        else:
+            technical_marker_names = tuple(name for name in technical_marker_names if name not in requested_names)
+        groups.append(replace(group, technical_marker_names=technical_marker_names))
+    if not found_segment:
+        raise ValueError(f"Segment '{segment_name}' does not exist.")
+    return _replace_draft_groups(draft, tuple(groups))
 
 
 def add_virtual_marker_to_draft(
@@ -850,6 +1047,7 @@ def c3d_segment_marker_groups_for_preset(preset: C3dModelPreset) -> tuple[C3dSeg
                 tuple(segment.marker_names),
                 "" if segment.parent_name == "base" else segment.parent_name,
                 "anatomical",
+                tuple(segment.marker_names),
             )
             for segment in bela_segment_specs()
         )
@@ -917,15 +1115,19 @@ def c3d_template_payload_from_draft(draft: C3dWorkflowDraft) -> dict:
 
 def _groups_from_model_template(template: ModelTemplate) -> tuple[C3dSegmentMarkerGroup, ...]:
     marker_segments = {}
+    technical_marker_segments = {}
     for attachment in template.marker_attachments:
         for segment_name in attachment.segment_names:
             marker_segments.setdefault(segment_name, []).append(attachment.name)
+            if attachment.is_technical:
+                technical_marker_segments.setdefault(segment_name, []).append(attachment.name)
     return tuple(
         C3dSegmentMarkerGroup(
             segment.name,
             tuple(marker_segments.get(segment.name, ())),
             "" if segment.parent_name in {"base", "root"} else segment.parent_name,
             "anatomical",
+            tuple(technical_marker_segments.get(segment.name, ())),
         )
         for segment in template.segments
     )
@@ -1033,3 +1235,36 @@ def _settings_from_model_template(template: ModelTemplate) -> tuple[C3dSegmentSe
             )
         )
     return tuple(settings)
+
+
+def _mean_marker_group(positions: np.ndarray, indices: tuple[int, ...]) -> np.ndarray:
+    """
+    Return the mean position of one marker index group.
+    """
+    return np.mean(positions[:, indices], axis=1)
+
+
+def _strip_accents(text: str) -> str:
+    """
+    Normalize the small French report snippets that need regex matching.
+    """
+    return text.replace("é", "e").replace("è", "e").replace("ê", "e").replace("à", "a").replace("�", "e")
+
+
+def _score_entry_from_dict(raw_entry: dict) -> C3dScoreReportEntry:
+    """
+    Convert a raw parsed SCORE block to a typed report entry.
+    """
+    segment_growth = tuple(raw_entry.get("segment_growth", ()))
+    proximal_segment_name = segment_growth[0] if len(segment_growth) >= 1 else ""
+    distal_segment_name = segment_growth[1] if len(segment_growth) >= 2 else ""
+    return C3dScoreReportEntry(
+        segment_index=int(raw_entry["segment_index"]),
+        marker_names=tuple(raw_entry.get("marker_names", ())),
+        kept_frame_count=raw_entry.get("kept_frame_count"),
+        total_frame_count=raw_entry.get("total_frame_count"),
+        proximal_column=raw_entry.get("proximal_column"),
+        distal_column=raw_entry.get("distal_column"),
+        proximal_segment_name=proximal_segment_name,
+        distal_segment_name=distal_segment_name,
+    )

@@ -60,6 +60,7 @@ from .c3d_creation_workflow import (
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
+    set_segment_marker_technical,
     unassign_markers_from_segment,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
@@ -245,6 +246,9 @@ def launch_model_editor() -> None:
             self.segment_marker_list.itemSelectionChanged.connect(self._update_assigned_marker_list)
             self.assigned_marker_list = QListWidget()
             self.assigned_marker_list.setSelectionMode(qt_extended_selection)
+            self.assigned_marker_list.itemSelectionChanged.connect(self._sync_assigned_marker_technical_checkbox)
+            self.assigned_marker_technical_checkbox = QCheckBox("Selected markers are technical")
+            self.assigned_marker_technical_checkbox.stateChanged.connect(self._set_selected_assigned_markers_technical)
             self.axis_list = QListWidget()
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
@@ -340,6 +344,7 @@ def launch_model_editor() -> None:
             right_column = QVBoxLayout()
             right_column.addWidget(QLabel("Markers assigned to selected segment"))
             right_column.addWidget(self.assigned_marker_list)
+            right_column.addWidget(self.assigned_marker_technical_checkbox)
             marker_row.addLayout(left_column)
             marker_row.addLayout(transfer_column)
             marker_row.addLayout(right_column)
@@ -746,7 +751,7 @@ def launch_model_editor() -> None:
         def _selected_assigned_marker_names(self) -> tuple[str, ...]:
             marker_names = []
             for item in self.assigned_marker_list.selectedItems():
-                marker_name = item.text()
+                marker_name = item.text().split("|", maxsplit=1)[0].strip()
                 if marker_name.startswith("Select a segment") or marker_name.startswith("No marker"):
                     continue
                 marker_names.append(marker_name)
@@ -754,6 +759,7 @@ def launch_model_editor() -> None:
 
         def _update_assigned_marker_list(self) -> None:
             self.assigned_marker_list.clear()
+            self._sync_assigned_marker_technical_checkbox()
             segment_name = self._selected_workflow_segment_name()
             if segment_name is None:
                 self.assigned_marker_list.addItem("Select a segment to inspect its markers.")
@@ -765,8 +771,40 @@ def launch_model_editor() -> None:
                     self.assigned_marker_list.addItem("No marker assigned to this segment.")
                     return
                 for marker_name in group.marker_names:
-                    self.assigned_marker_list.addItem(marker_name)
+                    marker_kind = "technical" if marker_name in group.technical_marker_names else "additional"
+                    self.assigned_marker_list.addItem(f"{marker_name} | {marker_kind}")
                 return
+
+        def _sync_assigned_marker_technical_checkbox(self) -> None:
+            marker_names = self._selected_assigned_marker_names()
+            segment_name = self._selected_workflow_segment_name()
+            is_checked = False
+            is_enabled = segment_name is not None and len(marker_names) != 0
+            if is_enabled:
+                for group in self.workflow_draft.segment_marker_groups:
+                    if group.segment_name == segment_name:
+                        is_checked = all(marker_name in group.technical_marker_names for marker_name in marker_names)
+                        break
+            self.assigned_marker_technical_checkbox.blockSignals(True)
+            self.assigned_marker_technical_checkbox.setEnabled(is_enabled)
+            self.assigned_marker_technical_checkbox.setChecked(is_checked)
+            self.assigned_marker_technical_checkbox.blockSignals(False)
+
+        def _set_selected_assigned_markers_technical(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            marker_names = self._selected_assigned_marker_names()
+            if segment_name is None or len(marker_names) == 0:
+                return
+            try:
+                self.workflow_draft = set_segment_marker_technical(
+                    self.workflow_draft,
+                    segment_name,
+                    marker_names,
+                    self.assigned_marker_technical_checkbox.isChecked(),
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to update marker type", str(error))
 
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():

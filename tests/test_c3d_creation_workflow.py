@@ -19,9 +19,13 @@ from biobuddy.gui.c3d_creation_workflow import (
     c3d_workflow_progress,
     c3d_workflow_summary,
     clear_c3d_file_role_from_draft,
+    four_marker_groups,
+    parse_score_report,
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
+    score_virtual_marker_names_from_entry,
+    set_segment_marker_technical,
     unassign_markers_from_segment,
     unassign_marker_from_segment,
     update_segment_settings_in_draft,
@@ -113,12 +117,14 @@ def test_c3d_workflow_draft_edits_segment_marker_assignments():
 
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
     assert custom_group.marker_names == ("CUSTOM1",)
+    assert custom_group.technical_marker_names == ("CUSTOM1",)
     assert custom_group.parent_name == "Pelvis"
     assert custom_group.segment_type == "technical"
 
     draft = unassign_marker_from_segment(draft, "CustomSegment", "CUSTOM1")
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
     assert custom_group.marker_names == ()
+    assert custom_group.technical_marker_names == ()
 
     draft = remove_segment_from_draft(draft, "CustomSegment")
     assert all(group.segment_name != "CustomSegment" for group in draft.segment_marker_groups)
@@ -137,6 +143,67 @@ def test_c3d_workflow_draft_edits_multiple_segment_marker_assignments():
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
 
     assert custom_group.marker_names == ("CUSTOM2",)
+
+
+def test_c3d_workflow_draft_marks_assigned_markers_as_technical():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "CustomSegment", segment_type="anatomical")
+    draft = assign_markers_to_segment(draft, "CustomSegment", ("CUSTOM1", "CUSTOM2"), is_technical=False)
+
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.technical_marker_names == ()
+
+    draft = set_segment_marker_technical(draft, "CustomSegment", ("CUSTOM1",), True)
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.technical_marker_names == ("CUSTOM1",)
+
+    draft = set_segment_marker_technical(draft, "CustomSegment", ("CUSTOM1",), False)
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.technical_marker_names == ()
+
+
+def test_four_marker_groups_matches_three_marker_matlab_special_case():
+    positions = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+
+    result = four_marker_groups(positions)
+
+    assert result.groups == ((0,), (1,), (0,), (2,))
+    assert np.allclose(result.first_vector, (1.0, -1.0, 0.0))
+    assert np.allclose(result.second_vector, (1.0, 0.0, -1.0))
+    assert result.cross_product_norm_squared == 3.0
+
+
+def test_parse_score_report_extracts_joint_center_entries():
+    report_text = """
+    SCoRE for segment 2
+    Marqueurs utilises: EIASD CID EIPSD EIPSG CIG EIASG MANU MIDSTERNUM XIPHOIDE C7 D3 D10
+    Nombre images : 7297
+    4629 frames sur 7297 ont ete conservees
+        CoR/AoR dans proximal a colonne 7
+        CoR/AoR dans distal   a colonne 7
+         Pelvis passe de 6 a 7 marqueurs
+         Thorax passe de 6 a 7 marqueurs
+    """
+
+    entries = parse_score_report(report_text)
+
+    assert len(entries) == 1
+    entry = entries[0]
+    assert entry.segment_index == 2
+    assert entry.marker_names[:2] == ("EIASD", "CID")
+    assert entry.kept_frame_count == 4629
+    assert entry.total_frame_count == 7297
+    assert entry.proximal_column == 7
+    assert entry.distal_column == 7
+    assert entry.proximal_segment_name == "Pelvis"
+    assert entry.distal_segment_name == "Thorax"
+    assert score_virtual_marker_names_from_entry(entry) == ("CoR_Thorax_in_Pelvis", "CoR_Thorax_in_Thorax")
 
 
 def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
@@ -269,7 +336,7 @@ def test_c3d_workflow_draft_validation_reports_technical_segment_requirements():
 
     issues = validate_c3d_workflow_draft(draft)
 
-    assert any(issue.severity == "warning" and "at least 3 markers" in issue.message for issue in issues)
+    assert any(issue.severity == "warning" and "at least 3 technical markers" in issue.message for issue in issues)
     assert any(issue.severity == "error" and "UnknownParent" in issue.message for issue in issues)
 
 
