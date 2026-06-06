@@ -4,12 +4,17 @@ import numpy as np
 import pytest
 
 from biobuddy.gui.full_body_bela_template import parse_s2m_model
+from biobuddy.gui.model_builder import required_static_markers
 from biobuddy.gui.upper_limb_template import (
     upper_limb_inertia_by_segment,
     upper_limb_marker_attachments,
     upper_limb_marker_names,
     upper_limb_segment_specs,
+    upper_limb_template,
     upper_limb_unresolved_marker_references,
+    upper_limb_virtual_axis_endpoint_names,
+    upper_limb_virtual_feature_requirements,
+    upper_limb_virtual_point_name,
 )
 
 
@@ -38,6 +43,33 @@ def test_upper_limb_template_reports_virtual_marker_references():
     assert unresolved["LowerArm1"] == (5, 6)
     assert unresolved["LowerArm2"] == (5, 6)
     assert unresolved["Hand"] == (5,)
+
+
+def test_upper_limb_model_template_exposes_virtual_feature_placeholders():
+    template = upper_limb_template()
+    requirement_names = {requirement.name for requirement in upper_limb_virtual_feature_requirements()}
+
+    assert template.root_segment_name == "Pelvis"
+    assert [segment.name for segment in template.segments] == [
+        "Pelvis",
+        "Thorax",
+        "Clavicule",
+        "Scapula",
+        "Arm",
+        "LowerArm1",
+        "LowerArm2",
+        "Hand",
+    ]
+    assert upper_limb_virtual_point_name("Thorax", 7) in requirement_names
+    assert upper_limb_virtual_point_name("Arm", 8) in requirement_names
+    assert "Clavicule_u_axis" in requirement_names
+    assert upper_limb_virtual_point_name("Hand", 5) in requirement_names
+
+    required_markers = set(required_static_markers(template))
+    clavicle_axis_start, clavicle_axis_end = upper_limb_virtual_axis_endpoint_names("Clavicule", "u_axis")
+    assert upper_limb_virtual_point_name("Thorax", 7) in required_markers
+    assert clavicle_axis_start in required_markers
+    assert clavicle_axis_end in required_markers
 
 
 def test_upper_limb_inertia_parameters_match_reference_values():

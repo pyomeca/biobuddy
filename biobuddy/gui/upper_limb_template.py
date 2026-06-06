@@ -4,7 +4,16 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .model_builder import MarkerAttachmentSpec
+from ..components.generic.rigidbody.axis import Axis
+from ..utils.enums import Rotations, Translations
+from .model_builder import (
+    AxisSpec,
+    LocalFrameSpec,
+    MarkerAttachmentSpec,
+    MarkerEndpointSpec,
+    ModelTemplate,
+    SegmentSpec,
+)
 
 
 @dataclass(frozen=True)
@@ -43,11 +52,42 @@ class UpperLimbSegmentSpec:
         return tuple(sorted(missing_indices))
 
 
+@dataclass(frozen=True)
+class UpperLimbVirtualFeatureRequirement:
+    """
+    Virtual point or axis needed before the upper-limb template can be personalized.
+    """
+
+    name: str
+    feature_type: str
+    segment_name: str
+    matlab_indices: tuple[int, ...]
+    role: str
+
+
 def upper_limb_segment_specs() -> tuple[UpperLimbSegmentSpec, ...]:
     """
     Return the IRSST upper-limb model-2 chain extracted from Matlab files.
     """
     return UPPER_LIMB_SEGMENTS
+
+
+def upper_limb_template() -> ModelTemplate:
+    """
+    Return a declarative upper-limb template using explicit virtual feature placeholders.
+
+    The historical Matlab model references several points and axes that are not
+    raw C3D markers. Those are named in the template as regular marker-like
+    placeholders so the C3D creation workflow can fill them with pointing,
+    regression, SCORE, or SARA definitions before model generation.
+    """
+    return ModelTemplate(
+        name="Upper-limb from calibration C3D",
+        segments=tuple(_segment_to_template(segment) for segment in UPPER_LIMB_SEGMENTS),
+        marker_attachments=upper_limb_marker_attachments(),
+        required_static_markers=tuple(sorted(upper_limb_marker_names())),
+        root_segment_name="Pelvis",
+    )
 
 
 def upper_limb_marker_names() -> tuple[str, ...]:
@@ -78,6 +118,23 @@ def upper_limb_marker_attachments() -> tuple[MarkerAttachmentSpec, ...]:
     return tuple(attachments)
 
 
+def upper_limb_virtual_feature_requirements() -> tuple[UpperLimbVirtualFeatureRequirement, ...]:
+    """
+    Return virtual points and axes needed by the current upper-limb template.
+    """
+    requirements = []
+    for segment in UPPER_LIMB_SEGMENTS:
+        for role, indices in (
+            ("u_axis", segment.u_indices),
+            ("v_axis", segment.v_indices),
+            ("origin", segment.origin_indices),
+        ):
+            requirements.extend(_virtual_point_requirements_from_indices(segment, indices, role))
+        requirements.extend(_virtual_axis_requirements_from_indices(segment, segment.u_indices, "u_axis"))
+        requirements.extend(_virtual_axis_requirements_from_indices(segment, segment.v_indices, "v_axis"))
+    return tuple(_unique_requirements(requirements))
+
+
 def upper_limb_unresolved_marker_references() -> dict[str, tuple[int, ...]]:
     """
     Return local Matlab indices that refer to virtual/anatomical points.
@@ -87,6 +144,20 @@ def upper_limb_unresolved_marker_references() -> dict[str, tuple[int, ...]]:
         for segment in UPPER_LIMB_SEGMENTS
         if len(segment.unresolved_marker_indices) != 0
     }
+
+
+def upper_limb_virtual_point_name(segment_name: str, matlab_index: int) -> str:
+    """
+    Return the placeholder name for a non-raw Matlab point index.
+    """
+    return f"{segment_name}_virtual_{matlab_index}"
+
+
+def upper_limb_virtual_axis_endpoint_names(segment_name: str, axis_role: str) -> tuple[str, str]:
+    """
+    Return placeholder endpoint names for a virtual axis.
+    """
+    return f"{segment_name}_{axis_role}_start", f"{segment_name}_{axis_role}_end"
 
 
 def upper_limb_inertia_by_segment() -> dict[str, dict[str, np.ndarray | float | None]]:
@@ -105,6 +176,152 @@ def upper_limb_inertia_by_segment() -> dict[str, dict[str, np.ndarray | float | 
         }
         for segment in UPPER_LIMB_SEGMENTS
     }
+
+
+def _segment_to_template(segment: UpperLimbSegmentSpec) -> SegmentSpec:
+    return SegmentSpec(
+        name=segment.name,
+        parent_name="root" if segment.parent_name == "base" else segment.parent_name,
+        translations=_translations_from_string(segment.translations),
+        rotations=_rotations_from_string(segment.rotations),
+        frame=LocalFrameSpec(
+            origin=_endpoint_from_indices(segment, segment.origin_indices, role="origin"),
+            first_axis=_axis_from_indices(segment, segment.u_indices, role="u_axis", axis_name=_u_axis_name(segment)),
+            second_axis=_axis_from_indices(segment, segment.v_indices, role="v_axis", axis_name=_v_axis_name(segment)),
+            axis_to_keep=_axis_name_from_label(segment.axis_label),
+        ),
+        mesh_points=tuple(MarkerEndpointSpec((marker_name,)) for marker_name in segment.marker_names),
+    )
+
+
+def _endpoint_from_indices(
+    segment: UpperLimbSegmentSpec,
+    signed_indices: tuple[int, ...],
+    role: str,
+) -> MarkerEndpointSpec:
+    if len(signed_indices) == 0:
+        return MarkerEndpointSpec((upper_limb_virtual_point_name(segment.name, 0),))
+    return MarkerEndpointSpec(tuple(_marker_or_virtual_point_name(segment, abs(index)) for index in signed_indices))
+
+
+def _axis_from_indices(
+    segment: UpperLimbSegmentSpec,
+    signed_indices: tuple[int, ...],
+    role: str,
+    axis_name: Axis.Name,
+) -> AxisSpec:
+    start_names, end_names = _signed_index_groups(segment, signed_indices)
+    if len(start_names) == 0 or len(end_names) == 0:
+        start_name, end_name = upper_limb_virtual_axis_endpoint_names(segment.name, role)
+        return AxisSpec.from_markers(axis_name, start_name, end_name)
+    return AxisSpec.from_markers(axis_name, start_names, end_names)
+
+
+def _signed_index_groups(
+    segment: UpperLimbSegmentSpec,
+    signed_indices: tuple[int, ...],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    start_names = []
+    end_names = []
+    for signed_index in signed_indices:
+        point_name = _marker_or_virtual_point_name(segment, abs(signed_index))
+        if signed_index < 0:
+            start_names.append(point_name)
+        else:
+            end_names.append(point_name)
+    return tuple(start_names), tuple(end_names)
+
+
+def _marker_or_virtual_point_name(segment: UpperLimbSegmentSpec, matlab_index: int) -> str:
+    if matlab_index <= len(segment.marker_names):
+        return segment.marker_names[matlab_index - 1]
+    return upper_limb_virtual_point_name(segment.name, matlab_index)
+
+
+def _virtual_point_requirements_from_indices(
+    segment: UpperLimbSegmentSpec,
+    signed_indices: tuple[int, ...],
+    role: str,
+) -> tuple[UpperLimbVirtualFeatureRequirement, ...]:
+    requirements = []
+    for signed_index in signed_indices:
+        matlab_index = abs(signed_index)
+        if matlab_index > len(segment.marker_names):
+            requirements.append(
+                UpperLimbVirtualFeatureRequirement(
+                    name=upper_limb_virtual_point_name(segment.name, matlab_index),
+                    feature_type="point",
+                    segment_name=segment.name,
+                    matlab_indices=(matlab_index,),
+                    role=role,
+                )
+            )
+    return tuple(requirements)
+
+
+def _virtual_axis_requirements_from_indices(
+    segment: UpperLimbSegmentSpec,
+    signed_indices: tuple[int, ...],
+    role: str,
+) -> tuple[UpperLimbVirtualFeatureRequirement, ...]:
+    start_names, end_names = _signed_index_groups(segment, signed_indices)
+    if len(start_names) != 0 and len(end_names) != 0:
+        return ()
+    return (
+        UpperLimbVirtualFeatureRequirement(
+            name=f"{segment.name}_{role}",
+            feature_type="axis",
+            segment_name=segment.name,
+            matlab_indices=tuple(abs(index) for index in signed_indices),
+            role=role,
+        ),
+    )
+
+
+def _unique_requirements(
+    requirements: list[UpperLimbVirtualFeatureRequirement],
+) -> tuple[UpperLimbVirtualFeatureRequirement, ...]:
+    unique = {}
+    for requirement in requirements:
+        unique[(requirement.feature_type, requirement.name, requirement.role)] = requirement
+    return tuple(unique.values())
+
+
+def _u_axis_name(segment: UpperLimbSegmentSpec) -> Axis.Name:
+    kept_axis_name = _axis_name_from_label(segment.axis_label)
+    return kept_axis_name if segment.keep_axis_index == 1 else _complementary_axis_name(kept_axis_name)
+
+
+def _v_axis_name(segment: UpperLimbSegmentSpec) -> Axis.Name:
+    kept_axis_name = _axis_name_from_label(segment.axis_label)
+    return kept_axis_name if segment.keep_axis_index == 2 else _complementary_axis_name(kept_axis_name)
+
+
+def _axis_name_from_label(axis_label: str) -> Axis.Name:
+    axis_names = {"x": Axis.Name.X, "y": Axis.Name.Y, "z": Axis.Name.Z}
+    return axis_names[axis_label.lower()]
+
+
+def _complementary_axis_name(axis_name: Axis.Name) -> Axis.Name:
+    if axis_name == Axis.Name.X:
+        return Axis.Name.Y
+    if axis_name == Axis.Name.Y:
+        return Axis.Name.Z
+    if axis_name == Axis.Name.Z:
+        return Axis.Name.X
+    raise ValueError(f"Unsupported axis name: {axis_name}.")
+
+
+def _rotations_from_string(rotations: str | None) -> Rotations:
+    if rotations is None:
+        return Rotations.NONE
+    return Rotations(rotations)
+
+
+def _translations_from_string(translations: str | None) -> Translations:
+    if translations is None:
+        return Translations.NONE
+    return Translations(translations)
 
 
 UPPER_LIMB_SEGMENTS = (

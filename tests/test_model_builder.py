@@ -131,10 +131,9 @@ def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
         C3dModelPreset.UPPER_LIMB,
     )
     assert template_for_c3d_model_preset(C3dModelPreset.LOWER_LIMBS).root_segment_name == "Pelvis"
+    assert template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB).name == "Upper-limb from calibration C3D"
     with pytest.raises(NotImplementedError, match="Full-body C3D model creation"):
         template_for_c3d_model_preset(C3dModelPreset.FULL_BODY)
-    with pytest.raises(NotImplementedError, match="Upper-limb C3D model creation"):
-        template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB)
 
 
 def test_find_static_c3d_file_uses_expected_patterns(tmp_path):

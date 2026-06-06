@@ -92,11 +92,16 @@ from .virtual_points import (
 )
 from .upper_limb_template import (
     UpperLimbSegmentSpec,
+    UpperLimbVirtualFeatureRequirement,
     upper_limb_inertia_by_segment,
     upper_limb_marker_attachments,
     upper_limb_marker_names,
     upper_limb_segment_specs,
+    upper_limb_template,
     upper_limb_unresolved_marker_references,
+    upper_limb_virtual_axis_endpoint_names,
+    upper_limb_virtual_feature_requirements,
+    upper_limb_virtual_point_name,
 )
 from .lower_limb_template import lower_limb_template
 from .full_body_bela_template import (
@@ -201,11 +206,16 @@ __all__ = [
     pointing_virtual_point.__name__,
     sara_virtual_axis_placeholder.__name__,
     UpperLimbSegmentSpec.__name__,
+    UpperLimbVirtualFeatureRequirement.__name__,
     upper_limb_inertia_by_segment.__name__,
     upper_limb_marker_attachments.__name__,
     upper_limb_marker_names.__name__,
     upper_limb_segment_specs.__name__,
+    upper_limb_template.__name__,
     upper_limb_unresolved_marker_references.__name__,
+    upper_limb_virtual_axis_endpoint_names.__name__,
+    upper_limb_virtual_feature_requirements.__name__,
+    upper_limb_virtual_point_name.__name__,
     lower_limb_template.__name__,
     BelaSegmentSpec.__name__,
     S2mMarkerSpec.__name__,

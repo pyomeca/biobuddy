@@ -7,6 +7,7 @@ from pathlib import Path
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..utils.marker_data import C3dData, MarkerData
 from .lower_limb_template import lower_limb_template
+from .upper_limb_template import upper_limb_template
 from .model_builder import (
     FrameQuality,
     MarkerAvailabilityReport,
@@ -68,10 +69,7 @@ def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:
             "a BioMod model."
         )
     if preset == C3dModelPreset.UPPER_LIMB:
-        raise NotImplementedError(
-            "Upper-limb C3D model creation still needs CoR/SARA and anatomical virtual-point reconstruction before it "
-            "can generate a BioMod model."
-        )
+        return upper_limb_template()
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
 
 
