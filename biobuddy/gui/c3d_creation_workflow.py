@@ -23,6 +23,18 @@ class C3dWorkflowStep:
 
 
 @dataclass(frozen=True)
+class C3dWorkflowStepStatus:
+    """
+    Current completion state of one C3D workflow step.
+    """
+
+    number: int
+    name: str
+    status: str
+    detail: str
+
+
+@dataclass(frozen=True)
 class C3dFileRole:
     """
     Generic file name expected by a C3D model creation preset.
@@ -113,6 +125,18 @@ class C3dFileAssignmentDraft:
     role: str
     generic_name: str
     source_path: str = ""
+
+
+@dataclass(frozen=True)
+class C3dVirtualMarkerMethodExample:
+    """
+    Example shown in the GUI for one virtual marker creation method.
+    """
+
+    method: str
+    source_example: str
+    equation_example: str
+    description: str
 
 
 @dataclass(frozen=True)
@@ -297,6 +321,147 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
             )
 
     return tuple(issues)
+
+
+def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = None) -> tuple[C3dWorkflowStepStatus, ...]:
+    """
+    Return user-facing completion states for the guided C3D workflow.
+    """
+    issues = validate_c3d_workflow_draft(draft, data)
+    issue_categories = {issue.category for issue in issues}
+    segment_count = len(draft.segment_marker_groups)
+    empty_segment_count = sum(len(group.marker_names) == 0 for group in draft.segment_marker_groups)
+    assigned_marker_count = sum(len(group.marker_names) for group in draft.segment_marker_groups)
+    required_role_count = sum(role.required for role in c3d_file_roles_for_preset(draft.preset))
+    assigned_required_role_count = sum(
+        1
+        for assignment in draft.file_assignments
+        if assignment.source_path != "" and _file_role_is_required(draft.preset, assignment.role)
+    )
+    source_missing_virtual_count = sum(
+        marker.method in {"pointing", "equation", "regression", "score", "sara"} and marker.source == ""
+        for marker in draft.virtual_markers
+    )
+    incomplete_axis_count = sum(axis.axis == "" for axis in draft.axes)
+    child_translation_count = sum(setting.child_translation for setting in draft.segment_settings)
+    initial_rotation_source_missing_count = sum(
+        setting.initial_rotation_method in {"matrix", "anatomical_c3d"} and setting.initial_rotation_source == ""
+        for setting in draft.segment_settings
+    )
+    dof_issue_count = sum(issue.category == "dof" for issue in issues)
+
+    return (
+        C3dWorkflowStepStatus(1, "New from C3D", "done", f"Draft initialized for {draft.preset.value}."),
+        C3dWorkflowStepStatus(
+            2,
+            "Choose a C3D file",
+            "done" if data is not None else "pending",
+            "Static/anatomical C3D loaded." if data is not None else "Choose the static/anatomical C3D.",
+        ),
+        C3dWorkflowStepStatus(
+            3,
+            "List markers",
+            "done" if data is not None and len(data.marker_names) != 0 else "pending",
+            (
+                f"{len(data.marker_names)} markers available."
+                if data is not None
+                else "Markers appear after loading a C3D."
+            ),
+        ),
+        C3dWorkflowStepStatus(
+            4,
+            "Create segments",
+            "done" if segment_count != 0 else "pending",
+            f"{segment_count} segments in the draft.",
+        ),
+        C3dWorkflowStepStatus(
+            5,
+            "Assign markers",
+            _step_status(empty_segment_count == 0 and assigned_marker_count != 0, assigned_marker_count != 0),
+            f"{assigned_marker_count} marker assignments; {empty_segment_count} segments without markers.",
+        ),
+        C3dWorkflowStepStatus(
+            6,
+            "Create virtual markers",
+            _step_status(source_missing_virtual_count == 0, len(draft.virtual_markers) != 0),
+            f"{len(draft.virtual_markers)} virtual markers; {source_missing_virtual_count} missing sources.",
+        ),
+        C3dWorkflowStepStatus(
+            7,
+            "Create axes",
+            _step_status("axes" not in issue_categories and incomplete_axis_count == 0, len(draft.axes) != 0),
+            f"{len(draft.axes)} axes; {incomplete_axis_count} without selected x/y/z axis.",
+        ),
+        C3dWorkflowStepStatus(
+            8,
+            "Child translations",
+            "done",
+            f"{child_translation_count} segments allow child translations.",
+        ),
+        C3dWorkflowStepStatus(
+            9,
+            "Initial rotation",
+            "done" if initial_rotation_source_missing_count == 0 else "warning",
+            f"{initial_rotation_source_missing_count} initial rotations need a source.",
+        ),
+        C3dWorkflowStepStatus(
+            10,
+            "DoF",
+            "done" if dof_issue_count == 0 else "warning",
+            f"{dof_issue_count} DoF range issue(s).",
+        ),
+        C3dWorkflowStepStatus(
+            11,
+            "Generate template",
+            "done" if not any(issue.severity == "error" for issue in issues) else "warning",
+            f"{sum(issue.severity == 'error' for issue in issues)} blocking issue(s), "
+            f"{sum(issue.severity == 'warning' for issue in issues)} warning(s).",
+        ),
+        C3dWorkflowStepStatus(
+            12,
+            "Rename C3Ds",
+            _step_status(assigned_required_role_count == required_role_count, assigned_required_role_count != 0),
+            f"{assigned_required_role_count}/{required_role_count} required C3D files assigned.",
+        ),
+    )
+
+
+def c3d_virtual_marker_method_examples() -> tuple[C3dVirtualMarkerMethodExample, ...]:
+    """
+    Return examples for the virtual marker methods supported by the C3D workflow.
+    """
+    return (
+        C3dVirtualMarkerMethodExample(
+            method="marker_mean",
+            source_example="LASI,RASI",
+            equation_example="",
+            description="Average several raw C3D markers to create one virtual point.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="pointing",
+            source_example="pointing_virtual_markers.c3d",
+            equation_example="pointer_tip",
+            description="Use a pointing trial to identify a joint center or anatomical landmark.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="regression",
+            source_example="static_anatomical.c3d",
+            equation_example="example_predictive_hip_cor(D) or example_predictive_shoulder_cor(G)",
+            description="Use a predictive equation for a hip or shoulder center from anatomical markers.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="score",
+            source_example="functional_left_hip_score.c3d",
+            equation_example="proximal/distal center",
+            description="Use a functional calibration trial to estimate a center of rotation.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="sara",
+            source_example="functional_left_knee_sara.c3d",
+            equation_example="axis direction from condyles",
+            description="Use SARA to estimate a functional joint axis, then orient it with anatomical markers.",
+        ),
+    )
 
 
 def add_segment_to_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3dWorkflowDraft:
@@ -667,6 +832,8 @@ def c3d_template_payload_from_draft(draft: C3dWorkflowDraft) -> dict:
         "axes": [asdict(axis) for axis in draft.axes],
         "segment_settings": [asdict(setting) for setting in draft.segment_settings],
         "c3d_file_assignments": [asdict(assignment) for assignment in draft.file_assignments],
+        "progress": [asdict(status) for status in c3d_workflow_progress(draft)],
+        "virtual_marker_method_examples": [asdict(example) for example in c3d_virtual_marker_method_examples()],
         "validation_issues": [asdict(issue) for issue in validate_c3d_workflow_draft(draft)],
     }
 
@@ -740,6 +907,18 @@ def _virtual_feature_default_method(feature_type: str, role: str) -> str:
 
 def _count_dof(translations: str, rotations: str) -> int:
     return len(translations.replace("-", "")) + len(rotations.replace("-", ""))
+
+
+def _step_status(is_done: bool, has_started: bool) -> str:
+    if is_done:
+        return "done"
+    if has_started:
+        return "warning"
+    return "pending"
+
+
+def _file_role_is_required(preset: C3dModelPreset, role_name: str) -> bool:
+    return any(role.role == role_name and role.required for role in c3d_file_roles_for_preset(preset))
 
 
 def _initial_segment_settings(preset: C3dModelPreset) -> tuple[C3dSegmentSettingsDraft, ...]:

@@ -13,7 +13,9 @@ from biobuddy.gui.c3d_creation_workflow import (
     c3d_segment_marker_groups_for_preset,
     c3d_template_payload,
     c3d_template_payload_from_draft,
+    c3d_virtual_marker_method_examples,
     c3d_workflow_draft,
+    c3d_workflow_progress,
     c3d_workflow_summary,
     clear_c3d_file_role_from_draft,
     remove_axis_from_draft,
@@ -244,3 +246,48 @@ def test_c3d_template_payload_from_draft_includes_validation_issues():
     payload = c3d_template_payload_from_draft(draft)
 
     assert any(issue["category"] == "c3d files" for issue in payload["validation_issues"])
+
+
+def test_c3d_workflow_progress_reports_pending_c3d_selection():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    progress = c3d_workflow_progress(draft)
+
+    assert progress[0].status == "done"
+    assert progress[1].name == "Choose a C3D file"
+    assert progress[1].status == "pending"
+
+
+def test_c3d_workflow_progress_reports_loaded_markers_and_assigned_required_roles():
+    marker_dict = {"LASI": np.ones((4, 2)), "RASI": np.ones((4, 2)), "LPSI": np.ones((4, 2))}
+    data = DictData(marker_dict)
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = assign_c3d_file_role_to_draft(draft, "static", "/tmp/static_anatomical.c3d")
+
+    progress = c3d_workflow_progress(draft, data)
+    progress_by_name = {step.name: step for step in progress}
+
+    assert progress_by_name["Choose a C3D file"].status == "done"
+    assert progress_by_name["List markers"].detail == "3 markers available."
+    assert progress_by_name["Rename C3Ds"].status == "done"
+
+
+def test_c3d_virtual_marker_method_examples_document_regression_and_sara():
+    examples = c3d_virtual_marker_method_examples()
+
+    assert any(
+        example.method == "regression" and "example_predictive_hip_cor" in example.equation_example
+        for example in examples
+    )
+    assert any(
+        example.method == "sara" and "functional_left_knee_sara.c3d" in example.source_example for example in examples
+    )
+
+
+def test_c3d_template_payload_from_draft_includes_progress_and_method_examples():
+    draft = c3d_workflow_draft(C3dModelPreset.UPPER_LIMB)
+
+    payload = c3d_template_payload_from_draft(draft)
+
+    assert any(step["name"] == "Create axes" for step in payload["progress"])
+    assert any(example["method"] == "score" for example in payload["virtual_marker_method_examples"])

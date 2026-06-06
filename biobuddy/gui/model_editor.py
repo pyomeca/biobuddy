@@ -52,7 +52,9 @@ from .c3d_creation_workflow import (
     assign_marker_to_segment,
     c3d_creation_workflow,
     c3d_template_payload_from_draft,
+    c3d_virtual_marker_method_examples,
     c3d_workflow_draft,
+    c3d_workflow_progress,
     c3d_workflow_summary,
     clear_c3d_file_role_from_draft,
     remove_axis_from_draft,
@@ -236,6 +238,7 @@ def launch_model_editor() -> None:
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
             self.issue_list = QListWidget()
+            self.example_list = QListWidget()
             self.add_segment_button = QPushButton("Add segment")
             self.add_segment_button.clicked.connect(self._add_workflow_segment)
             self.remove_segment_button = QPushButton("Remove segment")
@@ -282,6 +285,7 @@ def launch_model_editor() -> None:
             workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
             workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
             workflow_tabs.addTab(self.issue_list, "Checks")
+            workflow_tabs.addTab(self.example_list, "Examples")
             workflow_tabs.addTab(self.summary_label, "Summary")
             layout.addWidget(workflow_tabs)
             layout.addWidget(buttons)
@@ -657,6 +661,7 @@ def launch_model_editor() -> None:
             self.segment_settings_list.clear()
             self.file_role_list.clear()
             self.issue_list.clear()
+            self.example_list.clear()
 
             if preset == C3dModelPreset.FULL_BODY:
                 self.status_label.setText(
@@ -669,8 +674,10 @@ def launch_model_editor() -> None:
             else:
                 self.status_label.setText("Status: ready with static C3D and optional functional trials.")
 
-            for step in workflow.steps:
-                self.step_list.addItem(f"{step.number}. {step.name} - {step.description}")
+            for step_status in c3d_workflow_progress(self.workflow_draft, self.c3d_data):
+                self.step_list.addItem(
+                    f"{step_status.number}. [{step_status.status}] {step_status.name} - {step_status.detail}"
+                )
 
             if self.c3d_data is None:
                 self.marker_list.addItem("Choose a C3D file to list markers.")
@@ -718,6 +725,12 @@ def launch_model_editor() -> None:
             else:
                 for issue in issues:
                     self.issue_list.addItem(f"{issue.severity.upper()} | {issue.category} | {issue.message}")
+
+            for example in c3d_virtual_marker_method_examples():
+                self.example_list.addItem(
+                    f"{example.method} | source: {example.source_example} | equation: "
+                    f"{example.equation_example or '-'} | {example.description}"
+                )
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
 
