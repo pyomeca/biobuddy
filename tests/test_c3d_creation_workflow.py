@@ -151,6 +151,52 @@ def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
     assert all(axis.name != "ElbowFlexionAxis" for axis in draft.axes)
 
 
+def test_c3d_workflow_draft_replaces_virtual_marker_and_axis_with_same_name():
+    draft = c3d_workflow_draft(C3dModelPreset.UPPER_LIMB)
+    draft = add_virtual_marker_to_draft(
+        draft,
+        name="ShoulderCoR",
+        method="pointing",
+        segment_name="Arm",
+        source="pointing_virtual_markers.c3d",
+    )
+    draft = add_virtual_marker_to_draft(
+        draft,
+        name="ShoulderCoR",
+        method="regression",
+        segment_name="Thorax",
+        source="static_anatomical.c3d",
+        equation="example_predictive_shoulder_cor(D)",
+    )
+    draft = add_axis_to_draft(
+        draft,
+        name="ElbowFlexionAxis",
+        segment_name="LowerArm1",
+        axis="x",
+        start_markers=("EPICm",),
+        end_markers=("EPICl",),
+    )
+    draft = add_axis_to_draft(
+        draft,
+        name="ElbowFlexionAxis",
+        segment_name="LowerArm1",
+        axis="z",
+        start_markers=("ELB_START",),
+        end_markers=("ELB_END",),
+        method="sara",
+    )
+
+    shoulder_markers = [marker for marker in draft.virtual_markers if marker.name == "ShoulderCoR"]
+    elbow_axes = [axis for axis in draft.axes if axis.name == "ElbowFlexionAxis"]
+
+    assert len(shoulder_markers) == 1
+    assert shoulder_markers[0].method == "regression"
+    assert shoulder_markers[0].segment_name == "Thorax"
+    assert len(elbow_axes) == 1
+    assert elbow_axes[0].axis == "z"
+    assert elbow_axes[0].method == "sara"
+
+
 def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
     draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
 

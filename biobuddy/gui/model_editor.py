@@ -247,7 +247,7 @@ def launch_model_editor() -> None:
             self.assign_marker_button.clicked.connect(self._assign_workflow_marker)
             self.unassign_marker_button = QPushButton("Remove selected marker")
             self.unassign_marker_button.clicked.connect(self._unassign_workflow_marker)
-            self.add_virtual_marker_button = QPushButton("Add virtual marker")
+            self.add_virtual_marker_button = QPushButton("Add/edit virtual marker")
             self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
             self.remove_virtual_marker_button = QPushButton("Remove virtual marker")
             self.remove_virtual_marker_button.clicked.connect(self._remove_workflow_virtual_marker)
@@ -422,32 +422,60 @@ def launch_model_editor() -> None:
             self._update_preset_details()
 
         def _add_workflow_virtual_marker(self) -> None:
-            name, accepted = QInputDialog.getText(self, "Add virtual marker", "Virtual marker name")
+            current_marker = self._selected_virtual_marker()
+            name, accepted = QInputDialog.getText(
+                self,
+                "Add/edit virtual marker",
+                "Virtual marker name",
+                text="" if current_marker is None else current_marker.name,
+            )
             if not accepted:
                 return
-            segment_name = self._choose_workflow_segment("Virtual marker segment")
+            segment_name = self._choose_workflow_segment(
+                "Virtual marker segment",
+                "" if current_marker is None else current_marker.segment_name,
+            )
             if segment_name is None:
                 return
+            methods = ["pointing", "equation", "regression", "marker_mean", "score", "sara"]
+            method_index = 0
+            if current_marker is not None and current_marker.method in methods:
+                method_index = methods.index(current_marker.method)
             method, accepted = QInputDialog.getItem(
                 self,
                 "Virtual marker method",
                 "Method",
-                ["pointing", "equation", "regression", "marker_mean", "score", "sara"],
-                0,
+                methods,
+                method_index,
                 False,
             )
             if not accepted:
                 return
-            source, accepted = QInputDialog.getText(self, "Virtual marker source", "Source C3D/markers/equation")
+            source, accepted = QInputDialog.getText(
+                self,
+                "Virtual marker source",
+                "Source C3D/markers",
+                text="" if current_marker is None else current_marker.source,
+            )
             if not accepted:
                 return
+            equation = "" if current_marker is None else current_marker.equation
+            if method in {"equation", "regression"}:
+                equation, accepted = QInputDialog.getText(
+                    self,
+                    "Virtual marker equation",
+                    "Equation or helper",
+                    text=equation or source,
+                )
+                if not accepted:
+                    return
             self.workflow_draft = add_virtual_marker_to_draft(
                 self.workflow_draft,
                 name=name,
                 method=method,
                 segment_name=segment_name,
                 source=source,
-                equation=source if method in {"equation", "regression"} else "",
+                equation=equation if method in {"equation", "regression"} else "",
             )
             self._update_preset_details()
 
@@ -459,29 +487,54 @@ def launch_model_editor() -> None:
             self._update_preset_details()
 
         def _add_workflow_axis(self) -> None:
-            name, accepted = QInputDialog.getText(self, "Add/edit axis", "Axis name")
+            current_axis = self._selected_axis()
+            name, accepted = QInputDialog.getText(
+                self,
+                "Add/edit axis",
+                "Axis name",
+                text="" if current_axis is None else current_axis.name,
+            )
             if not accepted:
                 return
-            segment_name = self._choose_workflow_segment("Axis segment")
+            segment_name = self._choose_workflow_segment(
+                "Axis segment",
+                "" if current_axis is None else current_axis.segment_name,
+            )
             if segment_name is None:
                 return
-            axis, accepted = QInputDialog.getItem(self, "Axis", "Axis", ["x", "y", "z"], 0, False)
+            axes = ["x", "y", "z"]
+            axis_index = axes.index(current_axis.axis) if current_axis is not None and current_axis.axis in axes else 0
+            axis, accepted = QInputDialog.getItem(self, "Axis", "Axis", axes, axis_index, False)
             if not accepted:
                 return
+            methods = ["markers", "functional", "sara", "score", "virtual_points"]
+            method_index = (
+                methods.index(current_axis.method) if current_axis is not None and current_axis.method in methods else 0
+            )
             method, accepted = QInputDialog.getItem(
                 self,
                 "Axis method",
                 "Method",
-                ["markers", "functional", "sara", "score", "virtual_points"],
-                0,
+                methods,
+                method_index,
                 False,
             )
             if not accepted:
                 return
-            start_text, accepted = QInputDialog.getText(self, "Axis start", "Start markers, comma-separated")
+            start_text, accepted = QInputDialog.getText(
+                self,
+                "Axis start",
+                "Start markers, comma-separated",
+                text="" if current_axis is None else ",".join(current_axis.start_markers),
+            )
             if not accepted:
                 return
-            end_text, accepted = QInputDialog.getText(self, "Axis end", "End markers, comma-separated")
+            end_text, accepted = QInputDialog.getText(
+                self,
+                "Axis end",
+                "End markers, comma-separated",
+                text="" if current_axis is None else ",".join(current_axis.end_markers),
+            )
             if not accepted:
                 return
             try:
@@ -606,9 +659,12 @@ def launch_model_editor() -> None:
             self.workflow_draft = clear_c3d_file_role_from_draft(self.workflow_draft, role)
             self._update_preset_details()
 
-        def _choose_workflow_segment(self, title: str) -> str | None:
+        def _choose_workflow_segment(self, title: str, current_segment_name: str = "") -> str | None:
             segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
-            segment_name, accepted = QInputDialog.getItem(self, title, "Segment", segment_names, 0, False)
+            if not segment_names:
+                return None
+            segment_index = segment_names.index(current_segment_name) if current_segment_name in segment_names else 0
+            segment_name, accepted = QInputDialog.getItem(self, title, "Segment", segment_names, segment_index, False)
             return segment_name if accepted else None
 
         def _selected_workflow_segment_name(self) -> str | None:
@@ -628,11 +684,29 @@ def launch_model_editor() -> None:
             text = self.feature_list.selectedItems()[0].text()
             return None if text.startswith("No additional") else text.split("|", maxsplit=1)[0].strip()
 
+        def _selected_virtual_marker(self):
+            name = self._selected_virtual_marker_name()
+            if name is None:
+                return None
+            for marker in self.workflow_draft.virtual_markers:
+                if marker.name == name:
+                    return marker
+            return None
+
         def _selected_axis_name(self) -> str | None:
             if not self.axis_list.selectedItems():
                 return None
             text = self.axis_list.selectedItems()[0].text()
             return None if text.startswith("No axis") else text.split("|", maxsplit=1)[0].strip()
+
+        def _selected_axis(self):
+            name = self._selected_axis_name()
+            if name is None:
+                return None
+            for axis in self.workflow_draft.axes:
+                if axis.name == name:
+                    return axis
+            return None
 
         def _selected_segment_setting(self):
             if not self.segment_settings_list.selectedItems():
