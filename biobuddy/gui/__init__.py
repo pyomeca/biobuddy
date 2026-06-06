@@ -72,6 +72,7 @@ from .c3d_model_creation import (
 )
 from .c3d_creation_workflow import (
     C3dAxisDraft,
+    C3dDraftIssue,
     C3dFileAssignmentDraft,
     C3dCreationWorkflow,
     C3dFileRole,
@@ -100,6 +101,7 @@ from .c3d_creation_workflow import (
     remove_virtual_marker_from_draft,
     unassign_marker_from_segment,
     update_segment_settings_in_draft,
+    validate_c3d_workflow_draft,
 )
 from .virtual_points import (
     VirtualAxisDefinition,
@@ -221,6 +223,7 @@ __all__ = [
     supported_c3d_model_presets.__name__,
     template_for_c3d_model_preset.__name__,
     C3dAxisDraft.__name__,
+    C3dDraftIssue.__name__,
     C3dFileAssignmentDraft.__name__,
     C3dCreationWorkflow.__name__,
     C3dFileRole.__name__,
@@ -249,6 +252,7 @@ __all__ = [
     remove_virtual_marker_from_draft.__name__,
     unassign_marker_from_segment.__name__,
     update_segment_settings_in_draft.__name__,
+    validate_c3d_workflow_draft.__name__,
     VirtualAxisDefinition.__name__,
     VirtualAxisMethod.__name__,
     VirtualPointDefinition.__name__,

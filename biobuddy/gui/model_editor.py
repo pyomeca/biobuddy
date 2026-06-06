@@ -60,6 +60,7 @@ from .c3d_creation_workflow import (
     remove_virtual_marker_from_draft,
     unassign_marker_from_segment,
     update_segment_settings_in_draft,
+    validate_c3d_workflow_draft,
 )
 from ..utils.marker_data import C3dData
 
@@ -234,6 +235,7 @@ def launch_model_editor() -> None:
             self.axis_list = QListWidget()
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
+            self.issue_list = QListWidget()
             self.add_segment_button = QPushButton("Add segment")
             self.add_segment_button.clicked.connect(self._add_workflow_segment)
             self.remove_segment_button = QPushButton("Remove segment")
@@ -279,6 +281,7 @@ def launch_model_editor() -> None:
             workflow_tabs.addTab(self._axis_workflow_tab(), "Axes")
             workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
             workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
+            workflow_tabs.addTab(self.issue_list, "Checks")
             workflow_tabs.addTab(self.summary_label, "Summary")
             layout.addWidget(workflow_tabs)
             layout.addWidget(buttons)
@@ -653,6 +656,7 @@ def launch_model_editor() -> None:
             self.axis_list.clear()
             self.segment_settings_list.clear()
             self.file_role_list.clear()
+            self.issue_list.clear()
 
             if preset == C3dModelPreset.FULL_BODY:
                 self.status_label.setText(
@@ -707,6 +711,13 @@ def launch_model_editor() -> None:
                 required = "required" if role_definition.required else "optional"
                 source = file_role.source_path if file_role.source_path else "not assigned"
                 self.file_role_list.addItem(f"{file_role.role} | {file_role.generic_name} | {required} | {source}")
+
+            issues = validate_c3d_workflow_draft(self.workflow_draft, self.c3d_data)
+            if len(issues) == 0:
+                self.issue_list.addItem("No draft issue detected.")
+            else:
+                for issue in issues:
+                    self.issue_list.addItem(f"{issue.severity.upper()} | {issue.category} | {issue.message}")
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
 

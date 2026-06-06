@@ -116,6 +116,17 @@ class C3dFileAssignmentDraft:
 
 
 @dataclass(frozen=True)
+class C3dDraftIssue:
+    """
+    Validation issue reported on an editable C3D workflow draft.
+    """
+
+    severity: str
+    category: str
+    message: str
+
+
+@dataclass(frozen=True)
 class C3dWorkflowDraft:
     """
     Editable state for an interactive C3D model creation session.
@@ -177,6 +188,115 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             for role in c3d_file_roles_for_preset(preset)
         ),
     )
+
+
+def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None = None) -> tuple[C3dDraftIssue, ...]:
+    """
+    Validate whether a C3D workflow draft has enough information to become a reusable template.
+    """
+    issues: list[C3dDraftIssue] = []
+    raw_marker_names = set(data.marker_names) if data is not None else set()
+    assigned_marker_names = {marker_name for group in draft.segment_marker_groups for marker_name in group.marker_names}
+    virtual_marker_names = {marker.name for marker in draft.virtual_markers}
+    known_marker_names = assigned_marker_names | virtual_marker_names
+    if data is not None:
+        known_marker_names |= raw_marker_names
+
+    for group in draft.segment_marker_groups:
+        if len(group.marker_names) == 0:
+            issues.append(
+                C3dDraftIssue("warning", "segments", f"Segment '{group.segment_name}' has no marker assigned.")
+            )
+        if data is not None:
+            missing = sorted(set(group.marker_names) - raw_marker_names - virtual_marker_names)
+            if missing:
+                issues.append(
+                    C3dDraftIssue(
+                        "error",
+                        "markers",
+                        f"Segment '{group.segment_name}' uses markers missing from the C3D: {', '.join(missing)}.",
+                    )
+                )
+
+    for marker in draft.virtual_markers:
+        if marker.segment_name not in {group.segment_name for group in draft.segment_marker_groups}:
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "virtual markers",
+                    f"Virtual marker '{marker.name}' is attached to unknown segment '{marker.segment_name}'.",
+                )
+            )
+        if marker.method in {"pointing", "equation", "regression", "score", "sara"} and marker.source == "":
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "virtual markers",
+                    f"Virtual marker '{marker.name}' has method '{marker.method}' but no source.",
+                )
+            )
+
+    for axis in draft.axes:
+        if axis.segment_name not in {group.segment_name for group in draft.segment_marker_groups}:
+            issues.append(
+                C3dDraftIssue(
+                    "error", "axes", f"Axis '{axis.name}' is attached to unknown segment '{axis.segment_name}'."
+                )
+            )
+        if axis.axis not in {"", "x", "y", "z"}:
+            issues.append(C3dDraftIssue("error", "axes", f"Axis '{axis.name}' uses invalid axis '{axis.axis}'."))
+        if axis.axis == "":
+            issues.append(C3dDraftIssue("warning", "axes", f"Axis '{axis.name}' has no x/y/z axis selected."))
+        unknown_markers = sorted(set(axis.start_markers + axis.end_markers) - known_marker_names)
+        if unknown_markers:
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "axes",
+                    f"Axis '{axis.name}' references unknown markers: {', '.join(unknown_markers)}.",
+                )
+            )
+
+    for setting in draft.segment_settings:
+        nb_dof = _count_dof(setting.translations, setting.rotations)
+        if len(setting.q_min) != 0 and len(setting.q_min) != nb_dof:
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "dof",
+                    f"Segment '{setting.segment_name}' has {len(setting.q_min)} q_min values for {nb_dof} DoF.",
+                )
+            )
+        if len(setting.q_max) != 0 and len(setting.q_max) != nb_dof:
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "dof",
+                    f"Segment '{setting.segment_name}' has {len(setting.q_max)} q_max values for {nb_dof} DoF.",
+                )
+            )
+        if setting.initial_rotation_method in {"matrix", "anatomical_c3d"} and setting.initial_rotation_source == "":
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "initial rotation",
+                    f"Segment '{setting.segment_name}' uses '{setting.initial_rotation_method}' without a source.",
+                )
+            )
+
+    role_definitions = {role.role: role for role in c3d_file_roles_for_preset(draft.preset)}
+    for assignment in draft.file_assignments:
+        role_definition = role_definitions[assignment.role]
+        if role_definition.required and assignment.source_path == "":
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "c3d files",
+                    f"Required role '{assignment.role}' is not assigned to a participant C3D file.",
+                )
+            )
+
+    return tuple(issues)
 
 
 def add_segment_to_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3dWorkflowDraft:
@@ -547,6 +667,7 @@ def c3d_template_payload_from_draft(draft: C3dWorkflowDraft) -> dict:
         "axes": [asdict(axis) for axis in draft.axes],
         "segment_settings": [asdict(setting) for setting in draft.segment_settings],
         "c3d_file_assignments": [asdict(assignment) for assignment in draft.file_assignments],
+        "validation_issues": [asdict(issue) for issue in validate_c3d_workflow_draft(draft)],
     }
 
 
@@ -615,6 +736,10 @@ def _virtual_feature_default_method(feature_type: str, role: str) -> str:
     if "axis" in role:
         return "functional_or_pointing"
     return "pointing"
+
+
+def _count_dof(translations: str, rotations: str) -> int:
+    return len(translations.replace("-", "")) + len(rotations.replace("-", ""))
 
 
 def _initial_segment_settings(preset: C3dModelPreset) -> tuple[C3dSegmentSettingsDraft, ...]:

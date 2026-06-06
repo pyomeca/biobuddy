@@ -21,6 +21,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     remove_virtual_marker_from_draft,
     unassign_marker_from_segment,
     update_segment_settings_in_draft,
+    validate_c3d_workflow_draft,
 )
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 
@@ -178,3 +179,68 @@ def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
 
     draft = clear_c3d_file_role_from_draft(draft, "static")
     assert next(assignment for assignment in draft.file_assignments if assignment.role == "static").source_path == ""
+
+
+def test_c3d_workflow_draft_validation_reports_empty_custom_segment():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "CustomSegment")
+
+    issues = validate_c3d_workflow_draft(draft)
+
+    assert any(
+        issue.severity == "warning" and issue.category == "segments" and "CustomSegment" in issue.message
+        for issue in issues
+    )
+
+
+def test_c3d_workflow_draft_validation_reports_missing_c3d_markers():
+    marker_dict = {"LASI": np.ones((4, 2)), "RASI": np.ones((4, 2))}
+    data = DictData(marker_dict)
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "CustomSegment")
+    draft = assign_marker_to_segment(draft, "CustomSegment", "NOT_IN_C3D")
+
+    issues = validate_c3d_workflow_draft(draft, data)
+
+    assert any(issue.severity == "error" and "NOT_IN_C3D" in issue.message for issue in issues)
+
+
+def test_c3d_workflow_draft_validation_reports_axis_marker_typo():
+    draft = c3d_workflow_draft(C3dModelPreset.UPPER_LIMB)
+    draft = add_axis_to_draft(
+        draft,
+        name="CustomAxis",
+        segment_name="Arm",
+        axis="x",
+        start_markers=("KNOWN_START",),
+        end_markers=("MISSPELLED_MARKER",),
+    )
+    draft = assign_marker_to_segment(draft, "Arm", "KNOWN_START")
+
+    issues = validate_c3d_workflow_draft(draft)
+
+    assert any(issue.category == "axes" and "MISSPELLED_MARKER" in issue.message for issue in issues)
+
+
+def test_c3d_workflow_draft_validation_reports_dof_limit_length_mismatch():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = update_segment_settings_in_draft(
+        draft,
+        segment_name="LShank",
+        translations="z",
+        rotations="xz",
+        q_min=(-1.0, -0.5),
+        q_max=(-1.0, -0.5, 0.5),
+    )
+
+    issues = validate_c3d_workflow_draft(draft)
+
+    assert any(issue.severity == "error" and "q_min values for 3 DoF" in issue.message for issue in issues)
+
+
+def test_c3d_template_payload_from_draft_includes_validation_issues():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    payload = c3d_template_payload_from_draft(draft)
+
+    assert any(issue["category"] == "c3d files" for issue in payload["validation_issues"])
