@@ -62,6 +62,7 @@ from .c3d_creation_workflow import (
     remove_virtual_marker_from_draft,
     set_segment_marker_technical,
     unassign_markers_from_segment,
+    update_segment_parent_in_draft,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
 )
@@ -244,6 +245,8 @@ def launch_model_editor() -> None:
             self.show_all_markers_checkbox.stateChanged.connect(self._update_available_marker_list)
             self.segment_marker_list = QListWidget()
             self.segment_marker_list.itemSelectionChanged.connect(self._update_assigned_marker_list)
+            self.workflow_parent_combo = QComboBox()
+            self.workflow_parent_combo.currentTextChanged.connect(self._set_workflow_segment_parent)
             self.assigned_marker_list = QListWidget()
             self.assigned_marker_list.setSelectionMode(qt_extended_selection)
             self.assigned_marker_list.itemSelectionChanged.connect(self._sync_assigned_marker_technical_checkbox)
@@ -334,6 +337,7 @@ def launch_model_editor() -> None:
             left_column.addWidget(QLabel("Available markers in main C3D"))
             left_column.addWidget(self.show_all_markers_checkbox)
             left_column.addWidget(self.marker_list)
+            self.marker_list.setMaximumWidth(260)
             transfer_column = QVBoxLayout()
             transfer_column.addStretch()
             self.assign_marker_button.setText("->")
@@ -341,13 +345,19 @@ def launch_model_editor() -> None:
             transfer_column.addWidget(self.assign_marker_button)
             transfer_column.addWidget(self.unassign_marker_button)
             transfer_column.addStretch()
+            parent_column = QVBoxLayout()
+            parent_column.addWidget(QLabel("Parent segment"))
+            parent_column.addWidget(self.workflow_parent_combo)
+            parent_column.addStretch()
             right_column = QVBoxLayout()
             right_column.addWidget(QLabel("Markers assigned to selected segment"))
             right_column.addWidget(self.assigned_marker_list)
             right_column.addWidget(self.assigned_marker_technical_checkbox)
-            marker_row.addLayout(left_column)
-            marker_row.addLayout(transfer_column)
-            marker_row.addLayout(right_column)
+            self.assigned_marker_list.setMaximumWidth(260)
+            marker_row.addLayout(left_column, 2)
+            marker_row.addLayout(transfer_column, 0)
+            marker_row.addLayout(parent_column, 1)
+            marker_row.addLayout(right_column, 2)
             layout.addLayout(marker_row)
             return widget
 
@@ -720,6 +730,20 @@ def launch_model_editor() -> None:
             self.workflow_draft = clear_c3d_file_role_from_draft(self.workflow_draft, role)
             self._update_preset_details()
 
+        def _set_workflow_segment_parent(self, _parent_name: str | None = None) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                return
+            try:
+                self.workflow_draft = update_segment_parent_in_draft(
+                    self.workflow_draft,
+                    segment_name,
+                    self.workflow_parent_combo.currentText(),
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to update segment parent", str(error))
+
         def _choose_workflow_segment(self, title: str, current_segment_name: str = "") -> str | None:
             segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
             if not segment_names:
@@ -760,6 +784,7 @@ def launch_model_editor() -> None:
         def _update_assigned_marker_list(self) -> None:
             self.assigned_marker_list.clear()
             self._sync_assigned_marker_technical_checkbox()
+            self._sync_workflow_parent_combo()
             segment_name = self._selected_workflow_segment_name()
             if segment_name is None:
                 self.assigned_marker_list.addItem("Select a segment to inspect its markers.")
@@ -805,6 +830,27 @@ def launch_model_editor() -> None:
                 self._update_preset_details()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to update marker type", str(error))
+
+        def _sync_workflow_parent_combo(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            self.workflow_parent_combo.blockSignals(True)
+            self.workflow_parent_combo.clear()
+            if segment_name is None:
+                self.workflow_parent_combo.setEnabled(False)
+                self.workflow_parent_combo.blockSignals(False)
+                return
+            choices = _segment_parent_choices(self.workflow_draft, excluded_segment_name=segment_name)
+            self.workflow_parent_combo.addItems(choices)
+            current_parent = ""
+            for group in self.workflow_draft.segment_marker_groups:
+                if group.segment_name == segment_name:
+                    current_parent = group.parent_name
+                    break
+            if current_parent not in choices:
+                self.workflow_parent_combo.addItem(current_parent)
+            self.workflow_parent_combo.setCurrentText(current_parent)
+            self.workflow_parent_combo.setEnabled(True)
+            self.workflow_parent_combo.blockSignals(False)
 
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():
@@ -884,8 +930,6 @@ def launch_model_editor() -> None:
                     f"{step_status.number}. [{step_status.status}] {step_status.name} - {step_status.detail}"
                 )
 
-            self._update_available_marker_list()
-
             for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
                 parent = group.parent_name if group.parent_name else "-"
@@ -893,6 +937,7 @@ def launch_model_editor() -> None:
                     f"{group.segment_name}: {markers} | type={group.segment_type} | parent={parent}"
                 )
             self._restore_workflow_segment_selection(previously_selected_segment)
+            self._update_available_marker_list()
 
             if len(self.workflow_draft.virtual_markers) == 0:
                 self.feature_list.addItem("No additional virtual feature required by this preset.")
@@ -949,9 +994,11 @@ def launch_model_editor() -> None:
                         break
             if self.segment_marker_list.count() == 0:
                 self._update_assigned_marker_list()
+                self._update_available_marker_list()
                 return
             self.segment_marker_list.setCurrentItem(self.segment_marker_list.item(target_index))
             self._update_assigned_marker_list()
+            self._update_available_marker_list()
 
         def _update_available_marker_list(self) -> None:
             self.marker_list.clear()
@@ -959,10 +1006,21 @@ def launch_model_editor() -> None:
                 self.marker_list.addItem("Choose the main marker C3D to list markers.")
                 return
             marker_names = tuple(self.c3d_data.marker_names)
+            selected_segment_name = self._selected_workflow_segment_name()
+            selected_segment_marker_names = {
+                marker_name
+                for group in self.workflow_draft.segment_marker_groups
+                if group.segment_name == selected_segment_name
+                for marker_name in group.marker_names
+            }
+            marker_names = tuple(
+                marker_name for marker_name in marker_names if marker_name not in selected_segment_marker_names
+            )
             if not self.show_all_markers_checkbox.isChecked():
                 assigned_marker_names = {
                     marker_name
                     for group in self.workflow_draft.segment_marker_groups
+                    if group.segment_name != selected_segment_name
                     for marker_name in group.marker_names
                 }
                 marker_names = tuple(
@@ -1831,11 +1889,15 @@ def _split_marker_text(text: str) -> tuple[str, ...]:
     return tuple(value for value in text.replace(",", " ").split() if value != "")
 
 
-def _segment_parent_choices(workflow_draft) -> list[str]:
+def _segment_parent_choices(workflow_draft, excluded_segment_name: str = "") -> list[str]:
     """
     Return editable parent choices for a new C3D workflow segment.
     """
-    return ["", "root", "base"] + [group.segment_name for group in workflow_draft.segment_marker_groups]
+    return ["", "root", "base"] + [
+        group.segment_name
+        for group in workflow_draft.segment_marker_groups
+        if group.segment_name != excluded_segment_name
+    ]
 
 
 def _parse_optional_float(text: str) -> float | None:

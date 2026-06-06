@@ -28,6 +28,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     set_segment_marker_technical,
     unassign_markers_from_segment,
     unassign_marker_from_segment,
+    update_segment_parent_in_draft,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
 )
@@ -143,6 +144,16 @@ def test_c3d_workflow_draft_edits_multiple_segment_marker_assignments():
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
 
     assert custom_group.marker_names == ("CUSTOM2",)
+
+
+def test_c3d_workflow_draft_updates_segment_parent():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "CustomSegment", parent_name="Pelvis", segment_type="technical")
+
+    draft = update_segment_parent_in_draft(draft, "CustomSegment", "Trunk")
+
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.parent_name == "Trunk"
 
 
 def test_c3d_workflow_draft_marks_assigned_markers_as_technical():

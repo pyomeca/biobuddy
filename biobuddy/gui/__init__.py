@@ -112,6 +112,7 @@ from .c3d_creation_workflow import (
     set_segment_marker_technical,
     unassign_markers_from_segment,
     unassign_marker_from_segment,
+    update_segment_parent_in_draft,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
 )
@@ -275,6 +276,7 @@ __all__ = [
     set_segment_marker_technical.__name__,
     unassign_markers_from_segment.__name__,
     unassign_marker_from_segment.__name__,
+    update_segment_parent_in_draft.__name__,
     update_segment_settings_in_draft.__name__,
     validate_c3d_workflow_draft.__name__,
     VirtualAxisDefinition.__name__,

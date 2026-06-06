@@ -692,6 +692,30 @@ def remove_segment_from_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3d
     )
 
 
+def update_segment_parent_in_draft(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    parent_name: str,
+) -> C3dWorkflowDraft:
+    """
+    Update the parent segment used by one editable workflow segment.
+    """
+    parent_name = parent_name.strip()
+    groups = []
+    found_segment = False
+    for group in draft.segment_marker_groups:
+        if group.segment_name != segment_name:
+            groups.append(group)
+            continue
+        found_segment = True
+        if parent_name == segment_name:
+            raise ValueError("A segment cannot be its own parent.")
+        groups.append(replace(group, parent_name=parent_name))
+    if not found_segment:
+        raise ValueError(f"Segment '{segment_name}' does not exist.")
+    return _replace_draft_groups(draft, tuple(groups))
+
+
 def assign_marker_to_segment(
     draft: C3dWorkflowDraft,
     segment_name: str,
