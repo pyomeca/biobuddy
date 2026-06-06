@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from .segment_editor import (
@@ -39,9 +40,17 @@ from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
     c3d_model_preset_virtual_features,
+    create_model_from_marker_data,
     create_model_from_c3d_folder,
     supported_c3d_model_presets,
+    template_for_c3d_model_preset,
 )
+from .c3d_creation_workflow import (
+    c3d_creation_workflow,
+    c3d_template_payload,
+    c3d_workflow_summary,
+)
+from ..utils.marker_data import C3dData
 
 
 def launch_model_editor() -> None:
@@ -180,22 +189,35 @@ def launch_model_editor() -> None:
 
     class C3dModelCreationDialog(QDialog):
         """
-        Dialog used before selecting the calibration folder.
+        Dialog for the C3D-driven model creation workflow.
         """
 
         def __init__(self, parent=None):
             super().__init__(parent)
             self.setWindowTitle("New model from C3D")
             self.presets = supported_c3d_model_presets()
+            self.c3d_data = None
 
             self.preset_combo = QComboBox()
             for preset in self.presets:
                 self.preset_combo.addItem(_c3d_preset_label(preset))
             self.preset_combo.currentIndexChanged.connect(self._update_preset_details)
 
+            self.c3d_path = QLineEdit()
+            self.c3d_path.setReadOnly(True)
+            self.choose_c3d_button = QPushButton("Choose C3D file")
+            self.choose_c3d_button.clicked.connect(self._choose_c3d_file)
+            self.generate_template_button = QPushButton("Generate template")
+            self.generate_template_button.clicked.connect(self._generate_template)
+
             self.status_label = QLabel()
+            self.summary_label = QLabel()
             self.feature_list = QListWidget()
             self.feature_list.setMinimumHeight(180)
+            self.step_list = QListWidget()
+            self.marker_list = QListWidget()
+            self.segment_marker_list = QListWidget()
+            self.file_role_list = QListWidget()
 
             buttons = QDialogButtonBox(_dialog_button("Ok") | _dialog_button("Cancel"))
             buttons.accepted.connect(self.accept)
@@ -204,10 +226,23 @@ def launch_model_editor() -> None:
             layout = QVBoxLayout(self)
             layout.addWidget(QLabel("Model preset"))
             layout.addWidget(self.preset_combo)
+            c3d_row = QHBoxLayout()
+            c3d_row.addWidget(self.c3d_path)
+            c3d_row.addWidget(self.choose_c3d_button)
+            c3d_row.addWidget(self.generate_template_button)
+            layout.addLayout(c3d_row)
             layout.addWidget(self.status_label)
-            layout.addWidget(QLabel("Virtual features to reconstruct"))
-            layout.addWidget(self.feature_list)
+
+            workflow_tabs = QTabWidget()
+            workflow_tabs.addTab(self.step_list, "Pipeline")
+            workflow_tabs.addTab(self.marker_list, "Markers")
+            workflow_tabs.addTab(self.segment_marker_list, "Segments")
+            workflow_tabs.addTab(self.feature_list, "Virtual markers/axes")
+            workflow_tabs.addTab(self.file_role_list, "C3D names")
+            workflow_tabs.addTab(self.summary_label, "Summary")
+            layout.addWidget(workflow_tabs)
             layout.addWidget(buttons)
+            self.resize(900, 650)
             self._update_preset_details()
 
         def selected_preset(self) -> C3dModelPreset:
@@ -216,27 +251,94 @@ def launch_model_editor() -> None:
             """
             return self.presets[self.preset_combo.currentIndex()]
 
+        def selected_c3d_file(self) -> Path | None:
+            """
+            Return the selected C3D file, if one was chosen.
+            """
+            text = self.c3d_path.text().strip()
+            return None if text == "" else Path(text)
+
+        def _choose_c3d_file(self) -> None:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Choose C3D file",
+                "",
+                "C3D files (*.c3d)",
+            )
+            if not filepath:
+                return
+            try:
+                self.c3d_data = C3dData(filepath)
+                self.c3d_path.setText(filepath)
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to load C3D", str(error))
+
+        def _generate_template(self) -> None:
+            default_name = f"{self.selected_preset().value}_template.json"
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Generate template",
+                default_name,
+                "JSON files (*.json)",
+            )
+            if not filepath:
+                return
+            try:
+                Path(filepath).write_text(json.dumps(c3d_template_payload(self.selected_preset()), indent=2))
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to generate template", str(error))
+
         def _update_preset_details(self) -> None:
             preset = self.selected_preset()
             features = c3d_model_preset_virtual_features(preset)
+            workflow = c3d_creation_workflow(preset)
+            self.step_list.clear()
+            self.marker_list.clear()
+            self.segment_marker_list.clear()
             self.feature_list.clear()
+            self.file_role_list.clear()
+
             if preset == C3dModelPreset.FULL_BODY:
-                self.status_label.setText("Status: template extraction exists; BioMod generation is still blocked.")
+                self.status_label.setText(
+                    "Status: full-body template mapping exists; generation still needs virtual markers."
+                )
             elif preset == C3dModelPreset.UPPER_LIMB:
                 self.status_label.setText(
-                    "Status: template exists; virtual features must be supplied before generation."
+                    "Status: upper-limb template exists; virtual markers/axes must be supplied before generation."
                 )
             else:
                 self.status_label.setText("Status: ready with static C3D and optional functional trials.")
 
+            for step in workflow.steps:
+                self.step_list.addItem(f"{step.number}. {step.name} - {step.description}")
+
+            if self.c3d_data is None:
+                self.marker_list.addItem("Choose a C3D file to list markers.")
+            else:
+                for marker_name in self.c3d_data.marker_names:
+                    self.marker_list.addItem(marker_name)
+
+            for group in workflow.segment_marker_groups:
+                markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
+                self.segment_marker_list.addItem(f"{group.segment_name}: {markers}")
+
             if len(features) == 0:
                 self.feature_list.addItem("No additional virtual feature required by this preset.")
-                return
-            for feature in features:
-                self.feature_list.addItem(
-                    f"{feature.feature_type}: {feature.name} | {feature.segment_name} | {feature.role} | "
-                    f"{feature.description}"
+            else:
+                for feature in features:
+                    self.feature_list.addItem(
+                        f"{feature.feature_type}: {feature.name} | {feature.segment_name} | {feature.role} | "
+                        f"{feature.description}"
+                    )
+
+            for file_role in workflow.file_roles:
+                required = "required" if file_role.required else "optional"
+                self.file_role_list.addItem(
+                    f"{file_role.generic_name} | {file_role.role} | {required} | {file_role.description}"
                 )
+
+            self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
 
     class ModelPreviewWidget(QWidget):
         """
@@ -549,7 +651,7 @@ def launch_model_editor() -> None:
 
             open_button = QPushButton("Open model")
             open_button.clicked.connect(self._open_model)
-            new_c3d_model_button = QPushButton("New model from C3D...")
+            new_c3d_model_button = QPushButton("New from C3D")
             new_c3d_model_button.clicked.connect(self._new_model_from_c3d)
             save_button = QPushButton("Save as .bioMod")
             save_button.clicked.connect(self._save_model)
@@ -603,6 +705,10 @@ def launch_model_editor() -> None:
             dialog = C3dModelCreationDialog(self)
             if _exec_dialog(dialog) != _dialog_accepted_value():
                 return
+            selected_c3d_file = dialog.selected_c3d_file()
+            if selected_c3d_file is not None:
+                self._new_model_from_c3d_file(selected_c3d_file, dialog.selected_preset())
+                return
             calibration_folder = QFileDialog.getExistingDirectory(
                 self,
                 "Select calibration folder",
@@ -623,6 +729,25 @@ def launch_model_editor() -> None:
                     self,
                     "Model generated from C3D",
                     _format_c3d_creation_summary(result, folder_path),
+                )
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to generate model", str(error))
+
+        def _new_model_from_c3d_file(self, filepath: Path, preset: C3dModelPreset) -> None:
+            try:
+                template = template_for_c3d_model_preset(preset)
+                result = create_model_from_marker_data(
+                    template=template,
+                    static_data=C3dData(str(filepath)),
+                    preset=preset,
+                )
+                self.model = result.model
+                self.current_filepath = filepath.with_suffix(".bioMod")
+                self._refresh_model_views()
+                QMessageBox.information(
+                    self,
+                    "Model generated from C3D",
+                    _format_c3d_creation_summary(result, filepath.parent),
                 )
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate model", str(error))
