@@ -286,7 +286,6 @@ def launch_model_editor() -> None:
 
             workflow_tabs = QTabWidget()
             workflow_tabs.addTab(self.step_list, "Pipeline")
-            workflow_tabs.addTab(self.marker_list, "Markers")
             workflow_tabs.addTab(self._segment_workflow_tab(), "Segments")
             workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
             workflow_tabs.addTab(self._axis_workflow_tab(), "Axes")
@@ -316,16 +315,31 @@ def launch_model_editor() -> None:
         def _segment_workflow_tab(self):
             widget = QWidget()
             layout = QVBoxLayout(widget)
-            layout.addWidget(QLabel("Segments"))
-            layout.addWidget(self.segment_marker_list)
-            layout.addWidget(QLabel("Markers assigned to selected segment"))
-            layout.addWidget(self.assigned_marker_list)
             row = QHBoxLayout()
             row.addWidget(self.add_segment_button)
             row.addWidget(self.remove_segment_button)
-            row.addWidget(self.assign_marker_button)
-            row.addWidget(self.unassign_marker_button)
+            row.addStretch()
             layout.addLayout(row)
+            layout.addWidget(QLabel("Segments"))
+            layout.addWidget(self.segment_marker_list)
+            marker_row = QHBoxLayout()
+            left_column = QVBoxLayout()
+            left_column.addWidget(QLabel("Available markers in main C3D"))
+            left_column.addWidget(self.marker_list)
+            transfer_column = QVBoxLayout()
+            transfer_column.addStretch()
+            self.assign_marker_button.setText("->")
+            self.unassign_marker_button.setText("<-")
+            transfer_column.addWidget(self.assign_marker_button)
+            transfer_column.addWidget(self.unassign_marker_button)
+            transfer_column.addStretch()
+            right_column = QVBoxLayout()
+            right_column.addWidget(QLabel("Markers assigned to selected segment"))
+            right_column.addWidget(self.assigned_marker_list)
+            marker_row.addLayout(left_column)
+            marker_row.addLayout(transfer_column)
+            marker_row.addLayout(right_column)
+            layout.addLayout(marker_row)
             return widget
 
         def _virtual_marker_workflow_tab(self):
@@ -400,8 +414,33 @@ def launch_model_editor() -> None:
             segment_name, accepted = QInputDialog.getText(self, "Add segment", "Segment name")
             if not accepted:
                 return
+            segment_type, accepted = QInputDialog.getItem(
+                self,
+                "Segment type",
+                "Type",
+                ["technical", "anatomical"],
+                0,
+                False,
+            )
+            if not accepted:
+                return
+            parent_name, accepted = QInputDialog.getItem(
+                self,
+                "Segment parent",
+                "Parent",
+                _segment_parent_choices(self.workflow_draft),
+                0,
+                True,
+            )
+            if not accepted:
+                return
             try:
-                self.workflow_draft = add_segment_to_draft(self.workflow_draft, segment_name)
+                self.workflow_draft = add_segment_to_draft(
+                    self.workflow_draft,
+                    segment_name,
+                    parent_name=parent_name,
+                    segment_type=segment_type,
+                )
                 self._update_preset_details()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to add segment", str(error))
@@ -695,7 +734,7 @@ def launch_model_editor() -> None:
             marker_names = []
             for item in self.marker_list.selectedItems():
                 marker_name = item.text()
-                if marker_name.startswith("Choose a C3D"):
+                if marker_name.startswith("Choose "):
                     continue
                 marker_names.append(marker_name)
             return tuple(marker_names)
@@ -796,7 +835,7 @@ def launch_model_editor() -> None:
                     "Status: upper-limb template exists; virtual markers/axes must be supplied before generation."
                 )
             else:
-                self.status_label.setText("Status: ready with static C3D and optional functional trials.")
+                self.status_label.setText("Status: ready with main marker C3D and optional functional trials.")
 
             for step_status in c3d_workflow_progress(self.workflow_draft, self.c3d_data):
                 self.step_list.addItem(
@@ -804,14 +843,17 @@ def launch_model_editor() -> None:
                 )
 
             if self.c3d_data is None:
-                self.marker_list.addItem("Choose a C3D file to list markers.")
+                self.marker_list.addItem("Choose the main marker C3D to list markers.")
             else:
                 for marker_name in self.c3d_data.marker_names:
                     self.marker_list.addItem(marker_name)
 
             for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
-                self.segment_marker_list.addItem(f"{group.segment_name}: {markers}")
+                parent = group.parent_name if group.parent_name else "-"
+                self.segment_marker_list.addItem(
+                    f"{group.segment_name}: {markers} | type={group.segment_type} | parent={parent}"
+                )
             self._restore_workflow_segment_selection(previously_selected_segment)
 
             if len(self.workflow_draft.virtual_markers) == 0:
@@ -1728,6 +1770,13 @@ def _split_marker_text(text: str) -> tuple[str, ...]:
     Parse a comma- or space-separated marker list.
     """
     return tuple(value for value in text.replace(",", " ").split() if value != "")
+
+
+def _segment_parent_choices(workflow_draft) -> list[str]:
+    """
+    Return editable parent choices for a new C3D workflow segment.
+    """
+    return ["", "root", "base"] + [group.segment_name for group in workflow_draft.segment_marker_groups]
 
 
 def _parse_optional_float(text: str) -> float | None:

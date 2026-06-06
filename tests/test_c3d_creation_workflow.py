@@ -35,17 +35,17 @@ def test_c3d_creation_workflow_steps_match_expected_pipeline():
 
     assert [step.name for step in steps] == [
         "New from C3D",
-        "Choose a C3D file",
-        "List markers",
-        "Create segments",
-        "Assign markers",
+        "Choose main C3D",
+        "Create technical segments",
         "Create virtual markers",
-        "Create axes",
-        "Child translations",
-        "Initial rotation",
+        "Create anatomical segments",
+        "Segment coordinate systems",
+        "Initial rotations",
         "DoF",
+        "Parent-child transforms",
+        "Validate",
         "Generate template",
-        "Rename C3Ds",
+        "Generate model",
     ]
 
 
@@ -54,7 +54,7 @@ def test_c3d_file_roles_use_generic_names_for_three_presets():
     upper_limb_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.UPPER_LIMB)}
     full_body_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FULL_BODY)}
 
-    assert "static_anatomical.c3d" in lower_limb_names
+    assert "main_markers.c3d" in lower_limb_names
     assert "functional_left_knee_sara.c3d" in lower_limb_names
     assert "pointing_virtual_markers.c3d" in upper_limb_names
     assert "functional_upper_limb_score_sara.c3d" in full_body_names
@@ -68,6 +68,8 @@ def test_c3d_segment_marker_groups_cover_three_models():
     assert any(group.segment_name == "Pelvis" and "LASI" in group.marker_names for group in lower_limb_groups)
     assert any(group.segment_name == "Arm" and "EPICl" in group.marker_names for group in upper_limb_groups)
     assert any(group.segment_name == "Thorax" and "MANU" in group.marker_names for group in full_body_groups)
+    assert any(group.segment_name == "Trunk" and group.parent_name == "Pelvis" for group in lower_limb_groups)
+    assert all(group.segment_type == "anatomical" for group in full_body_groups)
 
 
 def test_c3d_workflow_summary_reports_marker_counts_and_virtual_features():
@@ -105,12 +107,14 @@ def test_c3d_template_payload_is_serializable_and_contains_virtual_features():
 def test_c3d_workflow_draft_edits_segment_marker_assignments():
     draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
 
-    draft = add_segment_to_draft(draft, "CustomSegment")
+    draft = add_segment_to_draft(draft, "CustomSegment", parent_name="Pelvis", segment_type="technical")
     draft = assign_marker_to_segment(draft, "CustomSegment", "CUSTOM1")
     draft = assign_marker_to_segment(draft, "CustomSegment", "CUSTOM1")
 
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
     assert custom_group.marker_names == ("CUSTOM1",)
+    assert custom_group.parent_name == "Pelvis"
+    assert custom_group.segment_type == "technical"
 
     draft = unassign_marker_from_segment(draft, "CustomSegment", "CUSTOM1")
     custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
@@ -228,7 +232,7 @@ def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
         initial_rotation_method="anatomical_c3d",
         initial_rotation_source="static_anatomical.c3d",
     )
-    draft = assign_c3d_file_role_to_draft(draft, "static", "/tmp/subject01_static.c3d")
+    draft = assign_c3d_file_role_to_draft(draft, "main", "/tmp/main_markers.c3d")
 
     payload = c3d_template_payload_from_draft(draft)
 
@@ -238,12 +242,12 @@ def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
     assert lshank_settings["child_translation"] is True
     assert lshank_settings["initial_rotation_method"] == "anatomical_c3d"
     assert any(
-        assignment["role"] == "static" and assignment["source_path"] == "/tmp/subject01_static.c3d"
+        assignment["role"] == "main" and assignment["source_path"] == "/tmp/main_markers.c3d"
         for assignment in payload["c3d_file_assignments"]
     )
 
-    draft = clear_c3d_file_role_from_draft(draft, "static")
-    assert next(assignment for assignment in draft.file_assignments if assignment.role == "static").source_path == ""
+    draft = clear_c3d_file_role_from_draft(draft, "main")
+    assert next(assignment for assignment in draft.file_assignments if assignment.role == "main").source_path == ""
 
 
 def test_c3d_workflow_draft_validation_reports_empty_custom_segment():
@@ -256,6 +260,17 @@ def test_c3d_workflow_draft_validation_reports_empty_custom_segment():
         issue.severity == "warning" and issue.category == "segments" and "CustomSegment" in issue.message
         for issue in issues
     )
+
+
+def test_c3d_workflow_draft_validation_reports_technical_segment_requirements():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "TechnicalFemur", parent_name="UnknownParent", segment_type="technical")
+    draft = assign_marker_to_segment(draft, "TechnicalFemur", "THI1")
+
+    issues = validate_c3d_workflow_draft(draft)
+
+    assert any(issue.severity == "warning" and "at least 3 markers" in issue.message for issue in issues)
+    assert any(issue.severity == "error" and "UnknownParent" in issue.message for issue in issues)
 
 
 def test_c3d_workflow_draft_validation_reports_missing_c3d_markers():
@@ -317,7 +332,7 @@ def test_c3d_workflow_progress_reports_pending_c3d_selection():
     progress = c3d_workflow_progress(draft)
 
     assert progress[0].status == "done"
-    assert progress[1].name == "Choose a C3D file"
+    assert progress[1].name == "Choose main C3D"
     assert progress[1].status == "pending"
 
 
@@ -325,14 +340,13 @@ def test_c3d_workflow_progress_reports_loaded_markers_and_assigned_required_role
     marker_dict = {"LASI": np.ones((4, 2)), "RASI": np.ones((4, 2)), "LPSI": np.ones((4, 2))}
     data = DictData(marker_dict)
     draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
-    draft = assign_c3d_file_role_to_draft(draft, "static", "/tmp/static_anatomical.c3d")
+    draft = assign_c3d_file_role_to_draft(draft, "main", "/tmp/main_markers.c3d")
 
     progress = c3d_workflow_progress(draft, data)
     progress_by_name = {step.name: step for step in progress}
 
-    assert progress_by_name["Choose a C3D file"].status == "done"
-    assert progress_by_name["List markers"].detail == "3 markers available."
-    assert progress_by_name["Rename C3Ds"].status == "done"
+    assert progress_by_name["Choose main C3D"].status == "done"
+    assert progress_by_name["Generate model"].status == "done"
 
 
 def test_c3d_virtual_marker_method_examples_document_regression_and_sara():
@@ -352,5 +366,5 @@ def test_c3d_template_payload_from_draft_includes_progress_and_method_examples()
 
     payload = c3d_template_payload_from_draft(draft)
 
-    assert any(step["name"] == "Create axes" for step in payload["progress"])
+    assert any(step["name"] == "Segment coordinate systems" for step in payload["progress"])
     assert any(example["method"] == "score" for example in payload["virtual_marker_method_examples"])
