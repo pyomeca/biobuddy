@@ -56,6 +56,45 @@ class C3dCreationWorkflow:
     segment_marker_groups: tuple[C3dSegmentMarkerGroup, ...]
 
 
+@dataclass(frozen=True)
+class C3dVirtualMarkerDraft:
+    """
+    Editable virtual marker definition in a C3D workflow draft.
+    """
+
+    name: str
+    method: str
+    segment_name: str
+    source: str = ""
+    equation: str = ""
+
+
+@dataclass(frozen=True)
+class C3dAxisDraft:
+    """
+    Editable axis definition in a C3D workflow draft.
+    """
+
+    name: str
+    segment_name: str
+    axis: str
+    start_markers: tuple[str, ...]
+    end_markers: tuple[str, ...]
+    method: str = "markers"
+
+
+@dataclass(frozen=True)
+class C3dWorkflowDraft:
+    """
+    Editable state for an interactive C3D model creation session.
+    """
+
+    preset: C3dModelPreset
+    segment_marker_groups: tuple[C3dSegmentMarkerGroup, ...]
+    virtual_markers: tuple[C3dVirtualMarkerDraft, ...]
+    axes: tuple[C3dAxisDraft, ...]
+
+
 def c3d_creation_workflow(preset: C3dModelPreset) -> C3dCreationWorkflow:
     """
     Return the GUI-facing workflow for one model preset.
@@ -65,6 +104,190 @@ def c3d_creation_workflow(preset: C3dModelPreset) -> C3dCreationWorkflow:
         steps=c3d_creation_workflow_steps(),
         file_roles=c3d_file_roles_for_preset(preset),
         segment_marker_groups=c3d_segment_marker_groups_for_preset(preset),
+    )
+
+
+def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
+    """
+    Return an editable draft initialized from a preset workflow.
+    """
+    virtual_features = c3d_model_preset_virtual_features(preset)
+    return C3dWorkflowDraft(
+        preset=preset,
+        segment_marker_groups=c3d_segment_marker_groups_for_preset(preset),
+        virtual_markers=tuple(
+            C3dVirtualMarkerDraft(
+                name=feature.name,
+                method=_virtual_feature_default_method(feature.feature_type, feature.role),
+                segment_name=feature.segment_name,
+                source=feature.description,
+            )
+            for feature in virtual_features
+            if feature.feature_type == "point"
+        ),
+        axes=tuple(
+            C3dAxisDraft(
+                name=feature.name,
+                segment_name=feature.segment_name,
+                axis="",
+                start_markers=(f"{feature.name}_start",),
+                end_markers=(f"{feature.name}_end",),
+                method=_virtual_feature_default_method(feature.feature_type, feature.role),
+            )
+            for feature in virtual_features
+            if feature.feature_type == "axis"
+        ),
+    )
+
+
+def add_segment_to_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3dWorkflowDraft:
+    """
+    Add a segment to an editable draft.
+    """
+    segment_name = segment_name.strip()
+    if segment_name == "":
+        raise ValueError("Segment name cannot be empty.")
+    if any(group.segment_name == segment_name for group in draft.segment_marker_groups):
+        raise ValueError(f"Segment '{segment_name}' already exists.")
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups + (C3dSegmentMarkerGroup(segment_name, ()),),
+        virtual_markers=draft.virtual_markers,
+        axes=draft.axes,
+    )
+
+
+def remove_segment_from_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3dWorkflowDraft:
+    """
+    Remove a segment and its draft virtual definitions.
+    """
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=tuple(
+            group for group in draft.segment_marker_groups if group.segment_name != segment_name
+        ),
+        virtual_markers=tuple(marker for marker in draft.virtual_markers if marker.segment_name != segment_name),
+        axes=tuple(axis for axis in draft.axes if axis.segment_name != segment_name),
+    )
+
+
+def assign_marker_to_segment(draft: C3dWorkflowDraft, segment_name: str, marker_name: str) -> C3dWorkflowDraft:
+    """
+    Assign a marker to a segment. Markers may belong to several segments.
+    """
+    marker_name = marker_name.strip()
+    if marker_name == "":
+        raise ValueError("Marker name cannot be empty.")
+    groups = []
+    found_segment = False
+    for group in draft.segment_marker_groups:
+        if group.segment_name != segment_name:
+            groups.append(group)
+            continue
+        found_segment = True
+        marker_names = group.marker_names if marker_name in group.marker_names else group.marker_names + (marker_name,)
+        groups.append(C3dSegmentMarkerGroup(group.segment_name, marker_names))
+    if not found_segment:
+        raise ValueError(f"Segment '{segment_name}' does not exist.")
+    return _replace_draft_groups(draft, tuple(groups))
+
+
+def unassign_marker_from_segment(draft: C3dWorkflowDraft, segment_name: str, marker_name: str) -> C3dWorkflowDraft:
+    """
+    Remove one marker assignment from one segment.
+    """
+    groups = []
+    for group in draft.segment_marker_groups:
+        if group.segment_name == segment_name:
+            groups.append(
+                C3dSegmentMarkerGroup(
+                    group.segment_name,
+                    tuple(name for name in group.marker_names if name != marker_name),
+                )
+            )
+        else:
+            groups.append(group)
+    return _replace_draft_groups(draft, tuple(groups))
+
+
+def add_virtual_marker_to_draft(
+    draft: C3dWorkflowDraft,
+    name: str,
+    method: str,
+    segment_name: str,
+    source: str = "",
+    equation: str = "",
+) -> C3dWorkflowDraft:
+    """
+    Add or replace a virtual marker definition.
+    """
+    marker = C3dVirtualMarkerDraft(
+        name=_require_name(name, "Virtual marker"),
+        method=_require_name(method, "Virtual marker method"),
+        segment_name=_require_name(segment_name, "Virtual marker segment"),
+        source=source.strip(),
+        equation=equation.strip(),
+    )
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=tuple(existing for existing in draft.virtual_markers if existing.name != marker.name)
+        + (marker,),
+        axes=draft.axes,
+    )
+
+
+def remove_virtual_marker_from_draft(draft: C3dWorkflowDraft, name: str) -> C3dWorkflowDraft:
+    """
+    Remove a virtual marker definition by name.
+    """
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=tuple(marker for marker in draft.virtual_markers if marker.name != name),
+        axes=draft.axes,
+    )
+
+
+def add_axis_to_draft(
+    draft: C3dWorkflowDraft,
+    name: str,
+    segment_name: str,
+    axis: str,
+    start_markers: tuple[str, ...],
+    end_markers: tuple[str, ...],
+    method: str = "markers",
+) -> C3dWorkflowDraft:
+    """
+    Add or replace an axis definition.
+    """
+    axis_definition = C3dAxisDraft(
+        name=_require_name(name, "Axis"),
+        segment_name=_require_name(segment_name, "Axis segment"),
+        axis=_require_name(axis, "Axis name"),
+        start_markers=tuple(name.strip() for name in start_markers if name.strip() != ""),
+        end_markers=tuple(name.strip() for name in end_markers if name.strip() != ""),
+        method=_require_name(method, "Axis method"),
+    )
+    if len(axis_definition.start_markers) == 0 or len(axis_definition.end_markers) == 0:
+        raise ValueError("An axis needs at least one start marker and one end marker.")
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=draft.virtual_markers,
+        axes=tuple(existing for existing in draft.axes if existing.name != axis_definition.name) + (axis_definition,),
+    )
+
+
+def remove_axis_from_draft(draft: C3dWorkflowDraft, name: str) -> C3dWorkflowDraft:
+    """
+    Remove an axis definition by name.
+    """
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=draft.virtual_markers,
+        axes=tuple(axis for axis in draft.axes if axis.name != name),
     )
 
 
@@ -183,6 +406,21 @@ def c3d_template_payload(preset: C3dModelPreset) -> dict:
     }
 
 
+def c3d_template_payload_from_draft(draft: C3dWorkflowDraft) -> dict:
+    """
+    Return a serializable template payload from the current editable draft.
+    """
+    workflow = c3d_creation_workflow(draft.preset)
+    return {
+        "preset": draft.preset.value,
+        "steps": [asdict(step) for step in workflow.steps],
+        "c3d_file_roles": [asdict(role) for role in workflow.file_roles],
+        "segment_marker_groups": [asdict(group) for group in draft.segment_marker_groups],
+        "virtual_markers": [asdict(marker) for marker in draft.virtual_markers],
+        "axes": [asdict(axis) for axis in draft.axes],
+    }
+
+
 def _groups_from_model_template(template: ModelTemplate) -> tuple[C3dSegmentMarkerGroup, ...]:
     marker_segments = {}
     for attachment in template.marker_attachments:
@@ -203,3 +441,32 @@ def _expected_marker_names_for_preset(preset: C3dModelPreset) -> set[str]:
     if preset == C3dModelPreset.FULL_BODY:
         return {marker_name for segment in bela_segment_specs() for marker_name in segment.marker_names}
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
+
+
+def _replace_draft_groups(
+    draft: C3dWorkflowDraft,
+    segment_marker_groups: tuple[C3dSegmentMarkerGroup, ...],
+) -> C3dWorkflowDraft:
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=segment_marker_groups,
+        virtual_markers=draft.virtual_markers,
+        axes=draft.axes,
+    )
+
+
+def _require_name(value: str, label: str) -> str:
+    value = value.strip()
+    if value == "":
+        raise ValueError(f"{label} cannot be empty.")
+    return value
+
+
+def _virtual_feature_default_method(feature_type: str, role: str) -> str:
+    if feature_type == "axis":
+        return "sara" if "axis" in role else "markers"
+    if "legacy" in role:
+        return "pointing_or_regression"
+    if "axis" in role:
+        return "functional_or_pointing"
+    return "pointing"

@@ -39,16 +39,24 @@ from .validation_panel import validate_model_for_editor
 from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
-    c3d_model_preset_virtual_features,
     create_model_from_marker_data,
     create_model_from_c3d_folder,
     supported_c3d_model_presets,
     template_for_c3d_model_preset,
 )
 from .c3d_creation_workflow import (
+    add_axis_to_draft,
+    add_segment_to_draft,
+    add_virtual_marker_to_draft,
+    assign_marker_to_segment,
     c3d_creation_workflow,
-    c3d_template_payload,
+    c3d_template_payload_from_draft,
+    c3d_workflow_draft,
     c3d_workflow_summary,
+    remove_axis_from_draft,
+    remove_segment_from_draft,
+    remove_virtual_marker_from_draft,
+    unassign_marker_from_segment,
 )
 from ..utils.marker_data import C3dData
 
@@ -71,6 +79,7 @@ def launch_model_editor() -> None:
             QCheckBox,
             QLabel,
             QLineEdit,
+            QInputDialog,
             QListWidget,
             QMainWindow,
             QMessageBox,
@@ -105,6 +114,7 @@ def launch_model_editor() -> None:
                 QCheckBox,
                 QLabel,
                 QLineEdit,
+                QInputDialog,
                 QListWidget,
                 QMainWindow,
                 QMessageBox,
@@ -197,6 +207,7 @@ def launch_model_editor() -> None:
             self.setWindowTitle("New model from C3D")
             self.presets = supported_c3d_model_presets()
             self.c3d_data = None
+            self.workflow_draft = c3d_workflow_draft(self.presets[0])
 
             self.preset_combo = QComboBox()
             for preset in self.presets:
@@ -217,7 +228,24 @@ def launch_model_editor() -> None:
             self.step_list = QListWidget()
             self.marker_list = QListWidget()
             self.segment_marker_list = QListWidget()
+            self.axis_list = QListWidget()
             self.file_role_list = QListWidget()
+            self.add_segment_button = QPushButton("Add segment")
+            self.add_segment_button.clicked.connect(self._add_workflow_segment)
+            self.remove_segment_button = QPushButton("Remove segment")
+            self.remove_segment_button.clicked.connect(self._remove_workflow_segment)
+            self.assign_marker_button = QPushButton("Assign selected marker")
+            self.assign_marker_button.clicked.connect(self._assign_workflow_marker)
+            self.unassign_marker_button = QPushButton("Remove selected marker")
+            self.unassign_marker_button.clicked.connect(self._unassign_workflow_marker)
+            self.add_virtual_marker_button = QPushButton("Add virtual marker")
+            self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
+            self.remove_virtual_marker_button = QPushButton("Remove virtual marker")
+            self.remove_virtual_marker_button.clicked.connect(self._remove_workflow_virtual_marker)
+            self.add_axis_button = QPushButton("Add/edit axis")
+            self.add_axis_button.clicked.connect(self._add_workflow_axis)
+            self.remove_axis_button = QPushButton("Remove axis")
+            self.remove_axis_button.clicked.connect(self._remove_workflow_axis)
 
             buttons = QDialogButtonBox(_dialog_button("Ok") | _dialog_button("Cancel"))
             buttons.accepted.connect(self.accept)
@@ -236,8 +264,9 @@ def launch_model_editor() -> None:
             workflow_tabs = QTabWidget()
             workflow_tabs.addTab(self.step_list, "Pipeline")
             workflow_tabs.addTab(self.marker_list, "Markers")
-            workflow_tabs.addTab(self.segment_marker_list, "Segments")
-            workflow_tabs.addTab(self.feature_list, "Virtual markers/axes")
+            workflow_tabs.addTab(self._segment_workflow_tab(), "Segments")
+            workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
+            workflow_tabs.addTab(self._axis_workflow_tab(), "Axes")
             workflow_tabs.addTab(self.file_role_list, "C3D names")
             workflow_tabs.addTab(self.summary_label, "Summary")
             layout.addWidget(workflow_tabs)
@@ -257,6 +286,38 @@ def launch_model_editor() -> None:
             """
             text = self.c3d_path.text().strip()
             return None if text == "" else Path(text)
+
+        def _segment_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(self.segment_marker_list)
+            row = QHBoxLayout()
+            row.addWidget(self.add_segment_button)
+            row.addWidget(self.remove_segment_button)
+            row.addWidget(self.assign_marker_button)
+            row.addWidget(self.unassign_marker_button)
+            layout.addLayout(row)
+            return widget
+
+        def _virtual_marker_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(self.feature_list)
+            row = QHBoxLayout()
+            row.addWidget(self.add_virtual_marker_button)
+            row.addWidget(self.remove_virtual_marker_button)
+            layout.addLayout(row)
+            return widget
+
+        def _axis_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(self.axis_list)
+            row = QHBoxLayout()
+            row.addWidget(self.add_axis_button)
+            row.addWidget(self.remove_axis_button)
+            layout.addLayout(row)
+            return widget
 
         def _choose_c3d_file(self) -> None:
             filepath, _ = QFileDialog.getOpenFileName(
@@ -285,18 +346,168 @@ def launch_model_editor() -> None:
             if not filepath:
                 return
             try:
-                Path(filepath).write_text(json.dumps(c3d_template_payload(self.selected_preset()), indent=2))
+                Path(filepath).write_text(json.dumps(c3d_template_payload_from_draft(self.workflow_draft), indent=2))
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate template", str(error))
 
+        def _add_workflow_segment(self) -> None:
+            segment_name, accepted = QInputDialog.getText(self, "Add segment", "Segment name")
+            if not accepted:
+                return
+            try:
+                self.workflow_draft = add_segment_to_draft(self.workflow_draft, segment_name)
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add segment", str(error))
+
+        def _remove_workflow_segment(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                return
+            self.workflow_draft = remove_segment_from_draft(self.workflow_draft, segment_name)
+            self._update_preset_details()
+
+        def _assign_workflow_marker(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            marker_name = self._selected_workflow_marker_name()
+            if segment_name is None or marker_name is None:
+                return
+            try:
+                self.workflow_draft = assign_marker_to_segment(self.workflow_draft, segment_name, marker_name)
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to assign marker", str(error))
+
+        def _unassign_workflow_marker(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            marker_name = self._selected_workflow_marker_name()
+            if segment_name is None or marker_name is None:
+                return
+            self.workflow_draft = unassign_marker_from_segment(self.workflow_draft, segment_name, marker_name)
+            self._update_preset_details()
+
+        def _add_workflow_virtual_marker(self) -> None:
+            name, accepted = QInputDialog.getText(self, "Add virtual marker", "Virtual marker name")
+            if not accepted:
+                return
+            segment_name = self._choose_workflow_segment("Virtual marker segment")
+            if segment_name is None:
+                return
+            method, accepted = QInputDialog.getItem(
+                self,
+                "Virtual marker method",
+                "Method",
+                ["pointing", "equation", "regression", "marker_mean", "score", "sara"],
+                0,
+                False,
+            )
+            if not accepted:
+                return
+            source, accepted = QInputDialog.getText(self, "Virtual marker source", "Source C3D/markers/equation")
+            if not accepted:
+                return
+            self.workflow_draft = add_virtual_marker_to_draft(
+                self.workflow_draft,
+                name=name,
+                method=method,
+                segment_name=segment_name,
+                source=source,
+                equation=source if method in {"equation", "regression"} else "",
+            )
+            self._update_preset_details()
+
+        def _remove_workflow_virtual_marker(self) -> None:
+            name = self._selected_virtual_marker_name()
+            if name is None:
+                return
+            self.workflow_draft = remove_virtual_marker_from_draft(self.workflow_draft, name)
+            self._update_preset_details()
+
+        def _add_workflow_axis(self) -> None:
+            name, accepted = QInputDialog.getText(self, "Add/edit axis", "Axis name")
+            if not accepted:
+                return
+            segment_name = self._choose_workflow_segment("Axis segment")
+            if segment_name is None:
+                return
+            axis, accepted = QInputDialog.getItem(self, "Axis", "Axis", ["x", "y", "z"], 0, False)
+            if not accepted:
+                return
+            method, accepted = QInputDialog.getItem(
+                self,
+                "Axis method",
+                "Method",
+                ["markers", "functional", "sara", "score", "virtual_points"],
+                0,
+                False,
+            )
+            if not accepted:
+                return
+            start_text, accepted = QInputDialog.getText(self, "Axis start", "Start markers, comma-separated")
+            if not accepted:
+                return
+            end_text, accepted = QInputDialog.getText(self, "Axis end", "End markers, comma-separated")
+            if not accepted:
+                return
+            try:
+                self.workflow_draft = add_axis_to_draft(
+                    self.workflow_draft,
+                    name=name,
+                    segment_name=segment_name,
+                    axis=axis,
+                    start_markers=_split_marker_text(start_text),
+                    end_markers=_split_marker_text(end_text),
+                    method=method,
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to add axis", str(error))
+
+        def _remove_workflow_axis(self) -> None:
+            name = self._selected_axis_name()
+            if name is None:
+                return
+            self.workflow_draft = remove_axis_from_draft(self.workflow_draft, name)
+            self._update_preset_details()
+
+        def _choose_workflow_segment(self, title: str) -> str | None:
+            segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
+            segment_name, accepted = QInputDialog.getItem(self, title, "Segment", segment_names, 0, False)
+            return segment_name if accepted else None
+
+        def _selected_workflow_segment_name(self) -> str | None:
+            if not self.segment_marker_list.selectedItems():
+                return None
+            return self.segment_marker_list.selectedItems()[0].text().split(":", maxsplit=1)[0]
+
+        def _selected_workflow_marker_name(self) -> str | None:
+            if not self.marker_list.selectedItems():
+                return None
+            marker_name = self.marker_list.selectedItems()[0].text()
+            return None if marker_name.startswith("Choose a C3D") else marker_name
+
+        def _selected_virtual_marker_name(self) -> str | None:
+            if not self.feature_list.selectedItems():
+                return None
+            text = self.feature_list.selectedItems()[0].text()
+            return None if text.startswith("No additional") else text.split("|", maxsplit=1)[0].strip()
+
+        def _selected_axis_name(self) -> str | None:
+            if not self.axis_list.selectedItems():
+                return None
+            text = self.axis_list.selectedItems()[0].text()
+            return None if text.startswith("No axis") else text.split("|", maxsplit=1)[0].strip()
+
         def _update_preset_details(self) -> None:
             preset = self.selected_preset()
-            features = c3d_model_preset_virtual_features(preset)
+            if self.workflow_draft.preset != preset:
+                self.workflow_draft = c3d_workflow_draft(preset)
             workflow = c3d_creation_workflow(preset)
             self.step_list.clear()
             self.marker_list.clear()
             self.segment_marker_list.clear()
             self.feature_list.clear()
+            self.axis_list.clear()
             self.file_role_list.clear()
 
             if preset == C3dModelPreset.FULL_BODY:
@@ -319,17 +530,25 @@ def launch_model_editor() -> None:
                 for marker_name in self.c3d_data.marker_names:
                     self.marker_list.addItem(marker_name)
 
-            for group in workflow.segment_marker_groups:
+            for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
                 self.segment_marker_list.addItem(f"{group.segment_name}: {markers}")
 
-            if len(features) == 0:
+            if len(self.workflow_draft.virtual_markers) == 0:
                 self.feature_list.addItem("No additional virtual feature required by this preset.")
             else:
-                for feature in features:
+                for feature in self.workflow_draft.virtual_markers:
                     self.feature_list.addItem(
-                        f"{feature.feature_type}: {feature.name} | {feature.segment_name} | {feature.role} | "
-                        f"{feature.description}"
+                        f"{feature.name} | {feature.segment_name} | {feature.method} | {feature.source}"
+                    )
+
+            if len(self.workflow_draft.axes) == 0:
+                self.axis_list.addItem("No axis definition yet.")
+            else:
+                for axis in self.workflow_draft.axes:
+                    self.axis_list.addItem(
+                        f"{axis.name} | {axis.segment_name} | {axis.axis} | {axis.method} | "
+                        f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}"
                     )
 
             for file_role in workflow.file_roles:
@@ -1188,6 +1407,13 @@ def _parse_float_list(text: str) -> list[float]:
     if stripped_text == "":
         return []
     return [float(value) for value in stripped_text.replace(",", " ").split()]
+
+
+def _split_marker_text(text: str) -> tuple[str, ...]:
+    """
+    Parse a comma- or space-separated marker list.
+    """
+    return tuple(value for value in text.replace(",", " ").split() if value != "")
 
 
 def _parse_optional_float(text: str) -> float | None:

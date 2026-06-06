@@ -2,12 +2,22 @@ import numpy as np
 
 from biobuddy import DictData
 from biobuddy.gui.c3d_creation_workflow import (
+    add_axis_to_draft,
+    add_segment_to_draft,
+    add_virtual_marker_to_draft,
+    assign_marker_to_segment,
     c3d_creation_workflow,
     c3d_creation_workflow_steps,
     c3d_file_roles_for_preset,
     c3d_segment_marker_groups_for_preset,
     c3d_template_payload,
+    c3d_template_payload_from_draft,
+    c3d_workflow_draft,
     c3d_workflow_summary,
+    remove_axis_from_draft,
+    remove_segment_from_draft,
+    remove_virtual_marker_from_draft,
+    unassign_marker_from_segment,
 )
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 
@@ -82,3 +92,54 @@ def test_c3d_template_payload_is_serializable_and_contains_virtual_features():
     assert len(payload["steps"]) == 12
     assert any(group["segment_name"] == "Arm" for group in payload["segment_marker_groups"])
     assert any(feature["name"] == "Thorax_virtual_7" for feature in payload["virtual_features"])
+
+
+def test_c3d_workflow_draft_edits_segment_marker_assignments():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    draft = add_segment_to_draft(draft, "CustomSegment")
+    draft = assign_marker_to_segment(draft, "CustomSegment", "CUSTOM1")
+    draft = assign_marker_to_segment(draft, "CustomSegment", "CUSTOM1")
+
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.marker_names == ("CUSTOM1",)
+
+    draft = unassign_marker_from_segment(draft, "CustomSegment", "CUSTOM1")
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+    assert custom_group.marker_names == ()
+
+    draft = remove_segment_from_draft(draft, "CustomSegment")
+    assert all(group.segment_name != "CustomSegment" for group in draft.segment_marker_groups)
+
+
+def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
+    draft = c3d_workflow_draft(C3dModelPreset.UPPER_LIMB)
+
+    draft = add_virtual_marker_to_draft(
+        draft,
+        name="ShoulderCoR",
+        method="regression",
+        segment_name="Arm",
+        source="static_anatomical.c3d",
+        equation="example_predictive_shoulder_cor",
+    )
+    draft = add_axis_to_draft(
+        draft,
+        name="ElbowFlexionAxis",
+        segment_name="LowerArm1",
+        axis="x",
+        start_markers=("EPICm",),
+        end_markers=("EPICl",),
+        method="sara",
+    )
+
+    payload = c3d_template_payload_from_draft(draft)
+
+    assert any(marker["name"] == "ShoulderCoR" for marker in payload["virtual_markers"])
+    assert any(axis["name"] == "ElbowFlexionAxis" for axis in payload["axes"])
+
+    draft = remove_virtual_marker_from_draft(draft, "ShoulderCoR")
+    draft = remove_axis_from_draft(draft, "ElbowFlexionAxis")
+
+    assert all(marker.name != "ShoulderCoR" for marker in draft.virtual_markers)
+    assert all(axis.name != "ElbowFlexionAxis" for axis in draft.axes)
