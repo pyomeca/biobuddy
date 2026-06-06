@@ -239,6 +239,9 @@ def launch_model_editor() -> None:
             self.marker_list = QListWidget()
             self.marker_list.setSelectionMode(qt_extended_selection)
             self.segment_marker_list = QListWidget()
+            self.segment_marker_list.itemSelectionChanged.connect(self._update_assigned_marker_list)
+            self.assigned_marker_list = QListWidget()
+            self.assigned_marker_list.setSelectionMode(qt_extended_selection)
             self.axis_list = QListWidget()
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
@@ -313,7 +316,10 @@ def launch_model_editor() -> None:
         def _segment_workflow_tab(self):
             widget = QWidget()
             layout = QVBoxLayout(widget)
+            layout.addWidget(QLabel("Segments"))
             layout.addWidget(self.segment_marker_list)
+            layout.addWidget(QLabel("Markers assigned to selected segment"))
+            layout.addWidget(self.assigned_marker_list)
             row = QHBoxLayout()
             row.addWidget(self.add_segment_button)
             row.addWidget(self.remove_segment_button)
@@ -420,7 +426,9 @@ def launch_model_editor() -> None:
 
         def _unassign_workflow_marker(self) -> None:
             segment_name = self._selected_workflow_segment_name()
-            marker_names = self._selected_workflow_marker_names()
+            marker_names = self._selected_assigned_marker_names()
+            if len(marker_names) == 0:
+                marker_names = self._selected_workflow_marker_names()
             if segment_name is None or len(marker_names) == 0:
                 return
             self.workflow_draft = unassign_markers_from_segment(self.workflow_draft, segment_name, marker_names)
@@ -692,6 +700,31 @@ def launch_model_editor() -> None:
                 marker_names.append(marker_name)
             return tuple(marker_names)
 
+        def _selected_assigned_marker_names(self) -> tuple[str, ...]:
+            marker_names = []
+            for item in self.assigned_marker_list.selectedItems():
+                marker_name = item.text()
+                if marker_name.startswith("Select a segment") or marker_name.startswith("No marker"):
+                    continue
+                marker_names.append(marker_name)
+            return tuple(marker_names)
+
+        def _update_assigned_marker_list(self) -> None:
+            self.assigned_marker_list.clear()
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                self.assigned_marker_list.addItem("Select a segment to inspect its markers.")
+                return
+            for group in self.workflow_draft.segment_marker_groups:
+                if group.segment_name != segment_name:
+                    continue
+                if len(group.marker_names) == 0:
+                    self.assigned_marker_list.addItem("No marker assigned to this segment.")
+                    return
+                for marker_name in group.marker_names:
+                    self.assigned_marker_list.addItem(marker_name)
+                return
+
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():
                 return None
@@ -737,13 +770,16 @@ def launch_model_editor() -> None:
             return self.file_role_list.selectedItems()[0].text().split("|", maxsplit=1)[0].strip()
 
         def _update_preset_details(self) -> None:
+            previously_selected_segment = self._selected_workflow_segment_name()
             preset = self.selected_preset()
             if self.workflow_draft.preset != preset:
                 self.workflow_draft = c3d_workflow_draft(preset)
+                previously_selected_segment = None
             workflow = c3d_creation_workflow(preset)
             self.step_list.clear()
             self.marker_list.clear()
             self.segment_marker_list.clear()
+            self.assigned_marker_list.clear()
             self.feature_list.clear()
             self.axis_list.clear()
             self.segment_settings_list.clear()
@@ -776,6 +812,7 @@ def launch_model_editor() -> None:
             for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
                 self.segment_marker_list.addItem(f"{group.segment_name}: {markers}")
+            self._restore_workflow_segment_selection(previously_selected_segment)
 
             if len(self.workflow_draft.virtual_markers) == 0:
                 self.feature_list.addItem("No additional virtual feature required by this preset.")
@@ -821,6 +858,20 @@ def launch_model_editor() -> None:
                 )
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
+
+        def _restore_workflow_segment_selection(self, segment_name: str | None) -> None:
+            target_index = 0
+            if segment_name is not None:
+                for index in range(self.segment_marker_list.count()):
+                    item_segment_name = self.segment_marker_list.item(index).text().split(":", maxsplit=1)[0]
+                    if item_segment_name == segment_name:
+                        target_index = index
+                        break
+            if self.segment_marker_list.count() == 0:
+                self._update_assigned_marker_list()
+                return
+            self.segment_marker_list.setCurrentItem(self.segment_marker_list.item(target_index))
+            self._update_assigned_marker_list()
 
     class ModelPreviewWidget(QWidget):
         """
