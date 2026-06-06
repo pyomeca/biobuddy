@@ -6,6 +6,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     add_segment_to_draft,
     add_virtual_marker_to_draft,
     assign_c3d_file_role_to_draft,
+    assign_markers_to_segment,
     assign_marker_to_segment,
     c3d_creation_workflow,
     c3d_creation_workflow_steps,
@@ -21,6 +22,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
+    unassign_markers_from_segment,
     unassign_marker_from_segment,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
@@ -116,6 +118,21 @@ def test_c3d_workflow_draft_edits_segment_marker_assignments():
 
     draft = remove_segment_from_draft(draft, "CustomSegment")
     assert all(group.segment_name != "CustomSegment" for group in draft.segment_marker_groups)
+
+
+def test_c3d_workflow_draft_edits_multiple_segment_marker_assignments():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_segment_to_draft(draft, "CustomSegment")
+
+    draft = assign_markers_to_segment(draft, "CustomSegment", ("CUSTOM1", "CUSTOM2", "CUSTOM1"))
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+
+    assert custom_group.marker_names == ("CUSTOM1", "CUSTOM2")
+
+    draft = unassign_markers_from_segment(draft, "CustomSegment", ("CUSTOM1", "MISSING_MARKER"))
+    custom_group = next(group for group in draft.segment_marker_groups if group.segment_name == "CustomSegment")
+
+    assert custom_group.marker_names == ("CUSTOM2",)
 
 
 def test_c3d_workflow_draft_edits_virtual_markers_and_axes():

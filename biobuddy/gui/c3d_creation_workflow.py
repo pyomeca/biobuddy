@@ -520,6 +520,20 @@ def assign_marker_to_segment(draft: C3dWorkflowDraft, segment_name: str, marker_
     return _replace_draft_groups(draft, tuple(groups))
 
 
+def assign_markers_to_segment(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    marker_names: tuple[str, ...],
+) -> C3dWorkflowDraft:
+    """
+    Assign several markers to one segment while preserving their selection order.
+    """
+    updated_draft = draft
+    for marker_name in marker_names:
+        updated_draft = assign_marker_to_segment(updated_draft, segment_name, marker_name)
+    return updated_draft
+
+
 def unassign_marker_from_segment(draft: C3dWorkflowDraft, segment_name: str, marker_name: str) -> C3dWorkflowDraft:
     """
     Remove one marker assignment from one segment.
@@ -536,6 +550,20 @@ def unassign_marker_from_segment(draft: C3dWorkflowDraft, segment_name: str, mar
         else:
             groups.append(group)
     return _replace_draft_groups(draft, tuple(groups))
+
+
+def unassign_markers_from_segment(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    marker_names: tuple[str, ...],
+) -> C3dWorkflowDraft:
+    """
+    Remove several marker assignments from one segment.
+    """
+    updated_draft = draft
+    for marker_name in marker_names:
+        updated_draft = unassign_marker_from_segment(updated_draft, segment_name, marker_name)
+    return updated_draft
 
 
 def add_virtual_marker_to_draft(

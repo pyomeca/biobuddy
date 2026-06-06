@@ -49,7 +49,7 @@ from .c3d_creation_workflow import (
     add_segment_to_draft,
     add_virtual_marker_to_draft,
     assign_c3d_file_role_to_draft,
-    assign_marker_to_segment,
+    assign_markers_to_segment,
     c3d_creation_workflow,
     c3d_template_payload_from_draft,
     c3d_virtual_marker_method_examples,
@@ -60,7 +60,7 @@ from .c3d_creation_workflow import (
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
-    unassign_marker_from_segment,
+    unassign_markers_from_segment,
     update_segment_settings_in_draft,
     validate_c3d_workflow_draft,
 )
@@ -75,6 +75,7 @@ def launch_model_editor() -> None:
         from PySide6.QtCore import QPointF, Qt
         from PySide6.QtGui import QColor, QPainter, QPen
         from PySide6.QtWidgets import (
+            QAbstractItemView,
             QApplication,
             QComboBox,
             QDialog,
@@ -103,6 +104,7 @@ def launch_model_editor() -> None:
         qt_horizontal = Qt.Orientation.Horizontal
         qt_match_exact = Qt.MatchFlag.MatchExactly
         qt_match_recursive = Qt.MatchFlag.MatchRecursive
+        qt_extended_selection = QAbstractItemView.SelectionMode.ExtendedSelection
         qpaint_antialiasing = QPainter.RenderHint.Antialiasing
         get_event_position = lambda event: event.position()
     except ImportError:
@@ -110,6 +112,7 @@ def launch_model_editor() -> None:
             from PyQt5.QtCore import QPointF, Qt
             from PyQt5.QtGui import QColor, QPainter, QPen
             from PyQt5.QtWidgets import (
+                QAbstractItemView,
                 QApplication,
                 QComboBox,
                 QDialog,
@@ -138,6 +141,7 @@ def launch_model_editor() -> None:
             qt_horizontal = Qt.Horizontal
             qt_match_exact = Qt.MatchExactly
             qt_match_recursive = Qt.MatchRecursive
+            qt_extended_selection = QAbstractItemView.ExtendedSelection
             qpaint_antialiasing = QPainter.Antialiasing
             get_event_position = lambda event: event.localPos()
         except ImportError as error:
@@ -233,6 +237,7 @@ def launch_model_editor() -> None:
             self.feature_list.setMinimumHeight(180)
             self.step_list = QListWidget()
             self.marker_list = QListWidget()
+            self.marker_list.setSelectionMode(qt_extended_selection)
             self.segment_marker_list = QListWidget()
             self.axis_list = QListWidget()
             self.segment_settings_list = QListWidget()
@@ -243,9 +248,9 @@ def launch_model_editor() -> None:
             self.add_segment_button.clicked.connect(self._add_workflow_segment)
             self.remove_segment_button = QPushButton("Remove segment")
             self.remove_segment_button.clicked.connect(self._remove_workflow_segment)
-            self.assign_marker_button = QPushButton("Assign selected marker")
+            self.assign_marker_button = QPushButton("Assign selected markers")
             self.assign_marker_button.clicked.connect(self._assign_workflow_marker)
-            self.unassign_marker_button = QPushButton("Remove selected marker")
+            self.unassign_marker_button = QPushButton("Remove selected markers")
             self.unassign_marker_button.clicked.connect(self._unassign_workflow_marker)
             self.add_virtual_marker_button = QPushButton("Add/edit virtual marker")
             self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
@@ -404,21 +409,21 @@ def launch_model_editor() -> None:
 
         def _assign_workflow_marker(self) -> None:
             segment_name = self._selected_workflow_segment_name()
-            marker_name = self._selected_workflow_marker_name()
-            if segment_name is None or marker_name is None:
+            marker_names = self._selected_workflow_marker_names()
+            if segment_name is None or len(marker_names) == 0:
                 return
             try:
-                self.workflow_draft = assign_marker_to_segment(self.workflow_draft, segment_name, marker_name)
+                self.workflow_draft = assign_markers_to_segment(self.workflow_draft, segment_name, marker_names)
                 self._update_preset_details()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to assign marker", str(error))
 
         def _unassign_workflow_marker(self) -> None:
             segment_name = self._selected_workflow_segment_name()
-            marker_name = self._selected_workflow_marker_name()
-            if segment_name is None or marker_name is None:
+            marker_names = self._selected_workflow_marker_names()
+            if segment_name is None or len(marker_names) == 0:
                 return
-            self.workflow_draft = unassign_marker_from_segment(self.workflow_draft, segment_name, marker_name)
+            self.workflow_draft = unassign_markers_from_segment(self.workflow_draft, segment_name, marker_names)
             self._update_preset_details()
 
         def _add_workflow_virtual_marker(self) -> None:
@@ -673,10 +678,19 @@ def launch_model_editor() -> None:
             return self.segment_marker_list.selectedItems()[0].text().split(":", maxsplit=1)[0]
 
         def _selected_workflow_marker_name(self) -> str | None:
-            if not self.marker_list.selectedItems():
+            marker_names = self._selected_workflow_marker_names()
+            if len(marker_names) == 0:
                 return None
-            marker_name = self.marker_list.selectedItems()[0].text()
-            return None if marker_name.startswith("Choose a C3D") else marker_name
+            return marker_names[0]
+
+        def _selected_workflow_marker_names(self) -> tuple[str, ...]:
+            marker_names = []
+            for item in self.marker_list.selectedItems():
+                marker_name = item.text()
+                if marker_name.startswith("Choose a C3D"):
+                    continue
+                marker_names.append(marker_name)
+            return tuple(marker_names)
 
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():
