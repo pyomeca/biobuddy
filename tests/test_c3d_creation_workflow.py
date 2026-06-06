@@ -5,6 +5,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     add_axis_to_draft,
     add_segment_to_draft,
     add_virtual_marker_to_draft,
+    assign_c3d_file_role_to_draft,
     assign_marker_to_segment,
     c3d_creation_workflow,
     c3d_creation_workflow_steps,
@@ -14,10 +15,12 @@ from biobuddy.gui.c3d_creation_workflow import (
     c3d_template_payload_from_draft,
     c3d_workflow_draft,
     c3d_workflow_summary,
+    clear_c3d_file_role_from_draft,
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
     unassign_marker_from_segment,
+    update_segment_settings_in_draft,
 )
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 
@@ -143,3 +146,35 @@ def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
 
     assert all(marker.name != "ShoulderCoR" for marker in draft.virtual_markers)
     assert all(axis.name != "ElbowFlexionAxis" for axis in draft.axes)
+
+
+def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    draft = update_segment_settings_in_draft(
+        draft,
+        segment_name="LShank",
+        translations="z",
+        rotations="xz",
+        q_min=(-1.0, -0.5),
+        q_max=(1.0, 0.5),
+        child_translation=True,
+        initial_rotation_method="anatomical_c3d",
+        initial_rotation_source="static_anatomical.c3d",
+    )
+    draft = assign_c3d_file_role_to_draft(draft, "static", "/tmp/subject01_static.c3d")
+
+    payload = c3d_template_payload_from_draft(draft)
+
+    lshank_settings = next(setting for setting in payload["segment_settings"] if setting["segment_name"] == "LShank")
+    assert lshank_settings["translations"] == "z"
+    assert lshank_settings["rotations"] == "xz"
+    assert lshank_settings["child_translation"] is True
+    assert lshank_settings["initial_rotation_method"] == "anatomical_c3d"
+    assert any(
+        assignment["role"] == "static" and assignment["source_path"] == "/tmp/subject01_static.c3d"
+        for assignment in payload["c3d_file_assignments"]
+    )
+
+    draft = clear_c3d_file_role_from_draft(draft, "static")
+    assert next(assignment for assignment in draft.file_assignments if assignment.role == "static").source_path == ""

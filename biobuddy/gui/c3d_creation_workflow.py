@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ..utils.marker_data import C3dData, MarkerData
 from .c3d_model_creation import C3dModelPreset, c3d_model_preset_virtual_features
-from .full_body_bela_template import bela_segment_specs
+from .full_body_bela_template import bela_segment_specs, rotations_from_matlab_dof, translations_from_matlab_dof
 from .lower_limb_template import lower_limb_template
 from .model_builder import ModelTemplate, required_functional_markers, required_static_markers
 from .upper_limb_template import upper_limb_template
@@ -84,6 +84,38 @@ class C3dAxisDraft:
 
 
 @dataclass(frozen=True)
+class C3dSegmentSettingsDraft:
+    """
+    Editable kinematic settings for one segment.
+    """
+
+    segment_name: str
+    translations: str = ""
+    rotations: str = ""
+    q_min: tuple[float, ...] = ()
+    q_max: tuple[float, ...] = ()
+    child_translation: bool = False
+    initial_rotation_method: str = "identity"
+    initial_rotation_source: str = ""
+    initial_rotation_matrix: tuple[tuple[float, float, float], ...] = (
+        (1.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, 0.0, 1.0),
+    )
+
+
+@dataclass(frozen=True)
+class C3dFileAssignmentDraft:
+    """
+    Editable mapping from a generic C3D role to a participant-specific file.
+    """
+
+    role: str
+    generic_name: str
+    source_path: str = ""
+
+
+@dataclass(frozen=True)
 class C3dWorkflowDraft:
     """
     Editable state for an interactive C3D model creation session.
@@ -93,6 +125,8 @@ class C3dWorkflowDraft:
     segment_marker_groups: tuple[C3dSegmentMarkerGroup, ...]
     virtual_markers: tuple[C3dVirtualMarkerDraft, ...]
     axes: tuple[C3dAxisDraft, ...]
+    segment_settings: tuple[C3dSegmentSettingsDraft, ...] = ()
+    file_assignments: tuple[C3dFileAssignmentDraft, ...] = ()
 
 
 def c3d_creation_workflow(preset: C3dModelPreset) -> C3dCreationWorkflow:
@@ -137,6 +171,11 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             for feature in virtual_features
             if feature.feature_type == "axis"
         ),
+        segment_settings=_initial_segment_settings(preset),
+        file_assignments=tuple(
+            C3dFileAssignmentDraft(role=role.role, generic_name=role.generic_name)
+            for role in c3d_file_roles_for_preset(preset)
+        ),
     )
 
 
@@ -154,6 +193,8 @@ def add_segment_to_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3dWorkf
         segment_marker_groups=draft.segment_marker_groups + (C3dSegmentMarkerGroup(segment_name, ()),),
         virtual_markers=draft.virtual_markers,
         axes=draft.axes,
+        segment_settings=draft.segment_settings + (C3dSegmentSettingsDraft(segment_name),),
+        file_assignments=draft.file_assignments,
     )
 
 
@@ -168,6 +209,8 @@ def remove_segment_from_draft(draft: C3dWorkflowDraft, segment_name: str) -> C3d
         ),
         virtual_markers=tuple(marker for marker in draft.virtual_markers if marker.segment_name != segment_name),
         axes=tuple(axis for axis in draft.axes if axis.segment_name != segment_name),
+        segment_settings=tuple(setting for setting in draft.segment_settings if setting.segment_name != segment_name),
+        file_assignments=draft.file_assignments,
     )
 
 
@@ -234,6 +277,8 @@ def add_virtual_marker_to_draft(
         virtual_markers=tuple(existing for existing in draft.virtual_markers if existing.name != marker.name)
         + (marker,),
         axes=draft.axes,
+        segment_settings=draft.segment_settings,
+        file_assignments=draft.file_assignments,
     )
 
 
@@ -246,6 +291,8 @@ def remove_virtual_marker_from_draft(draft: C3dWorkflowDraft, name: str) -> C3dW
         segment_marker_groups=draft.segment_marker_groups,
         virtual_markers=tuple(marker for marker in draft.virtual_markers if marker.name != name),
         axes=draft.axes,
+        segment_settings=draft.segment_settings,
+        file_assignments=draft.file_assignments,
     )
 
 
@@ -276,6 +323,8 @@ def add_axis_to_draft(
         segment_marker_groups=draft.segment_marker_groups,
         virtual_markers=draft.virtual_markers,
         axes=tuple(existing for existing in draft.axes if existing.name != axis_definition.name) + (axis_definition,),
+        segment_settings=draft.segment_settings,
+        file_assignments=draft.file_assignments,
     )
 
 
@@ -288,7 +337,85 @@ def remove_axis_from_draft(draft: C3dWorkflowDraft, name: str) -> C3dWorkflowDra
         segment_marker_groups=draft.segment_marker_groups,
         virtual_markers=draft.virtual_markers,
         axes=tuple(axis for axis in draft.axes if axis.name != name),
+        segment_settings=draft.segment_settings,
+        file_assignments=draft.file_assignments,
     )
+
+
+def update_segment_settings_in_draft(
+    draft: C3dWorkflowDraft,
+    segment_name: str,
+    translations: str,
+    rotations: str,
+    q_min: tuple[float, ...] = (),
+    q_max: tuple[float, ...] = (),
+    child_translation: bool = False,
+    initial_rotation_method: str = "identity",
+    initial_rotation_source: str = "",
+    initial_rotation_matrix: tuple[tuple[float, float, float], ...] | None = None,
+) -> C3dWorkflowDraft:
+    """
+    Add or replace kinematic settings for one segment.
+    """
+    matrix = (
+        C3dSegmentSettingsDraft.initial_rotation_matrix if initial_rotation_matrix is None else initial_rotation_matrix
+    )
+    setting = C3dSegmentSettingsDraft(
+        segment_name=_require_name(segment_name, "Segment"),
+        translations=translations.strip(),
+        rotations=rotations.strip(),
+        q_min=tuple(float(value) for value in q_min),
+        q_max=tuple(float(value) for value in q_max),
+        child_translation=child_translation,
+        initial_rotation_method=_require_name(initial_rotation_method, "Initial rotation method"),
+        initial_rotation_source=initial_rotation_source.strip(),
+        initial_rotation_matrix=matrix,
+    )
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=draft.virtual_markers,
+        axes=draft.axes,
+        segment_settings=tuple(existing for existing in draft.segment_settings if existing.segment_name != segment_name)
+        + (setting,),
+        file_assignments=draft.file_assignments,
+    )
+
+
+def assign_c3d_file_role_to_draft(draft: C3dWorkflowDraft, role: str, source_path: str) -> C3dWorkflowDraft:
+    """
+    Assign a participant C3D file to a generic role.
+    """
+    role = _require_name(role, "C3D role")
+    source_path = _require_name(source_path, "C3D source path")
+    assignments = []
+    found_role = False
+    for assignment in draft.file_assignments:
+        if assignment.role == role:
+            found_role = True
+            assignments.append(
+                C3dFileAssignmentDraft(
+                    role=assignment.role,
+                    generic_name=assignment.generic_name,
+                    source_path=source_path,
+                )
+            )
+        else:
+            assignments.append(assignment)
+    if not found_role:
+        raise ValueError(f"C3D role '{role}' does not exist.")
+    return _replace_draft_file_assignments(draft, tuple(assignments))
+
+
+def clear_c3d_file_role_from_draft(draft: C3dWorkflowDraft, role: str) -> C3dWorkflowDraft:
+    """
+    Clear a participant C3D file assignment.
+    """
+    assignments = tuple(
+        C3dFileAssignmentDraft(assignment.role, assignment.generic_name) if assignment.role == role else assignment
+        for assignment in draft.file_assignments
+    )
+    return _replace_draft_file_assignments(draft, assignments)
 
 
 def c3d_creation_workflow_steps() -> tuple[C3dWorkflowStep, ...]:
@@ -418,6 +545,8 @@ def c3d_template_payload_from_draft(draft: C3dWorkflowDraft) -> dict:
         "segment_marker_groups": [asdict(group) for group in draft.segment_marker_groups],
         "virtual_markers": [asdict(marker) for marker in draft.virtual_markers],
         "axes": [asdict(axis) for axis in draft.axes],
+        "segment_settings": [asdict(setting) for setting in draft.segment_settings],
+        "c3d_file_assignments": [asdict(assignment) for assignment in draft.file_assignments],
     }
 
 
@@ -452,6 +581,22 @@ def _replace_draft_groups(
         segment_marker_groups=segment_marker_groups,
         virtual_markers=draft.virtual_markers,
         axes=draft.axes,
+        segment_settings=draft.segment_settings,
+        file_assignments=draft.file_assignments,
+    )
+
+
+def _replace_draft_file_assignments(
+    draft: C3dWorkflowDraft,
+    file_assignments: tuple[C3dFileAssignmentDraft, ...],
+) -> C3dWorkflowDraft:
+    return C3dWorkflowDraft(
+        preset=draft.preset,
+        segment_marker_groups=draft.segment_marker_groups,
+        virtual_markers=draft.virtual_markers,
+        axes=draft.axes,
+        segment_settings=draft.segment_settings,
+        file_assignments=file_assignments,
     )
 
 
@@ -470,3 +615,35 @@ def _virtual_feature_default_method(feature_type: str, role: str) -> str:
     if "axis" in role:
         return "functional_or_pointing"
     return "pointing"
+
+
+def _initial_segment_settings(preset: C3dModelPreset) -> tuple[C3dSegmentSettingsDraft, ...]:
+    if preset == C3dModelPreset.LOWER_LIMBS:
+        return tuple(_settings_from_model_template(lower_limb_template()))
+    if preset == C3dModelPreset.UPPER_LIMB:
+        return tuple(_settings_from_model_template(upper_limb_template()))
+    if preset == C3dModelPreset.FULL_BODY:
+        return tuple(
+            C3dSegmentSettingsDraft(
+                segment_name=segment.name,
+                translations=translations_from_matlab_dof(segment) or "",
+                rotations=rotations_from_matlab_dof(segment) or "",
+                child_translation=translations_from_matlab_dof(segment) is not None,
+            )
+            for segment in bela_segment_specs()
+        )
+    raise ValueError(f"Unsupported C3D model preset: {preset}.")
+
+
+def _settings_from_model_template(template: ModelTemplate) -> tuple[C3dSegmentSettingsDraft, ...]:
+    settings = []
+    for segment in template.segments:
+        settings.append(
+            C3dSegmentSettingsDraft(
+                segment_name=segment.name,
+                translations="" if segment.translations.value is None else segment.translations.value,
+                rotations="" if segment.rotations.value is None else segment.rotations.value,
+                child_translation=segment.translations.value is not None,
+            )
+        )
+    return tuple(settings)

@@ -48,15 +48,18 @@ from .c3d_creation_workflow import (
     add_axis_to_draft,
     add_segment_to_draft,
     add_virtual_marker_to_draft,
+    assign_c3d_file_role_to_draft,
     assign_marker_to_segment,
     c3d_creation_workflow,
     c3d_template_payload_from_draft,
     c3d_workflow_draft,
     c3d_workflow_summary,
+    clear_c3d_file_role_from_draft,
     remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
     unassign_marker_from_segment,
+    update_segment_settings_in_draft,
 )
 from ..utils.marker_data import C3dData
 
@@ -229,6 +232,7 @@ def launch_model_editor() -> None:
             self.marker_list = QListWidget()
             self.segment_marker_list = QListWidget()
             self.axis_list = QListWidget()
+            self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
             self.add_segment_button = QPushButton("Add segment")
             self.add_segment_button.clicked.connect(self._add_workflow_segment)
@@ -246,6 +250,12 @@ def launch_model_editor() -> None:
             self.add_axis_button.clicked.connect(self._add_workflow_axis)
             self.remove_axis_button = QPushButton("Remove axis")
             self.remove_axis_button.clicked.connect(self._remove_workflow_axis)
+            self.edit_segment_settings_button = QPushButton("Edit segment settings")
+            self.edit_segment_settings_button.clicked.connect(self._edit_workflow_segment_settings)
+            self.assign_c3d_role_button = QPushButton("Assign C3D file")
+            self.assign_c3d_role_button.clicked.connect(self._assign_workflow_c3d_role)
+            self.clear_c3d_role_button = QPushButton("Clear C3D file")
+            self.clear_c3d_role_button.clicked.connect(self._clear_workflow_c3d_role)
 
             buttons = QDialogButtonBox(_dialog_button("Ok") | _dialog_button("Cancel"))
             buttons.accepted.connect(self.accept)
@@ -267,7 +277,8 @@ def launch_model_editor() -> None:
             workflow_tabs.addTab(self._segment_workflow_tab(), "Segments")
             workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
             workflow_tabs.addTab(self._axis_workflow_tab(), "Axes")
-            workflow_tabs.addTab(self.file_role_list, "C3D names")
+            workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
+            workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
             workflow_tabs.addTab(self.summary_label, "Summary")
             layout.addWidget(workflow_tabs)
             layout.addWidget(buttons)
@@ -316,6 +327,23 @@ def launch_model_editor() -> None:
             row = QHBoxLayout()
             row.addWidget(self.add_axis_button)
             row.addWidget(self.remove_axis_button)
+            layout.addLayout(row)
+            return widget
+
+        def _segment_settings_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(self.segment_settings_list)
+            layout.addWidget(self.edit_segment_settings_button)
+            return widget
+
+        def _file_role_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(self.file_role_list)
+            row = QHBoxLayout()
+            row.addWidget(self.assign_c3d_role_button)
+            row.addWidget(self.clear_c3d_role_button)
             layout.addLayout(row)
             return widget
 
@@ -470,6 +498,107 @@ def launch_model_editor() -> None:
             self.workflow_draft = remove_axis_from_draft(self.workflow_draft, name)
             self._update_preset_details()
 
+        def _edit_workflow_segment_settings(self) -> None:
+            setting = self._selected_segment_setting()
+            if setting is None:
+                return
+            translations, accepted = QInputDialog.getText(
+                self,
+                "Segment translations",
+                "Translations",
+                text=setting.translations,
+            )
+            if not accepted:
+                return
+            rotations, accepted = QInputDialog.getText(self, "Segment rotations", "Rotations", text=setting.rotations)
+            if not accepted:
+                return
+            q_min, accepted = QInputDialog.getText(
+                self,
+                "q min",
+                "q min values",
+                text=_format_float_list(list(setting.q_min)),
+            )
+            if not accepted:
+                return
+            q_max, accepted = QInputDialog.getText(
+                self,
+                "q max",
+                "q max values",
+                text=_format_float_list(list(setting.q_max)),
+            )
+            if not accepted:
+                return
+            child_translation, accepted = QInputDialog.getItem(
+                self,
+                "Child translation",
+                "Allow child translation",
+                ["no", "yes"],
+                1 if setting.child_translation else 0,
+                False,
+            )
+            if not accepted:
+                return
+            initial_rotation_method, accepted = QInputDialog.getItem(
+                self,
+                "Initial rotation",
+                "Method",
+                ["identity", "matrix", "anatomical_c3d"],
+                (
+                    ["identity", "matrix", "anatomical_c3d"].index(setting.initial_rotation_method)
+                    if setting.initial_rotation_method in {"identity", "matrix", "anatomical_c3d"}
+                    else 0
+                ),
+                False,
+            )
+            if not accepted:
+                return
+            initial_rotation_source, accepted = QInputDialog.getText(
+                self,
+                "Initial rotation source",
+                "Matrix values or anatomical C3D",
+                text=setting.initial_rotation_source,
+            )
+            if not accepted:
+                return
+            try:
+                self.workflow_draft = update_segment_settings_in_draft(
+                    self.workflow_draft,
+                    segment_name=setting.segment_name,
+                    translations=translations,
+                    rotations=rotations,
+                    q_min=tuple(_parse_float_list(q_min)),
+                    q_max=tuple(_parse_float_list(q_max)),
+                    child_translation=child_translation == "yes",
+                    initial_rotation_method=initial_rotation_method,
+                    initial_rotation_source=initial_rotation_source,
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to edit segment settings", str(error))
+
+        def _assign_workflow_c3d_role(self) -> None:
+            role = self._selected_c3d_role()
+            if role is None:
+                return
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Assign C3D file",
+                "",
+                "C3D files (*.c3d)",
+            )
+            if not filepath:
+                return
+            self.workflow_draft = assign_c3d_file_role_to_draft(self.workflow_draft, role, filepath)
+            self._update_preset_details()
+
+        def _clear_workflow_c3d_role(self) -> None:
+            role = self._selected_c3d_role()
+            if role is None:
+                return
+            self.workflow_draft = clear_c3d_file_role_from_draft(self.workflow_draft, role)
+            self._update_preset_details()
+
         def _choose_workflow_segment(self, title: str) -> str | None:
             segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
             segment_name, accepted = QInputDialog.getItem(self, title, "Segment", segment_names, 0, False)
@@ -498,6 +627,20 @@ def launch_model_editor() -> None:
             text = self.axis_list.selectedItems()[0].text()
             return None if text.startswith("No axis") else text.split("|", maxsplit=1)[0].strip()
 
+        def _selected_segment_setting(self):
+            if not self.segment_settings_list.selectedItems():
+                return None
+            segment_name = self.segment_settings_list.selectedItems()[0].text().split("|", maxsplit=1)[0].strip()
+            for setting in self.workflow_draft.segment_settings:
+                if setting.segment_name == segment_name:
+                    return setting
+            return None
+
+        def _selected_c3d_role(self) -> str | None:
+            if not self.file_role_list.selectedItems():
+                return None
+            return self.file_role_list.selectedItems()[0].text().split("|", maxsplit=1)[0].strip()
+
         def _update_preset_details(self) -> None:
             preset = self.selected_preset()
             if self.workflow_draft.preset != preset:
@@ -508,6 +651,7 @@ def launch_model_editor() -> None:
             self.segment_marker_list.clear()
             self.feature_list.clear()
             self.axis_list.clear()
+            self.segment_settings_list.clear()
             self.file_role_list.clear()
 
             if preset == C3dModelPreset.FULL_BODY:
@@ -551,11 +695,18 @@ def launch_model_editor() -> None:
                         f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}"
                     )
 
-            for file_role in workflow.file_roles:
-                required = "required" if file_role.required else "optional"
-                self.file_role_list.addItem(
-                    f"{file_role.generic_name} | {file_role.role} | {required} | {file_role.description}"
+            for setting in self.workflow_draft.segment_settings:
+                self.segment_settings_list.addItem(
+                    f"{setting.segment_name} | translations={setting.translations or '-'} | "
+                    f"rotations={setting.rotations or '-'} | child_translation={setting.child_translation} | "
+                    f"initial_rotation={setting.initial_rotation_method}"
                 )
+
+            for file_role in self.workflow_draft.file_assignments:
+                role_definition = next(role for role in workflow.file_roles if role.role == file_role.role)
+                required = "required" if role_definition.required else "optional"
+                source = file_role.source_path if file_role.source_path else "not assigned"
+                self.file_role_list.addItem(f"{file_role.role} | {file_role.generic_name} | {required} | {source}")
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
 
