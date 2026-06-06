@@ -62,6 +62,8 @@ from .model_builder import (
 from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
+    C3dPresetVirtualFeature,
+    c3d_model_preset_virtual_features,
     create_model_from_c3d_folder,
     create_model_from_marker_data,
     find_static_c3d_file,
@@ -180,6 +182,8 @@ __all__ = [
     template_marker_availability.__name__,
     C3dModelCreationResult.__name__,
     C3dModelPreset.__name__,
+    C3dPresetVirtualFeature.__name__,
+    c3d_model_preset_virtual_features.__name__,
     create_model_from_c3d_folder.__name__,
     create_model_from_marker_data.__name__,
     find_static_c3d_file.__name__,

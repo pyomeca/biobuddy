@@ -5,6 +5,7 @@ from biobuddy import DictData, Rotations, Translations
 from biobuddy.gui.lower_limb_template import lower_limb_template
 from biobuddy.gui.c3d_model_creation import (
     C3dModelPreset,
+    c3d_model_preset_virtual_features,
     create_model_from_marker_data,
     find_static_c3d_file,
     supported_c3d_model_presets,
@@ -134,6 +135,17 @@ def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
     assert template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB).name == "Upper-limb from calibration C3D"
     with pytest.raises(NotImplementedError, match="Full-body C3D model creation"):
         template_for_c3d_model_preset(C3dModelPreset.FULL_BODY)
+
+
+def test_c3d_model_presets_report_virtual_features_to_reconstruct():
+    lower_limb_features = c3d_model_preset_virtual_features(C3dModelPreset.LOWER_LIMBS)
+    upper_limb_features = c3d_model_preset_virtual_features(C3dModelPreset.UPPER_LIMB)
+    full_body_features = c3d_model_preset_virtual_features(C3dModelPreset.FULL_BODY)
+
+    assert lower_limb_features == ()
+    assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)
+    assert any(feature.feature_type == "axis" and feature.name == "Clavicule_u_axis" for feature in upper_limb_features)
+    assert any(feature.name.startswith("Thorax_virtual_") for feature in full_body_features)
 
 
 def test_find_static_c3d_file_uses_expected_patterns(tmp_path):

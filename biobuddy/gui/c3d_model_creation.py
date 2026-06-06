@@ -6,8 +6,9 @@ from pathlib import Path
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..utils.marker_data import C3dData, MarkerData
+from .full_body_bela_template import bela_unresolved_marker_references
 from .lower_limb_template import lower_limb_template
-from .upper_limb_template import upper_limb_template
+from .upper_limb_template import upper_limb_template, upper_limb_virtual_feature_requirements
 from .model_builder import (
     FrameQuality,
     MarkerAvailabilityReport,
@@ -50,11 +51,61 @@ class C3dModelCreationResult:
     functional_data: dict[str, MarkerData]
 
 
+@dataclass(frozen=True)
+class C3dPresetVirtualFeature:
+    """
+    Point or axis that must be reconstructed before a preset can be generated.
+    """
+
+    name: str
+    feature_type: str
+    segment_name: str
+    role: str
+    description: str
+
+
 def supported_c3d_model_presets() -> tuple[C3dModelPreset, ...]:
     """
     Return presets shown in the C3D creation workflow.
     """
     return (C3dModelPreset.FULL_BODY, C3dModelPreset.LOWER_LIMBS, C3dModelPreset.UPPER_LIMB)
+
+
+def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPresetVirtualFeature, ...]:
+    """
+    Return virtual features that still need explicit reconstruction for a preset.
+    """
+    if preset == C3dModelPreset.LOWER_LIMBS:
+        return ()
+    if preset == C3dModelPreset.UPPER_LIMB:
+        return tuple(
+            C3dPresetVirtualFeature(
+                name=requirement.name,
+                feature_type=requirement.feature_type,
+                segment_name=requirement.segment_name,
+                role=requirement.role,
+                description=(
+                    f"Matlab indices {', '.join(str(index) for index in requirement.matlab_indices)} "
+                    f"for {requirement.role}"
+                ),
+            )
+            for requirement in upper_limb_virtual_feature_requirements()
+        )
+    if preset == C3dModelPreset.FULL_BODY:
+        features = []
+        for segment_name, indices in bela_unresolved_marker_references().items():
+            for index in indices:
+                features.append(
+                    C3dPresetVirtualFeature(
+                        name=f"{segment_name}_virtual_{index}",
+                        feature_type="point",
+                        segment_name=segment_name,
+                        role="legacy_matlab_reference",
+                        description=f"BeLa Matlab local index {index}",
+                    )
+                )
+        return tuple(features)
+    raise ValueError(f"Unsupported C3D model preset: {preset}.")
 
 
 def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:

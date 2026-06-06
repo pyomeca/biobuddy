@@ -38,6 +38,7 @@ from .validation_panel import validate_model_for_editor
 from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
+    c3d_model_preset_virtual_features,
     create_model_from_c3d_folder,
     supported_c3d_model_presets,
 )
@@ -52,11 +53,13 @@ def launch_model_editor() -> None:
         from PySide6.QtGui import QColor, QPainter, QPen
         from PySide6.QtWidgets import (
             QApplication,
+            QComboBox,
+            QDialog,
+            QDialogButtonBox,
             QFileDialog,
             QFormLayout,
             QHBoxLayout,
             QCheckBox,
-            QInputDialog,
             QLabel,
             QLineEdit,
             QListWidget,
@@ -84,11 +87,13 @@ def launch_model_editor() -> None:
             from PyQt5.QtGui import QColor, QPainter, QPen
             from PyQt5.QtWidgets import (
                 QApplication,
+                QComboBox,
+                QDialog,
+                QDialogButtonBox,
                 QFileDialog,
                 QFormLayout,
                 QHBoxLayout,
                 QCheckBox,
-                QInputDialog,
                 QLabel,
                 QLineEdit,
                 QListWidget,
@@ -152,6 +157,86 @@ def launch_model_editor() -> None:
         scroll_area.setWidget(widget)
         scroll_area.setWidgetResizable(True)
         return scroll_area
+
+    def _dialog_accepted_value() -> int:
+        """
+        Return the Qt accepted dialog value for PySide6 and PyQt5.
+        """
+        return QDialog.DialogCode.Accepted if hasattr(QDialog, "DialogCode") else QDialog.Accepted
+
+    def _dialog_button(button_name: str):
+        """
+        Return a QDialogButtonBox standard button for PySide6 and PyQt5.
+        """
+        if hasattr(QDialogButtonBox, "StandardButton"):
+            return getattr(QDialogButtonBox.StandardButton, button_name)
+        return getattr(QDialogButtonBox, button_name)
+
+    def _exec_dialog(dialog) -> int:
+        """
+        Execute a dialog across PySide6 and PyQt5.
+        """
+        return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
+
+    class C3dModelCreationDialog(QDialog):
+        """
+        Dialog used before selecting the calibration folder.
+        """
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("New model from C3D")
+            self.presets = supported_c3d_model_presets()
+
+            self.preset_combo = QComboBox()
+            for preset in self.presets:
+                self.preset_combo.addItem(_c3d_preset_label(preset))
+            self.preset_combo.currentIndexChanged.connect(self._update_preset_details)
+
+            self.status_label = QLabel()
+            self.feature_list = QListWidget()
+            self.feature_list.setMinimumHeight(180)
+
+            buttons = QDialogButtonBox(_dialog_button("Ok") | _dialog_button("Cancel"))
+            buttons.accepted.connect(self.accept)
+            buttons.rejected.connect(self.reject)
+
+            layout = QVBoxLayout(self)
+            layout.addWidget(QLabel("Model preset"))
+            layout.addWidget(self.preset_combo)
+            layout.addWidget(self.status_label)
+            layout.addWidget(QLabel("Virtual features to reconstruct"))
+            layout.addWidget(self.feature_list)
+            layout.addWidget(buttons)
+            self._update_preset_details()
+
+        def selected_preset(self) -> C3dModelPreset:
+            """
+            Return the preset selected in the dialog.
+            """
+            return self.presets[self.preset_combo.currentIndex()]
+
+        def _update_preset_details(self) -> None:
+            preset = self.selected_preset()
+            features = c3d_model_preset_virtual_features(preset)
+            self.feature_list.clear()
+            if preset == C3dModelPreset.FULL_BODY:
+                self.status_label.setText("Status: template extraction exists; BioMod generation is still blocked.")
+            elif preset == C3dModelPreset.UPPER_LIMB:
+                self.status_label.setText(
+                    "Status: template exists; virtual features must be supplied before generation."
+                )
+            else:
+                self.status_label.setText("Status: ready with static C3D and optional functional trials.")
+
+            if len(features) == 0:
+                self.feature_list.addItem("No additional virtual feature required by this preset.")
+                return
+            for feature in features:
+                self.feature_list.addItem(
+                    f"{feature.feature_type}: {feature.name} | {feature.segment_name} | {feature.role} | "
+                    f"{feature.description}"
+                )
 
     class ModelPreviewWidget(QWidget):
         """
@@ -515,17 +600,8 @@ def launch_model_editor() -> None:
                 QMessageBox.critical(self, "Unable to open model", str(error))
 
         def _new_model_from_c3d(self) -> None:
-            presets = supported_c3d_model_presets()
-            preset_labels = {_c3d_preset_label(preset): preset for preset in presets}
-            preset_label, accepted = QInputDialog.getItem(
-                self,
-                "New model from C3D",
-                "Model preset",
-                list(preset_labels),
-                0,
-                False,
-            )
-            if not accepted:
+            dialog = C3dModelCreationDialog(self)
+            if _exec_dialog(dialog) != _dialog_accepted_value():
                 return
             calibration_folder = QFileDialog.getExistingDirectory(
                 self,
@@ -538,7 +614,7 @@ def launch_model_editor() -> None:
                 folder_path = Path(calibration_folder)
                 result = create_model_from_c3d_folder(
                     calibration_folder=folder_path,
-                    preset=preset_labels[preset_label],
+                    preset=dialog.selected_preset(),
                 )
                 self.model = result.model
                 self.current_filepath = folder_path / result.output_filename
