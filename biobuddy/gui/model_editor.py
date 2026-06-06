@@ -238,6 +238,9 @@ def launch_model_editor() -> None:
             self.step_list = QListWidget()
             self.marker_list = QListWidget()
             self.marker_list.setSelectionMode(qt_extended_selection)
+            self.show_all_markers_checkbox = QCheckBox("Show markers already used by other segments")
+            self.show_all_markers_checkbox.setChecked(True)
+            self.show_all_markers_checkbox.stateChanged.connect(self._update_available_marker_list)
             self.segment_marker_list = QListWidget()
             self.segment_marker_list.itemSelectionChanged.connect(self._update_assigned_marker_list)
             self.assigned_marker_list = QListWidget()
@@ -325,6 +328,7 @@ def launch_model_editor() -> None:
             marker_row = QHBoxLayout()
             left_column = QVBoxLayout()
             left_column.addWidget(QLabel("Available markers in main C3D"))
+            left_column.addWidget(self.show_all_markers_checkbox)
             left_column.addWidget(self.marker_list)
             transfer_column = QVBoxLayout()
             transfer_column.addStretch()
@@ -734,7 +738,7 @@ def launch_model_editor() -> None:
             marker_names = []
             for item in self.marker_list.selectedItems():
                 marker_name = item.text()
-                if marker_name.startswith("Choose "):
+                if marker_name.startswith("Choose ") or marker_name.startswith("No available"):
                     continue
                 marker_names.append(marker_name)
             return tuple(marker_names)
@@ -842,11 +846,7 @@ def launch_model_editor() -> None:
                     f"{step_status.number}. [{step_status.status}] {step_status.name} - {step_status.detail}"
                 )
 
-            if self.c3d_data is None:
-                self.marker_list.addItem("Choose the main marker C3D to list markers.")
-            else:
-                for marker_name in self.c3d_data.marker_names:
-                    self.marker_list.addItem(marker_name)
+            self._update_available_marker_list()
 
             for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
@@ -914,6 +914,27 @@ def launch_model_editor() -> None:
                 return
             self.segment_marker_list.setCurrentItem(self.segment_marker_list.item(target_index))
             self._update_assigned_marker_list()
+
+        def _update_available_marker_list(self) -> None:
+            self.marker_list.clear()
+            if self.c3d_data is None:
+                self.marker_list.addItem("Choose the main marker C3D to list markers.")
+                return
+            marker_names = tuple(self.c3d_data.marker_names)
+            if not self.show_all_markers_checkbox.isChecked():
+                assigned_marker_names = {
+                    marker_name
+                    for group in self.workflow_draft.segment_marker_groups
+                    for marker_name in group.marker_names
+                }
+                marker_names = tuple(
+                    marker_name for marker_name in marker_names if marker_name not in assigned_marker_names
+                )
+            if len(marker_names) == 0:
+                self.marker_list.addItem("No available marker with the current filter.")
+                return
+            for marker_name in marker_names:
+                self.marker_list.addItem(marker_name)
 
     class ModelPreviewWidget(QWidget):
         """
