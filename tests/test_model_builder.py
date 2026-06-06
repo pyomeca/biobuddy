@@ -3,6 +3,14 @@ import pytest
 
 from biobuddy import DictData, Rotations, Translations
 from biobuddy.gui.lower_limb_template import lower_limb_template
+from biobuddy.gui.c3d_model_creation import (
+    C3dModelPreset,
+    create_model_from_marker_data,
+    find_static_c3d_file,
+    supported_c3d_model_presets,
+    template_for_c3d_model_preset,
+)
+from biobuddy.gui.virtual_points import marker_pair_virtual_axis, pointing_virtual_point
 from biobuddy.gui.model_builder import (
     AxisSpec,
     MarkerEndpointSpec,
@@ -79,6 +87,65 @@ def test_template_marker_availability_reports_static_and_functional_trials():
     assert set(reports) == {"static", "left_knee_sara"}
     assert reports["static"].complete_frame_count == 3
     assert reports["left_knee_sara"].complete_frame_count == 3
+
+
+def test_c3d_model_creation_from_marker_data_returns_model_and_reports():
+    result = create_model_from_marker_data(
+        template=lower_limb_template(),
+        static_data=_synthetic_lower_limb_data(),
+        preset=C3dModelPreset.LOWER_LIMBS,
+    )
+
+    assert result.preset == C3dModelPreset.LOWER_LIMBS
+    assert result.output_filename == "lower_body.bioMod"
+    assert "Pelvis" in result.model.segment_names
+    assert result.marker_reports["static"].complete_frame_count == 3
+    assert result.frame_quality["Pelvis"].mean_angle_degrees == pytest.approx(90.0)
+
+
+def test_c3d_model_creation_applies_virtual_features_before_generation():
+    original_data = _synthetic_lower_limb_data()
+    marker_dict = dict(original_data.marker_dict)
+    marker_dict["RawLASI"] = marker_dict.pop("LASI")
+    data = DictData(marker_dict)
+
+    result = create_model_from_marker_data(
+        template=lower_limb_template(),
+        static_data=data,
+        preset=C3dModelPreset.LOWER_LIMBS,
+        static_virtual_points=(pointing_virtual_point("LASI", "RawLASI"),),
+        static_virtual_axes=(marker_pair_virtual_axis("PelvisLeftRight", ("LPSI", "RawLASI"), ("RPSI", "RASI")),),
+    )
+
+    assert "LASI" in result.static_data.marker_names
+    assert "PelvisLeftRight_start" in result.static_data.marker_names
+    assert "PelvisLeftRight_end" in result.static_data.marker_names
+    assert result.marker_reports["static"].markers["LASI"].valid_frame_count == 3
+    assert "Pelvis" in result.model.segment_names
+
+
+def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
+    assert supported_c3d_model_presets() == (
+        C3dModelPreset.FULL_BODY,
+        C3dModelPreset.LOWER_LIMBS,
+        C3dModelPreset.UPPER_LIMB,
+    )
+    assert template_for_c3d_model_preset(C3dModelPreset.LOWER_LIMBS).root_segment_name == "Pelvis"
+    with pytest.raises(NotImplementedError, match="Full-body C3D model creation"):
+        template_for_c3d_model_preset(C3dModelPreset.FULL_BODY)
+    with pytest.raises(NotImplementedError, match="Upper-limb C3D model creation"):
+        template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB)
+
+
+def test_find_static_c3d_file_uses_expected_patterns(tmp_path):
+    static_file = tmp_path / "subject_static.c3d"
+    static_file.touch()
+
+    assert find_static_c3d_file(tmp_path) == static_file
+
+    (tmp_path / "another_static.c3d").touch()
+    with pytest.raises(RuntimeError, match="Expected one static trial"):
+        find_static_c3d_file(tmp_path)
 
 
 def test_lower_limb_template_builds_expected_generic_model():

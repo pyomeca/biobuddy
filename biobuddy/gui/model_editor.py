@@ -35,9 +35,12 @@ from .muscle_editor import (
 )
 from .preview_scene import build_preview_scene
 from .validation_panel import validate_model_for_editor
-from .lower_limb_template import lower_limb_template
-from .model_builder import build_real_model_from_c3d_folder, compute_frame_quality
-from ..utils.marker_data import C3dData
+from .c3d_model_creation import (
+    C3dModelCreationResult,
+    C3dModelPreset,
+    create_model_from_c3d_folder,
+    supported_c3d_model_presets,
+)
 
 
 def launch_model_editor() -> None:
@@ -53,6 +56,7 @@ def launch_model_editor() -> None:
             QFormLayout,
             QHBoxLayout,
             QCheckBox,
+            QInputDialog,
             QLabel,
             QLineEdit,
             QListWidget,
@@ -84,6 +88,7 @@ def launch_model_editor() -> None:
                 QFormLayout,
                 QHBoxLayout,
                 QCheckBox,
+                QInputDialog,
                 QLabel,
                 QLineEdit,
                 QListWidget,
@@ -459,14 +464,14 @@ def launch_model_editor() -> None:
 
             open_button = QPushButton("Open model")
             open_button.clicked.connect(self._open_model)
-            new_lower_body_button = QPushButton("New lower-body model")
-            new_lower_body_button.clicked.connect(self._new_lower_body_model)
+            new_c3d_model_button = QPushButton("New model from C3D...")
+            new_c3d_model_button.clicked.connect(self._new_model_from_c3d)
             save_button = QPushButton("Save as .bioMod")
             save_button.clicked.connect(self._save_model)
 
             toolbar = QHBoxLayout()
             toolbar.addWidget(open_button)
-            toolbar.addWidget(new_lower_body_button)
+            toolbar.addWidget(new_c3d_model_button)
             toolbar.addWidget(save_button)
             toolbar.addStretch()
 
@@ -509,7 +514,19 @@ def launch_model_editor() -> None:
             except Exception as error:
                 QMessageBox.critical(self, "Unable to open model", str(error))
 
-        def _new_lower_body_model(self) -> None:
+        def _new_model_from_c3d(self) -> None:
+            presets = supported_c3d_model_presets()
+            preset_labels = {_c3d_preset_label(preset): preset for preset in presets}
+            preset_label, accepted = QInputDialog.getItem(
+                self,
+                "New model from C3D",
+                "Model preset",
+                list(preset_labels),
+                0,
+                False,
+            )
+            if not accepted:
+                return
             calibration_folder = QFileDialog.getExistingDirectory(
                 self,
                 "Select calibration folder",
@@ -518,21 +535,18 @@ def launch_model_editor() -> None:
             if not calibration_folder:
                 return
             try:
-                template = lower_limb_template()
                 folder_path = Path(calibration_folder)
-                self.model = build_real_model_from_c3d_folder(template=template, calibration_folder=folder_path)
-                self.current_filepath = folder_path / "lower_body.bioMod"
-                self._refresh_model_views()
-
-                static_data = _load_static_trial_for_quality(folder_path)
-                quality = compute_frame_quality(template, static_data)
-                summary = "\n".join(
-                    f"{name}: raw plane angle {metric.mean_angle_degrees:.1f} deg" for name, metric in quality.items()
+                result = create_model_from_c3d_folder(
+                    calibration_folder=folder_path,
+                    preset=preset_labels[preset_label],
                 )
+                self.model = result.model
+                self.current_filepath = folder_path / result.output_filename
+                self._refresh_model_views()
                 QMessageBox.information(
                     self,
-                    "Lower-body model generated",
-                    f"Generated {len(self.model.segments)} segments from '{folder_path}'.\n\n{summary}",
+                    "Model generated from C3D",
+                    _format_c3d_creation_summary(result, folder_path),
                 )
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate model", str(error))
@@ -929,17 +943,40 @@ def launch_model_editor() -> None:
     app.exec()
 
 
-def _load_static_trial_for_quality(calibration_folder: Path):
+def _c3d_preset_label(preset: C3dModelPreset) -> str:
     """
-    Load the same static/anatomical trial used by the lower-body generator.
+    Return the label shown in the C3D creation dialog.
     """
-    for pattern in ("*static*.c3d", "*func_anat.c3d"):
-        matches = list(calibration_folder.glob(pattern))
-        if matches:
-            if len(matches) != 1:
-                raise RuntimeError(f"Expected one static trial matching '{pattern}', found {len(matches)}.")
-            return C3dData(str(matches[0]))
-    raise RuntimeError("No static trial found. Expected '*static*.c3d' or '*func_anat.c3d'.")
+    if preset == C3dModelPreset.LOWER_LIMBS:
+        return "Lower-limbs"
+    if preset == C3dModelPreset.FULL_BODY:
+        return "Full body"
+    if preset == C3dModelPreset.UPPER_LIMB:
+        return "Upper-limb"
+    return preset.value
+
+
+def _format_c3d_creation_summary(result: C3dModelCreationResult, calibration_folder: Path) -> str:
+    """
+    Build a compact GUI summary for a generated C3D model.
+    """
+    marker_lines = []
+    for trial_name, report in result.marker_reports.items():
+        missing = "none" if len(report.missing_markers) == 0 else ", ".join(report.missing_markers)
+        marker_lines.append(
+            f"{trial_name}: {report.complete_frame_count}/{report.total_frame_count} complete frames, "
+            f"missing markers: {missing}"
+        )
+    quality_lines = [
+        f"{name}: raw plane angle {metric.mean_angle_degrees:.1f} deg" for name, metric in result.frame_quality.items()
+    ]
+    return (
+        f"Generated {len(result.model.segments)} segments from '{calibration_folder}'.\n\n"
+        "Marker availability\n"
+        f"{chr(10).join(marker_lines)}\n\n"
+        "Frame quality\n"
+        f"{chr(10).join(quality_lines)}"
+    )
 
 
 def _parse_float_list(text: str) -> list[float]:
