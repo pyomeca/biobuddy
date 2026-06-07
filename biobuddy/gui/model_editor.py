@@ -60,7 +60,6 @@ from .c3d_creation_workflow import (
     c3d_workflow_progress,
     c3d_workflow_summary,
     clear_c3d_file_role_from_draft,
-    remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
     set_segment_marker_technical,
@@ -212,6 +211,51 @@ def launch_model_editor() -> None:
         """
         return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
 
+    def _create_axis_vector_controls(index: int) -> dict[str, object]:
+        """
+        Create the repeated controls used to define one anatomical frame vector.
+        """
+        start_list = QListWidget()
+        start_list.setSelectionMode(qt_extended_selection)
+        end_list = QListWidget()
+        end_list.setSelectionMode(qt_extended_selection)
+        axis_combo = QComboBox()
+        axis_combo.addItems(["x", "y", "z"])
+        if index == 1:
+            axis_combo.setCurrentText("y")
+        return {
+            "start_list": start_list,
+            "end_list": end_list,
+            "axis_combo": axis_combo,
+            "keep_checkbox": QCheckBox("Keep this vector"),
+            "add_start_button": QPushButton("Add to start"),
+            "add_end_button": QPushButton("Add to end"),
+            "remove_start_button": QPushButton("Remove start"),
+            "remove_end_button": QPushButton("Remove end"),
+        }
+
+    def _axis_vector_layout(index: int, controls: dict[str, object]):
+        """
+        Build the layout for one repeated anatomical frame vector.
+        """
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel(f"Vector {index + 1} start markers"))
+        layout.addWidget(controls["start_list"])
+        start_buttons = QHBoxLayout()
+        start_buttons.addWidget(controls["add_start_button"])
+        start_buttons.addWidget(controls["remove_start_button"])
+        layout.addLayout(start_buttons)
+        layout.addWidget(QLabel(f"Vector {index + 1} end markers"))
+        layout.addWidget(controls["end_list"])
+        end_buttons = QHBoxLayout()
+        end_buttons.addWidget(controls["add_end_button"])
+        end_buttons.addWidget(controls["remove_end_button"])
+        layout.addLayout(end_buttons)
+        layout.addWidget(QLabel(f"Vector {index + 1} axis"))
+        layout.addWidget(controls["axis_combo"])
+        layout.addWidget(controls["keep_checkbox"])
+        return layout
+
     class C3dSegmentAxisPreviewWidget(QWidget):
         """
         Small rotatable preview for marker-defined segment axes in the C3D workflow.
@@ -223,8 +267,7 @@ def launch_model_editor() -> None:
             self.c3d_data = None
             self.marker_names = ()
             self.axes = ()
-            self.current_start_markers = ()
-            self.current_end_markers = ()
+            self.current_vectors = ()
             self.yaw = -0.6
             self.pitch = 0.35
             self._last_mouse_position = None
@@ -234,14 +277,12 @@ def launch_model_editor() -> None:
             c3d_data,
             marker_names: tuple[str, ...],
             axes: tuple[object, ...],
-            current_start_markers: tuple[str, ...],
-            current_end_markers: tuple[str, ...],
+            current_vectors: tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...],
         ) -> None:
             self.c3d_data = c3d_data
             self.marker_names = marker_names
             self.axes = axes
-            self.current_start_markers = current_start_markers
-            self.current_end_markers = current_end_markers
+            self.current_vectors = current_vectors
             self.update()
 
         def paintEvent(self, event) -> None:
@@ -263,13 +304,17 @@ def launch_model_editor() -> None:
                 end = _mean_preview_position(self.c3d_data, axis.end_markers)
                 if start is not None and end is not None:
                     axis_segments.append((axis.axis, axis.keep_vector, start, end))
-            temporary_start = _mean_preview_position(self.c3d_data, self.current_start_markers)
-            temporary_end = _mean_preview_position(self.c3d_data, self.current_end_markers)
+            temporary_segments = []
+            for axis_name, start_markers, end_markers, keep_vector in self.current_vectors:
+                start = _mean_preview_position(self.c3d_data, start_markers)
+                end = _mean_preview_position(self.c3d_data, end_markers)
+                if start is not None and end is not None:
+                    temporary_segments.append((axis_name, keep_vector, start, end))
             points = list(marker_points.values())
             for _, _, start, end in axis_segments:
                 points.extend((start, end))
-            if temporary_start is not None and temporary_end is not None:
-                points.extend((temporary_start, temporary_end))
+            for _, _, start, end in temporary_segments:
+                points.extend((start, end))
             if len(points) == 0:
                 painter.drawText(self.rect(), qt_alignment_center, "No visible marker for the selected segment")
                 return
@@ -291,11 +336,11 @@ def launch_model_editor() -> None:
                     transform(_rotate_preview_point(end, self.yaw, self.pitch)),
                 )
 
-            if temporary_start is not None and temporary_end is not None:
-                painter.setPen(QPen(QColor("#f59e0b"), 3))
+            for axis_name, keep_vector, start, end in temporary_segments:
+                painter.setPen(QPen(QColor("#f59e0b"), 4 if keep_vector else 2))
                 painter.drawLine(
-                    transform(_rotate_preview_point(temporary_start, self.yaw, self.pitch)),
-                    transform(_rotate_preview_point(temporary_end, self.yaw, self.pitch)),
+                    transform(_rotate_preview_point(start, self.yaw, self.pitch)),
+                    transform(_rotate_preview_point(end, self.yaw, self.pitch)),
                 )
 
         def mousePressEvent(self, event) -> None:
@@ -357,24 +402,27 @@ def launch_model_editor() -> None:
             self.assigned_marker_technical_checkbox = QCheckBox("Selected markers are technical")
             self.assigned_marker_technical_checkbox.stateChanged.connect(self._set_selected_assigned_markers_technical)
             self.axis_list = QListWidget()
+            self.anatomical_segment_list = QListWidget()
+            self.anatomical_segment_list.itemSelectionChanged.connect(self._update_anatomical_segment_details)
             self.axis_marker_source_list = QListWidget()
             self.axis_marker_source_list.setSelectionMode(qt_extended_selection)
-            self.axis_start_list = QListWidget()
-            self.axis_start_list.setSelectionMode(qt_extended_selection)
-            self.axis_end_list = QListWidget()
-            self.axis_end_list.setSelectionMode(qt_extended_selection)
-            self.axis_name_combo = QComboBox()
-            self.axis_name_combo.addItems(["x", "y", "z"])
-            self.axis_keep_checkbox = QCheckBox("Keep this vector")
-            self.add_axis_start_button = QPushButton("Add to start")
-            self.add_axis_start_button.clicked.connect(self._add_selected_axis_start_markers)
-            self.add_axis_end_button = QPushButton("Add to end")
-            self.add_axis_end_button.clicked.connect(self._add_selected_axis_end_markers)
-            self.remove_axis_start_button = QPushButton("Remove start")
-            self.remove_axis_start_button.clicked.connect(self._remove_selected_axis_start_markers)
-            self.remove_axis_end_button = QPushButton("Remove end")
-            self.remove_axis_end_button.clicked.connect(self._remove_selected_axis_end_markers)
-            self.save_segment_axis_button = QPushButton("Add/update segment vector")
+            self.axis_vector_controls = [_create_axis_vector_controls(index) for index in range(2)]
+            for index, controls in enumerate(self.axis_vector_controls):
+                controls["add_start_button"].clicked.connect(
+                    lambda checked=False, vector_index=index: self._add_selected_axis_markers(vector_index, "start")
+                )
+                controls["add_end_button"].clicked.connect(
+                    lambda checked=False, vector_index=index: self._add_selected_axis_markers(vector_index, "end")
+                )
+                controls["remove_start_button"].clicked.connect(
+                    lambda checked=False, vector_index=index: self._remove_selected_axis_markers(vector_index, "start")
+                )
+                controls["remove_end_button"].clicked.connect(
+                    lambda checked=False, vector_index=index: self._remove_selected_axis_markers(vector_index, "end")
+                )
+                controls["axis_combo"].currentTextChanged.connect(self._update_segment_axis_preview)
+                controls["keep_checkbox"].stateChanged.connect(self._update_segment_axis_preview)
+            self.save_segment_axis_button = QPushButton("Add/update anatomical frame vectors")
             self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
             self.segment_settings_list = QListWidget()
@@ -393,10 +441,6 @@ def launch_model_editor() -> None:
             self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
             self.remove_virtual_marker_button = QPushButton("Remove virtual marker")
             self.remove_virtual_marker_button.clicked.connect(self._remove_workflow_virtual_marker)
-            self.add_axis_button = QPushButton("Add/edit axis")
-            self.add_axis_button.clicked.connect(self._add_workflow_axis)
-            self.remove_axis_button = QPushButton("Remove axis")
-            self.remove_axis_button.clicked.connect(self._remove_workflow_axis)
             self.edit_segment_settings_button = QPushButton("Edit segment settings")
             self.edit_segment_settings_button.clicked.connect(self._edit_workflow_segment_settings)
             self.assign_c3d_role_button = QPushButton("Assign C3D file")
@@ -420,9 +464,9 @@ def launch_model_editor() -> None:
 
             workflow_tabs = QTabWidget()
             workflow_tabs.addTab(self.step_list, "Pipeline")
-            workflow_tabs.addTab(self._segment_workflow_tab(), "Segments")
+            workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
+            workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
             workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
-            workflow_tabs.addTab(self._axis_workflow_tab(), "Axes")
             workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
             workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
             workflow_tabs.addTab(self.issue_list, "Checks")
@@ -483,36 +527,30 @@ def launch_model_editor() -> None:
             marker_row.addLayout(transfer_column, 0)
             marker_row.addLayout(right_column, 2)
             layout.addLayout(marker_row)
+            return widget
 
+        def _anatomical_segment_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            layout.addWidget(QLabel("Anatomical segments"))
+            layout.addWidget(self.anatomical_segment_list)
             axis_layout = QHBoxLayout()
             source_column = QVBoxLayout()
             source_column.addWidget(QLabel("Axis marker source"))
             source_column.addWidget(self.axis_marker_source_list)
-            source_buttons = QHBoxLayout()
-            source_buttons.addWidget(self.add_axis_start_button)
-            source_buttons.addWidget(self.add_axis_end_button)
-            source_column.addLayout(source_buttons)
-            start_column = QVBoxLayout()
-            start_column.addWidget(QLabel("Vector start markers"))
-            start_column.addWidget(self.axis_start_list)
-            start_column.addWidget(self.remove_axis_start_button)
-            end_column = QVBoxLayout()
-            end_column.addWidget(QLabel("Vector end markers"))
-            end_column.addWidget(self.axis_end_list)
-            end_column.addWidget(self.remove_axis_end_button)
-            vector_column = QVBoxLayout()
-            vector_column.addWidget(QLabel("Vector axis"))
-            vector_column.addWidget(self.axis_name_combo)
-            vector_column.addWidget(self.axis_keep_checkbox)
-            vector_column.addWidget(self.save_segment_axis_button)
-            vector_column.addStretch()
             axis_layout.addLayout(source_column, 2)
-            axis_layout.addLayout(start_column, 1)
-            axis_layout.addLayout(end_column, 1)
-            axis_layout.addLayout(vector_column, 1)
+            for index, controls in enumerate(self.axis_vector_controls):
+                axis_layout.addLayout(_axis_vector_layout(index, controls), 2)
+            save_column = QVBoxLayout()
+            save_column.addWidget(QLabel("Frame"))
+            save_column.addWidget(self.save_segment_axis_button)
+            save_column.addStretch()
+            axis_layout.addLayout(save_column, 1)
             axis_layout.addWidget(self.segment_axis_preview, 2)
             layout.addWidget(QLabel("Segment system of coordinates"))
             layout.addLayout(axis_layout)
+            layout.addWidget(QLabel("Saved anatomical vectors"))
+            layout.addWidget(self.axis_list)
             return widget
 
         def _virtual_marker_workflow_tab(self):
@@ -522,16 +560,6 @@ def launch_model_editor() -> None:
             row = QHBoxLayout()
             row.addWidget(self.add_virtual_marker_button)
             row.addWidget(self.remove_virtual_marker_button)
-            layout.addLayout(row)
-            return widget
-
-        def _axis_workflow_tab(self):
-            widget = QWidget()
-            layout = QVBoxLayout(widget)
-            layout.addWidget(self.axis_list)
-            row = QHBoxLayout()
-            row.addWidget(self.add_axis_button)
-            row.addWidget(self.remove_axis_button)
             layout.addLayout(row)
             return widget
 
@@ -713,78 +741,6 @@ def launch_model_editor() -> None:
             self.workflow_draft = remove_virtual_marker_from_draft(self.workflow_draft, name)
             self._update_preset_details()
 
-        def _add_workflow_axis(self) -> None:
-            current_axis = self._selected_axis()
-            name, accepted = QInputDialog.getText(
-                self,
-                "Add/edit axis",
-                "Axis name",
-                text="" if current_axis is None else current_axis.name,
-            )
-            if not accepted:
-                return
-            segment_name = self._choose_workflow_segment(
-                "Axis segment",
-                "" if current_axis is None else current_axis.segment_name,
-            )
-            if segment_name is None:
-                return
-            axes = ["x", "y", "z"]
-            axis_index = axes.index(current_axis.axis) if current_axis is not None and current_axis.axis in axes else 0
-            axis, accepted = QInputDialog.getItem(self, "Axis", "Axis", axes, axis_index, False)
-            if not accepted:
-                return
-            methods = ["markers", "functional", "sara", "score", "virtual_points"]
-            method_index = (
-                methods.index(current_axis.method) if current_axis is not None and current_axis.method in methods else 0
-            )
-            method, accepted = QInputDialog.getItem(
-                self,
-                "Axis method",
-                "Method",
-                methods,
-                method_index,
-                False,
-            )
-            if not accepted:
-                return
-            start_text, accepted = QInputDialog.getText(
-                self,
-                "Axis start",
-                "Start markers, comma-separated",
-                text="" if current_axis is None else ",".join(current_axis.start_markers),
-            )
-            if not accepted:
-                return
-            end_text, accepted = QInputDialog.getText(
-                self,
-                "Axis end",
-                "End markers, comma-separated",
-                text="" if current_axis is None else ",".join(current_axis.end_markers),
-            )
-            if not accepted:
-                return
-            try:
-                self.workflow_draft = add_axis_to_draft(
-                    self.workflow_draft,
-                    name=name,
-                    segment_name=segment_name,
-                    axis=axis,
-                    start_markers=_split_marker_text(start_text),
-                    end_markers=_split_marker_text(end_text),
-                    method=method,
-                )
-                self._update_preset_details()
-            except Exception as error:
-                QMessageBox.critical(self, "Unable to add axis", str(error))
-
-        def _remove_workflow_axis(self) -> None:
-            name = self._selected_axis_name()
-            if name is None:
-                return
-            self.workflow_draft = remove_axis_from_draft(self.workflow_draft, name)
-            self._update_preset_details()
-
         def _edit_workflow_segment_settings(self) -> None:
             setting = self._selected_segment_setting()
             if setting is None:
@@ -900,51 +856,62 @@ def launch_model_editor() -> None:
             except Exception as error:
                 QMessageBox.critical(self, "Unable to update segment parent", str(error))
 
-        def _add_selected_axis_start_markers(self) -> None:
-            self._append_axis_markers(self.axis_start_list)
-
-        def _add_selected_axis_end_markers(self) -> None:
-            self._append_axis_markers(self.axis_end_list)
-
-        def _remove_selected_axis_start_markers(self) -> None:
-            self._remove_selected_axis_markers(self.axis_start_list)
-
-        def _remove_selected_axis_end_markers(self) -> None:
-            self._remove_selected_axis_markers(self.axis_end_list)
-
-        def _append_axis_markers(self, target_list) -> None:
+        def _add_selected_axis_markers(self, vector_index: int, endpoint: str) -> None:
+            target_list = self._axis_endpoint_list(vector_index, endpoint)
             for item in self.axis_marker_source_list.selectedItems():
                 marker_name = item.text().split("|", maxsplit=1)[0].strip()
                 if marker_name:
                     target_list.addItem(marker_name)
             self._update_segment_axis_preview()
 
-        def _remove_selected_axis_markers(self, target_list) -> None:
+        def _remove_selected_axis_markers(self, vector_index: int, endpoint: str) -> None:
+            target_list = self._axis_endpoint_list(vector_index, endpoint)
             for item in target_list.selectedItems():
                 target_list.takeItem(target_list.row(item))
             self._update_segment_axis_preview()
 
+        def _axis_endpoint_list(self, vector_index: int, endpoint: str):
+            key = "start_list" if endpoint == "start" else "end_list"
+            return self.axis_vector_controls[vector_index][key]
+
         def _save_segment_axis_from_lists(self) -> None:
-            segment_name = self._selected_workflow_segment_name()
+            segment_name = self._selected_anatomical_segment_name()
             if segment_name is None:
                 return
-            axis_name = self.axis_name_combo.currentText()
-            start_markers = _list_widget_texts(self.axis_start_list)
-            end_markers = _list_widget_texts(self.axis_end_list)
+            vector_specs = self._axis_vector_specs()
+            if len(vector_specs) != 2:
+                QMessageBox.critical(self, "Unable to save segment axis", "Two complete vectors are required.")
+                return
+            if sum(keep_vector for _, _, _, keep_vector in vector_specs) != 1:
+                QMessageBox.critical(self, "Unable to save segment axis", "Choose exactly one vector to keep.")
+                return
             try:
-                self.workflow_draft = add_axis_to_draft(
-                    self.workflow_draft,
-                    name=f"{segment_name}_{axis_name}_axis",
-                    segment_name=segment_name,
-                    axis=axis_name,
-                    start_markers=start_markers,
-                    end_markers=end_markers,
-                    method="markers",
-                    keep_vector=self.axis_keep_checkbox.isChecked(),
-                )
+                updated_draft = self.workflow_draft
+                for index, (axis_name, start_markers, end_markers, keep_vector) in enumerate(vector_specs, start=1):
+                    updated_draft = add_axis_to_draft(
+                        updated_draft,
+                        name=f"{segment_name}_vector_{index}",
+                        segment_name=segment_name,
+                        axis=axis_name,
+                        start_markers=start_markers,
+                        end_markers=end_markers,
+                        method="markers",
+                        keep_vector=keep_vector,
+                    )
+                self.workflow_draft = updated_draft
                 self._update_preset_details()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to save segment axis", str(error))
+
+        def _axis_vector_specs(self) -> tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...]:
+            specs = []
+            for controls in self.axis_vector_controls:
+                axis_name = controls["axis_combo"].currentText()
+                start_markers = _list_widget_texts(controls["start_list"])
+                end_markers = _list_widget_texts(controls["end_list"])
+                if len(start_markers) != 0 and len(end_markers) != 0:
+                    specs.append((axis_name, start_markers, end_markers, controls["keep_checkbox"].isChecked()))
+            return tuple(specs)
 
         def _choose_workflow_segment(self, title: str, current_segment_name: str = "") -> str | None:
             segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
@@ -958,6 +925,11 @@ def launch_model_editor() -> None:
             if not self.segment_marker_list.selectedItems():
                 return None
             return self.segment_marker_list.selectedItems()[0].text().split(":", maxsplit=1)[0]
+
+        def _selected_anatomical_segment_name(self) -> str | None:
+            if not self.anatomical_segment_list.selectedItems():
+                return None
+            return self.anatomical_segment_list.selectedItems()[0].text().split(":", maxsplit=1)[0]
 
         def _selected_workflow_marker_name(self) -> str | None:
             marker_names = self._selected_workflow_marker_names()
@@ -987,8 +959,6 @@ def launch_model_editor() -> None:
             self.assigned_marker_list.clear()
             self._sync_assigned_marker_technical_checkbox()
             self._sync_workflow_parent_combo()
-            self._update_axis_marker_source_list()
-            self._update_segment_axis_preview()
             segment_name = self._selected_workflow_segment_name()
             if segment_name is None:
                 self.assigned_marker_list.addItem("Select a segment to inspect its markers.")
@@ -1003,6 +973,11 @@ def launch_model_editor() -> None:
                     marker_kind = "technical" if marker_name in group.technical_marker_names else "additional"
                     self.assigned_marker_list.addItem(f"{marker_name} | {marker_kind}")
                 return
+
+        def _update_anatomical_segment_details(self) -> None:
+            self._update_axis_marker_source_list()
+            self._load_selected_segment_axes_into_controls()
+            self._update_segment_axis_preview()
 
         def _sync_assigned_marker_technical_checkbox(self) -> None:
             marker_names = self._selected_assigned_marker_names()
@@ -1058,7 +1033,7 @@ def launch_model_editor() -> None:
 
         def _update_axis_marker_source_list(self) -> None:
             self.axis_marker_source_list.clear()
-            segment_name = self._selected_workflow_segment_name()
+            segment_name = self._selected_anatomical_segment_name()
             if segment_name is None:
                 self.axis_marker_source_list.addItem("Select a segment to list axis markers.")
                 return
@@ -1071,10 +1046,27 @@ def launch_model_editor() -> None:
             for marker_name in virtual_marker_names:
                 self.axis_marker_source_list.addItem(f"{marker_name} | virtual")
 
+        def _load_selected_segment_axes_into_controls(self) -> None:
+            segment_name = self._selected_anatomical_segment_name()
+            axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)[:2]
+            for index, controls in enumerate(self.axis_vector_controls):
+                controls["start_list"].clear()
+                controls["end_list"].clear()
+                controls["keep_checkbox"].setChecked(False)
+                if index >= len(axes):
+                    continue
+                axis = axes[index]
+                controls["axis_combo"].setCurrentText(axis.axis if axis.axis in {"x", "y", "z"} else "x")
+                controls["keep_checkbox"].setChecked(axis.keep_vector)
+                for marker_name in axis.start_markers:
+                    controls["start_list"].addItem(marker_name)
+                for marker_name in axis.end_markers:
+                    controls["end_list"].addItem(marker_name)
+
         def _update_segment_axis_preview(self) -> None:
-            segment_name = self._selected_workflow_segment_name()
+            segment_name = self._selected_anatomical_segment_name()
             if segment_name is None:
-                self.segment_axis_preview.set_context(self.c3d_data, (), (), (), ())
+                self.segment_axis_preview.set_context(self.c3d_data, (), (), ())
                 return
             segment_marker_names = tuple(self.workflow_marker_pool)
             axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)
@@ -1082,8 +1074,7 @@ def launch_model_editor() -> None:
                 self.c3d_data,
                 segment_marker_names,
                 axes,
-                _list_widget_texts(self.axis_start_list),
-                _list_widget_texts(self.axis_end_list),
+                self._axis_vector_specs(),
             )
 
         def _selected_virtual_marker_name(self) -> str | None:
@@ -1099,21 +1090,6 @@ def launch_model_editor() -> None:
             for marker in self.workflow_draft.virtual_markers:
                 if marker.name == name:
                     return marker
-            return None
-
-        def _selected_axis_name(self) -> str | None:
-            if not self.axis_list.selectedItems():
-                return None
-            text = self.axis_list.selectedItems()[0].text()
-            return None if text.startswith("No axis") else text.split("|", maxsplit=1)[0].strip()
-
-        def _selected_axis(self):
-            name = self._selected_axis_name()
-            if name is None:
-                return None
-            for axis in self.workflow_draft.axes:
-                if axis.name == name:
-                    return axis
             return None
 
         def _selected_segment_setting(self):
@@ -1132,6 +1108,7 @@ def launch_model_editor() -> None:
 
         def _update_preset_details(self) -> None:
             previously_selected_segment = self._selected_workflow_segment_name()
+            previously_selected_anatomical_segment = self._selected_anatomical_segment_name()
             preset = self.selected_preset()
             if self.workflow_draft.preset != preset:
                 self.workflow_draft = c3d_workflow_draft(preset)
@@ -1141,10 +1118,12 @@ def launch_model_editor() -> None:
                     else _marker_pool_from_draft(self.workflow_draft)
                 )
                 previously_selected_segment = None
+                previously_selected_anatomical_segment = None
             workflow = c3d_creation_workflow(preset)
             self.step_list.clear()
             self.marker_list.clear()
             self.segment_marker_list.clear()
+            self.anatomical_segment_list.clear()
             self.assigned_marker_list.clear()
             self.feature_list.clear()
             self.axis_list.clear()
@@ -1179,7 +1158,11 @@ def launch_model_editor() -> None:
                 self.segment_marker_list.addItem(
                     f"{group.segment_name}: {markers} | type={group.segment_type} | parent={parent}"
                 )
+                self.anatomical_segment_list.addItem(
+                    f"{group.segment_name}: {markers} | type={group.segment_type} | parent={parent}"
+                )
             self._restore_workflow_segment_selection(previously_selected_segment)
+            self._restore_anatomical_segment_selection(previously_selected_anatomical_segment)
             self._update_available_marker_list()
 
             if len(self.workflow_draft.virtual_markers) == 0:
@@ -1242,6 +1225,20 @@ def launch_model_editor() -> None:
             self.segment_marker_list.setCurrentItem(self.segment_marker_list.item(target_index))
             self._update_assigned_marker_list()
             self._update_available_marker_list()
+
+        def _restore_anatomical_segment_selection(self, segment_name: str | None) -> None:
+            target_index = 0
+            if segment_name is not None:
+                for index in range(self.anatomical_segment_list.count()):
+                    item_segment_name = self.anatomical_segment_list.item(index).text().split(":", maxsplit=1)[0]
+                    if item_segment_name == segment_name:
+                        target_index = index
+                        break
+            if self.anatomical_segment_list.count() == 0:
+                self._update_anatomical_segment_details()
+                return
+            self.anatomical_segment_list.setCurrentItem(self.anatomical_segment_list.item(target_index))
+            self._update_anatomical_segment_details()
 
         def _update_available_marker_list(self) -> None:
             self.marker_list.clear()
@@ -2134,13 +2131,6 @@ def _parse_float_list(text: str) -> list[float]:
     if stripped_text == "":
         return []
     return [float(value) for value in stripped_text.replace(",", " ").split()]
-
-
-def _split_marker_text(text: str) -> tuple[str, ...]:
-    """
-    Parse a comma- or space-separated marker list.
-    """
-    return tuple(value for value in text.replace(",", " ").split() if value != "")
 
 
 def _list_widget_texts(list_widget) -> tuple[str, ...]:

@@ -82,7 +82,7 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
     Return virtual features that still need explicit reconstruction for a preset.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return ()
+        return _lower_limb_score_virtual_features()
     if preset == C3dModelPreset.FROM_SCRATCH:
         return ()
     if preset == C3dModelPreset.UPPER_LIMB:
@@ -120,6 +120,55 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
                 )
         return tuple(features)
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
+
+
+def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
+    """
+    Return lower-limb SCoRE centers used by the lower-body template.
+    """
+    score_specs = (
+        (
+            "CoR_LThigh_in_Pelvis",
+            "LThigh",
+            "left_hip_score",
+            ("LPSI", "RPSI", "LASI", "RASI"),
+            ("LTHI", "LTHIB", "LTHID"),
+        ),
+        (
+            "CoR_LFoot_in_LShank",
+            "LFoot",
+            "left_ankle_score",
+            ("LTIB", "LTIBF", "LTIBD"),
+            ("LHEE", "LNAV", "LTOE", "LTOE5"),
+        ),
+        (
+            "CoR_RThigh_in_Pelvis",
+            "RThigh",
+            "right_hip_score",
+            ("LPSI", "RPSI", "LASI", "RASI"),
+            ("RTHI", "RTHIB", "RTHID"),
+        ),
+        (
+            "CoR_RFoot_in_RShank",
+            "RFoot",
+            "right_ankle_score",
+            ("RTIB", "RTIBF", "RTIBD"),
+            ("RHEE", "RNAV", "RTOE", "RTOE5"),
+        ),
+    )
+    return tuple(
+        C3dPresetVirtualFeature(
+            name=name,
+            feature_type="point",
+            segment_name=segment_name,
+            role="score",
+            description=(
+                f"trial={trial_name}; parent markers={','.join(parent_markers)}; "
+                f"child markers={','.join(child_markers)}"
+            ),
+        )
+        for name, segment_name, trial_name, parent_markers, child_markers in score_specs
+    )
 
 
 def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:

@@ -376,10 +376,12 @@ selects it in the marker editor.
 
 The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs`, `upper-limb`) or from a template-free
 `from scratch` draft. The draft workflow loads a main C3D, lists the available markers, lets users create technical or
-anatomical segments, assign markers to segments, mark each assigned marker as technical, choose the parent segment,
-define virtual markers from pointing/equation/regression/SCoRE/SARA sources, and define segment axes from start/end
-marker groups. Axis endpoints may contain several markers; they are averaged when converted to a model template. The
-segment axis panel also previews the marker cloud and saved/temporary vectors for the selected segment.
+anatomical segments, assign markers to segments, mark each assigned marker as technical, and choose the parent segment.
+The `Technical segment` tab is used to group the markers that define technical frames for SCoRE/SARA computations. The
+`Anatomical segment` tab is used after virtual points such as CoR/AoR have been defined; it defines the anatomical
+frame from two start-to-end marker vectors, each with an axis name, and one vector selected as the one to keep during
+orthonormalization. Axis endpoints may contain several markers; they are averaged when converted to a model template.
+The segment axis panel also previews the marker cloud and saved/temporary vectors for the selected segment.
 
 The lower-limb preset follows the same calibration logic as the walking reconstruction example: a static/anatomical C3D
 defines marker-based segment frames and anthropometric measurements, hip and ankle centers are defined from SCoRE

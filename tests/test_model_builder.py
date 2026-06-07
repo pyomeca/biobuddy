@@ -151,7 +151,15 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
     upper_limb_features = c3d_model_preset_virtual_features(C3dModelPreset.UPPER_LIMB)
     full_body_features = c3d_model_preset_virtual_features(C3dModelPreset.FULL_BODY)
 
-    assert lower_limb_features == ()
+    assert any(
+        feature.name == "CoR_LThigh_in_Pelvis"
+        and feature.role == "score"
+        and "parent markers=LPSI,RPSI,LASI,RASI" in feature.description
+        and "child markers=LTHI,LTHIB,LTHID" in feature.description
+        for feature in lower_limb_features
+    )
+    assert any(feature.name == "CoR_LFoot_in_LShank" and feature.role == "score" for feature in lower_limb_features)
+    assert len(lower_limb_features) == 4
     assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)
     assert any(feature.feature_type == "axis" and feature.name == "Clavicule_u_axis" for feature in upper_limb_features)
