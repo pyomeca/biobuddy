@@ -55,10 +55,12 @@ def test_c3d_creation_workflow_steps_match_expected_pipeline():
 
 
 def test_c3d_file_roles_use_generic_names_for_three_presets():
+    from_scratch_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FROM_SCRATCH)}
     lower_limb_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.LOWER_LIMBS)}
     upper_limb_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.UPPER_LIMB)}
     full_body_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FULL_BODY)}
 
+    assert from_scratch_names == {"main_markers.c3d"}
     assert "main_markers.c3d" in lower_limb_names
     assert "functional_left_knee_sara.c3d" in lower_limb_names
     assert "pointing_virtual_markers.c3d" in upper_limb_names
@@ -66,10 +68,12 @@ def test_c3d_file_roles_use_generic_names_for_three_presets():
 
 
 def test_c3d_segment_marker_groups_cover_three_models():
+    from_scratch_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.FROM_SCRATCH)
     lower_limb_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.LOWER_LIMBS)
     upper_limb_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.UPPER_LIMB)
     full_body_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.FULL_BODY)
 
+    assert from_scratch_groups == ()
     assert any(group.segment_name == "Pelvis" and "LASI" in group.marker_names for group in lower_limb_groups)
     assert any(group.segment_name == "Arm" and "EPICl" in group.marker_names for group in upper_limb_groups)
     assert any(group.segment_name == "Thorax" and "MANU" in group.marker_names for group in full_body_groups)
@@ -236,12 +240,13 @@ def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
         start_markers=("EPICm",),
         end_markers=("EPICl",),
         method="sara",
+        keep_vector=True,
     )
 
     payload = c3d_template_payload_from_draft(draft)
 
     assert any(marker["name"] == "ShoulderCoR" for marker in payload["virtual_markers"])
-    assert any(axis["name"] == "ElbowFlexionAxis" for axis in payload["axes"])
+    assert any(axis["name"] == "ElbowFlexionAxis" and axis["keep_vector"] is True for axis in payload["axes"])
 
     draft = remove_virtual_marker_from_draft(draft, "ShoulderCoR")
     draft = remove_axis_from_draft(draft, "ElbowFlexionAxis")

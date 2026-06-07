@@ -128,6 +128,7 @@ class C3dAxisDraft:
     start_markers: tuple[str, ...]
     end_markers: tuple[str, ...]
     method: str = "markers"
+    keep_vector: bool = False
 
 
 @dataclass(frozen=True)
@@ -215,6 +216,15 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
     """
     Return an editable draft initialized from a preset workflow.
     """
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return C3dWorkflowDraft(
+            preset=preset,
+            segment_marker_groups=(),
+            virtual_markers=(),
+            axes=(),
+            segment_settings=(),
+            file_assignments=(C3dFileAssignmentDraft(role="main", generic_name="main_markers.c3d"),),
+        )
     virtual_features = c3d_model_preset_virtual_features(preset)
     return C3dWorkflowDraft(
         preset=preset,
@@ -881,6 +891,7 @@ def add_axis_to_draft(
     start_markers: tuple[str, ...],
     end_markers: tuple[str, ...],
     method: str = "markers",
+    keep_vector: bool = False,
 ) -> C3dWorkflowDraft:
     """
     Add or replace an axis definition.
@@ -892,6 +903,7 @@ def add_axis_to_draft(
         start_markers=tuple(name.strip() for name in start_markers if name.strip() != ""),
         end_markers=tuple(name.strip() for name in end_markers if name.strip() != ""),
         method=_require_name(method, "Axis method"),
+        keep_vector=keep_vector,
     )
     if len(axis_definition.start_markers) == 0 or len(axis_definition.end_markers) == 0:
         raise ValueError("An axis needs at least one start marker and one end marker.")
@@ -1036,6 +1048,8 @@ def c3d_file_roles_for_preset(preset: C3dModelPreset) -> tuple[C3dFileRole, ...]
             C3dFileRole("right_knee_sara", "functional_right_knee_sara.c3d", "Right knee SARA trial."),
             C3dFileRole("right_ankle_score", "functional_right_ankle_score.c3d", "Right ankle SCORE trial."),
         )
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return (C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),)
     if preset == C3dModelPreset.UPPER_LIMB:
         return (
             C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),
@@ -1062,6 +1076,8 @@ def c3d_segment_marker_groups_for_preset(preset: C3dModelPreset) -> tuple[C3dSeg
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
         return _groups_from_model_template(lower_limb_template())
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return ()
     if preset == C3dModelPreset.UPPER_LIMB:
         return _groups_from_model_template(upper_limb_template())
     if preset == C3dModelPreset.FULL_BODY:
@@ -1165,6 +1181,8 @@ def _expected_marker_names_for_preset(preset: C3dModelPreset) -> set[str]:
         return set(required_static_markers(upper_limb_template()))
     if preset == C3dModelPreset.FULL_BODY:
         return {marker_name for segment in bela_segment_specs() for marker_name in segment.marker_names}
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return set()
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
 
 
@@ -1206,6 +1224,8 @@ def _require_name(value: str, label: str) -> str:
 def _virtual_feature_default_method(feature_type: str, role: str) -> str:
     if feature_type == "axis":
         return "sara" if "axis" in role else "markers"
+    if role in {"score", "sara"}:
+        return role
     if "legacy" in role:
         return "pointing_or_regression"
     if "axis" in role:
@@ -1244,6 +1264,8 @@ def _initial_segment_settings(preset: C3dModelPreset) -> tuple[C3dSegmentSetting
             )
             for segment in bela_segment_specs()
         )
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return ()
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
 
 

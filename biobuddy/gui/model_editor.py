@@ -1,5 +1,8 @@
 import json
+import math
 from pathlib import Path
+
+import numpy as np
 
 from .segment_editor import (
     SegmentEditorData,
@@ -209,6 +212,106 @@ def launch_model_editor() -> None:
         """
         return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
 
+    class C3dSegmentAxisPreviewWidget(QWidget):
+        """
+        Small rotatable preview for marker-defined segment axes in the C3D workflow.
+        """
+
+        def __init__(self):
+            super().__init__()
+            self.setMinimumHeight(220)
+            self.c3d_data = None
+            self.marker_names = ()
+            self.axes = ()
+            self.current_start_markers = ()
+            self.current_end_markers = ()
+            self.yaw = -0.6
+            self.pitch = 0.35
+            self._last_mouse_position = None
+
+        def set_context(
+            self,
+            c3d_data,
+            marker_names: tuple[str, ...],
+            axes: tuple[object, ...],
+            current_start_markers: tuple[str, ...],
+            current_end_markers: tuple[str, ...],
+        ) -> None:
+            self.c3d_data = c3d_data
+            self.marker_names = marker_names
+            self.axes = axes
+            self.current_start_markers = current_start_markers
+            self.current_end_markers = current_end_markers
+            self.update()
+
+        def paintEvent(self, event) -> None:
+            painter = QPainter(self)
+            painter.setRenderHint(qpaint_antialiasing)
+            painter.fillRect(self.rect(), QColor("white"))
+            if self.c3d_data is None:
+                painter.drawText(self.rect(), qt_alignment_center, "Choose a C3D to preview marker axes")
+                return
+            marker_points = {
+                marker_name: _marker_preview_position(self.c3d_data, marker_name)
+                for marker_name in self.marker_names
+                if marker_name in self.c3d_data.marker_names
+            }
+            marker_points = {name: point for name, point in marker_points.items() if point is not None}
+            axis_segments = []
+            for axis in self.axes:
+                start = _mean_preview_position(self.c3d_data, axis.start_markers)
+                end = _mean_preview_position(self.c3d_data, axis.end_markers)
+                if start is not None and end is not None:
+                    axis_segments.append((axis.axis, axis.keep_vector, start, end))
+            temporary_start = _mean_preview_position(self.c3d_data, self.current_start_markers)
+            temporary_end = _mean_preview_position(self.c3d_data, self.current_end_markers)
+            points = list(marker_points.values())
+            for _, _, start, end in axis_segments:
+                points.extend((start, end))
+            if temporary_start is not None and temporary_end is not None:
+                points.extend((temporary_start, temporary_end))
+            if len(points) == 0:
+                painter.drawText(self.rect(), qt_alignment_center, "No visible marker for the selected segment")
+                return
+            projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
+            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
+
+            painter.setPen(QPen(QColor("#2563eb"), 1))
+            painter.setBrush(QColor("#2563eb"))
+            for marker_name, point in marker_points.items():
+                center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
+                painter.drawEllipse(center, 4, 4)
+                painter.drawText(center.x() + 5, center.y() - 5, marker_name)
+
+            axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb", "": "#6b7280"}
+            for axis_name, keep_vector, start, end in axis_segments:
+                painter.setPen(QPen(QColor(axis_colors.get(axis_name, "#6b7280")), 4 if keep_vector else 2))
+                painter.drawLine(
+                    transform(_rotate_preview_point(start, self.yaw, self.pitch)),
+                    transform(_rotate_preview_point(end, self.yaw, self.pitch)),
+                )
+
+            if temporary_start is not None and temporary_end is not None:
+                painter.setPen(QPen(QColor("#f59e0b"), 3))
+                painter.drawLine(
+                    transform(_rotate_preview_point(temporary_start, self.yaw, self.pitch)),
+                    transform(_rotate_preview_point(temporary_end, self.yaw, self.pitch)),
+                )
+
+        def mousePressEvent(self, event) -> None:
+            self._last_mouse_position = get_event_position(event)
+
+        def mouseMoveEvent(self, event) -> None:
+            if self._last_mouse_position is None:
+                self._last_mouse_position = get_event_position(event)
+                return
+            position = get_event_position(event)
+            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
+            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
+            self.pitch = max(-1.4, min(1.4, self.pitch))
+            self._last_mouse_position = position
+            self.update()
+
     class C3dModelCreationDialog(QDialog):
         """
         Dialog for the C3D-driven model creation workflow.
@@ -220,6 +323,7 @@ def launch_model_editor() -> None:
             self.presets = supported_c3d_model_presets()
             self.c3d_data = None
             self.workflow_draft = c3d_workflow_draft(self.presets[0])
+            self.workflow_marker_pool = _marker_pool_from_draft(self.workflow_draft)
 
             self.preset_combo = QComboBox()
             for preset in self.presets:
@@ -253,6 +357,26 @@ def launch_model_editor() -> None:
             self.assigned_marker_technical_checkbox = QCheckBox("Selected markers are technical")
             self.assigned_marker_technical_checkbox.stateChanged.connect(self._set_selected_assigned_markers_technical)
             self.axis_list = QListWidget()
+            self.axis_marker_source_list = QListWidget()
+            self.axis_marker_source_list.setSelectionMode(qt_extended_selection)
+            self.axis_start_list = QListWidget()
+            self.axis_start_list.setSelectionMode(qt_extended_selection)
+            self.axis_end_list = QListWidget()
+            self.axis_end_list.setSelectionMode(qt_extended_selection)
+            self.axis_name_combo = QComboBox()
+            self.axis_name_combo.addItems(["x", "y", "z"])
+            self.axis_keep_checkbox = QCheckBox("Keep this vector")
+            self.add_axis_start_button = QPushButton("Add to start")
+            self.add_axis_start_button.clicked.connect(self._add_selected_axis_start_markers)
+            self.add_axis_end_button = QPushButton("Add to end")
+            self.add_axis_end_button.clicked.connect(self._add_selected_axis_end_markers)
+            self.remove_axis_start_button = QPushButton("Remove start")
+            self.remove_axis_start_button.clicked.connect(self._remove_selected_axis_start_markers)
+            self.remove_axis_end_button = QPushButton("Remove end")
+            self.remove_axis_end_button.clicked.connect(self._remove_selected_axis_end_markers)
+            self.save_segment_axis_button = QPushButton("Add/update segment vector")
+            self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
+            self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
             self.issue_list = QListWidget()
@@ -333,11 +457,15 @@ def launch_model_editor() -> None:
             layout.addWidget(QLabel("Segments"))
             layout.addWidget(self.segment_marker_list)
             marker_row = QHBoxLayout()
+            parent_column = QVBoxLayout()
+            parent_column.addWidget(QLabel("Parent segment"))
+            parent_column.addWidget(self.workflow_parent_combo)
+            parent_column.addStretch()
             left_column = QVBoxLayout()
             left_column.addWidget(QLabel("Available markers in main C3D"))
             left_column.addWidget(self.show_all_markers_checkbox)
             left_column.addWidget(self.marker_list)
-            self.marker_list.setMaximumWidth(260)
+            self.marker_list.setMaximumWidth(320)
             transfer_column = QVBoxLayout()
             transfer_column.addStretch()
             self.assign_marker_button.setText("->")
@@ -345,20 +473,46 @@ def launch_model_editor() -> None:
             transfer_column.addWidget(self.assign_marker_button)
             transfer_column.addWidget(self.unassign_marker_button)
             transfer_column.addStretch()
-            parent_column = QVBoxLayout()
-            parent_column.addWidget(QLabel("Parent segment"))
-            parent_column.addWidget(self.workflow_parent_combo)
-            parent_column.addStretch()
             right_column = QVBoxLayout()
             right_column.addWidget(QLabel("Markers assigned to selected segment"))
             right_column.addWidget(self.assigned_marker_list)
             right_column.addWidget(self.assigned_marker_technical_checkbox)
-            self.assigned_marker_list.setMaximumWidth(260)
+            self.assigned_marker_list.setMaximumWidth(320)
+            marker_row.addLayout(parent_column, 1)
             marker_row.addLayout(left_column, 2)
             marker_row.addLayout(transfer_column, 0)
-            marker_row.addLayout(parent_column, 1)
             marker_row.addLayout(right_column, 2)
             layout.addLayout(marker_row)
+
+            axis_layout = QHBoxLayout()
+            source_column = QVBoxLayout()
+            source_column.addWidget(QLabel("Axis marker source"))
+            source_column.addWidget(self.axis_marker_source_list)
+            source_buttons = QHBoxLayout()
+            source_buttons.addWidget(self.add_axis_start_button)
+            source_buttons.addWidget(self.add_axis_end_button)
+            source_column.addLayout(source_buttons)
+            start_column = QVBoxLayout()
+            start_column.addWidget(QLabel("Vector start markers"))
+            start_column.addWidget(self.axis_start_list)
+            start_column.addWidget(self.remove_axis_start_button)
+            end_column = QVBoxLayout()
+            end_column.addWidget(QLabel("Vector end markers"))
+            end_column.addWidget(self.axis_end_list)
+            end_column.addWidget(self.remove_axis_end_button)
+            vector_column = QVBoxLayout()
+            vector_column.addWidget(QLabel("Vector axis"))
+            vector_column.addWidget(self.axis_name_combo)
+            vector_column.addWidget(self.axis_keep_checkbox)
+            vector_column.addWidget(self.save_segment_axis_button)
+            vector_column.addStretch()
+            axis_layout.addLayout(source_column, 2)
+            axis_layout.addLayout(start_column, 1)
+            axis_layout.addLayout(end_column, 1)
+            axis_layout.addLayout(vector_column, 1)
+            axis_layout.addWidget(self.segment_axis_preview, 2)
+            layout.addWidget(QLabel("Segment system of coordinates"))
+            layout.addLayout(axis_layout)
             return widget
 
         def _virtual_marker_workflow_tab(self):
@@ -410,6 +564,7 @@ def launch_model_editor() -> None:
             try:
                 self.c3d_data = C3dData(filepath)
                 self.c3d_path.setText(filepath)
+                self.workflow_marker_pool = tuple(self.c3d_data.marker_names)
                 self._update_preset_details()
             except Exception as error:
                 QMessageBox.critical(self, "Unable to load C3D", str(error))
@@ -477,6 +632,7 @@ def launch_model_editor() -> None:
             if segment_name is None or len(marker_names) == 0:
                 return
             try:
+                self.workflow_marker_pool = tuple(dict.fromkeys(self.workflow_marker_pool + marker_names))
                 self.workflow_draft = assign_markers_to_segment(self.workflow_draft, segment_name, marker_names)
                 self._update_preset_details()
             except Exception as error:
@@ -744,6 +900,52 @@ def launch_model_editor() -> None:
             except Exception as error:
                 QMessageBox.critical(self, "Unable to update segment parent", str(error))
 
+        def _add_selected_axis_start_markers(self) -> None:
+            self._append_axis_markers(self.axis_start_list)
+
+        def _add_selected_axis_end_markers(self) -> None:
+            self._append_axis_markers(self.axis_end_list)
+
+        def _remove_selected_axis_start_markers(self) -> None:
+            self._remove_selected_axis_markers(self.axis_start_list)
+
+        def _remove_selected_axis_end_markers(self) -> None:
+            self._remove_selected_axis_markers(self.axis_end_list)
+
+        def _append_axis_markers(self, target_list) -> None:
+            for item in self.axis_marker_source_list.selectedItems():
+                marker_name = item.text().split("|", maxsplit=1)[0].strip()
+                if marker_name:
+                    target_list.addItem(marker_name)
+            self._update_segment_axis_preview()
+
+        def _remove_selected_axis_markers(self, target_list) -> None:
+            for item in target_list.selectedItems():
+                target_list.takeItem(target_list.row(item))
+            self._update_segment_axis_preview()
+
+        def _save_segment_axis_from_lists(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                return
+            axis_name = self.axis_name_combo.currentText()
+            start_markers = _list_widget_texts(self.axis_start_list)
+            end_markers = _list_widget_texts(self.axis_end_list)
+            try:
+                self.workflow_draft = add_axis_to_draft(
+                    self.workflow_draft,
+                    name=f"{segment_name}_{axis_name}_axis",
+                    segment_name=segment_name,
+                    axis=axis_name,
+                    start_markers=start_markers,
+                    end_markers=end_markers,
+                    method="markers",
+                    keep_vector=self.axis_keep_checkbox.isChecked(),
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to save segment axis", str(error))
+
         def _choose_workflow_segment(self, title: str, current_segment_name: str = "") -> str | None:
             segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
             if not segment_names:
@@ -785,6 +987,8 @@ def launch_model_editor() -> None:
             self.assigned_marker_list.clear()
             self._sync_assigned_marker_technical_checkbox()
             self._sync_workflow_parent_combo()
+            self._update_axis_marker_source_list()
+            self._update_segment_axis_preview()
             segment_name = self._selected_workflow_segment_name()
             if segment_name is None:
                 self.assigned_marker_list.addItem("Select a segment to inspect its markers.")
@@ -852,6 +1056,36 @@ def launch_model_editor() -> None:
             self.workflow_parent_combo.setEnabled(True)
             self.workflow_parent_combo.blockSignals(False)
 
+        def _update_axis_marker_source_list(self) -> None:
+            self.axis_marker_source_list.clear()
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                self.axis_marker_source_list.addItem("Select a segment to list axis markers.")
+                return
+            marker_names = tuple(self.workflow_marker_pool)
+            virtual_marker_names = tuple(
+                marker.name for marker in self.workflow_draft.virtual_markers if marker.segment_name == segment_name
+            )
+            for marker_name in marker_names:
+                self.axis_marker_source_list.addItem(marker_name)
+            for marker_name in virtual_marker_names:
+                self.axis_marker_source_list.addItem(f"{marker_name} | virtual")
+
+        def _update_segment_axis_preview(self) -> None:
+            segment_name = self._selected_workflow_segment_name()
+            if segment_name is None:
+                self.segment_axis_preview.set_context(self.c3d_data, (), (), (), ())
+                return
+            segment_marker_names = tuple(self.workflow_marker_pool)
+            axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)
+            self.segment_axis_preview.set_context(
+                self.c3d_data,
+                segment_marker_names,
+                axes,
+                _list_widget_texts(self.axis_start_list),
+                _list_widget_texts(self.axis_end_list),
+            )
+
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():
                 return None
@@ -901,6 +1135,11 @@ def launch_model_editor() -> None:
             preset = self.selected_preset()
             if self.workflow_draft.preset != preset:
                 self.workflow_draft = c3d_workflow_draft(preset)
+                self.workflow_marker_pool = (
+                    tuple(self.c3d_data.marker_names)
+                    if self.c3d_data is not None
+                    else _marker_pool_from_draft(self.workflow_draft)
+                )
                 previously_selected_segment = None
             workflow = c3d_creation_workflow(preset)
             self.step_list.clear()
@@ -914,7 +1153,11 @@ def launch_model_editor() -> None:
             self.issue_list.clear()
             self.example_list.clear()
 
-            if preset == C3dModelPreset.FULL_BODY:
+            if preset == C3dModelPreset.FROM_SCRATCH:
+                self.status_label.setText(
+                    "Status: template-free draft; add segments, markers, axes, DoFs, and virtual markers manually."
+                )
+            elif preset == C3dModelPreset.FULL_BODY:
                 self.status_label.setText(
                     "Status: full-body template mapping exists; generation still needs virtual markers."
                 )
@@ -1002,10 +1245,10 @@ def launch_model_editor() -> None:
 
         def _update_available_marker_list(self) -> None:
             self.marker_list.clear()
-            if self.c3d_data is None:
+            if self.c3d_data is None and len(self.workflow_marker_pool) == 0:
                 self.marker_list.addItem("Choose the main marker C3D to list markers.")
                 return
-            marker_names = tuple(self.c3d_data.marker_names)
+            marker_names = tuple(self.c3d_data.marker_names) if self.c3d_data is not None else self.workflow_marker_pool
             selected_segment_name = self._selected_workflow_segment_name()
             selected_segment_marker_names = {
                 marker_name
@@ -1396,6 +1639,15 @@ def launch_model_editor() -> None:
         def _new_model_from_c3d(self) -> None:
             dialog = C3dModelCreationDialog(self)
             if _exec_dialog(dialog) != _dialog_accepted_value():
+                return
+            if dialog.selected_preset() == C3dModelPreset.FROM_SCRATCH:
+                QMessageBox.information(
+                    self,
+                    "Template-free C3D draft",
+                    "The template-free C3D workflow is ready for drafting in the dialog. Use 'Generate template' "
+                    "after adding segments, markers, axes, DoFs, and virtual markers; direct BioMod generation "
+                    "will be enabled once the draft can be converted to a complete model template.",
+                )
                 return
             selected_c3d_file = dialog.selected_c3d_file()
             if selected_c3d_file is not None:
@@ -1846,6 +2098,8 @@ def _c3d_preset_label(preset: C3dModelPreset) -> str:
         return "Full body"
     if preset == C3dModelPreset.UPPER_LIMB:
         return "Upper-limb"
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return "From scratch"
     return preset.value
 
 
@@ -1887,6 +2141,68 @@ def _split_marker_text(text: str) -> tuple[str, ...]:
     Parse a comma- or space-separated marker list.
     """
     return tuple(value for value in text.replace(",", " ").split() if value != "")
+
+
+def _list_widget_texts(list_widget) -> tuple[str, ...]:
+    """
+    Return all marker names shown in a QListWidget, preserving duplicates.
+    """
+    return tuple(
+        list_widget.item(index).text().split("|", maxsplit=1)[0].strip() for index in range(list_widget.count())
+    )
+
+
+def _marker_pool_from_draft(workflow_draft) -> tuple[str, ...]:
+    """
+    Return the known marker names for a C3D draft, even before a C3D file is loaded.
+    """
+    marker_names = []
+    for group in workflow_draft.segment_marker_groups:
+        marker_names.extend(group.marker_names)
+    marker_names.extend(marker.name for marker in workflow_draft.virtual_markers)
+    return tuple(dict.fromkeys(marker_names))
+
+
+def _marker_preview_position(c3d_data, marker_name: str) -> tuple[float, float, float] | None:
+    """
+    Return the mean 3D position of one visible C3D marker.
+    """
+    if c3d_data is None or marker_name not in c3d_data.marker_names:
+        return None
+    values = c3d_data.get_position((marker_name,))[:3, 0, :]
+    if np.isnan(values).all():
+        return None
+    point = np.nanmean(values, axis=1)
+    if np.isnan(point).any():
+        return None
+    return tuple(float(value) for value in point)
+
+
+def _mean_preview_position(c3d_data, marker_names: tuple[str, ...]) -> tuple[float, float, float] | None:
+    """
+    Return the mean point for a possibly duplicated marker list.
+    """
+    points = [_marker_preview_position(c3d_data, marker_name) for marker_name in marker_names]
+    points = [point for point in points if point is not None]
+    if len(points) == 0:
+        return None
+    return tuple(float(value) for value in np.mean(np.asarray(points, dtype=float), axis=0))
+
+
+def _rotate_preview_point(point: tuple[float, float, float], yaw: float, pitch: float) -> tuple[float, float]:
+    """
+    Project a 3D point with a user-controlled yaw/pitch rotation.
+    """
+    x, y, z = point
+    cos_yaw = math.cos(yaw)
+    sin_yaw = math.sin(yaw)
+    cos_pitch = math.cos(pitch)
+    sin_pitch = math.sin(pitch)
+    yaw_x = cos_yaw * x - sin_yaw * y
+    yaw_y = sin_yaw * x + cos_yaw * y
+    pitch_y = cos_pitch * yaw_y - sin_pitch * z
+    pitch_z = sin_pitch * yaw_y + cos_pitch * z
+    return yaw_x + 0.25 * pitch_y, -pitch_z + 0.15 * pitch_y
 
 
 def _segment_parent_choices(workflow_draft, excluded_segment_name: str = "") -> list[str]:

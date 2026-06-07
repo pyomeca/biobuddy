@@ -373,6 +373,20 @@ the user edits the model. The muscle tab also exposes editable origin and insert
 model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
 tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
 selects it in the marker editor.
+
+The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs`, `upper-limb`) or from a template-free
+`from scratch` draft. The draft workflow loads a main C3D, lists the available markers, lets users create technical or
+anatomical segments, assign markers to segments, mark each assigned marker as technical, choose the parent segment,
+define virtual markers from pointing/equation/regression/SCoRE/SARA sources, and define segment axes from start/end
+marker groups. Axis endpoints may contain several markers; they are averaged when converted to a model template. The
+segment axis panel also previews the marker cloud and saved/temporary vectors for the selected segment.
+
+The lower-limb preset follows the same calibration logic as the walking reconstruction example: a static/anatomical C3D
+defines marker-based segment frames and anthropometric measurements, hip and ankle centers are defined from SCoRE
+functional trials, knee axes are defined from SARA functional trials and oriented with condyle markers, then the
+personalized model is generated from the evaluated marker-defined frames. At the moment, the GUI can draft these
+ingredients and generate the existing lower-limb template; fully converting an arbitrary template-free draft to a
+BioMod model still requires the remaining template-builder bridge.
 ![model_graph](docs/images/model_graph.png)
 
 

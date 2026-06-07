@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..utils.marker_data import C3dData, MarkerData
-from .full_body_bela_template import bela_unresolved_marker_references
+from .full_body_bela_template import bela_unresolved_marker_references, bela_virtual_marker_reference_map
 from .lower_limb_template import lower_limb_template
 from .upper_limb_template import upper_limb_template, upper_limb_virtual_feature_requirements
 from .model_builder import (
@@ -33,6 +33,7 @@ class C3dModelPreset(Enum):
     FULL_BODY = "full_body"
     LOWER_LIMBS = "lower_limbs"
     UPPER_LIMB = "upper_limb"
+    FROM_SCRATCH = "from_scratch"
 
 
 @dataclass(frozen=True)
@@ -68,7 +69,12 @@ def supported_c3d_model_presets() -> tuple[C3dModelPreset, ...]:
     """
     Return presets shown in the C3D creation workflow.
     """
-    return (C3dModelPreset.FULL_BODY, C3dModelPreset.LOWER_LIMBS, C3dModelPreset.UPPER_LIMB)
+    return (
+        C3dModelPreset.FROM_SCRATCH,
+        C3dModelPreset.FULL_BODY,
+        C3dModelPreset.LOWER_LIMBS,
+        C3dModelPreset.UPPER_LIMB,
+    )
 
 
 def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPresetVirtualFeature, ...]:
@@ -76,6 +82,8 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
     Return virtual features that still need explicit reconstruction for a preset.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
+        return ()
+    if preset == C3dModelPreset.FROM_SCRATCH:
         return ()
     if preset == C3dModelPreset.UPPER_LIMB:
         return tuple(
@@ -93,15 +101,21 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
         )
     if preset == C3dModelPreset.FULL_BODY:
         features = []
+        virtual_reference_map = bela_virtual_marker_reference_map()
         for segment_name, indices in bela_unresolved_marker_references().items():
             for index in indices:
+                default_name = f"{segment_name}_virtual_{index}"
+                name, method, description = virtual_reference_map.get(
+                    (segment_name, index),
+                    (default_name, "legacy_matlab_reference", f"BeLa Matlab local index {index}"),
+                )
                 features.append(
                     C3dPresetVirtualFeature(
-                        name=f"{segment_name}_virtual_{index}",
-                        feature_type="point",
+                        name=name,
+                        feature_type="axis" if method == "sara" and "direction" in name else "point",
                         segment_name=segment_name,
-                        role="legacy_matlab_reference",
-                        description=f"BeLa Matlab local index {index}",
+                        role=method,
+                        description=description,
                     )
                 )
         return tuple(features)
@@ -114,6 +128,11 @@ def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
         return lower_limb_template()
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        raise NotImplementedError(
+            "Template-free C3D model creation is an interactive drafting workflow. Add segments, markers, axes, "
+            "DoFs, and virtual markers in the GUI, then export a reusable template before generating a BioMod model."
+        )
     if preset == C3dModelPreset.FULL_BODY:
         raise NotImplementedError(
             "Full-body C3D model creation still needs CoR/SARA virtual-point reconstruction before it can generate "
@@ -216,6 +235,8 @@ def _default_output_filename(preset: C3dModelPreset) -> str:
         return "full_body.bioMod"
     if preset == C3dModelPreset.UPPER_LIMB:
         return "upper_limb.bioMod"
+    if preset == C3dModelPreset.FROM_SCRATCH:
+        return "from_scratch.bioMod"
     raise ValueError(f"Unsupported C3D model preset: {preset}.")
 
 

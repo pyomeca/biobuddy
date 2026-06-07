@@ -145,6 +145,55 @@ def bela_unresolved_marker_references() -> dict[str, tuple[int, ...]]:
     }
 
 
+def bela_virtual_marker_reference_map() -> dict[tuple[str, int], tuple[str, str, str]]:
+    """
+    Infer BeLa virtual marker names from the Matlab append-to-parent/child SCORE logic.
+
+    Returns
+    -------
+    dict[tuple[str, int], tuple[str, str, str]]
+        Mapping ``(segment_name, local_index)`` to ``(name, method, description)``.
+    """
+    reference_map: dict[tuple[str, int], tuple[str, str, str]] = {}
+    segment_by_name = {segment.name: segment for segment in BELA_SEGMENTS}
+    children_by_parent: dict[str, list[BelaSegmentSpec]] = {segment.name: [] for segment in BELA_SEGMENTS}
+    for segment in BELA_SEGMENTS:
+        if segment.parent_name in children_by_parent:
+            children_by_parent[segment.parent_name].append(segment)
+    for segment in BELA_SEGMENTS:
+        if segment.parent_name in {"", "base", "root"} or segment.parent_name not in segment_by_name:
+            continue
+        prefix = "AoR" if segment.joint == "aor" else "CoR"
+        method = "sara" if segment.joint == "aor" else "score"
+        parent_name = segment.parent_name
+        child_index = len(segment.marker_names) + 1
+        reference_map[(segment.name, child_index)] = (
+            f"{prefix}_{segment.name}_in_{segment.name}",
+            method,
+            f"{prefix} from functional {method.upper()} trial, expressed in child segment {segment.name}.",
+        )
+        if segment.joint_determination_type == "functional" and len(segment.functional_axis_indices) != 0:
+            reference_map[(segment.name, max(segment.functional_axis_indices))] = (
+                f"AoR_{segment.name}_direction_in_{segment.name}",
+                "sara",
+                f"SARA axis direction for {segment.name}, oriented with anatomical landmarks.",
+            )
+    for parent_name, children in children_by_parent.items():
+        parent = segment_by_name[parent_name]
+        first_child_index = len(parent.marker_names) + 1
+        if parent.parent_name not in {"", "base", "root"}:
+            first_child_index += 1
+        for child_index, child in enumerate(children, start=first_child_index):
+            prefix = "AoR" if child.joint == "aor" else "CoR"
+            method = "sara" if child.joint == "aor" else "score"
+            reference_map[(parent_name, child_index)] = (
+                f"{prefix}_{child.name}_in_{parent_name}",
+                method,
+                f"{prefix} from functional {method.upper()} trial, expressed in parent segment {parent_name}.",
+            )
+    return reference_map
+
+
 def signed_marker_groups(
     segment: BelaSegmentSpec,
     signed_indices: tuple[int, ...],

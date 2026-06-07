@@ -104,6 +104,12 @@ def test_c3d_model_creation_from_marker_data_returns_model_and_reports():
     assert result.frame_quality["Pelvis"].mean_angle_degrees == pytest.approx(90.0)
 
 
+def test_from_scratch_c3d_preset_is_template_free():
+    assert C3dModelPreset.FROM_SCRATCH in supported_c3d_model_presets()
+    with pytest.raises(NotImplementedError, match="Template-free"):
+        template_for_c3d_model_preset(C3dModelPreset.FROM_SCRATCH)
+
+
 def test_c3d_model_creation_applies_virtual_features_before_generation():
     original_data = _synthetic_lower_limb_data()
     marker_dict = dict(original_data.marker_dict)
@@ -127,6 +133,7 @@ def test_c3d_model_creation_applies_virtual_features_before_generation():
 
 def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
     assert supported_c3d_model_presets() == (
+        C3dModelPreset.FROM_SCRATCH,
         C3dModelPreset.FULL_BODY,
         C3dModelPreset.LOWER_LIMBS,
         C3dModelPreset.UPPER_LIMB,
@@ -135,6 +142,8 @@ def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
     assert template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB).name == "Upper-limb from calibration C3D"
     with pytest.raises(NotImplementedError, match="Full-body C3D model creation"):
         template_for_c3d_model_preset(C3dModelPreset.FULL_BODY)
+    with pytest.raises(NotImplementedError, match="Template-free"):
+        template_for_c3d_model_preset(C3dModelPreset.FROM_SCRATCH)
 
 
 def test_c3d_model_presets_report_virtual_features_to_reconstruct():
@@ -143,9 +152,10 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
     full_body_features = c3d_model_preset_virtual_features(C3dModelPreset.FULL_BODY)
 
     assert lower_limb_features == ()
+    assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)
     assert any(feature.feature_type == "axis" and feature.name == "Clavicule_u_axis" for feature in upper_limb_features)
-    assert any(feature.name.startswith("Thorax_virtual_") for feature in full_body_features)
+    assert any(feature.name == "CoR_Thorax_in_Thorax" and feature.role == "score" for feature in full_body_features)
 
 
 def test_find_static_c3d_file_uses_expected_patterns(tmp_path):
