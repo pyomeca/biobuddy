@@ -11,7 +11,13 @@ from ..utils.marker_data import C3dData, MarkerData
 from .c3d_model_creation import C3dModelPreset, c3d_model_preset_virtual_features
 from .full_body_bela_template import bela_segment_specs, rotations_from_matlab_dof, translations_from_matlab_dof
 from .lower_limb_template import lower_limb_template
-from .model_builder import ModelTemplate, required_functional_markers, required_static_markers
+from .model_builder import (
+    AxisSpec,
+    FunctionalAxisSpec,
+    ModelTemplate,
+    required_functional_markers,
+    required_static_markers,
+)
 from .upper_limb_template import upper_limb_template
 
 
@@ -226,6 +232,19 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             file_assignments=(C3dFileAssignmentDraft(role="main", generic_name="main_markers.c3d"),),
         )
     virtual_features = c3d_model_preset_virtual_features(preset)
+    template_axes = _axis_drafts_from_model_template(_template_for_axis_prefill(preset))
+    virtual_axis_drafts = tuple(
+        C3dAxisDraft(
+            name=feature.name,
+            segment_name=feature.segment_name,
+            axis="",
+            start_markers=(f"{feature.name}_start",),
+            end_markers=(f"{feature.name}_end",),
+            method=_virtual_feature_default_method(feature.feature_type, feature.role),
+        )
+        for feature in virtual_features
+        if feature.feature_type == "axis"
+    )
     return C3dWorkflowDraft(
         preset=preset,
         segment_marker_groups=c3d_segment_marker_groups_for_preset(preset),
@@ -239,23 +258,72 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             for feature in virtual_features
             if feature.feature_type == "point"
         ),
-        axes=tuple(
-            C3dAxisDraft(
-                name=feature.name,
-                segment_name=feature.segment_name,
-                axis="",
-                start_markers=(f"{feature.name}_start",),
-                end_markers=(f"{feature.name}_end",),
-                method=_virtual_feature_default_method(feature.feature_type, feature.role),
-            )
-            for feature in virtual_features
-            if feature.feature_type == "axis"
-        ),
+        axes=template_axes + virtual_axis_drafts,
         segment_settings=_initial_segment_settings(preset),
         file_assignments=tuple(
             C3dFileAssignmentDraft(role=role.role, generic_name=role.generic_name)
             for role in c3d_file_roles_for_preset(preset)
         ),
+    )
+
+
+def _template_for_axis_prefill(preset: C3dModelPreset) -> ModelTemplate | None:
+    """
+    Return the Python model template used to prefill anatomical axis definitions, when available.
+    """
+    if preset == C3dModelPreset.LOWER_LIMBS:
+        return lower_limb_template()
+    if preset == C3dModelPreset.UPPER_LIMB:
+        return upper_limb_template()
+    return None
+
+
+def _axis_drafts_from_model_template(template: ModelTemplate | None) -> tuple[C3dAxisDraft, ...]:
+    """
+    Convert marker-defined template axes into editable GUI axis drafts.
+    """
+    if template is None:
+        return ()
+    drafts = []
+    for segment in template.segments:
+        if segment.frame is None:
+            continue
+        first_axis = segment.frame.first_axis
+        second_axis = segment.frame.second_axis
+        drafts.append(_axis_draft_from_axis_spec(segment.name, "first_axis", first_axis, segment.frame.axis_to_keep))
+        fallback_axis = second_axis.fallback if isinstance(second_axis, FunctionalAxisSpec) else second_axis
+        drafts.append(
+            _axis_draft_from_axis_spec(
+                segment.name,
+                "second_axis",
+                fallback_axis,
+                segment.frame.axis_to_keep,
+                method=second_axis.method.value if isinstance(second_axis, FunctionalAxisSpec) else "markers",
+            )
+        )
+    return tuple(drafts)
+
+
+def _axis_draft_from_axis_spec(
+    segment_name: str,
+    axis_role: str,
+    axis_spec: AxisSpec,
+    axis_to_keep,
+    method: str = "markers",
+) -> C3dAxisDraft:
+    """
+    Build a C3D axis draft from one template AxisSpec.
+    """
+    axis_name = axis_spec.name.value if hasattr(axis_spec.name, "value") else str(axis_spec.name)
+    axis_to_keep_name = axis_to_keep.value if hasattr(axis_to_keep, "value") else str(axis_to_keep)
+    return C3dAxisDraft(
+        name=f"{segment_name}_{axis_role}",
+        segment_name=segment_name,
+        axis=axis_name.lower(),
+        start_markers=axis_spec.start.marker_names,
+        end_markers=axis_spec.end.marker_names,
+        method=method,
+        keep_vector=axis_name == axis_to_keep_name,
     )
 
 

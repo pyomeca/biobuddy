@@ -53,6 +53,9 @@ Tracker = "https://github.com/pyomeca/biobuddy/issues"
 where = ["."]
 include = ["biobuddy*"]
 
+[tool.setuptools.package-data]
+biobuddy = ["gui/*.json"]
+
 [tool.setuptools.dynamic]
 version = { attr = "biobuddy.version.__version__" }
 

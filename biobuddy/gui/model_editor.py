@@ -98,6 +98,7 @@ def launch_model_editor() -> None:
             QScrollArea,
             QSplitter,
             QTabWidget,
+            QTextEdit,
             QTreeWidget,
             QTreeWidgetItem,
             QVBoxLayout,
@@ -135,6 +136,7 @@ def launch_model_editor() -> None:
                 QScrollArea,
                 QSplitter,
                 QTabWidget,
+                QTextEdit,
                 QTreeWidget,
                 QTreeWidgetItem,
                 QVBoxLayout,
@@ -525,6 +527,7 @@ def launch_model_editor() -> None:
             self.setWindowTitle("New model from C3D")
             self.presets = supported_c3d_model_presets()
             self.c3d_data = None
+            self.c3d_folder_path = ""
             self.workflow_draft = c3d_workflow_draft(self.presets[0])
             self.workflow_marker_pool = _marker_pool_from_draft(self.workflow_draft)
 
@@ -539,6 +542,15 @@ def launch_model_editor() -> None:
             self.choose_c3d_button.clicked.connect(self._choose_c3d_file)
             self.generate_template_button = QPushButton("Generate template")
             self.generate_template_button.clicked.connect(self._generate_template)
+            self.c3d_folder_edit = QLineEdit()
+            self.c3d_folder_edit.setReadOnly(True)
+            self.choose_c3d_folder_button = QPushButton("Choose C3D folder")
+            self.choose_c3d_folder_button.clicked.connect(self._choose_c3d_folder)
+            self.generate_log_button = QPushButton("Generate log")
+            self.generate_log_button.clicked.connect(self._update_generation_log)
+            self.generation_log_edit = QTextEdit()
+            self.generation_log_edit.setReadOnly(True)
+            self.generation_log_edit.setMinimumHeight(160)
 
             self.status_label = QLabel()
             self.summary_label = QLabel()
@@ -551,6 +563,9 @@ def launch_model_editor() -> None:
             self.show_all_markers_checkbox = QCheckBox("Show markers already used by other segments")
             self.show_all_markers_checkbox.setChecked(True)
             self.show_all_markers_checkbox.stateChanged.connect(self._update_available_marker_list)
+            self.show_virtual_markers_in_segments_checkbox = QCheckBox("Show virtual markers")
+            self.show_virtual_markers_in_segments_checkbox.setChecked(True)
+            self.show_virtual_markers_in_segments_checkbox.stateChanged.connect(self._update_available_marker_list)
             self.segment_marker_list = QListWidget()
             self.segment_marker_list.itemSelectionChanged.connect(self._update_assigned_marker_list)
             self.workflow_parent_combo = QComboBox()
@@ -585,7 +600,11 @@ def launch_model_editor() -> None:
             self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
             self.virtual_marker_name_edit = QLineEdit()
+            self.virtual_marker_suggested_name_label = QLabel()
+            self.use_suggested_virtual_marker_name_button = QPushButton("Use suggested name")
+            self.use_suggested_virtual_marker_name_button.clicked.connect(self._use_suggested_virtual_marker_name)
             self.virtual_marker_segment_combo = QComboBox()
+            self.virtual_marker_segment_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
             self.virtual_marker_method_combo = QComboBox()
             self.virtual_marker_method_combo.addItems(
                 ["pointing", "score", "sara", "marker_mean", "regression", "equation"]
@@ -593,18 +612,31 @@ def launch_model_editor() -> None:
             self.virtual_marker_method_combo.currentTextChanged.connect(self._sync_virtual_marker_method_fields)
             self.virtual_marker_source_edit = QLineEdit()
             self.virtual_marker_source_edit.textChanged.connect(self._update_virtual_marker_preview)
+            self.browse_virtual_marker_c3d_button = QPushButton("Browse C3D")
+            self.browse_virtual_marker_c3d_button.clicked.connect(self._browse_virtual_marker_c3d_source)
             self.virtual_marker_equation_edit = QLineEdit()
             self.virtual_marker_c3d_role_combo = QComboBox()
             self.virtual_marker_proximal_combo = QComboBox()
             self.virtual_marker_proximal_combo.currentTextChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_proximal_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
             self.virtual_marker_distal_combo = QComboBox()
             self.virtual_marker_distal_combo.currentTextChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_distal_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
             self.virtual_marker_info_label = QLabel()
             self.virtual_marker_info_label.setWordWrap(True)
             self.save_virtual_marker_button = QPushButton("Save virtual marker")
             self.save_virtual_marker_button.clicked.connect(self._save_workflow_virtual_marker_from_form)
             self.virtual_marker_preview = C3dVirtualMarkerPreviewWidget()
             self.segment_settings_list = QListWidget()
+            self.segment_settings_list.itemSelectionChanged.connect(self._load_selected_segment_settings_into_form)
+            self.settings_translations_edit = QLineEdit()
+            self.settings_rotations_edit = QLineEdit()
+            self.settings_q_min_edit = QLineEdit()
+            self.settings_q_max_edit = QLineEdit()
+            self.settings_child_translation_checkbox = QCheckBox("Allow child translation")
+            self.settings_initial_rotation_method_combo = QComboBox()
+            self.settings_initial_rotation_method_combo.addItems(["identity", "matrix", "anatomical_c3d"])
+            self.settings_initial_rotation_source_edit = QLineEdit()
             self.file_role_list = QListWidget()
             self.issue_list = QListWidget()
             self.example_list = QListWidget()
@@ -620,8 +652,8 @@ def launch_model_editor() -> None:
             self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
             self.remove_virtual_marker_button = QPushButton("Remove virtual marker")
             self.remove_virtual_marker_button.clicked.connect(self._remove_workflow_virtual_marker)
-            self.edit_segment_settings_button = QPushButton("Edit segment settings")
-            self.edit_segment_settings_button.clicked.connect(self._edit_workflow_segment_settings)
+            self.edit_segment_settings_button = QPushButton("Apply segment settings")
+            self.edit_segment_settings_button.clicked.connect(self._apply_workflow_segment_settings_from_form)
             self.assign_c3d_role_button = QPushButton("Assign C3D file")
             self.assign_c3d_role_button.clicked.connect(self._assign_workflow_c3d_role)
             self.clear_c3d_role_button = QPushButton("Clear C3D file")
@@ -642,7 +674,7 @@ def launch_model_editor() -> None:
             layout.addWidget(self.status_label)
 
             workflow_tabs = QTabWidget()
-            workflow_tabs.addTab(self.step_list, "Pipeline")
+            workflow_tabs.addTab(self._pipeline_workflow_tab(), "Pipeline")
             workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
             workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
             workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
@@ -669,6 +701,24 @@ def launch_model_editor() -> None:
             text = self.c3d_path.text().strip()
             return None if text == "" else Path(text)
 
+        def _pipeline_workflow_tab(self):
+            widget = QWidget()
+            layout = QVBoxLayout(widget)
+            folder_row = QHBoxLayout()
+            folder_row.addWidget(QLabel("C3D folder"))
+            folder_row.addWidget(self.c3d_folder_edit)
+            folder_row.addWidget(self.choose_c3d_folder_button)
+            layout.addLayout(folder_row)
+            layout.addWidget(QLabel("Workflow status"))
+            layout.addWidget(self.step_list)
+            log_row = QHBoxLayout()
+            log_row.addWidget(QLabel("Generation log"))
+            log_row.addStretch()
+            log_row.addWidget(self.generate_log_button)
+            layout.addLayout(log_row)
+            layout.addWidget(self.generation_log_edit)
+            return widget
+
         def _segment_workflow_tab(self):
             widget = QWidget()
             layout = QVBoxLayout(widget)
@@ -687,6 +737,7 @@ def launch_model_editor() -> None:
             left_column = QVBoxLayout()
             left_column.addWidget(QLabel("Available markers in main C3D"))
             left_column.addWidget(self.show_all_markers_checkbox)
+            left_column.addWidget(self.show_virtual_markers_in_segments_checkbox)
             left_column.addWidget(self.marker_list)
             self.marker_list.setMaximumWidth(320)
             transfer_column = QVBoxLayout()
@@ -747,15 +798,20 @@ def launch_model_editor() -> None:
 
             form_column = QVBoxLayout()
             form = QFormLayout()
-            form.addRow("Name", self.virtual_marker_name_edit)
             form.addRow("Segment", self.virtual_marker_segment_combo)
             form.addRow("Method", self.virtual_marker_method_combo)
-            form.addRow("Source C3D / markers", self.virtual_marker_source_edit)
+            source_row = QHBoxLayout()
+            source_row.addWidget(self.virtual_marker_source_edit)
+            source_row.addWidget(self.browse_virtual_marker_c3d_button)
+            form.addRow("Source C3D / markers", source_row)
             form.addRow("C3D role", self.virtual_marker_c3d_role_combo)
             form.addRow("Technical proximal", self.virtual_marker_proximal_combo)
             form.addRow("Technical distal", self.virtual_marker_distal_combo)
             form.addRow("Equation / regression", self.virtual_marker_equation_edit)
+            form.addRow("Suggested name", self.virtual_marker_suggested_name_label)
+            form.addRow("Name", self.virtual_marker_name_edit)
             form_column.addLayout(form)
+            form_column.addWidget(self.use_suggested_virtual_marker_name_button)
             form_column.addWidget(self.save_virtual_marker_button)
             form_column.addWidget(QLabel("Selected marker information"))
             form_column.addWidget(self.virtual_marker_info_label)
@@ -770,9 +826,25 @@ def launch_model_editor() -> None:
 
         def _segment_settings_workflow_tab(self):
             widget = QWidget()
-            layout = QVBoxLayout(widget)
-            layout.addWidget(self.segment_settings_list)
-            layout.addWidget(self.edit_segment_settings_button)
+            layout = QHBoxLayout(widget)
+            left_column = QVBoxLayout()
+            left_column.addWidget(QLabel("Segments"))
+            left_column.addWidget(self.segment_settings_list)
+            layout.addLayout(left_column, 1)
+
+            form_column = QVBoxLayout()
+            form = QFormLayout()
+            form.addRow("Translations", self.settings_translations_edit)
+            form.addRow("Rotations", self.settings_rotations_edit)
+            form.addRow("q min", self.settings_q_min_edit)
+            form.addRow("q max", self.settings_q_max_edit)
+            form.addRow("", self.settings_child_translation_checkbox)
+            form.addRow("Initial rotation", self.settings_initial_rotation_method_combo)
+            form.addRow("Initial rotation source", self.settings_initial_rotation_source_edit)
+            form_column.addLayout(form)
+            form_column.addWidget(self.edit_segment_settings_button)
+            form_column.addStretch()
+            layout.addLayout(form_column, 2)
             return widget
 
         def _file_role_workflow_tab(self):
@@ -789,7 +861,7 @@ def launch_model_editor() -> None:
             filepath, _ = QFileDialog.getOpenFileName(
                 self,
                 "Choose C3D file",
-                "",
+                self.c3d_folder_path,
                 "C3D files (*.c3d)",
             )
             if not filepath:
@@ -802,6 +874,26 @@ def launch_model_editor() -> None:
             except Exception as error:
                 QMessageBox.critical(self, "Unable to load C3D", str(error))
 
+        def _choose_c3d_folder(self) -> None:
+            folder = QFileDialog.getExistingDirectory(self, "Choose folder containing C3D files", self.c3d_folder_path)
+            if not folder:
+                return
+            self.c3d_folder_path = folder
+            self.c3d_folder_edit.setText(folder)
+            self._update_generation_log()
+
+        def _browse_virtual_marker_c3d_source(self) -> None:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Choose virtual marker C3D",
+                self.c3d_folder_path,
+                "C3D files (*.c3d)",
+            )
+            if not filepath:
+                return
+            self.virtual_marker_source_edit.setText(filepath)
+            self._update_virtual_marker_preview()
+
         def _generate_template(self) -> None:
             default_name = f"{self.selected_preset().value}_template.json"
             filepath, _ = QFileDialog.getSaveFileName(
@@ -813,7 +905,17 @@ def launch_model_editor() -> None:
             if not filepath:
                 return
             try:
-                Path(filepath).write_text(json.dumps(c3d_template_payload_from_draft(self.workflow_draft), indent=2))
+                payload = c3d_template_payload_from_draft(self.workflow_draft)
+                payload["c3d_folder"] = self.c3d_folder_path
+                payload["generation_log"] = list(
+                    _c3d_generation_log(
+                        self.workflow_draft,
+                        self.c3d_data,
+                        self.c3d_folder_path,
+                        self.workflow_marker_pool,
+                    )
+                )
+                Path(filepath).write_text(json.dumps(payload, indent=2))
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate template", str(error))
 
@@ -894,7 +996,7 @@ def launch_model_editor() -> None:
             self._update_virtual_marker_preview()
 
         def _save_workflow_virtual_marker_from_form(self) -> None:
-            name = self.virtual_marker_name_edit.text().strip()
+            name = self.virtual_marker_name_edit.text().strip() or self._suggested_virtual_marker_name()
             segment_name = self.virtual_marker_segment_combo.currentText().strip()
             method = self.virtual_marker_method_combo.currentText().strip()
             source = self._virtual_marker_source_from_form(method)
@@ -908,6 +1010,7 @@ def launch_model_editor() -> None:
                     source=source,
                     equation=equation,
                 )
+                self.workflow_marker_pool = tuple(dict.fromkeys(self.workflow_marker_pool + (name,)))
                 self._update_preset_details()
                 self._select_virtual_marker_by_name(name)
             except Exception as error:
@@ -932,12 +1035,67 @@ def launch_model_editor() -> None:
                 parts.append(f"helper={equation}")
             return "; ".join(parts)
 
+        def _suggested_virtual_marker_name(self) -> str:
+            method = self.virtual_marker_method_combo.currentText().strip()
+            proximal = self.virtual_marker_proximal_combo.currentText().strip()
+            distal = self.virtual_marker_distal_combo.currentText().strip()
+            segment_name = self.virtual_marker_segment_combo.currentText().strip()
+            joint_name = _joint_name_from_segments(proximal, distal) if proximal or distal else segment_name or "Marker"
+            method_label = {"score": "SCoRE", "sara": "SARA", "marker_mean": "Average"}.get(
+                method,
+                method.capitalize() if method else "Virtual",
+            )
+            local_segment = proximal or segment_name
+            if method in {"score", "sara"} and local_segment:
+                return f"CoR_{method_label}_{joint_name}_in_{local_segment}"
+            if segment_name:
+                return f"{method_label}_{joint_name}_in_{segment_name}"
+            return f"{method_label}_{joint_name}"
+
+        def _update_suggested_virtual_marker_name(self, *_args) -> None:
+            self.virtual_marker_suggested_name_label.setText(self._suggested_virtual_marker_name())
+
+        def _use_suggested_virtual_marker_name(self) -> None:
+            self.virtual_marker_name_edit.setText(self._suggested_virtual_marker_name())
+
         def _remove_workflow_virtual_marker(self) -> None:
             name = self._selected_virtual_marker_name()
             if name is None:
                 return
             self.workflow_draft = remove_virtual_marker_from_draft(self.workflow_draft, name)
             self._update_preset_details()
+
+        def _load_selected_segment_settings_into_form(self) -> None:
+            setting = self._selected_segment_setting()
+            if setting is None:
+                return
+            self.settings_translations_edit.setText(setting.translations)
+            self.settings_rotations_edit.setText(setting.rotations)
+            self.settings_q_min_edit.setText(_format_float_list(list(setting.q_min)))
+            self.settings_q_max_edit.setText(_format_float_list(list(setting.q_max)))
+            self.settings_child_translation_checkbox.setChecked(setting.child_translation)
+            self.settings_initial_rotation_method_combo.setCurrentText(setting.initial_rotation_method)
+            self.settings_initial_rotation_source_edit.setText(setting.initial_rotation_source)
+
+        def _apply_workflow_segment_settings_from_form(self) -> None:
+            setting = self._selected_segment_setting()
+            if setting is None:
+                return
+            try:
+                self.workflow_draft = update_segment_settings_in_draft(
+                    self.workflow_draft,
+                    segment_name=setting.segment_name,
+                    translations=self.settings_translations_edit.text(),
+                    rotations=self.settings_rotations_edit.text(),
+                    q_min=tuple(_parse_float_list(self.settings_q_min_edit.text())),
+                    q_max=tuple(_parse_float_list(self.settings_q_max_edit.text())),
+                    child_translation=self.settings_child_translation_checkbox.isChecked(),
+                    initial_rotation_method=self.settings_initial_rotation_method_combo.currentText(),
+                    initial_rotation_source=self.settings_initial_rotation_source_edit.text(),
+                )
+                self._update_preset_details()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to apply segment settings", str(error))
 
         def _edit_workflow_segment_settings(self) -> None:
             setting = self._selected_segment_setting()
@@ -1025,7 +1183,7 @@ def launch_model_editor() -> None:
             filepath, _ = QFileDialog.getOpenFileName(
                 self,
                 "Assign C3D file",
-                "",
+                self.c3d_folder_path,
                 "C3D files (*.c3d)",
             )
             if not filepath:
@@ -1347,6 +1505,7 @@ def launch_model_editor() -> None:
                 if current_value in values:
                     combo.setCurrentText(current_value)
                 combo.blockSignals(False)
+            self._update_suggested_virtual_marker_name()
 
         def _sync_virtual_marker_method_fields(self, _method: str | None = None) -> None:
             method = self.virtual_marker_method_combo.currentText()
@@ -1368,6 +1527,7 @@ def launch_model_editor() -> None:
                 "equation": "Use a project-specific equation/helper name and the source markers/C3D it needs.",
             }
             self.virtual_marker_info_label.setText(hints.get(method, ""))
+            self._update_suggested_virtual_marker_name()
             self._update_virtual_marker_preview()
 
         def _update_virtual_marker_info_label(self, marker) -> None:
@@ -1393,6 +1553,15 @@ def launch_model_editor() -> None:
                 self.virtual_marker_proximal_combo.currentText().strip(),
                 self.virtual_marker_distal_combo.currentText().strip(),
             )
+
+        def _update_generation_log(self) -> None:
+            lines = _c3d_generation_log(
+                self.workflow_draft,
+                self.c3d_data,
+                self.c3d_folder_path,
+                self.workflow_marker_pool,
+            )
+            self.generation_log_edit.setPlainText("\n".join(lines))
 
         def _selected_segment_setting(self):
             if not self.segment_settings_list.selectedItems():
@@ -1493,6 +1662,9 @@ def launch_model_editor() -> None:
                     f"rotations={setting.rotations or '-'} | child_translation={setting.child_translation} | "
                     f"initial_rotation={setting.initial_rotation_method}"
                 )
+            if self.segment_settings_list.count() != 0 and self.segment_settings_list.currentItem() is None:
+                self.segment_settings_list.setCurrentItem(self.segment_settings_list.item(0))
+                self._load_selected_segment_settings_into_form()
 
             for file_role in self.workflow_draft.file_assignments:
                 role_definition = next(role for role in workflow.file_roles if role.role == file_role.role)
@@ -1515,6 +1687,7 @@ def launch_model_editor() -> None:
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
             self._update_virtual_marker_preview()
+            self._update_generation_log()
 
         def _restore_workflow_segment_selection(self, segment_name: str | None) -> None:
             target_index = 0
@@ -1552,6 +1725,10 @@ def launch_model_editor() -> None:
                 self.marker_list.addItem("Choose the main marker C3D to list markers.")
                 return
             marker_names = tuple(self.c3d_data.marker_names) if self.c3d_data is not None else self.workflow_marker_pool
+            if self.show_virtual_markers_in_segments_checkbox.isChecked():
+                marker_names = tuple(
+                    dict.fromkeys(marker_names + tuple(marker.name for marker in self.workflow_draft.virtual_markers))
+                )
             selected_segment_name = self._selected_workflow_segment_name()
             selected_segment_marker_names = {
                 marker_name
@@ -2457,6 +2634,90 @@ def _marker_pool_from_draft(workflow_draft) -> tuple[str, ...]:
         marker_names.extend(group.marker_names)
     marker_names.extend(marker.name for marker in workflow_draft.virtual_markers)
     return tuple(dict.fromkeys(marker_names))
+
+
+def _load_virtual_marker_joint_names() -> dict:
+    """
+    Load the editable segment-pair to joint-name mapping used for suggested virtual marker names.
+    """
+    filepath = Path(__file__).with_name("virtual_marker_joint_names.json")
+    try:
+        return json.loads(filepath.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {"default": "Joint", "pairs": []}
+
+
+def _joint_name_from_segments(proximal_segment_name: str, distal_segment_name: str) -> str:
+    """
+    Infer a joint name from proximal/distal segment names using an editable JSON mapping.
+    """
+    mapping = _load_virtual_marker_joint_names()
+    proximal = proximal_segment_name.strip()
+    distal = distal_segment_name.strip()
+    for entry in mapping.get("pairs", []):
+        proximal_segments = set(entry.get("proximal_segments", []))
+        distal_segments = set(entry.get("distal_segments", []))
+        if proximal in proximal_segments and distal in distal_segments:
+            return entry.get("joint", mapping.get("default", "Joint"))
+    if distal:
+        return distal
+    if proximal:
+        return proximal
+    return mapping.get("default", "Joint")
+
+
+def _c3d_generation_log(
+    workflow_draft, c3d_data, c3d_folder_path: str, marker_pool: tuple[str, ...]
+) -> tuple[str, ...]:
+    """
+    Build a detailed human-readable generation log for the current C3D model draft.
+    """
+    lines = [
+        f"Preset: {workflow_draft.preset.value}",
+        f"C3D folder: {c3d_folder_path or 'not selected'}",
+        f"Main C3D markers: {len(c3d_data.marker_names) if c3d_data is not None else 0}",
+        f"Known marker pool: {len(marker_pool)}",
+        "",
+        "C3D file assignments:",
+    ]
+    for assignment in workflow_draft.file_assignments:
+        lines.append(f"- {assignment.role}: {assignment.source_path or assignment.generic_name}")
+    lines.extend(["", "Segments:"])
+    for group in workflow_draft.segment_marker_groups:
+        technical = ", ".join(group.technical_marker_names) if group.technical_marker_names else "-"
+        markers = ", ".join(group.marker_names) if group.marker_names else "-"
+        parent = group.parent_name if group.parent_name else "-"
+        lines.append(
+            f"- {group.segment_name} ({group.segment_type}, parent={parent}): markers=[{markers}], technical=[{technical}]"
+        )
+    lines.extend(["", "Virtual markers:"])
+    for marker in workflow_draft.virtual_markers:
+        source = marker.source if marker.source else "-"
+        equation = marker.equation if marker.equation else "-"
+        proximal, distal = _score_segments_from_payload(marker.equation)
+        local_note = ""
+        if marker.method in {"score", "sara"}:
+            local_note = (
+                f" | global marker added to marker pool; local offsets reserved for proximal={proximal or '-'} "
+                f"and distal={distal or '-'}"
+            )
+        lines.append(
+            f"- {marker.name}: method={marker.method}, segment={marker.segment_name}, source={source}, "
+            f"settings={equation}{local_note}"
+        )
+    lines.extend(["", "Anatomical axes:"])
+    for axis in workflow_draft.axes:
+        lines.append(
+            f"- {axis.segment_name}/{axis.name}: {axis.axis}, "
+            f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}, keep={axis.keep_vector}"
+        )
+    lines.extend(["", "Segment settings:"])
+    for setting in workflow_draft.segment_settings:
+        lines.append(
+            f"- {setting.segment_name}: translations={setting.translations or '-'}, rotations={setting.rotations or '-'}, "
+            f"child_translation={setting.child_translation}, initial_rotation={setting.initial_rotation_method}"
+        )
+    return tuple(lines)
 
 
 def _split_marker_names(text: str) -> tuple[str, ...]:

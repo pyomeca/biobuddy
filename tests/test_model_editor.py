@@ -1,7 +1,15 @@
 from biobuddy import (
     BiomechanicalModelReal,
 )
-from biobuddy.gui.model_editor import _score_segments_from_payload, _split_marker_names, _strip_score_segment_payload
+from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft
+from biobuddy.gui.c3d_model_creation import C3dModelPreset
+from biobuddy.gui.model_editor import (
+    _c3d_generation_log,
+    _joint_name_from_segments,
+    _score_segments_from_payload,
+    _split_marker_names,
+    _strip_score_segment_payload,
+)
 from biobuddy.gui.segment_editor import load_model
 
 
@@ -42,3 +50,23 @@ def test_virtual_marker_editor_payload_helpers_preserve_score_settings():
     assert _score_segments_from_payload(payload) == ("PelvisTech", "ThighTech")
     assert _strip_score_segment_payload(payload) == "condyles=ME,LE"
     assert _split_marker_names("LASI, RASI; LPSI") == ("LASI", "RASI", "LPSI")
+
+
+def test_virtual_marker_editor_suggests_joint_names_from_segment_pairs():
+    """
+    Infer understandable virtual marker names from proximal/distal technical segment names.
+    """
+    assert _joint_name_from_segments("Pelvis", "LThigh") == "Hip"
+    assert _joint_name_from_segments("LThigh", "LShank") == "Knee"
+
+
+def test_c3d_generation_log_reports_virtual_marker_local_offset_context():
+    """
+    Keep a trace that SCoRE/SARA markers are global markers with local offsets reserved for model construction.
+    """
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    lines = _c3d_generation_log(draft, None, "/tmp/c3d", ("LASI", "RASI"))
+
+    assert any("Preset: lower_limbs" in line for line in lines)
+    assert any("Virtual markers:" in line for line in lines)
+    assert any("global marker added to marker pool" in line for line in lines)

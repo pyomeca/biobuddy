@@ -247,6 +247,7 @@ class SegmentCoordinateSystemUtils:
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
         visualize: bool = False,
+        average_parent_child_static_projection: bool = False,
     ) -> Callable:
         """
         Compute the SCoRE (Symmetrical Center of Rotation Estimation) between two sets of markers
@@ -259,6 +260,9 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the child segment to compute the score point from
         visualize
             If True, a 3D visualization of the score point computation will be shown. Plotly is required for this.
+        average_parent_child_static_projection
+            If True, the final static global point is the mean of the CoR projected through the parent and child
+            static technical frames. If False, the historical behavior is kept and only the parent projection is used.
 
         Returns
         -------
@@ -298,21 +302,34 @@ class SegmentCoordinateSystemUtils:
                 )
 
                 # Compute the SCoRE point
-                _, cor_parent_local, _, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
-                score_cache[static_markers_hash] = [rt_parent_static, rt_parent_func, rt_child_func, cor_parent_local]
+                _, cor_parent_local, cor_child_local, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
+                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
+                score_cache[static_markers_hash] = [
+                    rt_parent_static,
+                    rt_parent_func,
+                    rt_child_func,
+                    cor_parent_local,
+                    cor_child_local,
+                    rt_child_static,
+                ]
 
             rt_parent_static = score_cache[static_markers_hash][0]
             cor_in_local = np.hstack((score_cache[static_markers_hash][3], 1))
+            child_cor_in_local = np.hstack((score_cache[static_markers_hash][4], 1))
+            rt_child_static = score_cache[static_markers_hash][5]
 
             # Project the optimal point into the static parent segment
             frame_count_static = len(rt_parent_static)
             cor_static = np.zeros((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
+                parent_projection = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
+                if average_parent_child_static_projection:
+                    child_projection = (rt_child_static[i_frame] @ child_cor_in_local).reshape(4)
+                    cor_static[:, i_frame] = 0.5 * (parent_projection + child_projection)
+                else:
+                    cor_static[:, i_frame] = parent_projection
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
-                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
                 _visualize_score(static_markers, rt_parent_static, rt_child_static, cor_static)
 
                 rt_parent_func = score_cache[static_markers_hash][1]
