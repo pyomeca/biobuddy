@@ -357,6 +357,164 @@ def launch_model_editor() -> None:
             self._last_mouse_position = position
             self.update()
 
+    class C3dVirtualMarkerPreviewWidget(QWidget):
+        """
+        Rotatable C3D preview focused on virtual marker placement.
+        """
+
+        def __init__(self):
+            super().__init__()
+            self.setMinimumHeight(280)
+            self.c3d_data = None
+            self.groups = ()
+            self.virtual_markers = ()
+            self.selected_marker_name = ""
+            self.selected_method = "pointing"
+            self.proximal_segment_name = ""
+            self.distal_segment_name = ""
+            self.yaw = -0.6
+            self.pitch = 0.35
+            self._last_mouse_position = None
+
+        def set_context(
+            self,
+            c3d_data,
+            groups: tuple[object, ...],
+            virtual_markers: tuple[object, ...],
+            selected_marker_name: str,
+            selected_method: str,
+            proximal_segment_name: str,
+            distal_segment_name: str,
+        ) -> None:
+            self.c3d_data = c3d_data
+            self.groups = groups
+            self.virtual_markers = virtual_markers
+            self.selected_marker_name = selected_marker_name
+            self.selected_method = selected_method
+            self.proximal_segment_name = proximal_segment_name
+            self.distal_segment_name = distal_segment_name
+            self.update()
+
+        def paintEvent(self, event) -> None:
+            painter = QPainter(self)
+            painter.setRenderHint(qpaint_antialiasing)
+            painter.fillRect(self.rect(), QColor("white"))
+            if self.c3d_data is None:
+                painter.drawText(self.rect(), qt_alignment_center, "Choose a C3D to preview virtual markers")
+                return
+
+            marker_records = []
+            for segment_index, group in enumerate(self.groups):
+                for marker_name in group.marker_names:
+                    point = _marker_preview_position(self.c3d_data, marker_name)
+                    if point is None:
+                        continue
+                    marker_records.append(
+                        (
+                            marker_name,
+                            point,
+                            group.segment_name,
+                            marker_name in group.technical_marker_names,
+                            segment_index,
+                        )
+                    )
+
+            virtual_points = []
+            for marker in self.virtual_markers:
+                if marker.method == "marker_mean":
+                    point = _mean_preview_position(self.c3d_data, _split_marker_names(marker.source))
+                else:
+                    point = _mean_preview_position(self.c3d_data, _split_marker_names(marker.source))
+                if point is not None:
+                    virtual_points.append((marker.name, point, marker.segment_name))
+
+            solution_points = []
+            if self.selected_method in {"score", "sara"}:
+                proximal_point = self._technical_segment_center(self.proximal_segment_name)
+                distal_point = self._technical_segment_center(self.distal_segment_name)
+                if proximal_point is not None:
+                    solution_points.append(("proximal", proximal_point))
+                if distal_point is not None:
+                    solution_points.append(("distal", distal_point))
+
+            points = [record[1] for record in marker_records]
+            points.extend(point for _, point, _ in virtual_points)
+            points.extend(point for _, point in solution_points)
+            if len(points) == 0:
+                painter.drawText(self.rect(), qt_alignment_center, "No visible marker for this virtual marker context")
+                return
+
+            projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
+            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
+
+            for marker_name, point, segment_name, is_technical, segment_index in marker_records:
+                color = QColor(_segment_preview_color(segment_index))
+                center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
+                painter.setPen(QPen(color, 1))
+                painter.setBrush(color)
+                if is_technical:
+                    painter.drawRect(int(center.x()) - 4, int(center.y()) - 4, 8, 8)
+                else:
+                    painter.drawEllipse(center, 4, 4)
+                painter.drawText(center.x() + 5, center.y() - 5, f"{marker_name} ({segment_name})")
+
+            painter.setPen(QPen(QColor("#7c3aed"), 2))
+            painter.setBrush(QColor("#7c3aed"))
+            for marker_name, point, segment_name in virtual_points:
+                center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
+                painter.drawEllipse(center, 7, 7)
+                painter.drawText(center.x() + 8, center.y() - 8, f"{marker_name} | {segment_name}")
+
+            solution_colors = {"proximal": "#f97316", "distal": "#0891b2"}
+            for label, point in solution_points:
+                center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
+                painter.setPen(QPen(QColor(solution_colors[label]), 3))
+                painter.setBrush(QColor(solution_colors[label]))
+                painter.drawRect(int(center.x()) - 6, int(center.y()) - 6, 12, 12)
+                painter.drawText(center.x() + 8, center.y() - 8, f"{label} solution")
+            if len(solution_points) == 2:
+                painter.setPen(QPen(QColor("#111827"), 1))
+                painter.drawLine(
+                    transform(_rotate_preview_point(solution_points[0][1], self.yaw, self.pitch)),
+                    transform(_rotate_preview_point(solution_points[1][1], self.yaw, self.pitch)),
+                )
+
+            self._draw_legend(painter)
+
+        def _technical_segment_center(self, segment_name: str) -> tuple[float, float, float] | None:
+            for group in self.groups:
+                if group.segment_name == segment_name:
+                    marker_names = group.technical_marker_names if group.technical_marker_names else group.marker_names
+                    return _mean_preview_position(self.c3d_data, marker_names)
+            return None
+
+        def _draw_legend(self, painter) -> None:
+            painter.setPen(QPen(QColor("#111827"), 1))
+            painter.setBrush(QColor(255, 255, 255, 225))
+            painter.drawRect(8, 8, 255, 82)
+            painter.drawText(14, 24, "Legend")
+            _draw_legend_point(painter, QPointF(20, 40), QColor("#2563eb"), "Anatomical/additional marker", 36, 44)
+            painter.setPen(QPen(QColor("#2563eb"), 1))
+            painter.setBrush(QColor("#2563eb"))
+            painter.drawRect(16, 52, 8, 8)
+            painter.setPen(QPen(QColor("#111827"), 1))
+            painter.drawText(36, 62, "Technical marker")
+            _draw_legend_point(painter, QPointF(20, 74), QColor("#7c3aed"), "Virtual marker", 36, 78)
+
+        def mousePressEvent(self, event) -> None:
+            self._last_mouse_position = get_event_position(event)
+
+        def mouseMoveEvent(self, event) -> None:
+            if self._last_mouse_position is None:
+                self._last_mouse_position = get_event_position(event)
+                return
+            position = get_event_position(event)
+            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
+            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
+            self.pitch = max(-1.4, min(1.4, self.pitch))
+            self._last_mouse_position = position
+            self.update()
+
     class C3dModelCreationDialog(QDialog):
         """
         Dialog for the C3D-driven model creation workflow.
@@ -386,6 +544,7 @@ def launch_model_editor() -> None:
             self.summary_label = QLabel()
             self.feature_list = QListWidget()
             self.feature_list.setMinimumHeight(180)
+            self.feature_list.itemSelectionChanged.connect(self._load_selected_virtual_marker_into_form)
             self.step_list = QListWidget()
             self.marker_list = QListWidget()
             self.marker_list.setSelectionMode(qt_extended_selection)
@@ -425,6 +584,26 @@ def launch_model_editor() -> None:
             self.save_segment_axis_button = QPushButton("Add/update anatomical frame vectors")
             self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
+            self.virtual_marker_name_edit = QLineEdit()
+            self.virtual_marker_segment_combo = QComboBox()
+            self.virtual_marker_method_combo = QComboBox()
+            self.virtual_marker_method_combo.addItems(
+                ["pointing", "score", "sara", "marker_mean", "regression", "equation"]
+            )
+            self.virtual_marker_method_combo.currentTextChanged.connect(self._sync_virtual_marker_method_fields)
+            self.virtual_marker_source_edit = QLineEdit()
+            self.virtual_marker_source_edit.textChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_equation_edit = QLineEdit()
+            self.virtual_marker_c3d_role_combo = QComboBox()
+            self.virtual_marker_proximal_combo = QComboBox()
+            self.virtual_marker_proximal_combo.currentTextChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_distal_combo = QComboBox()
+            self.virtual_marker_distal_combo.currentTextChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_info_label = QLabel()
+            self.virtual_marker_info_label.setWordWrap(True)
+            self.save_virtual_marker_button = QPushButton("Save virtual marker")
+            self.save_virtual_marker_button.clicked.connect(self._save_workflow_virtual_marker_from_form)
+            self.virtual_marker_preview = C3dVirtualMarkerPreviewWidget()
             self.segment_settings_list = QListWidget()
             self.file_role_list = QListWidget()
             self.issue_list = QListWidget()
@@ -465,8 +644,8 @@ def launch_model_editor() -> None:
             workflow_tabs = QTabWidget()
             workflow_tabs.addTab(self.step_list, "Pipeline")
             workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
-            workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
             workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
+            workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
             workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
             workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
             workflow_tabs.addTab(self.issue_list, "Checks")
@@ -555,12 +734,38 @@ def launch_model_editor() -> None:
 
         def _virtual_marker_workflow_tab(self):
             widget = QWidget()
-            layout = QVBoxLayout(widget)
-            layout.addWidget(self.feature_list)
+            layout = QHBoxLayout(widget)
+
+            list_column = QVBoxLayout()
+            list_column.addWidget(QLabel("Virtual markers"))
+            list_column.addWidget(self.feature_list)
             row = QHBoxLayout()
             row.addWidget(self.add_virtual_marker_button)
             row.addWidget(self.remove_virtual_marker_button)
-            layout.addLayout(row)
+            list_column.addLayout(row)
+            layout.addLayout(list_column, 1)
+
+            form_column = QVBoxLayout()
+            form = QFormLayout()
+            form.addRow("Name", self.virtual_marker_name_edit)
+            form.addRow("Segment", self.virtual_marker_segment_combo)
+            form.addRow("Method", self.virtual_marker_method_combo)
+            form.addRow("Source C3D / markers", self.virtual_marker_source_edit)
+            form.addRow("C3D role", self.virtual_marker_c3d_role_combo)
+            form.addRow("Technical proximal", self.virtual_marker_proximal_combo)
+            form.addRow("Technical distal", self.virtual_marker_distal_combo)
+            form.addRow("Equation / regression", self.virtual_marker_equation_edit)
+            form_column.addLayout(form)
+            form_column.addWidget(self.save_virtual_marker_button)
+            form_column.addWidget(QLabel("Selected marker information"))
+            form_column.addWidget(self.virtual_marker_info_label)
+            form_column.addStretch()
+            layout.addLayout(form_column, 1)
+
+            preview_column = QVBoxLayout()
+            preview_column.addWidget(QLabel("3D placement preview"))
+            preview_column.addWidget(self.virtual_marker_preview)
+            layout.addLayout(preview_column, 2)
             return widget
 
         def _segment_settings_workflow_tab(self):
@@ -677,62 +882,55 @@ def launch_model_editor() -> None:
             self._update_preset_details()
 
         def _add_workflow_virtual_marker(self) -> None:
-            current_marker = self._selected_virtual_marker()
-            name, accepted = QInputDialog.getText(
-                self,
-                "Add/edit virtual marker",
-                "Virtual marker name",
-                text="" if current_marker is None else current_marker.name,
-            )
-            if not accepted:
-                return
-            segment_name = self._choose_workflow_segment(
-                "Virtual marker segment",
-                "" if current_marker is None else current_marker.segment_name,
-            )
-            if segment_name is None:
-                return
-            methods = ["pointing", "equation", "regression", "marker_mean", "score", "sara"]
-            method_index = 0
-            if current_marker is not None and current_marker.method in methods:
-                method_index = methods.index(current_marker.method)
-            method, accepted = QInputDialog.getItem(
-                self,
-                "Virtual marker method",
-                "Method",
-                methods,
-                method_index,
-                False,
-            )
-            if not accepted:
-                return
-            source, accepted = QInputDialog.getText(
-                self,
-                "Virtual marker source",
-                "Source C3D/markers",
-                text="" if current_marker is None else current_marker.source,
-            )
-            if not accepted:
-                return
-            equation = "" if current_marker is None else current_marker.equation
-            if method in {"equation", "regression"}:
-                equation, accepted = QInputDialog.getText(
-                    self,
-                    "Virtual marker equation",
-                    "Equation or helper",
-                    text=equation or source,
+            self.feature_list.clearSelection()
+            self.virtual_marker_name_edit.clear()
+            self.virtual_marker_source_edit.clear()
+            self.virtual_marker_equation_edit.clear()
+            if self.virtual_marker_segment_combo.count() != 0:
+                self.virtual_marker_segment_combo.setCurrentIndex(0)
+            self.virtual_marker_method_combo.setCurrentText("pointing")
+            self._sync_virtual_marker_method_fields()
+            self._update_virtual_marker_info_label(None)
+            self._update_virtual_marker_preview()
+
+        def _save_workflow_virtual_marker_from_form(self) -> None:
+            name = self.virtual_marker_name_edit.text().strip()
+            segment_name = self.virtual_marker_segment_combo.currentText().strip()
+            method = self.virtual_marker_method_combo.currentText().strip()
+            source = self._virtual_marker_source_from_form(method)
+            equation = self._virtual_marker_equation_from_form(method)
+            try:
+                self.workflow_draft = add_virtual_marker_to_draft(
+                    self.workflow_draft,
+                    name=name,
+                    method=method,
+                    segment_name=segment_name,
+                    source=source,
+                    equation=equation,
                 )
-                if not accepted:
-                    return
-            self.workflow_draft = add_virtual_marker_to_draft(
-                self.workflow_draft,
-                name=name,
-                method=method,
-                segment_name=segment_name,
-                source=source,
-                equation=equation if method in {"equation", "regression"} else "",
-            )
-            self._update_preset_details()
+                self._update_preset_details()
+                self._select_virtual_marker_by_name(name)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to save virtual marker", str(error))
+
+        def _virtual_marker_source_from_form(self, method: str) -> str:
+            source = self.virtual_marker_source_edit.text().strip()
+            c3d_role = self.virtual_marker_c3d_role_combo.currentText().strip()
+            if method in {"score", "sara", "pointing", "regression", "equation"} and source == "":
+                source = c3d_role
+            return source
+
+        def _virtual_marker_equation_from_form(self, method: str) -> str:
+            equation = self.virtual_marker_equation_edit.text().strip()
+            if method not in {"score", "sara"}:
+                return equation if method in {"equation", "regression"} else ""
+            parts = [
+                f"proximal={self.virtual_marker_proximal_combo.currentText().strip()}",
+                f"distal={self.virtual_marker_distal_combo.currentText().strip()}",
+            ]
+            if equation:
+                parts.append(f"helper={equation}")
+            return "; ".join(parts)
 
         def _remove_workflow_virtual_marker(self) -> None:
             name = self._selected_virtual_marker_name()
@@ -1092,6 +1290,110 @@ def launch_model_editor() -> None:
                     return marker
             return None
 
+        def _select_virtual_marker_by_name(self, marker_name: str) -> None:
+            for index in range(self.feature_list.count()):
+                item = self.feature_list.item(index)
+                if item.text().split("|", maxsplit=1)[0].strip() == marker_name:
+                    self.feature_list.setCurrentItem(item)
+                    return
+
+        def _load_selected_virtual_marker_into_form(self) -> None:
+            marker = self._selected_virtual_marker()
+            if marker is None:
+                self._sync_virtual_marker_method_fields()
+                self._update_virtual_marker_preview()
+                return
+            self.virtual_marker_name_edit.setText(marker.name)
+            self.virtual_marker_segment_combo.setCurrentText(marker.segment_name)
+            self.virtual_marker_method_combo.setCurrentText(marker.method)
+            self.virtual_marker_source_edit.setText(marker.source)
+            self.virtual_marker_equation_edit.setText(_strip_score_segment_payload(marker.equation))
+            proximal, distal = _score_segments_from_payload(marker.equation)
+            if proximal:
+                self.virtual_marker_proximal_combo.setCurrentText(proximal)
+            if distal:
+                self.virtual_marker_distal_combo.setCurrentText(distal)
+            if marker.source:
+                self.virtual_marker_c3d_role_combo.setCurrentText(marker.source)
+            self._sync_virtual_marker_method_fields()
+            self._update_virtual_marker_info_label(marker)
+            self._update_virtual_marker_preview()
+
+        def _sync_virtual_marker_choices(self) -> None:
+            current_segment = self.virtual_marker_segment_combo.currentText()
+            current_role = self.virtual_marker_c3d_role_combo.currentText()
+            current_proximal = self.virtual_marker_proximal_combo.currentText()
+            current_distal = self.virtual_marker_distal_combo.currentText()
+
+            segment_names = [group.segment_name for group in self.workflow_draft.segment_marker_groups]
+            role_names = [assignment.role for assignment in self.workflow_draft.file_assignments]
+            technical_segment_names = [
+                group.segment_name
+                for group in self.workflow_draft.segment_marker_groups
+                if group.segment_type == "technical" or len(group.technical_marker_names) != 0
+            ]
+            if len(technical_segment_names) == 0:
+                technical_segment_names = segment_names
+
+            for combo, values, current_value in (
+                (self.virtual_marker_segment_combo, segment_names, current_segment),
+                (self.virtual_marker_c3d_role_combo, role_names, current_role),
+                (self.virtual_marker_proximal_combo, technical_segment_names, current_proximal),
+                (self.virtual_marker_distal_combo, technical_segment_names, current_distal),
+            ):
+                combo.blockSignals(True)
+                combo.clear()
+                combo.addItems(values)
+                if current_value in values:
+                    combo.setCurrentText(current_value)
+                combo.blockSignals(False)
+
+        def _sync_virtual_marker_method_fields(self, _method: str | None = None) -> None:
+            method = self.virtual_marker_method_combo.currentText()
+            self.virtual_marker_source_edit.setEnabled(
+                method in {"pointing", "score", "sara", "regression", "equation", "marker_mean"}
+            )
+            self.virtual_marker_c3d_role_combo.setEnabled(
+                method in {"pointing", "score", "sara", "regression", "equation"}
+            )
+            self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"})
+            self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"})
+            self.virtual_marker_equation_edit.setEnabled(method in {"equation", "regression", "score", "sara"})
+            hints = {
+                "pointing": "Choose the pointing C3D/role and optionally the marker or pointer-tip name in source.",
+                "score": "Choose the functional C3D plus proximal and distal technical segments. SCoRE estimates a joint center.",
+                "sara": "Choose the functional C3D plus proximal and distal technical segments. SARA estimates a rotation axis; use the equation field for orientation markers if needed.",
+                "marker_mean": "Write comma-separated marker names in Source C3D / markers. Duplicates are allowed and are averaged.",
+                "regression": "Choose the source C3D/role and name the predictive equation, for example example_predictive_hip_cor(D).",
+                "equation": "Use a project-specific equation/helper name and the source markers/C3D it needs.",
+            }
+            self.virtual_marker_info_label.setText(hints.get(method, ""))
+            self._update_virtual_marker_preview()
+
+        def _update_virtual_marker_info_label(self, marker) -> None:
+            if marker is None:
+                self.virtual_marker_info_label.setText(
+                    "Select a virtual marker to inspect its method, segment, source, and equation."
+                )
+                return
+            source = marker.source if marker.source else "-"
+            equation = marker.equation if marker.equation else "-"
+            self.virtual_marker_info_label.setText(
+                f"Name: {marker.name}\nSegment: {marker.segment_name}\nMethod: {marker.method}\n"
+                f"Source: {source}\nEquation/settings: {equation}"
+            )
+
+        def _update_virtual_marker_preview(self, *_args) -> None:
+            self.virtual_marker_preview.set_context(
+                self.c3d_data,
+                self.workflow_draft.segment_marker_groups,
+                self.workflow_draft.virtual_markers,
+                self.virtual_marker_name_edit.text().strip(),
+                self.virtual_marker_method_combo.currentText().strip(),
+                self.virtual_marker_proximal_combo.currentText().strip(),
+                self.virtual_marker_distal_combo.currentText().strip(),
+            )
+
         def _selected_segment_setting(self):
             if not self.segment_settings_list.selectedItems():
                 return None
@@ -1164,6 +1466,7 @@ def launch_model_editor() -> None:
             self._restore_workflow_segment_selection(previously_selected_segment)
             self._restore_anatomical_segment_selection(previously_selected_anatomical_segment)
             self._update_available_marker_list()
+            self._sync_virtual_marker_choices()
 
             if len(self.workflow_draft.virtual_markers) == 0:
                 self.feature_list.addItem("No additional virtual feature required by this preset.")
@@ -1172,6 +1475,8 @@ def launch_model_editor() -> None:
                     self.feature_list.addItem(
                         f"{feature.name} | {feature.segment_name} | {feature.method} | {feature.source}"
                     )
+                if self.feature_list.currentItem() is None:
+                    self.feature_list.setCurrentItem(self.feature_list.item(0))
 
             if len(self.workflow_draft.axes) == 0:
                 self.axis_list.addItem("No axis definition yet.")
@@ -1209,6 +1514,7 @@ def launch_model_editor() -> None:
                 )
 
             self.summary_label.setText(c3d_workflow_summary(preset, self.c3d_data))
+            self._update_virtual_marker_preview()
 
         def _restore_workflow_segment_selection(self, segment_name: str | None) -> None:
             target_index = 0
@@ -2151,6 +2457,50 @@ def _marker_pool_from_draft(workflow_draft) -> tuple[str, ...]:
         marker_names.extend(group.marker_names)
     marker_names.extend(marker.name for marker in workflow_draft.virtual_markers)
     return tuple(dict.fromkeys(marker_names))
+
+
+def _split_marker_names(text: str) -> tuple[str, ...]:
+    """
+    Split a comma/semicolon separated marker list while preserving duplicated markers.
+    """
+    return tuple(marker.strip() for marker in text.replace(";", ",").split(",") if marker.strip())
+
+
+def _score_segments_from_payload(text: str) -> tuple[str, str]:
+    """
+    Extract proximal/distal segment names from the compact virtual-marker settings payload.
+    """
+    values = {"proximal": "", "distal": ""}
+    for part in text.split(";"):
+        if "=" not in part:
+            continue
+        key, value = part.split("=", maxsplit=1)
+        key = key.strip()
+        if key in values:
+            values[key] = value.strip()
+    return values["proximal"], values["distal"]
+
+
+def _strip_score_segment_payload(text: str) -> str:
+    """
+    Return the user helper/equation part from a compact SCoRE/SARA settings payload.
+    """
+    helper_parts = []
+    for part in text.split(";"):
+        stripped = part.strip()
+        if stripped.startswith("helper="):
+            helper_parts.append(stripped.split("=", maxsplit=1)[1].strip())
+        elif stripped and not stripped.startswith("proximal=") and not stripped.startswith("distal="):
+            helper_parts.append(stripped)
+    return "; ".join(helper_parts)
+
+
+def _segment_preview_color(segment_index: int) -> str:
+    """
+    Return a stable color for markers attached to one segment in C3D previews.
+    """
+    colors = ("#2563eb", "#dc2626", "#16a34a", "#ca8a04", "#7c3aed", "#0891b2", "#db2777", "#4b5563")
+    return colors[segment_index % len(colors)]
 
 
 def _marker_preview_position(c3d_data, marker_name: str) -> tuple[float, float, float] | None:
