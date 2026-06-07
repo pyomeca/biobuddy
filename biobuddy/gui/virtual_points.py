@@ -425,6 +425,178 @@ def local_frame_regression_virtual_point(
     )
 
 
+def hara2016_hip_center_local(leg_length_mm: float, side: str) -> np.ndarray:
+    """
+    Return Hara et al. 2016 hip joint center coordinates in a pelvis frame.
+
+    The pelvis frame convention is x anterior, y left, z superior, in millimeters.
+    """
+    side = _normalized_side(side)
+    leg_length_mm = float(leg_length_mm)
+    if leg_length_mm <= 0:
+        raise ValueError("leg_length_mm must be positive.")
+    x_anterior = 11.0 - 0.063 * leg_length_mm
+    y_lateral = 8.0 + 0.086 * leg_length_mm
+    z_superior = -9.0 - 0.078 * leg_length_mm
+    y_left = -y_lateral if side == "right" else y_lateral
+    return np.array([x_anterior, y_left, z_superior], dtype=float)
+
+
+def harrington2007_hip_center_local_hara_axes(
+    pelvic_width_mm: np.ndarray | float,
+    pelvic_depth_mm: np.ndarray | float,
+    leg_length_mm: float,
+    side: str,
+) -> np.ndarray:
+    """
+    Return a Harrington et al. 2007 hip center variant in Hara-like pelvis axes.
+
+    The axes are x anterior, y left, z superior, in millimeters. Axis/sign conventions
+    should be validated against the lab's reference implementation before clinical use.
+    """
+    side = _normalized_side(side)
+    pelvic_width_mm = np.asarray(pelvic_width_mm, dtype=float)
+    pelvic_depth_mm = np.asarray(pelvic_depth_mm, dtype=float)
+    leg_length_mm = float(leg_length_mm)
+    if np.any(pelvic_width_mm <= 0) or np.any(pelvic_depth_mm <= 0) or leg_length_mm <= 0:
+        raise ValueError("pelvic_width_mm, pelvic_depth_mm and leg_length_mm must be positive.")
+    x_anterior = -9.9 - 0.24 * pelvic_depth_mm
+    y_lateral = 7.9 + 0.16 * pelvic_width_mm + 0.28 * pelvic_depth_mm
+    z_superior = -7.1 - 0.16 * pelvic_width_mm - 0.04 * leg_length_mm
+    y_left = -y_lateral if side == "right" else y_lateral
+    return np.vstack((x_anterior, y_left, z_superior))
+
+
+def predictive_hara2016_hip_cor(
+    name: str,
+    side: str,
+    leg_length_mm: float,
+    right_asis: str = "RASI",
+    left_asis: str = "LASI",
+    right_psis: str = "RPSI",
+    left_psis: str = "LPSI",
+) -> VirtualPointDefinition:
+    """
+    Create a Hara 2016 predictive hip center from ASIS/PSIS pelvis landmarks.
+    """
+    required_markers = (right_asis, left_asis, right_psis, left_psis)
+    local_offset = hara2016_hip_center_local(leg_length_mm, side)
+
+    def evaluator(data: MarkerData) -> np.ndarray:
+        origin, rotation, _width, _depth = _pelvis_frame_from_asis_psis(
+            data,
+            right_asis=right_asis,
+            left_asis=left_asis,
+            right_psis=right_psis,
+            left_psis=left_psis,
+        )
+        return _local_offset_to_global(origin, rotation, local_offset[:, np.newaxis])
+
+    return VirtualPointDefinition(
+        name=name,
+        method=VirtualPointMethod.LOCAL_FRAME_REGRESSION,
+        required_markers=required_markers,
+        evaluator=evaluator,
+        description="Hara et al. 2016 predictive hip center in a pelvis ASIS/PSIS frame.",
+    )
+
+
+def predictive_harrington2007_hip_cor(
+    name: str,
+    side: str,
+    leg_length_mm: float,
+    right_asis: str = "RASI",
+    left_asis: str = "LASI",
+    right_psis: str = "RPSI",
+    left_psis: str = "LPSI",
+) -> VirtualPointDefinition:
+    """
+    Create a Harrington 2007 predictive hip center from ASIS/PSIS pelvis landmarks.
+    """
+    required_markers = (right_asis, left_asis, right_psis, left_psis)
+
+    def evaluator(data: MarkerData) -> np.ndarray:
+        origin, rotation, pelvic_width, pelvic_depth = _pelvis_frame_from_asis_psis(
+            data,
+            right_asis=right_asis,
+            left_asis=left_asis,
+            right_psis=right_psis,
+            left_psis=left_psis,
+        )
+        local_offset = harrington2007_hip_center_local_hara_axes(
+            pelvic_width_mm=pelvic_width,
+            pelvic_depth_mm=pelvic_depth,
+            leg_length_mm=leg_length_mm,
+            side=side,
+        )
+        return _local_offset_to_global(origin, rotation, local_offset)
+
+    return VirtualPointDefinition(
+        name=name,
+        method=VirtualPointMethod.LOCAL_FRAME_REGRESSION,
+        required_markers=required_markers,
+        evaluator=evaluator,
+        description="Harrington et al. 2007 predictive hip center in a pelvis ASIS/PSIS frame.",
+    )
+
+
+def predictive_sobral2025_shoulder_cor(
+    name: str,
+    side: str,
+    age_years: float,
+    sex: str | int | float | bool,
+    height_m: float,
+    weight_kg: float,
+    angulus_acromialis: str,
+    acromioclavicular: str,
+    angulus_inferior: str,
+    trigonum_spinae: str,
+    allow_left_with_warning: bool = False,
+) -> VirtualPointDefinition:
+    """
+    Create a Sobral 2025 predictive glenohumeral center from scapula landmarks.
+    """
+    normalized_side = _normalized_side(side)
+    if normalized_side == "left" and not allow_left_with_warning:
+        raise ValueError("Sobral 2025 left-side use requires allow_left_with_warning=True after local validation.")
+    required_markers = (angulus_acromialis, acromioclavicular, angulus_inferior, trigonum_spinae)
+
+    def evaluator(data: MarkerData) -> np.ndarray:
+        aa = data.get_position([angulus_acromialis])[:3, 0, :]
+        ac = data.get_position([acromioclavicular])[:3, 0, :]
+        ai = data.get_position([angulus_inferior])[:3, 0, :]
+        ts = data.get_position([trigonum_spinae])[:3, 0, :]
+        origin, rotation = _scapula_frame_from_landmarks(aa=aa, ts=ts, ai=ai)
+        ac_local = _global_points_to_local(origin, rotation, ac)
+        ai_local = _global_points_to_local(origin, rotation, ai)
+        features = {
+            "AC_x": ac_local[0, :],
+            "AC_y": ac_local[1, :],
+            "AC_z": ac_local[2, :],
+            "AI_z": ai_local[2, :],
+            "L_AA_TS": _column_distance(aa, ts),
+            "L_AA_AI": _column_distance(aa, ai),
+            "L_AA_AC": _column_distance(aa, ac),
+            "L_TS_AI": _column_distance(ts, ai),
+            "L_TS_AC": _column_distance(ts, ac),
+            "L_AI_AC": _column_distance(ai, ac),
+            "A": float(age_years),
+            "S": _sex_code(sex),
+            "H": float(height_m),
+            "W": float(weight_kg),
+        }
+        local = _sobral2025_glenohumeral_center_local_from_features(features)
+        return _local_offset_to_global(origin, rotation, local)
+
+    return VirtualPointDefinition(
+        name=name,
+        method=VirtualPointMethod.LOCAL_FRAME_REGRESSION,
+        required_markers=required_markers,
+        evaluator=evaluator,
+        description="Sobral et al. 2025 predictive glenohumeral center in a scapula landmark frame.",
+    )
+
+
 def example_predictive_hip_cor(side: str) -> VirtualPointDefinition:
     """
     Return an example pelvis-regression hip center definition.
@@ -513,6 +685,119 @@ def _dynamic_local_frame(
     frame[:, third_name, :] = _normalize(third_vector)
     frame[:, 3, :] = origin.evaluate(data)
     return np.moveaxis(frame, 2, 0)
+
+
+def _pelvis_frame_from_asis_psis(
+    data: MarkerData,
+    right_asis: str,
+    left_asis: str,
+    right_psis: str,
+    left_psis: str,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    r_asis = data.get_position([right_asis])[:3, 0, :]
+    l_asis = data.get_position([left_asis])[:3, 0, :]
+    r_psis = data.get_position([right_psis])[:3, 0, :]
+    l_psis = data.get_position([left_psis])[:3, 0, :]
+    origin = 0.5 * (r_asis + l_asis)
+    y_left = _normalize(l_asis - r_asis)
+    mid_psis = 0.5 * (r_psis + l_psis)
+    posterior = mid_psis - origin
+    posterior_projected = posterior - np.sum(posterior * y_left, axis=0)[np.newaxis, :] * y_left
+    x_anterior = _normalize(-posterior_projected)
+    z_superior = _normalize(np.cross(x_anterior, y_left, axis=0))
+    y_left = _normalize(np.cross(z_superior, x_anterior, axis=0))
+    rotation = _rotation_from_axis_columns(x_anterior, y_left, z_superior)
+    pelvic_width = _column_distance(r_asis, l_asis)
+    pelvic_depth = np.abs(np.sum((mid_psis - origin) * x_anterior, axis=0))
+    return origin, rotation, pelvic_width, pelvic_depth
+
+
+def _scapula_frame_from_landmarks(aa: np.ndarray, ts: np.ndarray, ai: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    z_lateral = _normalize(aa - ts)
+    x_normal = _normalize(np.cross(ai - aa, z_lateral, axis=0))
+    y_axis = _normalize(np.cross(z_lateral, x_normal, axis=0))
+    return aa, _rotation_from_axis_columns(x_normal, y_axis, z_lateral)
+
+
+def _rotation_from_axis_columns(x_axis: np.ndarray, y_axis: np.ndarray, z_axis: np.ndarray) -> np.ndarray:
+    return np.stack((x_axis.T, y_axis.T, z_axis.T), axis=2)
+
+
+def _local_offset_to_global(origin: np.ndarray, rotation: np.ndarray, local_offset: np.ndarray) -> np.ndarray:
+    local_offset = _broadcast_vector(local_offset, origin.shape[1])
+    return (np.einsum("fij,jf->fi", rotation, local_offset) + origin.T).T
+
+
+def _global_points_to_local(origin: np.ndarray, rotation: np.ndarray, global_points: np.ndarray) -> np.ndarray:
+    return np.einsum("fji,jf->fi", rotation, global_points - origin).T
+
+
+def _column_distance(first: np.ndarray, second: np.ndarray) -> np.ndarray:
+    return np.linalg.norm(first - second, axis=0)
+
+
+def _normalized_side(side: str) -> str:
+    side = side.lower()
+    if side in {"right", "r", "d"}:
+        return "right"
+    if side in {"left", "l", "g"}:
+        return "left"
+    raise ValueError("side must be right/left, R/L, or D/G.")
+
+
+def _sex_code(sex: str | int | float | bool) -> float:
+    if isinstance(sex, str):
+        sex = sex.lower()
+        if sex in {"female", "f", "woman", "0"}:
+            return 0.0
+        if sex in {"male", "m", "man", "1"}:
+            return 1.0
+        raise ValueError("sex must be female/male or 0/1.")
+    return float(sex)
+
+
+def _sobral2025_glenohumeral_center_local_from_features(features: dict[str, np.ndarray | float]) -> np.ndarray:
+    f = {key: np.asarray(value, dtype=float) for key, value in features.items()}
+    x = (
+        25.5316
+        + 0.6334 * f["AC_x"]
+        + 0.7842 * f["AC_y"]
+        - 0.0832 * f["AI_z"]
+        - 0.2673 * f["L_AA_TS"]
+        + 0.0365 * f["L_AA_AI"]
+        - 0.5353 * f["L_AA_AC"]
+        + 0.0843 * f["L_TS_AI"]
+        + 0.2350 * f["L_TS_AC"]
+        - 0.1246 * f["L_AI_AC"]
+        - 0.0237 * f["A"]
+        + 2.1296 * f["S"]
+        - 1.1900 * f["H"]
+        + 0.0221 * f["W"]
+    )
+    y = (
+        -6.7070
+        - 0.2514 * f["AC_x"]
+        + 0.7558 * f["AC_y"]
+        + 0.0264 * f["AI_z"]
+        - 0.0620 * f["L_AA_AI"]
+        - 1.7641 * f["S"]
+        - 5.7094 * f["H"]
+    )
+    z = (
+        -22.5233
+        + 0.5954 * f["AC_x"]
+        + 0.0600 * f["AC_y"]
+        + 0.1085 * f["AI_z"]
+        + 0.3983 * f["AC_z"]
+        - 0.3880 * f["L_AA_AC"]
+        - 0.0197 * f["L_TS_AI"]
+        - 0.0934 * f["L_TS_AC"]
+        + 0.0558 * f["A"]
+        + 0.2930 * f["S"]
+        + 26.4715 * f["H"]
+        - 0.0361 * f["W"]
+    )
+    return np.vstack((x, y, z))
 
 
 def _third_axis_name(first_name: Axis.Name, second_name: Axis.Name) -> Axis.Name:

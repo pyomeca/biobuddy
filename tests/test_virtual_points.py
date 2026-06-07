@@ -11,6 +11,10 @@ from biobuddy.gui.virtual_points import (
     example_predictive_shoulder_cor,
     global_linear_regression_virtual_point,
     global_vector_virtual_axis,
+    hara2016_hip_center_local,
+    predictive_hara2016_hip_cor,
+    predictive_harrington2007_hip_cor,
+    predictive_sobral2025_shoulder_cor,
     local_frame_virtual_axis,
     local_frame_regression_virtual_point,
     marker_data_with_virtual_axes,
@@ -179,6 +183,63 @@ def test_predictive_joint_center_examples_define_expected_required_markers():
     assert {"CLAV1G", "ACRANTG", "ACRPOSTG"}.issubset(shoulder.required_markers)
 
 
+def test_hara2016_predictive_hip_center_projects_local_offset_to_global():
+    data = _pelvis_marker_data()
+    definition = predictive_hara2016_hip_cor(
+        "RHipHara",
+        side="right",
+        leg_length_mm=850.0,
+        right_asis="RASI",
+        left_asis="LASI",
+        right_psis="RPSI",
+        left_psis="LPSI",
+    )
+
+    point = definition.evaluate(data)
+    expected = np.array([0.0, 0.0, 1000.0]) + hara2016_hip_center_local(850.0, "right")
+
+    np.testing.assert_allclose(point[:3, 0], expected)
+
+
+def test_harrington2007_predictive_hip_center_is_finite():
+    data = _pelvis_marker_data()
+    definition = predictive_harrington2007_hip_cor(
+        "LHipHarrington",
+        side="left",
+        leg_length_mm=840.0,
+        right_asis="RASI",
+        left_asis="LASI",
+        right_psis="RPSI",
+        left_psis="LPSI",
+    )
+
+    point = definition.evaluate(data)
+
+    assert point.shape == (4, 2)
+    assert np.isfinite(point[:3, :]).all()
+
+
+def test_sobral2025_predictive_shoulder_center_is_finite():
+    data = _scapula_marker_data()
+    definition = predictive_sobral2025_shoulder_cor(
+        "RShoulderSobral",
+        side="right",
+        age_years=35,
+        sex="male",
+        height_m=1.78,
+        weight_kg=75,
+        angulus_acromialis="AA",
+        acromioclavicular="AC",
+        angulus_inferior="AI",
+        trigonum_spinae="TS",
+    )
+
+    point = definition.evaluate(data)
+
+    assert point.shape == (4, 2)
+    assert np.isfinite(point[:3, :]).all()
+
+
 def _simple_marker_data() -> DictData:
     marker_dict = {}
     points = {
@@ -186,6 +247,37 @@ def _simple_marker_data() -> DictData:
         "B": (1.0, 0.0, 0.0),
         "C": (0.0, 1.0, 0.0),
     }
+    for marker_name, position in points.items():
+        marker = np.ones((4, 2))
+        marker[:3, :] = np.asarray(position, dtype=float)[:, np.newaxis]
+        marker_dict[marker_name] = marker
+    return DictData(marker_dict)
+
+
+def _pelvis_marker_data() -> DictData:
+    return _marker_data_from_points(
+        {
+            "RASI": (0.0, -100.0, 1000.0),
+            "LASI": (0.0, 100.0, 1000.0),
+            "RPSI": (-80.0, -100.0, 1000.0),
+            "LPSI": (-80.0, 100.0, 1000.0),
+        }
+    )
+
+
+def _scapula_marker_data() -> DictData:
+    return _marker_data_from_points(
+        {
+            "AA": (200.0, -160.0, 1450.0),
+            "TS": (120.0, -120.0, 1450.0),
+            "AI": (150.0, -130.0, 1300.0),
+            "AC": (210.0, -170.0, 1460.0),
+        }
+    )
+
+
+def _marker_data_from_points(points: dict[str, tuple[float, float, float]]) -> DictData:
+    marker_dict = {}
     for marker_name, position in points.items():
         marker = np.ones((4, 2))
         marker[:3, :] = np.asarray(position, dtype=float)[:, np.newaxis]

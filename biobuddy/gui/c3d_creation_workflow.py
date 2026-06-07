@@ -20,6 +20,17 @@ from .model_builder import (
 )
 from .upper_limb_template import upper_limb_template
 
+SOURCE_REQUIRED_VIRTUAL_MARKER_METHODS = {
+    "pointing",
+    "equation",
+    "regression",
+    "score",
+    "sara",
+    "hara2016_hip",
+    "harrington2007_hip",
+    "sobral2025_shoulder",
+}
+
 
 @dataclass(frozen=True)
 class C3dWorkflowStep:
@@ -499,7 +510,7 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
                     f"Virtual marker '{marker.name}' is attached to unknown segment '{marker.segment_name}'.",
                 )
             )
-        if marker.method in {"pointing", "equation", "regression", "score", "sara"} and marker.source == "":
+        if marker.method in SOURCE_REQUIRED_VIRTUAL_MARKER_METHODS and marker.source == "":
             issues.append(
                 C3dDraftIssue(
                     "warning",
@@ -587,7 +598,7 @@ def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = Non
         if assignment.source_path != "" and _file_role_is_required(draft.preset, assignment.role)
     )
     source_missing_virtual_count = sum(
-        marker.method in {"pointing", "equation", "regression", "score", "sara"} and marker.source == ""
+        marker.method in SOURCE_REQUIRED_VIRTUAL_MARKER_METHODS and marker.source == ""
         for marker in draft.virtual_markers
     )
     incomplete_axis_count = sum(axis.axis == "" for axis in draft.axes)
@@ -710,6 +721,24 @@ def c3d_virtual_marker_method_examples() -> tuple[C3dVirtualMarkerMethodExample,
             source_example="main_markers.c3d",
             equation_example="example_predictive_hip_cor(D) or example_predictive_shoulder_cor(G)",
             description="Use a predictive equation for a hip or shoulder center from anatomical markers.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="hara2016_hip",
+            source_example="main_markers.c3d",
+            equation_example="side=right; leg_length_mm=850",
+            description="Predict a hip center with Hara et al. 2016 in a pelvis ASIS/PSIS frame.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="harrington2007_hip",
+            source_example="main_markers.c3d",
+            equation_example="side=left; leg_length_mm=840",
+            description="Predict a hip center with a Harrington 2007 variant in Hara-like pelvis axes.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="sobral2025_shoulder",
+            source_example="main_markers.c3d",
+            equation_example="side=right; age_years=35; sex=male; height_m=1.78; weight_kg=75",
+            description="Predict a glenohumeral center with Sobral et al. 2025 from scapula landmarks.",
         ),
         C3dVirtualMarkerMethodExample(
             method="score",

@@ -607,7 +607,17 @@ def launch_model_editor() -> None:
             self.virtual_marker_segment_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
             self.virtual_marker_method_combo = QComboBox()
             self.virtual_marker_method_combo.addItems(
-                ["pointing", "score", "sara", "marker_mean", "regression", "equation"]
+                [
+                    "pointing",
+                    "score",
+                    "sara",
+                    "marker_mean",
+                    "regression",
+                    "hara2016_hip",
+                    "harrington2007_hip",
+                    "sobral2025_shoulder",
+                    "equation",
+                ]
             )
             self.virtual_marker_method_combo.currentTextChanged.connect(self._sync_virtual_marker_method_fields)
             self.virtual_marker_source_edit = QLineEdit()
@@ -1019,14 +1029,16 @@ def launch_model_editor() -> None:
         def _virtual_marker_source_from_form(self, method: str) -> str:
             source = self.virtual_marker_source_edit.text().strip()
             c3d_role = self.virtual_marker_c3d_role_combo.currentText().strip()
-            if method in {"score", "sara", "pointing", "regression", "equation"} and source == "":
+            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
+            if method in {"score", "sara", "pointing", "regression", "equation"} | predictive_methods and source == "":
                 source = c3d_role
             return source
 
         def _virtual_marker_equation_from_form(self, method: str) -> str:
             equation = self.virtual_marker_equation_edit.text().strip()
+            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
             if method not in {"score", "sara"}:
-                return equation if method in {"equation", "regression"} else ""
+                return equation if method in {"equation", "regression"} | predictive_methods else ""
             parts = [
                 f"proximal={self.virtual_marker_proximal_combo.currentText().strip()}",
                 f"distal={self.virtual_marker_distal_combo.currentText().strip()}",
@@ -1045,6 +1057,12 @@ def launch_model_editor() -> None:
                 method,
                 method.capitalize() if method else "Virtual",
             )
+            if method in {"hara2016_hip", "harrington2007_hip"}:
+                method_label = method.replace("_hip", "").replace("2016", "2016Hip").replace("2007", "2007Hip")
+                joint_name = "Hip"
+            elif method == "sobral2025_shoulder":
+                method_label = "Sobral2025Shoulder"
+                joint_name = "Shoulder"
             local_segment = proximal or segment_name
             if method in {"score", "sara"} and local_segment:
                 return f"CoR_{method_label}_{joint_name}_in_{local_segment}"
@@ -1509,21 +1527,27 @@ def launch_model_editor() -> None:
 
         def _sync_virtual_marker_method_fields(self, _method: str | None = None) -> None:
             method = self.virtual_marker_method_combo.currentText()
+            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
             self.virtual_marker_source_edit.setEnabled(
-                method in {"pointing", "score", "sara", "regression", "equation", "marker_mean"}
+                method in {"pointing", "score", "sara", "regression", "equation", "marker_mean"} | predictive_methods
             )
             self.virtual_marker_c3d_role_combo.setEnabled(
-                method in {"pointing", "score", "sara", "regression", "equation"}
+                method in {"pointing", "score", "sara", "regression", "equation"} | predictive_methods
             )
             self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"})
             self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"})
-            self.virtual_marker_equation_edit.setEnabled(method in {"equation", "regression", "score", "sara"})
+            self.virtual_marker_equation_edit.setEnabled(
+                method in {"equation", "regression", "score", "sara"} | predictive_methods
+            )
             hints = {
                 "pointing": "Choose the pointing C3D/role and optionally the marker or pointer-tip name in source.",
                 "score": "Choose the functional C3D plus proximal and distal technical segments. SCoRE estimates a joint center.",
                 "sara": "Choose the functional C3D plus proximal and distal technical segments. SARA estimates a rotation axis; use the equation field for orientation markers if needed.",
                 "marker_mean": "Write comma-separated marker names in Source C3D / markers. Duplicates are allowed and are averaged.",
                 "regression": "Choose the source C3D/role and name the predictive equation, for example example_predictive_hip_cor(D).",
+                "hara2016_hip": "Hara 2016 hip CoR. Use Equation for side and leg length, e.g. side=right; leg_length_mm=850.",
+                "harrington2007_hip": "Harrington 2007 hip CoR. Use Equation for side and leg length, e.g. side=left; leg_length_mm=840.",
+                "sobral2025_shoulder": "Sobral 2025 shoulder CoR. Use Equation for side, age, sex, height_m, and weight_kg.",
                 "equation": "Use a project-specific equation/helper name and the source markers/C3D it needs.",
             }
             self.virtual_marker_info_label.setText(hints.get(method, ""))
