@@ -69,6 +69,7 @@ def test_fbx_model_can_be_exported_to_biomod():
     if os.path.exists(biomod_filepath):
         os.remove(biomod_filepath)
 
+
 def test_translation_fbx_to_biomod_to_fbx():
     """
     Convert FBX to bioMod, then export the bioMod model back to FBX.
@@ -100,6 +101,7 @@ def test_translation_fbx_to_biomod_to_fbx():
 
     if os.path.exists(biomod_filepath):
         os.remove(biomod_filepath)
+
 
 def test_fbx_writer_requires_blender_when_the_executable_is_missing():
     """
@@ -165,6 +167,7 @@ def test_fbx_parser_rejects_non_binary_files():
 
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def test_fbx_parser_decodes_scalar_properties():
     """

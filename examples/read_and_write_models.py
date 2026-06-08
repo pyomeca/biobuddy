@@ -233,7 +233,7 @@ def fbx_biomod_convertion():
     - FBX `PreRotation` values define the local rest orientation of each segment
       and are written into the segment coordinate system as rotation matrices, not
       as animated generalized coordinates.
-    
+
     The resulting FBX and BVH models were validated by injecting their respective
     animations and comparing the reconstructed joint-center positions relative to
     `Hips`. On 10 sampled frames and 54 shared segments, the mean position

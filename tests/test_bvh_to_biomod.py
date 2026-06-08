@@ -132,7 +132,7 @@ def test_bvh_root_offset_is_preserved_in_model_and_biomod():
 
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     filepath = parent_path + f"/examples/models/fullbody_model.bvh"
-    biomod_filepath = parent_path  + "/examples/models/fullbody_model_root_offset.bioMod"
+    biomod_filepath = parent_path + "/examples/models/fullbody_model_root_offset.bioMod"
 
     model = BiomechanicalModelReal().from_bvh(filepath=filepath)
     hips_segment = model.segments["Hips"]
@@ -187,6 +187,7 @@ Frame Time: 0.0333333
     if os.path.exists(filepath):
         os.remove(filepath)
 
+
 def test_bvh_parser_rejects_files_without_hierarchy():
     """Reject files that do not start with a BVH hierarchy block."""
 
@@ -199,6 +200,7 @@ def test_bvh_parser_rejects_files_without_hierarchy():
 
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def test_bvh_parser_rejects_invalid_joint_channel_declaration():
     """Reject joints whose declared channel count does not match the provided channels."""
@@ -218,6 +220,7 @@ ROOT root
 
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def test_bvh_parser_accepts_hierarchy_without_motion_block():
     """Allow loading a pure BVH hierarchy even when no motion samples are provided."""
@@ -243,6 +246,7 @@ ROOT root
     if os.path.exists(filepath):
         os.remove(filepath)
 
+
 def test_bvh_parser_rejects_invalid_end_site_block():
     """Reject malformed BVH end sites."""
 
@@ -265,6 +269,7 @@ ROOT root
 
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def test_bvh_writer_exports_a_minimal_root_hierarchy():
     """Export a minimal root-only model to BVH."""
