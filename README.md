@@ -365,6 +365,10 @@ launch it with:
 pip install biobuddy[gui]
 python -m biobuddy.gui
 ```
+If you are working from sources, you will need to install :
+```bash
+conda install -c conda-forge PySide6
+```
 
 The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment
 parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar parameters, and fixed via points, then
