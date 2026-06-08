@@ -68,6 +68,10 @@ jobs:
           conda install -c conda-forge deepdiff pinocchio pandas
           conda install -c opensim-org opensim=4.5.1
 
+      # - name: Animation dependencies
+      #   run: |
+      #     conda install -c conda-forge PySide6 rerun-sdk=0.27.2 trimesh tk imageio imageio-ffmpeg trc-data-reader
+
       - name: List conda packages
         run: conda list
 
