@@ -9,8 +9,9 @@ This script demonstrates how to:
 The output includes visualization of segments, degrees of freedom, via points, and markers.
 """
 
-from biobuddy import BiomechanicalModelReal
 from pathlib import Path
+
+from biobuddy import BiomechanicalModelReal
 
 
 def create_graph_from_biomod_file():

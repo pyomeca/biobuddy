@@ -490,6 +490,7 @@ def test_write_graphviz():
         output_dot = f.read()
 
     assert reference_dot == output_dot
+    assert len(output_dot) > 4700  #  Actually 4766
 
 
 def test_segment_has_ghost_parents():
