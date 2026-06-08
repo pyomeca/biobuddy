@@ -508,7 +508,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
     def from_fbx(
         self,
         filepath: str,
-        load_visual_meshes: bool = False,
+        split_meshes_per_segment: bool = False,
         mesh_output_dir: str = None,
     ) -> "BiomechanicalModelReal":
         """
@@ -518,12 +518,12 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ----------
         filepath
             The path to the FBX file to parse.
-        load_visual_meshes
+        split_meshes_per_segment
             Whether the skinned FBX visual mesh should be split into one mesh file
             per segment and attached to the resulting model.
         mesh_output_dir
             The directory where the generated per-segment mesh files should be
-            written. If ``None`` and ``load_visual_meshes`` is ``True``, a
+            written. If ``None`` and ``split_meshes_per_segment`` is ``True``, a
             ``<fbx_stem>_meshes`` directory is created next to the FBX file.
         """
         from ...model_parser.fbx import FbxModelParser
@@ -531,7 +531,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         self.filepath = filepath
         model = FbxModelParser(
             filepath=filepath,
-            load_visual_meshes=load_visual_meshes,
+            split_meshes_per_segment=split_meshes_per_segment,
             mesh_output_dir=mesh_output_dir,
         ).to_real()
         model.validate_model()
@@ -598,7 +598,7 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
 
         model = BiomechanicalModelReal().from_fbx(
             filepath=str(source_path),
-            load_visual_meshes=True,
+            split_meshes_per_segment=True,
             mesh_output_dir=str(meshes_directory),
         )
         biomod_path = package_directory / f"{package_stem}.bioMod"

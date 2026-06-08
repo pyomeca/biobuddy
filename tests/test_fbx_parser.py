@@ -194,7 +194,7 @@ def test_fbx_visual_mesh_can_be_split_per_segment(tmp_path: Path):
 
     model = BiomechanicalModelReal().from_fbx(
         filepath=str(fbx_filepath),
-        load_visual_meshes=True,
+        split_meshes_per_segment=True,
         mesh_output_dir=str(mesh_output_dir),
     )
 
@@ -226,7 +226,7 @@ def test_fbx_visual_mesh_is_written_in_biomod(tmp_path: Path):
 
     model = BiomechanicalModelReal().from_fbx(
         filepath=str(fbx_filepath),
-        load_visual_meshes=True,
+        split_meshes_per_segment=True,
         mesh_output_dir=str(mesh_output_dir),
     )
     model.to_biomod(filepath=str(biomod_filepath), with_mesh=True)
