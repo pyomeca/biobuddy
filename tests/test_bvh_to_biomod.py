@@ -113,7 +113,7 @@ def test_bvh_model_uses_native_rotation_channel_order():
     filepath = parent_path + f"/examples/models/fullbody_model.bvh"
 
     parser = BvhModelParser(filepath=filepath).to_q()
-    model = BiomechanicalModelReal().from_bvh(filepath=str(filepath))
+    model = BiomechanicalModelReal().from_bvh(filepath=filepath)
 
     assert parser.root.channels == [
         "Xposition",
@@ -142,7 +142,7 @@ def test_bvh_root_offset_is_preserved_in_model_and_biomod():
         np.array([0.0, 960.822, 40.4592]),
     )
 
-    model.to_biomod(filepath=str(biomod_filepath), with_mesh=False)
+    model.to_biomod(filepath=biomod_filepath, with_mesh=False)
     content = biomod_filepath.read_text()
 
     assert "segment\tHips" in content
@@ -182,7 +182,7 @@ Frame Time: 0.0333333
 """)
 
     with pytest.raises(ValueError, match="Each BVH motion row must contain 9 channel values."):
-        BvhModelParser(filepath=str(filepath))
+        BvhModelParser(filepath=filepath)
 
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -196,7 +196,7 @@ def test_bvh_parser_rejects_files_without_hierarchy():
     filepath.write_text("MOTION\nFrames: 0\nFrame Time: 0.0333333\n")
 
     with pytest.raises(ValueError, match="A BVH file must start with a HIERARCHY block."):
-        BvhModelParser(filepath=str(filepath))
+        BvhModelParser(filepath=filepath)
 
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -216,7 +216,7 @@ ROOT root
 """)
 
     with pytest.raises(ValueError, match="Joint root declares 6 channels but provides 5."):
-        BvhModelParser(filepath=str(filepath))
+        BvhModelParser(filepath=filepath)
 
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -235,7 +235,7 @@ ROOT root
 }
 """)
 
-    parser = BvhModelParser(filepath=str(filepath))
+    parser = BvhModelParser(filepath=filepath)
 
     assert parser.root is not None
     assert parser.root.name == "root"
@@ -265,7 +265,7 @@ ROOT root
 """)
 
     with pytest.raises(ValueError, match="Expected an OFFSET line inside End Site."):
-        BvhModelParser(filepath=str(filepath))
+        BvhModelParser(filepath=filepath)
 
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -279,7 +279,7 @@ def test_bvh_writer_exports_a_minimal_root_hierarchy():
     model = BiomechanicalModelReal()
     model.add_segment(SegmentReal(name="root_segment"))
 
-    model.to_bvh(filepath=str(filepath), with_mesh=False)
+    model.to_bvh(filepath=filepath, with_mesh=False)
 
     content = filepath.read_text()
     assert "ROOT root" in content
@@ -299,20 +299,20 @@ def test_bvh_writer_rejects_unsupported_model_features():
     # no root
     model = BiomechanicalModelReal()
     with pytest.raises(RuntimeError, match="BHV export assumes a root segment. No segment named 'root' was found."):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     # multiple roots
     model = BiomechanicalModelReal()
     model.add_segment(SegmentReal(name="root_segment", parent_name="root"))
     model.add_segment(SegmentReal(name="root_segment2", parent_name="root"))
     with pytest.raises(RuntimeError, match="BVH export requires exactly one segment attached to root."):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     # gravity
     model = BiomechanicalModelReal(gravity=np.array([0.0, -9.81, 0.0]))
     model.add_segment(SegmentReal(name="root_segment"))
     with pytest.raises(NotImplementedError, match="BVH export does not support gravity metadata."):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     # marker
     model = BiomechanicalModelReal()
@@ -322,7 +322,7 @@ def test_bvh_writer_rejects_unsupported_model_features():
         NotImplementedError,
         match="BVH export does not support segment markers. Segment root_segment cannot be exported.",
     ):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     # segment RT
     model = BiomechanicalModelReal()
@@ -338,7 +338,7 @@ def test_bvh_writer_rejects_unsupported_model_features():
         NotImplementedError,
         match="BVH export currently only supports identity local segment rotations. Segment root_segment is rotated.",
     ):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     if os.path.exists(filepath):
         os.remove(filepath)
@@ -362,7 +362,7 @@ def test_bvh_writer_rejects_segment_ranges():
         NotImplementedError,
         match="BVH export does not support segment q ranges. Segment root cannot be exported.",
     ):
-        model.to_bvh(filepath=str(filepath), with_mesh=False)
+        model.to_bvh(filepath=filepath, with_mesh=False)
 
     if os.path.exists(filepath):
         os.remove(filepath)
