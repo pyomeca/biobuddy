@@ -28,6 +28,7 @@
       - [Modifying the kinematic chain](#modifying-the-kinematic-chain)
       - [Flattening the model](#flattening-the-model)
   - [Model visualization](#model-visualization)
+  - [Desktop model editor](#desktop-model-editor)
 - [Note](#note)
 - [How to cite](#how-to-cite)
 - [How to contribute](#how-to-contribute)
@@ -386,6 +387,27 @@ model.animate(
     model_path=model_path,
 )
 ```
+
+## Desktop model editor
+BioBuddy also includes an early desktop editor for interactive model cleanup. Install the optional GUI dependency and
+launch it with:
+
+```bash
+pip install biobuddy[gui]
+python -m biobuddy.gui
+```
+If you are working from sources, you will need to install :
+```bash
+conda install -c conda-forge PySide6
+```
+
+The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment
+parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar parameters, and fixed via points, then
+saving the result as `.bioMod`. A synchronized 3D preview shows the kinematic chain, markers, and muscle paths while
+the user edits the model. The muscle tab also exposes editable origin and insertion points, the validation tab reports
+model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
+tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
+selects it in the marker editor.
 ![model_graph](docs/images/model_graph.png)
 
 

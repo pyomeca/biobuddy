@@ -22,6 +22,9 @@ from .model_modifiers import *
 # Model validation
 from .validation import *
 
+# GUI
+from .gui import *
+
 __all__ = (
     components.__all__
     + utils.__all__
@@ -30,5 +33,6 @@ __all__ = (
     + model_parser.__all__
     + model_modifiers.__all__
     + validation.__all__
+    + gui.__all__
     + ["__version__"]
 )
