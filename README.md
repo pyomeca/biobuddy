@@ -88,7 +88,7 @@ The available formats for now are:
 - OpenSim (.osim)
 - biorbd (.bioMod)
 - BVH (.bvh)
-- FBX (.fbx) for reading skeletal hierarchies
+- FBX (.fbx) for reading skeletal hierarchies and optionally splitting a skinned visual mesh into per-segment `.ply` files
 - URDF (.urdf), without muscles for now, but this will be added in the future.
 
 ```python3
@@ -100,8 +100,6 @@ model = BiomechanicalModelReal().from_osim(filepath=osim_filepath)
 # Translate it into a .bioMod file
 model.to_biomod(biomod_filepath)
 ```
-
-See the example [read_and_write_models.py](examples/read_and_write_models.py) for more details.
 
 ## Model creation
 A model can also be created from scratch using the `BiomechanicalModel`. In this generic model, everything can be defined 

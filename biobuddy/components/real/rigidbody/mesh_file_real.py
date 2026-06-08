@@ -123,11 +123,15 @@ class MeshFileReal:
     def mesh_rt(self, value):
         raise RuntimeError("The mesh_rt cannot be set directly, set the mesh_rotation and mesh_translation instead")
 
-    def to_biomod(self):
+    def to_biomod(self, mesh_path: str = None):
         # Define the print function, so it automatically formats things in the file properly
         out_string = ""
-        if self.mesh_file_directory and self.mesh_file_name:
-            out_string += f"\tmeshfile\t{self.mesh_file_directory}/{self.mesh_file_name}\n"
+        if (self.mesh_file_directory or mesh_path) and self.mesh_file_name:
+            if mesh_path is not None:
+                mesh_file_directory = mesh_path
+            else:
+                mesh_file_directory = self.mesh_file_directory
+            out_string += f"\tmeshfile\t{mesh_file_directory}/{self.mesh_file_name}\n"
             if self.mesh_color is not None:
                 out_string += f"\tmeshcolor\t{self.mesh_color[0]}\t{self.mesh_color[1]}\t{self.mesh_color[2]}\n"
             out_string += f"\tmeshscale\t{self.mesh_scale[0, 0]}\t{self.mesh_scale[1, 0]}\t{self.mesh_scale[2, 0]}\n"

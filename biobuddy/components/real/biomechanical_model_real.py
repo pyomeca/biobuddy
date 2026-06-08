@@ -1,4 +1,7 @@
+import json
+import shutil
 from copy import deepcopy
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -488,9 +491,56 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
-    def from_fbx(self, filepath: str) -> "BiomechanicalModelReal":
+    @staticmethod
+    def q_from_bvh(filepath: str):
+        """
+        Extract BVH motion samples as biorbd-compatible generalized coordinates.
+
+        Parameters
+        ----------
+        filepath
+            The path to the BVH file to parse.
+        """
+        from ...model_parser.bvh import BvhModelParser
+
+        return BvhModelParser(filepath=filepath).to_q()
+
+    def from_fbx(
+        self,
+        filepath: str,
+        split_meshes_per_segment: bool = False,
+        mesh_output_dir: str = None,
+    ) -> "BiomechanicalModelReal":
         """
         Create a biomechanical model from an FBX file.
+
+        Parameters
+        ----------
+        filepath
+            The path to the FBX file to parse.
+        split_meshes_per_segment
+            Whether the skinned FBX visual mesh should be split into one mesh file
+            per segment and attached to the resulting model.
+        mesh_output_dir
+            The directory where the generated per-segment mesh files should be
+            written. If ``None`` and ``split_meshes_per_segment`` is ``True``, a
+            ``<fbx_stem>_meshes`` directory is created next to the FBX file.
+        """
+        from ...model_parser.fbx import FbxModelParser
+
+        self.filepath = filepath
+        model = FbxModelParser(
+            filepath=filepath,
+            split_meshes_per_segment=split_meshes_per_segment,
+            mesh_output_dir=mesh_output_dir,
+        ).to_real()
+        model.validate_model()
+        return model
+
+    @staticmethod
+    def q_from_fbx(filepath: str):
+        """
+        Extract FBX animation samples as biorbd-compatible generalized coordinates.
 
         Parameters
         ----------
@@ -499,10 +549,97 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         """
         from ...model_parser.fbx import FbxModelParser
 
-        self.filepath = filepath
-        model = FbxModelParser(filepath=filepath).to_real()
-        model.validate_model()
-        return model
+        return FbxModelParser(filepath=filepath).to_q()
+
+    @staticmethod
+    def package_from_fbx(
+        filepath: str,
+        output_directory: str,
+        package_name: str = None,
+        with_animation: bool = True,
+    ) -> Path:
+        """
+        Convert an FBX file into a portable BioBuddy package directory.
+
+        The generated package contains:
+
+        - one ``.bioMod`` file,
+        - one ``meshes`` directory with per-segment ``.ply`` files,
+        - one ``animations`` directory with the extracted generalized coordinates,
+        - one ``source`` directory containing a copy of the original FBX file.
+
+        Parameters
+        ----------
+        filepath
+            The FBX file to convert.
+        output_directory
+            The parent directory where the package should be created.
+        package_name
+            The package folder name. If ``None``, the FBX stem is used.
+        with_animation
+            Whether the extracted FBX animation should be saved alongside the model.
+
+        Returns
+        -------
+        Path
+            The created package directory.
+        """
+        source_path = Path(filepath).resolve()
+        package_stem = package_name or source_path.stem
+        package_directory = Path(output_directory).resolve() / package_stem
+        meshes_directory = package_directory / "meshes"
+        animations_directory = package_directory / "animations"
+        source_directory = package_directory / "source"
+
+        package_directory.mkdir(parents=True, exist_ok=True)
+        meshes_directory.mkdir(parents=True, exist_ok=True)
+        animations_directory.mkdir(parents=True, exist_ok=True)
+        source_directory.mkdir(parents=True, exist_ok=True)
+
+        model = BiomechanicalModelReal().from_fbx(
+            filepath=str(source_path),
+            split_meshes_per_segment=True,
+            mesh_output_dir=str(meshes_directory),
+        )
+        biomod_path = package_directory / f"{package_stem}.bioMod"
+        model.to_biomod(filepath=str(biomod_path), with_mesh=True)
+
+        shutil.copy2(source_path, source_directory / source_path.name)
+
+        if with_animation:
+            from ...model_parser.fbx import FbxModelParser
+
+            parser = FbxModelParser(filepath=str(source_path))
+            animation = parser.to_q()
+            diagnostics = parser.animation_diagnostics()
+            animation_path = animations_directory / f"{package_stem}_q.npz"
+            np.savez(
+                animation_path,
+                q=animation.q,
+                time=animation.time,
+                dof_names=np.asarray(animation.dof_names, dtype=object),
+            )
+            metadata_path = animations_directory / "metadata.json"
+            metadata_path.write_text(
+                json.dumps(
+                    {
+                        "source_file": source_path.name,
+                        "frame_count": int(animation.q.shape[1]),
+                        "nb_q": int(animation.q.shape[0]),
+                        "duration_seconds": (float(animation.time[-1]) if animation.time.size else 0.0),
+                        "mapped_dof_count": diagnostics.mapped_dof_count,
+                        "missing_dof_names": diagnostics.missing_dof_names,
+                        "zero_dof_names": diagnostics.zero_dof_names,
+                        "constant_dof_names": diagnostics.constant_dof_names,
+                        "ignored_animated_model_nodes": (diagnostics.ignored_animated_model_nodes),
+                        "segments_without_visual_meshes": (diagnostics.segments_without_visual_meshes),
+                    },
+                    indent=2,
+                ),
+                encoding="utf-8",
+            )
+
+        return package_directory
 
     def to_biomod(self, filepath: str, with_mesh: bool = True) -> None:
         """
