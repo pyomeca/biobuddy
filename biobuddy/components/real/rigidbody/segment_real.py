@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from lxml import etree
 
@@ -290,7 +291,7 @@ class SegmentReal(SegmentUtils):
             angle_sequence=angle_sequence, angles=rotations, translation=translations
         )
 
-    def to_biomod(self, with_mesh: bool) -> str:
+    def to_biomod(self, with_mesh: bool, model_parent_folder: str = None) -> str:
         """
         Define the print function, so it automatically formats things in the file properly
         """
@@ -312,7 +313,11 @@ class SegmentReal(SegmentUtils):
         if self.mesh and with_mesh:
             out_string += self.mesh.to_biomod()
         if self.mesh_file and with_mesh:
-            out_string += self.mesh_file.to_biomod()
+            if os.path.isabs(self.mesh_file.mesh_file_directory):
+                mesh_path = os.path.relpath(self.mesh_file.mesh_file_directory, model_parent_folder)
+                out_string += self.mesh_file.to_biomod(mesh_path)
+            else:
+                out_string += self.mesh_file.to_biomod()
         out_string += "endsegment\n"
 
         # Also print the markers attached to the segment
