@@ -13,38 +13,10 @@ from biobuddy import (
     BvhModelParser,
     Translations,
     Rotations,
+    RotoTransMatrix,
 )
 
 from test_utils import compare_models
-
-
-def _model_with_marker() -> BiomechanicalModelReal:
-    model = BiomechanicalModelReal()
-    segment = SegmentReal(name="root")
-    segment.add_marker(MarkerReal(name="marker", position=np.zeros(3)))
-    model.add_segment(segment)
-    return model
-
-def _model_with_segment_rotation() -> BiomechanicalModelReal:
-    model = BiomechanicalModelReal()
-    model.add_segment(
-        SegmentReal(
-            name="root",
-            segment_coordinate_system=SegmentCoordinateSystemReal.from_euler_and_translation(
-                angles=np.array([0.1, 0.0, 0.0]),
-                angle_sequence="xyz",
-                translation=np.zeros(3),
-                is_scs_local=True,
-            ),
-        )
-    )
-    return model
-
-def _model_with_multiple_roots() -> BiomechanicalModelReal:
-    model = BiomechanicalModelReal()
-    model.add_segment(SegmentReal(name="root_segment", parent_name="root"))
-    model.add_segment(SegmentReal(name="other_root", parent_name="root"))
-    return model
 
 
 def test_translation_bvh_to_biomod():
@@ -312,39 +284,60 @@ def test_bvh_writer_exports_a_minimal_root_hierarchy():
     if os.path.exists(filepath):
         os.remove(filepath)
 
-@pytest.mark.parametrize(
-    "model_factory, expected_message",
-    [
-        (
-            lambda: BiomechanicalModelReal(gravity=np.array([0.0, -9.81, 0.0])),
-            "BVH export does not support gravity metadata.",
-        ),
-        (
-            lambda: _model_with_marker(),
-            "BVH export does not support segment markers. Segment root cannot be exported.",
-        ),
-        (
-            lambda: _model_with_segment_rotation(),
-            "BVH export currently only supports identity local segment rotations. Segment root is rotated.",
-        ),
-        (
-            lambda: _model_with_multiple_roots(),
-            "BVH export requires exactly one segment attached to root.",
-        ),
-    ],
-)
-def test_bvh_writer_rejects_unsupported_model_features(model_factory, expected_message: str):
+
+def test_bvh_writer_rejects_unsupported_model_features():
     """Reject model structures that cannot be represented faithfully in BVH."""
 
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     filepath = parent_path + f"/examples/models/unsupported.bvh"
-    model = model_factory()
 
-    with pytest.raises((RuntimeError, NotImplementedError), match=expected_message):
+    # no root
+    model = BiomechanicalModelReal()
+    with pytest.raises(RuntimeError, match="BHV export assumes a root segment. No segment named 'root' was found."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # multiple roots
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root_segment", parent_name="root"))
+    model.add_segment(SegmentReal(name="root_segment2", parent_name="root"))
+    with pytest.raises(RuntimeError, match="BVH export requires exactly one segment attached to root."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # gravity
+    model = BiomechanicalModelReal(gravity=np.array([0.0, -9.81, 0.0]))
+    model.add_segment(SegmentReal(name="root_segment"))
+    with pytest.raises(NotImplementedError, match="BVH export does not support gravity metadata."):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # marker
+    model = BiomechanicalModelReal()
+    model.add_segment(SegmentReal(name="root_segment"))
+    model.segments["root_segment"].add_marker(MarkerReal(name="root_marker", position=np.zeros(3)))
+    with pytest.raises(
+        NotImplementedError,
+        match="BVH export does not support segment markers. Segment root_segment cannot be exported.",
+    ):
+        model.to_bvh(filepath=str(filepath), with_mesh=False)
+
+    # segment RT
+    model = BiomechanicalModelReal()
+    model.add_segment(
+        SegmentReal(
+            name="root_segment",
+            segment_coordinate_system=SegmentCoordinateSystemReal(
+                scs=RotoTransMatrix.from_rt_matrix(np.array([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]))
+            ),
+        )
+    )
+    with pytest.raises(
+        NotImplementedError,
+        match="BVH export currently only supports identity local segment rotations. Segment root_segment is rotated.",
+    ):
         model.to_bvh(filepath=str(filepath), with_mesh=False)
 
     if os.path.exists(filepath):
         os.remove(filepath)
+
 
 def test_bvh_writer_rejects_segment_ranges():
     """Reject segment range metadata during BVH export."""
