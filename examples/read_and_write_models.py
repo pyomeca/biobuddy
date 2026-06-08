@@ -270,6 +270,13 @@ def fbx_biomod_convertion():
     if visualization_flag:
         model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
 
+    # --- Reading an .bioMod model and translating it to an .bvh model --- #
+    # Read a .bioMod file
+    model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
+
+    # And convert it to an .fbx file
+    model.to_fbx(fbx_filepath.replace(".fbx", "_translated.fbx"), with_mesh=visualization_flag)
+
 
 if __name__ == "__main__":
 

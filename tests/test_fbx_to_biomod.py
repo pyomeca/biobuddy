@@ -1,4 +1,4 @@
-from pathlib import Path
+import os
 import shutil
 import struct
 
@@ -16,10 +16,10 @@ def test_fbx_parser_extracts_the_fullbody_skeleton():
     """
     Parse the real FBX example and extract the expected skeleton roots.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    filepath = parent_path + f"/examples/models/fullbody_model.fbx"
 
-    parser = FbxModelParser(filepath=str(filepath))
+    parser = FbxModelParser(filepath=filepath)
 
     assert parser.version == 7400
     assert len(parser.root_ids) == 1
@@ -33,12 +33,13 @@ def test_fbx_and_bvh_share_the_same_kinematic_topology():
     """
     Build models from FBX and BVH and compare their segment hierarchy.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    bvh_filepath = parent_path / "examples" / "models" / "fullbody_model.bvh"
 
-    model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
-    model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=str(bvh_filepath))
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    bvh_filepath = parent_path + f"/examples/models/fullbody_model.bvh"
+
+    model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
+    model_from_bvh = BiomechanicalModelReal().from_bvh(filepath=bvh_filepath)
 
     fbx_topology = [(segment.name, segment.parent_name) for segment in model_from_fbx.segments]
     bvh_topology = [(segment.name, segment.parent_name) for segment in model_from_bvh.segments]
@@ -46,27 +47,29 @@ def test_fbx_and_bvh_share_the_same_kinematic_topology():
     assert fbx_topology == bvh_topology
 
 
-def test_fbx_model_can_be_exported_to_biomod(tmp_path: Path):
+def test_fbx_model_can_be_exported_to_biomod():
     """
     Export a converted FBX hierarchy to a biorbd-compatible ``.bioMod`` file.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    biomod_filepath = tmp_path / "fullbody_model_from_fbx.bioMod"
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    biomod_filepath = parent_path + f"/examples/models/fullbody_model_from_fbx.bioMod"
 
-    model = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
-    model.to_biomod(filepath=str(biomod_filepath), with_mesh=False)
+    model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
+    model.to_biomod(filepath=biomod_filepath, with_mesh=False)
 
     content = biomod_filepath.read_text()
     assert "segment\tHips" in content
     assert "\ttranslations\txyz" in content
     assert "\trotations\txyz" in content
 
-    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=str(biomod_filepath))
+    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
     compare_models(model, model_from_biomod, decimal=5)
 
+    if os.path.exists(biomod_filepath):
+        os.remove(biomod_filepath)
 
-def test_translation_fbx_to_biomod_to_fbx(tmp_path: Path):
+def test_translation_fbx_to_biomod_to_fbx():
     """
     Convert FBX to bioMod, then export the bioMod model back to FBX.
 
@@ -77,36 +80,38 @@ def test_translation_fbx_to_biomod_to_fbx(tmp_path: Path):
     if blender_executable is None:
         pytest.skip("Blender is required to run the FBX writer round-trip test.")
 
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    biomod_filepath = tmp_path / "fullbody_model_from_fbx.bioMod"
-    fbx_translated_filepath = tmp_path / "fullbody_model_translated.fbx"
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    biomod_filepath = parent_path + f"/examples/models/fullbody_model_from_fbx.bioMod"
+    fbx_translated_filepath = parent_path + f"/examples/models/fullbody_model_translated.fbx"
 
-    model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
-    model_from_fbx.to_biomod(filepath=str(biomod_filepath), with_mesh=False)
+    model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
+    model_from_fbx.to_biomod(filepath=biomod_filepath, with_mesh=False)
 
-    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=str(biomod_filepath))
+    model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
     model_from_biomod.to_fbx(
-        filepath=str(fbx_translated_filepath),
+        filepath=fbx_translated_filepath,
         with_mesh=False,
         blender_executable=blender_executable,
     )
 
-    model_from_fbx_2 = BiomechanicalModelReal().from_fbx(filepath=str(fbx_translated_filepath))
+    model_from_fbx_2 = BiomechanicalModelReal().from_fbx(filepath=fbx_translated_filepath)
     compare_models(model_from_fbx, model_from_fbx_2, decimal=4)
 
+    if os.path.exists(biomod_filepath):
+        os.remove(biomod_filepath)
 
-def test_fbx_writer_requires_blender_when_the_executable_is_missing(tmp_path: Path):
+def test_fbx_writer_requires_blender_when_the_executable_is_missing():
     """
     Fail with a clear message when the optional Blender backend is unavailable.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    model = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
 
     with pytest.raises(RuntimeError, match="FBX export requires Blender"):
         model.to_fbx(
-            filepath=str(tmp_path / "missing_blender.fbx"),
+            filepath=tmp_path / "missing_blender.fbx",
             with_mesh=False,
             blender_executable="definitely-not-a-real-blender-executable",
         )
@@ -116,9 +121,9 @@ def test_fbx_writer_serializes_segment_transforms():
     """
     Prepare a Blender payload with both local and global segment transforms.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    model = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
     writer = FbxModelWriter(filepath="unused.fbx", with_mesh=False)
 
     payload = writer._payload(model)
@@ -131,32 +136,35 @@ def test_fbx_writer_serializes_segment_transforms():
     assert np.array(hips_payload["global_rotation"]).shape == (3, 3)
 
 
-def test_fbx_writer_rejects_mesh_export(tmp_path: Path):
+def test_fbx_writer_rejects_mesh_export():
     """
     Keep the first FBX writer scoped to skeleton export until mesh support lands.
     """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-    model = BiomechanicalModelReal().from_fbx(filepath=str(fbx_filepath))
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
+    model = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
 
     with pytest.raises(NotImplementedError, match="FBX mesh export is not implemented yet"):
         model.to_fbx(
-            filepath=str(tmp_path / "with_mesh.fbx"),
+            filepath=tmp_path / "with_mesh.fbx",
             with_mesh=True,
             blender_executable="definitely-not-a-real-blender-executable",
         )
 
 
-def test_fbx_parser_rejects_non_binary_files(tmp_path: Path):
+def test_fbx_parser_rejects_non_binary_files():
     """
     Reject ASCII or unrelated files before attempting to parse records.
     """
-    filepath = tmp_path / "not_binary.fbx"
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    filepath = parent_path + f"/examples/models/not_binary.fbx"
     filepath.write_text("FBXHeaderExtension: {}", encoding="utf-8")
 
     with pytest.raises(ValueError, match="Only binary FBX files are supported"):
-        FbxModelParser(filepath=str(filepath))
+        FbxModelParser(filepath=filepath)
 
+    if os.path.exists(filepath):
+        os.remove(filepath)
 
 def test_fbx_parser_decodes_scalar_properties():
     """
