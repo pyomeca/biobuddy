@@ -37,6 +37,7 @@ from .yeadon_measurement_editor import (
     YeadonIllustrationPrimitive,
     launch_yeadon_measurement_editor,
     parse_yeadon_measurement_values,
+    save_yeadon_model,
     yeadon_measurement_illustration,
 )
 
@@ -76,5 +77,6 @@ __all__ = [
     YeadonIllustrationPrimitive.__name__,
     launch_yeadon_measurement_editor.__name__,
     parse_yeadon_measurement_values.__name__,
+    save_yeadon_model.__name__,
     yeadon_measurement_illustration.__name__,
 ]

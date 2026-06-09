@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Mapping
 
 from ..characteristics.yeadon import (
@@ -68,6 +69,13 @@ def yeadon_measurement_illustration(
     return base + (_highlight_for_spec(spec),)
 
 
+def save_yeadon_model(table: YeadonTable, filepath: str | Path) -> None:
+    """
+    Save the simple Yeadon segment model as a bioMod file.
+    """
+    table.to_simple_model().to_biomod(filepath=str(filepath), with_mesh=False)
+
+
 def launch_yeadon_measurement_editor() -> None:
     """
     Launch a Qt desktop editor for entering Yeadon anthropometric measurements.
@@ -79,6 +87,7 @@ def launch_yeadon_measurement_editor() -> None:
             QApplication,
             QCheckBox,
             QComboBox,
+            QFileDialog,
             QFormLayout,
             QGridLayout,
             QGroupBox,
@@ -106,6 +115,7 @@ def launch_yeadon_measurement_editor() -> None:
                 QApplication,
                 QCheckBox,
                 QComboBox,
+                QFileDialog,
                 QFormLayout,
                 QGridLayout,
                 QGroupBox,
@@ -222,6 +232,10 @@ def launch_yeadon_measurement_editor() -> None:
             compute_button = QPushButton("Compute")
             compute_button.clicked.connect(self._compute)
             action_layout.addWidget(compute_button)
+            self.save_button = QPushButton("Save as .bioMod")
+            self.save_button.setEnabled(False)
+            self.save_button.clicked.connect(self._save_model)
+            action_layout.addWidget(self.save_button)
             self.result_label = QLabel("")
             action_layout.addWidget(self.result_label)
             form_layout.addLayout(action_layout)
@@ -266,6 +280,24 @@ def launch_yeadon_measurement_editor() -> None:
                 return
             self.computed_table = table
             self.result_label.setText(f"Mass: {table.mass:0.3f} kg")
+            self.save_button.setEnabled(True)
+
+        def _save_model(self) -> None:
+            if self.computed_table is None:
+                QMessageBox.information(self, "No Yeadon model", "Compute a Yeadon model before saving.")
+                return
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Yeadon model",
+                "yeadon_model.bioMod",
+                "BioMod files (*.bioMod)",
+            )
+            if not filepath:
+                return
+            try:
+                save_yeadon_model(self.computed_table, filepath)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to save Yeadon model", str(error))
 
     app = QApplication.instance() or QApplication([])
     window = YeadonMeasurementEditor()

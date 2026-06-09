@@ -199,8 +199,8 @@ pelvis_inertia = yeadon_table[YeadonSegmentName.PELVIS]
 model = yeadon_table.to_simple_model()
 ```
 
-The GUI package includes a Yeadon measurement editor with one field per measurement and an illustration panel for the
-selected body level:
+The GUI package includes a Yeadon measurement editor with one field per measurement, an illustration panel for the
+selected body level, and export to a simple `.bioMod` model:
 
 ```bash
 python -m biobuddy.gui --yeadon-measurements
