@@ -206,6 +206,14 @@ selected body level, and export to a simple `.bioMod` model:
 python -m biobuddy.gui --yeadon-measurements
 ```
 
+The main model editor can also apply inertial parameters to the selected segment from the available inertial tables
+(`de Leva` and `Yeadon`). It opens a model-specific input dialog and lets you choose the source segment before applying
+mass, center of mass, and the full inertia matrix:
+
+```bash
+python -m biobuddy.gui
+```
+
 ```python3
 from biobuddy import launch_yeadon_measurement_editor
 

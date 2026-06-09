@@ -6,8 +6,11 @@ from dataclasses import fields
 from biobuddy import (
     BiomechanicalModelReal,
     SegmentEditorData,
+    available_inertial_models,
     apply_segment_editor_data,
+    build_inertial_parameters_from_model,
     get_segment_editor_data,
+    inertial_model_segment_names,
     SegmentCoordinateSystemReal,
     RotoTransMatrix,
 )
@@ -34,7 +37,7 @@ def _build_segment() -> SegmentReal:
         inertia_parameters=InertiaParametersReal(
             mass=5.0,
             center_of_mass=np.array([0.05, 0.0, 0.0]),
-            inertia=np.diag([0.5, 0.5, 0.5]),
+            inertia=np.array([[0.5, 0.1, 0.0], [0.1, 0.6, 0.2], [0.0, 0.2, 0.7]]),
         ),
         mesh=None,
         mesh_file=None,
@@ -54,7 +57,7 @@ def test_get_segment_editor_data_extracts_editable_values():
         inertia_parameters=InertiaParametersReal(
             mass=8.0,
             center_of_mass=np.array([0.1, 0.2, 0.3]),
-            inertia=np.diag([1.0, 2.0, 3.0]),
+            inertia=np.array([[1.0, 0.1, 0.2], [0.1, 2.0, 0.3], [0.2, 0.3, 3.0]]),
         ),
     )
 
@@ -67,6 +70,7 @@ def test_get_segment_editor_data_extracts_editable_values():
     assert data.q_max == [1.0, 2.0, 3.0]
     assert data.mass == 8.0
     assert data.center_of_mass == [0.1, 0.2, 0.3]
+    assert data.inertia_matrix == [[1.0, 0.1, 0.2], [0.1, 2.0, 0.3], [0.2, 0.3, 3.0]]
     assert data.inertia_diagonal == [1.0, 2.0, 3.0]
 
 
@@ -83,7 +87,7 @@ def test_apply_segment_editor_data_updates_segment():
         q_max=[1.0, 2.0],
         mass=4.5,
         center_of_mass=[0.0, -0.2, 0.0],
-        inertia_diagonal=[0.1, 0.2, 0.3],
+        inertia_matrix=[[0.1, 0.01, 0.02], [0.01, 0.2, 0.03], [0.02, 0.03, 0.3]],
     )
 
     apply_segment_editor_data(segment, data)
@@ -96,7 +100,10 @@ def test_apply_segment_editor_data_updates_segment():
     assert segment.q_ranges.max_bound == [1.0, 2.0]
     assert segment.inertia_parameters.mass == 4.5
     npt.assert_array_equal(segment.inertia_parameters.center_of_mass[:3, 0], np.array([0.0, -0.2, 0.0]))
-    npt.assert_array_equal(np.diag(segment.inertia_parameters.inertia)[:3], np.array([0.1, 0.2, 0.3]))
+    npt.assert_array_equal(
+        segment.inertia_parameters.inertia[:3, :3],
+        np.array([[0.1, 0.01, 0.02], [0.01, 0.2, 0.03], [0.02, 0.03, 0.3]]),
+    )
 
 
 def test_apply_segment_editor_data_rejects_incompatible_ranges():
@@ -112,7 +119,7 @@ def test_apply_segment_editor_data_rejects_incompatible_ranges():
         q_max=[1.0],
         mass=None,
         center_of_mass=[0.0, 0.0, 0.0],
-        inertia_diagonal=[0.0, 0.0, 0.0],
+        inertia_matrix=[[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
     )
 
     with pytest.raises(ValueError, match="Expected either 0 or 2 range values"):
@@ -149,7 +156,7 @@ def test_segment_data_class():
         "_markers",  # TODO: to be added
         "_contacts",  # TODO: to be added
         "_imus",  # TODO: to be added
-        "_inertia_parameters",  # -> mass, center_of_mass, inertia_diagonal
+        "_inertia_parameters",  # -> mass, center_of_mass, inertia_matrix
         "_mesh",  # -> TODO: to be added
         "_mesh_file",  # -> TODO: to be added
         "mesh_file",  # TODO: to be added
@@ -159,7 +166,7 @@ def test_segment_data_class():
         "_q_max",
         "_mass",
         "_center_of_mass",
-        "_inertia_diagonal",
+        "_inertia_matrix",
     }
     direct_editor_fields = editor_fields - derived_editor_fields
 
@@ -169,3 +176,28 @@ def test_segment_data_class():
         f"  In SegmentEditorData but not SegmentReal: {direct_editor_fields - real_fields}"
     )
     assert derived_editor_fields <= editor_fields
+
+
+def test_available_inertial_models_and_segments():
+    """
+    Expose only configurable inertial models and their source segments.
+    """
+    assert available_inertial_models() == ("de Leva", "Yeadon")
+    assert "TRUNK" in inertial_model_segment_names("de Leva")
+    assert "P" in inertial_model_segment_names("Yeadon")
+
+
+def test_build_de_leva_inertial_parameters_from_model():
+    """
+    Build segment inertia from de Leva model-specific subject inputs.
+    """
+    inertia_parameters = build_inertial_parameters_from_model(
+        "de Leva",
+        "R_THIGH",
+        {"total_mass": "70", "total_height": "1.75", "sex": "male"},
+    )
+
+    assert inertia_parameters.mass > 0
+    assert inertia_parameters.center_of_mass.shape == (4, 1)
+    assert inertia_parameters.inertia.shape == (4, 4)
+    assert np.any(inertia_parameters.inertia[:3, :3])
