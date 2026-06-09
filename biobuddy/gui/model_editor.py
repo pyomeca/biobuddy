@@ -1,9 +1,11 @@
 import json
 import math
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
 
+from ..validation import MuscleValidator
 from .segment_editor import (
     SegmentEditorData,
     apply_segment_editor_data,
@@ -69,6 +71,12 @@ from .c3d_creation_workflow import (
     validate_c3d_workflow_draft,
 )
 from ..utils.marker_data import C3dData
+
+PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS = {
+    "hara2016_hip": "Hara 2016 hip",
+    "harrington2007_hip": "Harrington 2007 hip",
+    "sobral2025_shoulder": "Sobral 2025 shoulder",
+}
 
 
 def launch_model_editor() -> None:
@@ -225,11 +233,13 @@ def launch_model_editor() -> None:
         axis_combo.addItems(["x", "y", "z"])
         if index == 1:
             axis_combo.setCurrentText("y")
+        keep_checkbox = QCheckBox("Keep this vector")
+        keep_checkbox.setChecked(index == 0)
         return {
             "start_list": start_list,
             "end_list": end_list,
             "axis_combo": axis_combo,
-            "keep_checkbox": QCheckBox("Keep this vector"),
+            "keep_checkbox": keep_checkbox,
             "add_start_button": QPushButton("Add to start"),
             "add_end_button": QPushButton("Add to end"),
             "remove_start_button": QPushButton("Remove start"),
@@ -256,6 +266,15 @@ def launch_model_editor() -> None:
         layout.addWidget(QLabel(f"Vector {index + 1} axis"))
         layout.addWidget(controls["axis_combo"])
         layout.addWidget(controls["keep_checkbox"])
+        return layout
+
+    def _axis_vectors_layout(axis_vector_controls: list[dict[str, object]]):
+        """
+        Stack vector 1 and vector 2 definitions so their start/end fields read vertically.
+        """
+        layout = QVBoxLayout()
+        for index, controls in enumerate(axis_vector_controls):
+            layout.addLayout(_axis_vector_layout(index, controls))
         return layout
 
     class C3dSegmentAxisPreviewWidget(QWidget):
@@ -431,7 +450,7 @@ def launch_model_editor() -> None:
                     virtual_points.append((marker.name, point, marker.segment_name))
 
             solution_points = []
-            if self.selected_method in {"score", "sara"}:
+            if self.selected_method in {"score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS):
                 proximal_point = self._technical_segment_center(self.proximal_segment_name)
                 distal_point = self._technical_segment_center(self.distal_segment_name)
                 if proximal_point is not None:
@@ -548,6 +567,8 @@ def launch_model_editor() -> None:
             self.choose_c3d_folder_button.clicked.connect(self._choose_c3d_folder)
             self.generate_log_button = QPushButton("Generate log")
             self.generate_log_button.clicked.connect(self._update_generation_log)
+            self.generate_python_code_button = QPushButton("Generate Python code")
+            self.generate_python_code_button.clicked.connect(self._generate_python_code)
             self.generation_log_edit = QTextEdit()
             self.generation_log_edit.setReadOnly(True)
             self.generation_log_edit.setMinimumHeight(160)
@@ -595,7 +616,9 @@ def launch_model_editor() -> None:
                     lambda checked=False, vector_index=index: self._remove_selected_axis_markers(vector_index, "end")
                 )
                 controls["axis_combo"].currentTextChanged.connect(self._update_segment_axis_preview)
-                controls["keep_checkbox"].stateChanged.connect(self._update_segment_axis_preview)
+                controls["keep_checkbox"].stateChanged.connect(
+                    lambda checked=False, vector_index=index: self._ensure_single_kept_axis_vector(vector_index)
+                )
             self.save_segment_axis_button = QPushButton("Add/update anatomical frame vectors")
             self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
@@ -613,13 +636,16 @@ def launch_model_editor() -> None:
                     "sara",
                     "marker_mean",
                     "regression",
-                    "hara2016_hip",
-                    "harrington2007_hip",
-                    "sobral2025_shoulder",
+                    "predictive",
                     "equation",
                 ]
             )
             self.virtual_marker_method_combo.currentTextChanged.connect(self._sync_virtual_marker_method_fields)
+            self.virtual_marker_predictive_method_combo = QComboBox()
+            self.virtual_marker_predictive_method_combo.addItems(list(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS.values()))
+            self.virtual_marker_predictive_method_combo.currentTextChanged.connect(
+                self._sync_virtual_marker_method_fields
+            )
             self.virtual_marker_source_edit = QLineEdit()
             self.virtual_marker_source_edit.textChanged.connect(self._update_virtual_marker_preview)
             self.browse_virtual_marker_c3d_button = QPushButton("Browse C3D")
@@ -724,6 +750,7 @@ def launch_model_editor() -> None:
             log_row = QHBoxLayout()
             log_row.addWidget(QLabel("Generation log"))
             log_row.addStretch()
+            log_row.addWidget(self.generate_python_code_button)
             log_row.addWidget(self.generate_log_button)
             layout.addLayout(log_row)
             layout.addWidget(self.generation_log_edit)
@@ -779,8 +806,7 @@ def launch_model_editor() -> None:
             source_column.addWidget(QLabel("Axis marker source"))
             source_column.addWidget(self.axis_marker_source_list)
             axis_layout.addLayout(source_column, 2)
-            for index, controls in enumerate(self.axis_vector_controls):
-                axis_layout.addLayout(_axis_vector_layout(index, controls), 2)
+            axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 3)
             save_column = QVBoxLayout()
             save_column.addWidget(QLabel("Frame"))
             save_column.addWidget(self.save_segment_axis_button)
@@ -810,13 +836,14 @@ def launch_model_editor() -> None:
             form = QFormLayout()
             form.addRow("Segment", self.virtual_marker_segment_combo)
             form.addRow("Method", self.virtual_marker_method_combo)
+            form.addRow("Predictive method", self.virtual_marker_predictive_method_combo)
             source_row = QHBoxLayout()
             source_row.addWidget(self.virtual_marker_source_edit)
             source_row.addWidget(self.browse_virtual_marker_c3d_button)
             form.addRow("Source C3D / markers", source_row)
             form.addRow("C3D role", self.virtual_marker_c3d_role_combo)
-            form.addRow("Technical proximal", self.virtual_marker_proximal_combo)
-            form.addRow("Technical distal", self.virtual_marker_distal_combo)
+            form.addRow("Proximal segment", self.virtual_marker_proximal_combo)
+            form.addRow("Distal segment", self.virtual_marker_distal_combo)
             form.addRow("Equation / regression", self.virtual_marker_equation_edit)
             form.addRow("Suggested name", self.virtual_marker_suggested_name_label)
             form.addRow("Name", self.virtual_marker_name_edit)
@@ -1001,6 +1028,7 @@ def launch_model_editor() -> None:
             if self.virtual_marker_segment_combo.count() != 0:
                 self.virtual_marker_segment_combo.setCurrentIndex(0)
             self.virtual_marker_method_combo.setCurrentText("pointing")
+            self.virtual_marker_predictive_method_combo.setCurrentIndex(0)
             self._sync_virtual_marker_method_fields()
             self._update_virtual_marker_info_label(None)
             self._update_virtual_marker_preview()
@@ -1008,7 +1036,7 @@ def launch_model_editor() -> None:
         def _save_workflow_virtual_marker_from_form(self) -> None:
             name = self.virtual_marker_name_edit.text().strip() or self._suggested_virtual_marker_name()
             segment_name = self.virtual_marker_segment_combo.currentText().strip()
-            method = self.virtual_marker_method_combo.currentText().strip()
+            method = self._selected_virtual_marker_method()
             source = self._virtual_marker_source_from_form(method)
             equation = self._virtual_marker_equation_from_form(method)
             try:
@@ -1029,16 +1057,20 @@ def launch_model_editor() -> None:
         def _virtual_marker_source_from_form(self, method: str) -> str:
             source = self.virtual_marker_source_edit.text().strip()
             c3d_role = self.virtual_marker_c3d_role_combo.currentText().strip()
-            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
-            if method in {"score", "sara", "pointing", "regression", "equation"} | predictive_methods and source == "":
+            if (
+                method
+                in {"score", "sara", "pointing", "regression", "equation"}
+                | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
+                and source == ""
+            ):
                 source = c3d_role
             return source
 
         def _virtual_marker_equation_from_form(self, method: str) -> str:
             equation = self.virtual_marker_equation_edit.text().strip()
-            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
-            if method not in {"score", "sara"}:
-                return equation if method in {"equation", "regression"} | predictive_methods else ""
+            methods_with_segment_context = {"score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
+            if method not in methods_with_segment_context:
+                return equation if method in {"equation", "regression"} else ""
             parts = [
                 f"proximal={self.virtual_marker_proximal_combo.currentText().strip()}",
                 f"distal={self.virtual_marker_distal_combo.currentText().strip()}",
@@ -1048,7 +1080,7 @@ def launch_model_editor() -> None:
             return "; ".join(parts)
 
         def _suggested_virtual_marker_name(self) -> str:
-            method = self.virtual_marker_method_combo.currentText().strip()
+            method = self._selected_virtual_marker_method()
             proximal = self.virtual_marker_proximal_combo.currentText().strip()
             distal = self.virtual_marker_distal_combo.currentText().strip()
             segment_name = self.virtual_marker_segment_combo.currentText().strip()
@@ -1058,10 +1090,10 @@ def launch_model_editor() -> None:
                 method.capitalize() if method else "Virtual",
             )
             if method in {"hara2016_hip", "harrington2007_hip"}:
-                method_label = method.replace("_hip", "").replace("2016", "2016Hip").replace("2007", "2007Hip")
+                method_label = PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS[method].replace(" ", "")
                 joint_name = "Hip"
             elif method == "sobral2025_shoulder":
-                method_label = "Sobral2025Shoulder"
+                method_label = PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS[method].replace(" ", "")
                 joint_name = "Shoulder"
             local_segment = proximal or segment_name
             if method in {"score", "sara"} and local_segment:
@@ -1259,6 +1291,13 @@ def launch_model_editor() -> None:
             if sum(keep_vector for _, _, _, keep_vector in vector_specs) != 1:
                 QMessageBox.critical(self, "Unable to save segment axis", "Choose exactly one vector to keep.")
                 return
+            if len({axis_name for axis_name, _, _, _ in vector_specs}) != 2:
+                QMessageBox.critical(
+                    self,
+                    "Unable to save segment axis",
+                    "The two vectors must use two different axes. The third axis is computed by cross product.",
+                )
+                return
             try:
                 updated_draft = self.workflow_draft
                 for index, (axis_name, start_markers, end_markers, keep_vector) in enumerate(vector_specs, start=1):
@@ -1426,16 +1465,38 @@ def launch_model_editor() -> None:
             for index, controls in enumerate(self.axis_vector_controls):
                 controls["start_list"].clear()
                 controls["end_list"].clear()
-                controls["keep_checkbox"].setChecked(False)
+                controls["axis_combo"].setCurrentText("x" if index == 0 else "y")
+                controls["keep_checkbox"].setChecked(index == 0)
                 if index >= len(axes):
                     continue
                 axis = axes[index]
-                controls["axis_combo"].setCurrentText(axis.axis if axis.axis in {"x", "y", "z"} else "x")
+                fallback_axis = "x" if index == 0 else "y"
+                controls["axis_combo"].setCurrentText(axis.axis if axis.axis in {"x", "y", "z"} else fallback_axis)
                 controls["keep_checkbox"].setChecked(axis.keep_vector)
                 for marker_name in axis.start_markers:
                     controls["start_list"].addItem(marker_name)
                 for marker_name in axis.end_markers:
                     controls["end_list"].addItem(marker_name)
+            self._ensure_single_kept_axis_vector(0)
+
+        def _ensure_single_kept_axis_vector(self, selected_index: int) -> None:
+            """
+            Keep exactly one anatomical vector as the source vector for orthonormalization.
+            """
+            checked_indices = [
+                index
+                for index, controls in enumerate(self.axis_vector_controls)
+                if controls["keep_checkbox"].isChecked()
+            ]
+            index_to_keep = (
+                selected_index if selected_index in checked_indices else (checked_indices[0] if checked_indices else 0)
+            )
+            for index, controls in enumerate(self.axis_vector_controls):
+                checkbox = controls["keep_checkbox"]
+                checkbox.blockSignals(True)
+                checkbox.setChecked(index == index_to_keep)
+                checkbox.blockSignals(False)
+            self._update_segment_axis_preview()
 
         def _update_segment_axis_preview(self) -> None:
             segment_name = self._selected_anatomical_segment_name()
@@ -1481,7 +1542,13 @@ def launch_model_editor() -> None:
                 return
             self.virtual_marker_name_edit.setText(marker.name)
             self.virtual_marker_segment_combo.setCurrentText(marker.segment_name)
-            self.virtual_marker_method_combo.setCurrentText(marker.method)
+            if marker.method in PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS:
+                self.virtual_marker_method_combo.setCurrentText("predictive")
+                self.virtual_marker_predictive_method_combo.setCurrentText(
+                    PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS[marker.method]
+                )
+            else:
+                self.virtual_marker_method_combo.setCurrentText(marker.method)
             self.virtual_marker_source_edit.setText(marker.source)
             self.virtual_marker_equation_edit.setText(_strip_score_segment_payload(marker.equation))
             proximal, distal = _score_segments_from_payload(marker.equation)
@@ -1525,19 +1592,32 @@ def launch_model_editor() -> None:
                 combo.blockSignals(False)
             self._update_suggested_virtual_marker_name()
 
+        def _selected_virtual_marker_method(self) -> str:
+            method = self.virtual_marker_method_combo.currentText().strip()
+            if method != "predictive":
+                return method
+            return _predictive_virtual_marker_method_from_label(
+                self.virtual_marker_predictive_method_combo.currentText().strip()
+            )
+
         def _sync_virtual_marker_method_fields(self, _method: str | None = None) -> None:
-            method = self.virtual_marker_method_combo.currentText()
-            predictive_methods = {"hara2016_hip", "harrington2007_hip", "sobral2025_shoulder"}
+            method = self._selected_virtual_marker_method()
+            is_predictive = self.virtual_marker_method_combo.currentText().strip() == "predictive"
+            self.virtual_marker_predictive_method_combo.setEnabled(is_predictive)
             self.virtual_marker_source_edit.setEnabled(
-                method in {"pointing", "score", "sara", "regression", "equation", "marker_mean"} | predictive_methods
+                method
+                in {"pointing", "score", "sara", "regression", "equation", "marker_mean"}
+                | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
             )
             self.virtual_marker_c3d_role_combo.setEnabled(
-                method in {"pointing", "score", "sara", "regression", "equation"} | predictive_methods
+                method
+                in {"pointing", "score", "sara", "regression", "equation"}
+                | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
             )
-            self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"})
-            self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"})
+            self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
+            self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
             self.virtual_marker_equation_edit.setEnabled(
-                method in {"equation", "regression", "score", "sara"} | predictive_methods
+                method in {"equation", "regression", "score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
             )
             hints = {
                 "pointing": "Choose the pointing C3D/role and optionally the marker or pointer-tip name in source.",
@@ -1573,7 +1653,7 @@ def launch_model_editor() -> None:
                 self.workflow_draft.segment_marker_groups,
                 self.workflow_draft.virtual_markers,
                 self.virtual_marker_name_edit.text().strip(),
-                self.virtual_marker_method_combo.currentText().strip(),
+                self._selected_virtual_marker_method(),
                 self.virtual_marker_proximal_combo.currentText().strip(),
                 self.virtual_marker_distal_combo.currentText().strip(),
             )
@@ -1586,6 +1666,24 @@ def launch_model_editor() -> None:
                 self.workflow_marker_pool,
             )
             self.generation_log_edit.setPlainText("\n".join(lines))
+
+        def _generate_python_code(self) -> None:
+            default_folder = self.c3d_folder_path or str(Path.home())
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save generated Python code",
+                str(Path(default_folder) / f"{self.workflow_draft.preset.value}_model_definition.py"),
+                "Python files (*.py)",
+            )
+            if not filepath:
+                return
+            try:
+                Path(filepath).write_text(
+                    _python_code_from_c3d_draft(self.workflow_draft, self.c3d_folder_path),
+                    encoding="utf-8",
+                )
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to generate Python code", str(error))
 
         def _selected_segment_setting(self):
             if not self.segment_settings_list.selectedItems():
@@ -1749,9 +1847,13 @@ def launch_model_editor() -> None:
                 self.marker_list.addItem("Choose the main marker C3D to list markers.")
                 return
             marker_names = tuple(self.c3d_data.marker_names) if self.c3d_data is not None else self.workflow_marker_pool
+            virtual_marker_names = tuple(marker.name for marker in self.workflow_draft.virtual_markers)
             if self.show_virtual_markers_in_segments_checkbox.isChecked():
+                marker_names = tuple(dict.fromkeys(marker_names + virtual_marker_names))
+            else:
+                virtual_marker_name_set = set(virtual_marker_names)
                 marker_names = tuple(
-                    dict.fromkeys(marker_names + tuple(marker.name for marker in self.workflow_draft.virtual_markers))
+                    marker_name for marker_name in marker_names if marker_name not in virtual_marker_name_set
                 )
             selected_segment_name = self._selected_workflow_segment_name()
             selected_segment_marker_names = {
@@ -1792,6 +1894,9 @@ def launch_model_editor() -> None:
             self.on_marker_selected = None
             self._projected_joint_positions = {}
             self._projected_marker_positions = {}
+            self.yaw = -0.6
+            self.pitch = 0.35
+            self._last_mouse_position = None
 
         def set_model(self, model) -> None:
             self.scene = None if model is None else build_preview_scene(model)
@@ -1809,14 +1914,23 @@ def launch_model_editor() -> None:
                 painter.drawText(self.rect(), qt_alignment_center, "Open a model to preview it")
                 return
 
-            projected_joints = {name: _project_point(point) for name, point in self.scene.joints.items()}
-            projected_markers = {name: _project_point(point) for name, point in self.scene.markers.items()}
+            projected_joints = {
+                name: _rotate_preview_point(point, self.yaw, self.pitch) for name, point in self.scene.joints.items()
+            }
+            projected_markers = {
+                name: _rotate_preview_point(point, self.yaw, self.pitch) for name, point in self.scene.markers.items()
+            }
             projected_axes = [
-                (axis, _project_point(axis.start), _project_point(axis.end)) for axis in self.scene.segment_axes
+                (
+                    axis,
+                    _rotate_preview_point(axis.start, self.yaw, self.pitch),
+                    _rotate_preview_point(axis.end, self.yaw, self.pitch),
+                )
+                for axis in self.scene.segment_axes
             ]
             all_points = list(projected_joints.values()) + list(projected_markers.values())
             for path in self.scene.muscles.values():
-                all_points.extend(_project_point(point) for point in path)
+                all_points.extend(_rotate_preview_point(point, self.yaw, self.pitch) for point in path)
             for _, start, end in projected_axes:
                 all_points.extend([start, end])
             transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
@@ -1833,7 +1947,10 @@ def launch_model_editor() -> None:
             painter.setPen(QPen(QColor("#dc2626"), 2))
             for path in self.scene.muscles.values():
                 for start, end in zip(path, path[1:]):
-                    painter.drawLine(transform(_project_point(start)), transform(_project_point(end)))
+                    painter.drawLine(
+                        transform(_rotate_preview_point(start, self.yaw, self.pitch)),
+                        transform(_rotate_preview_point(end, self.yaw, self.pitch)),
+                    )
 
             axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb"}
             for axis, start, end in projected_axes:
@@ -1854,6 +1971,20 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
             self._draw_legend(painter)
+
+        def mousePressEvent(self, event) -> None:
+            self._last_mouse_position = get_event_position(event)
+
+        def mouseMoveEvent(self, event) -> None:
+            if self._last_mouse_position is None:
+                self._last_mouse_position = get_event_position(event)
+                return
+            position = get_event_position(event)
+            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
+            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
+            self.pitch = max(-1.4, min(1.4, self.pitch))
+            self._last_mouse_position = position
+            self.update()
 
         def _draw_legend(self, painter) -> None:
             """
@@ -2077,6 +2208,12 @@ def launch_model_editor() -> None:
             validation_tab = QWidget()
             validation_layout = QVBoxLayout(validation_tab)
             validation_layout.addWidget(self.validate_button)
+            graph_model_button = QPushButton("Graph model")
+            graph_model_button.clicked.connect(self._write_model_graphviz)
+            plot_muscles_button = QPushButton("Plot muscles")
+            plot_muscles_button.clicked.connect(self._plot_muscles)
+            validation_layout.addWidget(graph_model_button)
+            validation_layout.addWidget(plot_muscles_button)
             validation_layout.addWidget(self.validation_messages)
             tabs.addTab(validation_tab, "Validation")
 
@@ -2092,7 +2229,7 @@ def launch_model_editor() -> None:
             open_button.clicked.connect(self._open_model)
             new_c3d_model_button = QPushButton("New from C3D")
             new_c3d_model_button.clicked.connect(self._new_model_from_c3d)
-            save_button = QPushButton("Save as .bioMod")
+            save_button = QPushButton("Export model")
             save_button.clicked.connect(self._save_model)
 
             toolbar = QHBoxLayout()
@@ -2205,13 +2342,43 @@ def launch_model_editor() -> None:
                 QMessageBox.information(self, "No model", "Open a model before saving.")
                 return
             default_name = "" if self.current_filepath is None else str(self.current_filepath.with_suffix(".bioMod"))
-            filepath, _ = QFileDialog.getSaveFileName(self, "Save model", default_name, "BioMod files (*.bioMod)")
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export model",
+                default_name,
+                "Supported models (*.bioMod *.osim *.urdf *.bvh);;BioMod files (*.bioMod);;OpenSim files (*.osim);;URDF files (*.urdf);;BVH files (*.bvh)",
+            )
             if not filepath:
                 return
             try:
-                self.model.to_biomod(filepath=filepath)
+                _export_model_to_path(self.model, filepath)
             except Exception as error:
-                QMessageBox.critical(self, "Unable to save model", str(error))
+                QMessageBox.critical(self, "Unable to export model", str(error))
+
+        def _write_model_graphviz(self) -> None:
+            if self.model is None:
+                QMessageBox.information(self, "No model", "Open a model before writing a graph.")
+                return
+            default_name = "" if self.current_filepath is None else str(self.current_filepath.with_suffix(".dot"))
+            filepath, _ = QFileDialog.getSaveFileName(self, "Write model graph", default_name, "Graphviz DOT (*.dot)")
+            if not filepath:
+                return
+            try:
+                self.model.write_graphviz(filepath)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to write model graph", str(error))
+
+        def _plot_muscles(self) -> None:
+            if self.model is None:
+                QMessageBox.information(self, "No model", "Open a model before plotting muscles.")
+                return
+            try:
+                muscle_validator = MuscleValidator(self.model)
+                muscle_validator.plot_force_length()
+                muscle_validator.plot_moment_arm()
+                muscle_validator.plot_torques()
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to plot muscles", str(error))
 
         def _refresh_model_views(self) -> None:
             """
@@ -2690,6 +2857,69 @@ def _joint_name_from_segments(proximal_segment_name: str, distal_segment_name: s
     return mapping.get("default", "Joint")
 
 
+def _predictive_virtual_marker_method_from_label(label_or_key: str) -> str:
+    """
+    Return the stored predictive method key from the readable GUI label.
+    """
+    if label_or_key in PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS:
+        return label_or_key
+    for method_key, method_label in PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS.items():
+        if label_or_key == method_label:
+            return method_key
+    return next(iter(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS))
+
+
+def _python_code_from_c3d_draft(workflow_draft, c3d_folder_path: str = "") -> str:
+    """
+    Generate an editable Python starting point from the current C3D workflow draft.
+    """
+    payload = _serializable_c3d_draft_payload(workflow_draft)
+    return "\n".join(
+        [
+            '"""Generated BioBuddy C3D model definition.',
+            "",
+            "Edit the marker names, virtual markers, axes, and DoF settings below, then adapt the final",
+            "build section to your participant-specific C3D files.",
+            '"""',
+            "",
+            f"C3D_FOLDER = {c3d_folder_path!r}",
+            f"WORKFLOW_DRAFT = {json.dumps(payload, indent=4)}",
+            "",
+            "# The GUI stores the draft as plain data. Rebuild a C3dWorkflowDraft or adapt this payload",
+            "# directly if you want to script project-specific model generation.",
+            "template_payload = WORKFLOW_DRAFT",
+            "print(template_payload)",
+            "",
+        ]
+    )
+
+
+def _serializable_c3d_draft_payload(workflow_draft) -> dict:
+    """
+    Convert the dataclass draft to JSON-friendly Python data.
+    """
+    payload = asdict(workflow_draft)
+    if hasattr(workflow_draft.preset, "value"):
+        payload["preset"] = workflow_draft.preset.value
+    return payload
+
+
+def _export_model_to_path(model, filepath: str) -> None:
+    """
+    Export a model with the writer matching the file extension.
+    """
+    suffix = Path(filepath).suffix.lower()
+    writers = {
+        ".biomod": model.to_biomod,
+        ".osim": model.to_osim,
+        ".urdf": model.to_urdf,
+        ".bvh": model.to_bvh,
+    }
+    if suffix not in writers:
+        raise ValueError("Supported export extensions are .bioMod, .osim, .urdf, and .bvh.")
+    writers[suffix](filepath=filepath)
+
+
 def _c3d_generation_log(
     workflow_draft, c3d_data, c3d_folder_path: str, marker_pool: tuple[str, ...]
 ) -> tuple[str, ...]:
@@ -2720,7 +2950,7 @@ def _c3d_generation_log(
         equation = marker.equation if marker.equation else "-"
         proximal, distal = _score_segments_from_payload(marker.equation)
         local_note = ""
-        if marker.method in {"score", "sara"}:
+        if marker.method in {"score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS):
             local_note = (
                 f" | global marker added to marker pool; local offsets reserved for proximal={proximal or '-'} "
                 f"and distal={distal or '-'}"

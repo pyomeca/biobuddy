@@ -5,7 +5,10 @@ from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 from biobuddy.gui.model_editor import (
     _c3d_generation_log,
+    _export_model_to_path,
     _joint_name_from_segments,
+    _predictive_virtual_marker_method_from_label,
+    _python_code_from_c3d_draft,
     _score_segments_from_payload,
     _split_marker_names,
     _strip_score_segment_payload,
@@ -70,3 +73,48 @@ def test_c3d_generation_log_reports_virtual_marker_local_offset_context():
     assert any("Preset: lower_limbs" in line for line in lines)
     assert any("Virtual markers:" in line for line in lines)
     assert any("global marker added to marker pool" in line for line in lines)
+
+
+def test_predictive_virtual_marker_method_label_maps_to_internal_key():
+    """
+    Keep readable predictive labels in the GUI while storing explicit method names in the draft.
+    """
+    assert _predictive_virtual_marker_method_from_label("Hara 2016 hip") == "hara2016_hip"
+    assert _predictive_virtual_marker_method_from_label("harrington2007_hip") == "harrington2007_hip"
+
+
+def test_python_code_from_c3d_draft_serializes_preset_value():
+    """
+    The generated script must contain editable JSON-like data, not Python enum reprs.
+    """
+    code = _python_code_from_c3d_draft(c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS), "/tmp/c3d")
+
+    assert "C3dModelPreset" not in code
+    assert '"preset": "lower_limbs"' in code
+    assert "C3D_FOLDER = '/tmp/c3d'" in code
+
+
+def test_export_model_to_path_dispatches_by_extension(tmp_path):
+    """
+    The model editor export button should use every writer supported by BioBuddy.
+    """
+    calls = []
+
+    class FakeModel:
+        def to_biomod(self, filepath):
+            calls.append(("biomod", filepath))
+
+        def to_osim(self, filepath):
+            calls.append(("osim", filepath))
+
+        def to_urdf(self, filepath):
+            calls.append(("urdf", filepath))
+
+        def to_bvh(self, filepath):
+            calls.append(("bvh", filepath))
+
+    model = FakeModel()
+    for extension in (".bioMod", ".osim", ".urdf", ".bvh"):
+        _export_model_to_path(model, str(tmp_path / f"model{extension}"))
+
+    assert [call[0] for call in calls] == ["biomod", "osim", "urdf", "bvh"]
