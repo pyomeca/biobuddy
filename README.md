@@ -202,6 +202,10 @@ model = yeadon_table.to_simple_model()
 The GUI package includes a Yeadon measurement editor with one field per measurement and an illustration panel for the
 selected body level:
 
+```bash
+python -m biobuddy.gui --yeadon-measurements
+```
+
 ```python3
 from biobuddy import launch_yeadon_measurement_editor
 
