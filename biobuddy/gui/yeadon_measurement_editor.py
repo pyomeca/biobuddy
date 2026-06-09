@@ -252,10 +252,7 @@ def launch_yeadon_measurement_editor() -> None:
         def _compute(self) -> None:
             try:
                 measurements = parse_yeadon_measurement_values(
-                    {
-                        name: field.text()
-                        for name, field in self.measurement_fields.items()
-                    }
+                    {name: field.text() for name, field in self.measurement_fields.items()}
                 )
                 total_mass = self.total_mass_field.text().strip()
                 table = YeadonTable(

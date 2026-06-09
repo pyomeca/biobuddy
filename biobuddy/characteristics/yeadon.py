@@ -181,9 +181,7 @@ def _measurement_spec(name: str) -> YeadonMeasurementSpec:
     )
 
 
-YEADON_MEASUREMENT_SPECS = tuple(
-    _measurement_spec(name) for name in YEADON_MEASUREMENT_NAMES
-)
+YEADON_MEASUREMENT_SPECS = tuple(_measurement_spec(name) for name in YEADON_MEASUREMENT_NAMES)
 
 
 class YeadonTable:
@@ -212,17 +210,9 @@ class YeadonTable:
             Optional measured total mass in kilograms. When provided, Yeadon's density model is scaled to this mass.
         """
         yeadon = _import_yeadon()
-        density_set = (
-            density_set.value
-            if isinstance(density_set, YeadonDensitySet)
-            else density_set
-        )
-        measurements = (
-            str(measurements) if isinstance(measurements, Path) else measurements
-        )
-        configuration = (
-            str(configuration) if isinstance(configuration, Path) else configuration
-        )
+        density_set = density_set.value if isinstance(density_set, YeadonDensitySet) else density_set
+        measurements = str(measurements) if isinstance(measurements, Path) else measurements
+        configuration = str(configuration) if isinstance(configuration, Path) else configuration
 
         self.measurements = measurements
         self.configuration = configuration
@@ -239,9 +229,7 @@ class YeadonTable:
             self.human.scale_human_by_mass(total_mass)
 
         self.inertial_table = {
-            segment_name: self._inertia_parameters_from_segment(
-                self._yeadon_segment(segment_name)
-            )
+            segment_name: self._inertia_parameters_from_segment(self._yeadon_segment(segment_name))
             for segment_name in YeadonSegmentName
         }
 
@@ -265,9 +253,7 @@ class YeadonTable:
     def measurement_specs() -> tuple[YeadonMeasurementSpec, ...]:
         return YEADON_MEASUREMENT_SPECS
 
-    def __getitem__(
-        self, segment_name: YeadonSegmentName | str
-    ) -> InertiaParametersReal:
+    def __getitem__(self, segment_name: YeadonSegmentName | str) -> InertiaParametersReal:
         return self.inertial_table[_coerce_segment_name(segment_name)]
 
     def segment_origin(self, segment_name: YeadonSegmentName | str) -> np.ndarray:
@@ -308,9 +294,7 @@ class YeadonTable:
     def _inertia_parameters_from_segment(segment: Any) -> InertiaParametersReal:
         return InertiaParametersReal(
             mass=float(segment.mass),
-            center_of_mass=np.asarray(segment.rel_center_of_mass, dtype=float).reshape(
-                3
-            ),
+            center_of_mass=np.asarray(segment.rel_center_of_mass, dtype=float).reshape(3),
             inertia=np.asarray(segment.rel_inertia, dtype=float).reshape(3, 3),
         )
 
