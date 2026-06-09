@@ -4,6 +4,7 @@ from biobuddy import (
 from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 from biobuddy.gui.model_editor import (
+    _c3d_file_names_from_folder,
     _c3d_generation_log,
     _export_model_to_path,
     _joint_name_from_segments,
@@ -59,8 +60,22 @@ def test_virtual_marker_editor_suggests_joint_names_from_segment_pairs():
     """
     Infer understandable virtual marker names from proximal/distal technical segment names.
     """
-    assert _joint_name_from_segments("Pelvis", "LThigh") == "Hip"
-    assert _joint_name_from_segments("LThigh", "LShank") == "Knee"
+    assert _joint_name_from_segments("Pelvis", "LThigh") == "Left_Hip"
+    assert _joint_name_from_segments("LThigh", "LShank") == "Left_Knee"
+
+
+def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):
+    """
+    The virtual marker GUI should offer C3D files from the selected pipeline folder.
+    """
+    (tmp_path / "left_hip_functional.c3d").write_text("")
+    (tmp_path / "notes.txt").write_text("")
+    (tmp_path / "right_hip_functional.c3d").write_text("")
+
+    assert _c3d_file_names_from_folder(str(tmp_path)) == (
+        "left_hip_functional.c3d",
+        "right_hip_functional.c3d",
+    )
 
 
 def test_c3d_generation_log_reports_virtual_marker_local_offset_context():
