@@ -33,6 +33,12 @@ from .muscle_editor import (
 )
 from .preview_scene import PreviewScene, SegmentAxis, build_preview_scene
 from .validation_panel import ValidationReport, validate_model_for_editor
+from .yeadon_measurement_editor import (
+    YeadonIllustrationPrimitive,
+    launch_yeadon_measurement_editor,
+    parse_yeadon_measurement_values,
+    yeadon_measurement_illustration,
+)
 
 __all__ = [
     SegmentEditorData.__name__,
@@ -67,4 +73,8 @@ __all__ = [
     build_preview_scene.__name__,
     ValidationReport.__name__,
     validate_model_for_editor.__name__,
+    YeadonIllustrationPrimitive.__name__,
+    launch_yeadon_measurement_editor.__name__,
+    parse_yeadon_measurement_values.__name__,
+    yeadon_measurement_illustration.__name__,
 ]
