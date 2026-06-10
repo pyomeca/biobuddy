@@ -1953,7 +1953,10 @@ def launch_model_editor() -> None:
             self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
             self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
             hints = {
-                "pointing": "Choose the pointing C3D. The selected segment and parent define the anatomical context.",
+                "pointing": (
+                    "Pointing is not implemented yet: the workflow still needs a dedicated pointing object "
+                    "to store the pointed target."
+                ),
                 "score": "Choose the functional C3D plus proximal and distal technical segments. SCoRE estimates a joint center.",
                 "sara": "Choose the functional C3D plus proximal and distal technical segments. SARA estimates a rotation axis.",
                 "marker_mean": "Average the technical markers shown for the proximal and distal segments.",
