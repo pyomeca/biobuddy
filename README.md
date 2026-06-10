@@ -188,6 +188,24 @@ model = de_leva.to_simple_model()
 ![DeLeva](docs/images/DeLeva.png)
 ![DeLeva_measures](docs/images/DeLeva_measures.png)
 
+The Yeadon model can also be used when the 95 Yeadon anthropometric measurements are available. BioBuddy delegates the
+solid geometry and inertia computation to the `yeadon` package, then exposes the resulting segment parameters through a
+table-like API:
+
+```python3
+measurements = {name: value_in_meters for name in YEADON_MEASUREMENT_NAMES}
+yeadon_table = YeadonTable()
+yeadon_table.from_measurement(measurements, total_mass=75.0)
+pelvis_inertia = yeadon_table[YeadonSegmentName.PELVIS]
+model = yeadon_table.to_simple_model()
+```
+
+```python3
+from biobuddy import launch_yeadon_measurement_editor
+
+launch_yeadon_measurement_editor()
+```
+
 
 ## Model personalization/modification
 The current version of BioBuddy allows you to modify your `BiomechanicalModelReal` to personalize it to your subjects by:
@@ -364,7 +382,7 @@ launch it with:
 
 ```bash
 pip install biobuddy[gui]
-python -m biobuddy.gui
+python examples/launch_model_editor_gui.py
 ```
 If you are working from sources, you will need to install :
 ```bash

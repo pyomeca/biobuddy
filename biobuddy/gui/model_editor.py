@@ -1,9 +1,16 @@
 from pathlib import Path
 
+import numpy as np
+
 from .segment_editor import (
+    DE_LEVA_MODEL_NAME,
+    YEADON_MODEL_NAME,
     SegmentEditorData,
     apply_segment_editor_data,
+    available_inertial_models,
+    build_inertial_parameters_from_model,
     get_segment_editor_data,
+    inertial_model_segment_names,
     load_model,
     validate_parent_name,
 )
@@ -45,8 +52,12 @@ def launch_model_editor() -> None:
         from PySide6.QtGui import QColor, QPainter, QPen
         from PySide6.QtWidgets import (
             QApplication,
+            QComboBox,
+            QDialog,
+            QDialogButtonBox,
             QFileDialog,
             QFormLayout,
+            QGridLayout,
             QHBoxLayout,
             QCheckBox,
             QLabel,
@@ -76,8 +87,12 @@ def launch_model_editor() -> None:
             from PyQt5.QtGui import QColor, QPainter, QPen
             from PyQt5.QtWidgets import (
                 QApplication,
+                QComboBox,
+                QDialog,
+                QDialogButtonBox,
                 QFileDialog,
                 QFormLayout,
+                QGridLayout,
                 QHBoxLayout,
                 QCheckBox,
                 QLabel,
@@ -106,6 +121,15 @@ def launch_model_editor() -> None:
                 "The model editor requires a working Qt binding. Install BioBuddy with `pip install biobuddy[gui]` "
                 "or use an environment where PyQt5 is available."
             ) from error
+    qdialog_accepted = QDialog.DialogCode.Accepted if hasattr(QDialog, "DialogCode") else QDialog.Accepted
+    qdialog_ok = (
+        QDialogButtonBox.StandardButton.Ok if hasattr(QDialogButtonBox, "StandardButton") else QDialogButtonBox.Ok
+    )
+    qdialog_cancel = (
+        QDialogButtonBox.StandardButton.Cancel
+        if hasattr(QDialogButtonBox, "StandardButton")
+        else QDialogButtonBox.Cancel
+    )
 
     def _draw_legend_point(painter, center, color, label: str, text_x: int, text_y: int) -> None:
         """
@@ -143,6 +167,102 @@ def launch_model_editor() -> None:
         scroll_area.setWidget(widget)
         scroll_area.setWidgetResizable(True)
         return scroll_area
+
+    def _clear_layout(layout) -> None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    class InertialModelDialog(QDialog):
+        """
+        Modal editor for the model-specific parameters needed to compute segment inertia.
+        """
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self.setWindowTitle("Apply inertial model")
+            self.model_parameters = {}
+
+            layout = QVBoxLayout(self)
+            form = QFormLayout()
+            self.model_name = QComboBox()
+            self.model_name.addItems(available_inertial_models())
+            self.source_segment_name = QComboBox()
+            form.addRow("Model", self.model_name)
+            form.addRow("Source segment", self.source_segment_name)
+            layout.addLayout(form)
+
+            self.parameter_widget = QWidget()
+            self.parameter_layout = QFormLayout(self.parameter_widget)
+            layout.addWidget(self.parameter_widget)
+
+            buttons = QDialogButtonBox(qdialog_ok | qdialog_cancel)
+            buttons.accepted.connect(self.accept)
+            buttons.rejected.connect(self.reject)
+            layout.addWidget(buttons)
+
+            self.model_name.currentTextChanged.connect(self._refresh_model_parameters)
+            self._refresh_model_parameters(self.model_name.currentText())
+
+        def _refresh_model_parameters(self, model_name: str) -> None:
+            self.source_segment_name.clear()
+            self.source_segment_name.addItems(inertial_model_segment_names(model_name))
+            _clear_layout(self.parameter_layout)
+            self.model_parameters = {}
+
+            if model_name == DE_LEVA_MODEL_NAME:
+                self.model_parameters["total_mass"] = QLineEdit()
+                self.model_parameters["total_height"] = QLineEdit()
+                self.model_parameters["sex"] = QComboBox()
+                self.model_parameters["sex"].addItems(["male", "female"])
+                self.parameter_layout.addRow("Total mass (kg)", self.model_parameters["total_mass"])
+                self.parameter_layout.addRow("Total height (m)", self.model_parameters["total_height"])
+                self.parameter_layout.addRow("Sex", self.model_parameters["sex"])
+                return
+
+            if model_name == YEADON_MODEL_NAME:
+                self.model_parameters["measurements"] = QLineEdit()
+                browse_button = QPushButton("Browse")
+                browse_button.clicked.connect(self._browse_yeadon_measurements)
+                path_layout = QHBoxLayout()
+                path_layout.addWidget(self.model_parameters["measurements"])
+                path_layout.addWidget(browse_button)
+                path_widget = QWidget()
+                path_widget.setLayout(path_layout)
+                self.model_parameters["total_mass"] = QLineEdit()
+                self.model_parameters["density_set"] = QComboBox()
+                self.model_parameters["density_set"].addItems(["Chandler", "Clauser", "Dempster"])
+                self.model_parameters["density_set"].setCurrentText("Dempster")
+                self.model_parameters["symmetric"] = QCheckBox()
+                self.model_parameters["symmetric"].setChecked(True)
+                self.parameter_layout.addRow("Measurements file", path_widget)
+                self.parameter_layout.addRow("Total mass (kg)", self.model_parameters["total_mass"])
+                self.parameter_layout.addRow("Density set", self.model_parameters["density_set"])
+                self.parameter_layout.addRow("Symmetric", self.model_parameters["symmetric"])
+
+        def _browse_yeadon_measurements(self) -> None:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Open Yeadon measurements",
+                "",
+                "Yeadon measurement files (*.txt *.yaml *.yml *.json);;All files (*)",
+            )
+            if filepath:
+                self.model_parameters["measurements"].setText(filepath)
+
+        def parameters(self) -> tuple[str, str, dict[str, object]]:
+            model_name = self.model_name.currentText()
+            parameters = {}
+            for name, widget in self.model_parameters.items():
+                if isinstance(widget, QLineEdit):
+                    parameters[name] = widget.text().strip()
+                elif isinstance(widget, QComboBox):
+                    parameters[name] = widget.currentText()
+                elif isinstance(widget, QCheckBox):
+                    parameters[name] = widget.isChecked()
+            return model_name, self.source_segment_name.currentText(), parameters
 
     class ModelPreviewWidget(QWidget):
         """
@@ -287,11 +407,16 @@ def launch_model_editor() -> None:
             self.q_min = QLineEdit()
             self.q_max = QLineEdit()
             self.mass = QLineEdit()
-            self.center_of_mass = QLineEdit()
-            self.inertia_diagonal = QLineEdit()
+            self.center_of_mass_fields = {axis: QLineEdit() for axis in ("x", "y", "z")}
+            self.inertia_mode = QComboBox()
+            self.inertia_mode.addItems(["Principal moments", "Inertia matrix"])
+            self.inertia_mode.currentTextChanged.connect(self._update_inertia_component_state)
+            self.inertia_fields = {(row, column): QLineEdit() for row in range(3) for column in range(3)}
 
             self.apply_button = QPushButton("Apply segment changes")
             self.apply_button.clicked.connect(self._apply_segment_changes)
+            self.apply_inertial_model_button = QPushButton("Use inertial model")
+            self.apply_inertial_model_button.clicked.connect(self._apply_inertial_model)
 
             form = QFormLayout()
             form.addRow("Parent", self.parent_name)
@@ -300,16 +425,19 @@ def launch_model_editor() -> None:
             form.addRow("q min", self.q_min)
             form.addRow("q max", self.q_max)
             form.addRow("Mass", self.mass)
-            form.addRow("Center of mass", self.center_of_mass)
-            form.addRow("Inertia diagonal", self.inertia_diagonal)
+            form.addRow("Center of mass", self._component_row(self.center_of_mass_fields))
+            form.addRow("Inertia mode", self.inertia_mode)
+            form.addRow("Inertia", self._inertia_grid())
 
             right_panel = QWidget()
             segment_tab = QWidget()
             segment_layout = QVBoxLayout(segment_tab)
             segment_layout.addWidget(QLabel("Segment properties"))
             segment_layout.addLayout(form)
+            segment_layout.addWidget(self.apply_inertial_model_button)
             segment_layout.addWidget(self.apply_button)
             segment_layout.addStretch()
+            self._update_inertia_component_state()
 
             self.marker_list = QListWidget()
             self.marker_list.itemSelectionChanged.connect(self._on_marker_selection_changed)
@@ -480,6 +608,59 @@ def launch_model_editor() -> None:
                 available_geometry.y() + (available_geometry.height() - height) // 2,
             )
 
+        def _component_row(self, fields: dict[str, QLineEdit]):
+            widget = QWidget()
+            layout = QHBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            for axis in ("x", "y", "z"):
+                layout.addWidget(QLabel(axis))
+                fields[axis].setPlaceholderText(axis)
+                layout.addWidget(fields[axis])
+            return widget
+
+        def _inertia_grid(self):
+            labels = (
+                ("Ixx", "Ixy", "Ixz"),
+                ("Iyx", "Iyy", "Iyz"),
+                ("Izx", "Izy", "Izz"),
+            )
+            widget = QWidget()
+            layout = QGridLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            for row in range(3):
+                for column in range(3):
+                    field = self.inertia_fields[(row, column)]
+                    field.setPlaceholderText(labels[row][column])
+                    layout.addWidget(QLabel(labels[row][column]), row, column * 2)
+                    layout.addWidget(field, row, column * 2 + 1)
+            return widget
+
+        def _update_inertia_component_state(self) -> None:
+            principal_moments = self.inertia_mode.currentText() == "Principal moments"
+            for (row, column), field in self.inertia_fields.items():
+                is_diagonal = row == column
+                field.setEnabled(is_diagonal or not principal_moments)
+                if principal_moments and not is_diagonal:
+                    field.setText("0")
+
+        def _set_component_fields(self, fields: dict[str, QLineEdit], values: list[float]) -> None:
+            for axis, value in zip(("x", "y", "z"), values):
+                fields[axis].setText(str(value))
+
+        def _read_component_fields(self, fields: dict[str, QLineEdit]) -> list[float]:
+            return [_parse_optional_float(fields[axis].text()) or 0.0 for axis in ("x", "y", "z")]
+
+        def _set_inertia_matrix_fields(self, inertia_matrix: list[list[float]]) -> None:
+            for row in range(3):
+                for column in range(3):
+                    self.inertia_fields[(row, column)].setText(str(inertia_matrix[row][column]))
+
+        def _read_inertia_matrix_fields(self) -> list[list[float]]:
+            return [
+                [_parse_optional_float(self.inertia_fields[(row, column)].text()) or 0.0 for column in range(3)]
+                for row in range(3)
+            ]
+
         def _open_model(self) -> None:
             filepath, _ = QFileDialog.getOpenFileName(
                 self,
@@ -497,6 +678,31 @@ def launch_model_editor() -> None:
                 self.preview.set_model(self.model)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to open model", str(error))
+
+        def _apply_inertial_model(self) -> None:
+            if self.model is None or self.current_segment_name is None:
+                QMessageBox.information(self, "No segment", "Open a model and select a segment first.")
+                return
+            dialog = InertialModelDialog(self)
+            result = dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
+            if result != qdialog_accepted:
+                return
+            model_name, source_segment_name, model_parameters = dialog.parameters()
+            try:
+                inertia_parameters = build_inertial_parameters_from_model(
+                    model_name=model_name,
+                    segment_name=source_segment_name,
+                    model_parameters=model_parameters,
+                )
+                self.model.segments[self.current_segment_name].inertia_parameters = inertia_parameters
+                data = get_segment_editor_data(self.model.segments[self.current_segment_name])
+                self.mass.setText("" if data.mass is None else str(data.mass))
+                self._set_component_fields(self.center_of_mass_fields, data.center_of_mass)
+                self.inertia_mode.setCurrentText("Inertia matrix")
+                self._set_inertia_matrix_fields(data.inertia_matrix)
+                self.preview.set_model(self.model)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to apply inertial model", str(error))
 
         def _save_model(self) -> None:
             if self.model is None:
@@ -563,8 +769,13 @@ def launch_model_editor() -> None:
             self.q_min.setText(_format_float_list(data.q_min))
             self.q_max.setText(_format_float_list(data.q_max))
             self.mass.setText("" if data.mass is None else str(data.mass))
-            self.center_of_mass.setText(_format_float_list(data.center_of_mass))
-            self.inertia_diagonal.setText(_format_float_list(data.inertia_diagonal))
+            self._set_component_fields(self.center_of_mass_fields, data.center_of_mass)
+            if _has_off_diagonal_inertia(data.inertia_matrix):
+                self.inertia_mode.setCurrentText("Inertia matrix")
+            else:
+                self.inertia_mode.setCurrentText("Principal moments")
+            self._set_inertia_matrix_fields(data.inertia_matrix)
+            self._update_inertia_component_state()
             self._populate_marker_list()
             self.preview.set_selected_segment(self.current_segment_name)
 
@@ -842,8 +1053,8 @@ def launch_model_editor() -> None:
                     q_min=_parse_float_list(self.q_min.text()),
                     q_max=_parse_float_list(self.q_max.text()),
                     mass=_parse_optional_float(self.mass.text()),
-                    center_of_mass=_parse_vector(self.center_of_mass.text(), expected_length=3),
-                    inertia_diagonal=_parse_vector(self.inertia_diagonal.text(), expected_length=3),
+                    center_of_mass=self._read_component_fields(self.center_of_mass_fields),
+                    inertia_matrix=self._read_inertia_matrix_fields(),
                 )
                 validate_parent_name(
                     model=self.model,
@@ -902,6 +1113,11 @@ def _format_optional_float(value: float | None) -> str:
     Format an optional float for display in a line edit.
     """
     return "" if value is None else str(value)
+
+
+def _has_off_diagonal_inertia(inertia_matrix: list[list[float]]) -> bool:
+    inertia = np.asarray(inertia_matrix, dtype=float)
+    return bool(np.any(inertia - np.diag(np.diag(inertia))))
 
 
 def _project_point(point) -> tuple[float, float]:
