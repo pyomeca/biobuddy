@@ -196,6 +196,34 @@ def launch_model_editor() -> None:
         painter.setPen(QPen(QColor("#111827"), 1))
         painter.drawText(text_x, text_y, label)
 
+    def _draw_preview_orientation_axes(painter, width: int, height: int, yaw: float, pitch: float) -> None:
+        """
+        Draw a small RGB orientation triad in a 3D preview corner.
+        """
+        origin = QPointF(max(width - 92, 34), max(height - 64, 44))
+        length = 34.0
+        axes = (
+            ("x", (1.0, 0.0, 0.0), QColor("#dc2626")),
+            ("y", (0.0, 1.0, 0.0), QColor("#16a34a")),
+            ("z", (0.0, 0.0, 1.0), QColor("#2563eb")),
+        )
+        painter.setBrush(QColor(255, 255, 255, 210))
+        painter.setPen(QPen(QColor("#e5e7eb"), 1))
+        painter.drawRect(int(origin.x()) - 20, int(origin.y()) - 42, 92, 74)
+        for label, vector, color in axes:
+            projected = _rotate_preview_point(vector, yaw, pitch)
+            norm = math.hypot(projected[0], projected[1])
+            if norm == 0:
+                continue
+            endpoint = QPointF(
+                origin.x() + length * projected[0] / norm,
+                origin.y() + length * projected[1] / norm,
+            )
+            painter.setPen(QPen(color, 3))
+            painter.drawLine(origin, endpoint)
+            painter.setPen(QPen(color, 1))
+            painter.drawText(endpoint.x() + 3, endpoint.y() - 3, label)
+
     def _scrollable_widget(widget):
         """
         Wrap a form-heavy tab so all controls remain reachable on smaller screens.
@@ -414,6 +442,7 @@ def launch_model_editor() -> None:
                 painter.setPen(QPen(QColor("#f59e0b"), 2))
                 center = transform(_rotate_preview_point(temporary_origin, self.yaw, self.pitch))
                 painter.drawRect(int(center.x()) - 5, int(center.y()) - 5, 10, 10)
+            _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
 
         def mousePressEvent(self, event) -> None:
             self._last_mouse_position = get_event_position(event)
@@ -439,6 +468,8 @@ def launch_model_editor() -> None:
             self.setMinimumHeight(280)
             self.setMinimumWidth(420)
             self.c3d_data = None
+            self.solution_c3d_data = None
+            self.preview_source_label = ""
             self.groups = ()
             self.virtual_markers = ()
             self.selected_marker_name = ""
@@ -453,6 +484,8 @@ def launch_model_editor() -> None:
         def set_context(
             self,
             c3d_data,
+            solution_c3d_data,
+            preview_source_label: str,
             groups: tuple[object, ...],
             virtual_markers: tuple[object, ...],
             selected_marker_name: str,
@@ -460,9 +493,11 @@ def launch_model_editor() -> None:
             proximal_segment_name: str,
             distal_segment_name: str,
         ) -> None:
-            if c3d_data is not self.c3d_data:
+            if c3d_data is not self.c3d_data or solution_c3d_data is not self.solution_c3d_data:
                 self._score_solution_cache.clear()
             self.c3d_data = c3d_data
+            self.solution_c3d_data = solution_c3d_data
+            self.preview_source_label = preview_source_label
             self.groups = groups
             self.virtual_markers = virtual_markers
             self.selected_marker_name = selected_marker_name
@@ -511,7 +546,10 @@ def launch_model_editor() -> None:
                 )
 
             virtual_points = []
-            for marker in self.virtual_markers:
+            selected_virtual_markers = [
+                marker for marker in self.virtual_markers if marker.name == self.selected_marker_name
+            ]
+            for marker in selected_virtual_markers:
                 if marker.method == "marker_mean":
                     point = _mean_preview_position(self.c3d_data, _split_marker_names(marker.source))
                 else:
@@ -578,6 +616,10 @@ def launch_model_editor() -> None:
                     transform(_rotate_preview_point(solution_points[1][1], self.yaw, self.pitch)),
                 )
 
+            painter.setPen(QPen(QColor("#111827"), 1))
+            if self.preview_source_label:
+                painter.drawText(12, self.height() - 12, f"Preview: {self.preview_source_label}")
+            _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
             self._draw_legend(painter)
 
         def _technical_segment_center(self, segment_name: str) -> tuple[float, float, float] | None:
@@ -601,26 +643,27 @@ def launch_model_editor() -> None:
             if len(parent_marker_names) == 0 or len(child_marker_names) == 0:
                 return ()
             marker_names = parent_marker_names + child_marker_names
-            if any(marker_name not in self.c3d_data.marker_names for marker_name in marker_names):
+            c3d_data = self.solution_c3d_data or self.c3d_data
+            if c3d_data is None or any(marker_name not in c3d_data.marker_names for marker_name in marker_names):
                 return ()
-            cache_key = (id(self.c3d_data), parent_marker_names, child_marker_names)
+            cache_key = (id(c3d_data), parent_marker_names, child_marker_names)
             if cache_key in self._score_solution_cache:
                 return self._score_solution_cache[cache_key]
             try:
                 from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
 
                 parent_cor = SegmentCoordinateSystemUtils.score(
-                    self.c3d_data,
+                    c3d_data,
                     parent_marker_names,
                     child_marker_names,
                     average_parent_child_static_projection=False,
-                )(self.c3d_data, None)[:3]
+                )(c3d_data, None)[:3]
                 mean_cor = SegmentCoordinateSystemUtils.score(
-                    self.c3d_data,
+                    c3d_data,
                     parent_marker_names,
                     child_marker_names,
                     average_parent_child_static_projection=True,
-                )(self.c3d_data, None)[:3]
+                )(c3d_data, None)[:3]
             except Exception:
                 return ()
             child_cor = 2 * mean_cor - parent_cor
@@ -731,6 +774,7 @@ def launch_model_editor() -> None:
                     painter.drawEllipse(center, radius, radius)
                 painter.drawText(center.x() + 6, center.y() - 6, f"{marker_name} ({segment_name})")
 
+            _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
             self._draw_legend(painter)
 
         def _draw_legend(self, painter) -> None:
@@ -908,6 +952,9 @@ def launch_model_editor() -> None:
             self.virtual_marker_c3d_file_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
             self.browse_virtual_marker_c3d_button = QPushButton("Browse C3D")
             self.browse_virtual_marker_c3d_button.clicked.connect(self._browse_virtual_marker_c3d_source)
+            self.virtual_marker_show_functional_c3d_checkbox = QCheckBox("Preview functional C3D")
+            self.virtual_marker_show_functional_c3d_checkbox.setChecked(True)
+            self.virtual_marker_show_functional_c3d_checkbox.stateChanged.connect(self._update_virtual_marker_preview)
             self.virtual_marker_equation_edit = QLineEdit()
             self.virtual_marker_equation_edit.hide()
             self.virtual_marker_c3d_role_combo = QComboBox()
@@ -1151,6 +1198,7 @@ def launch_model_editor() -> None:
             form.addRow("Method", self.virtual_marker_method_combo)
             form.addRow("Predictive method", self.virtual_marker_predictive_method_combo)
             form.addRow("Functional C3D", self.virtual_marker_c3d_file_combo)
+            form.addRow("", self.virtual_marker_show_functional_c3d_checkbox)
             form.addRow("Suggested name", self.virtual_marker_suggested_name_label)
             form.addRow("Name", self.virtual_marker_name_edit)
             form_column.addLayout(form)
@@ -2098,6 +2146,18 @@ def launch_model_editor() -> None:
             except Exception:
                 return self.c3d_data
 
+        def _selected_virtual_marker_preview_c3d_data(self):
+            if self.virtual_marker_show_functional_c3d_checkbox.isChecked():
+                return self._selected_virtual_marker_c3d_data()
+            return self.c3d_data
+
+        def _selected_virtual_marker_preview_label(self) -> str:
+            if self.virtual_marker_show_functional_c3d_checkbox.isChecked():
+                filename = self.virtual_marker_c3d_file_combo.currentText().strip()
+                return f"functional C3D ({filename})" if filename else "functional C3D"
+            static_file = Path(self.c3d_path.text().strip()).name if self.c3d_path.text().strip() else ""
+            return f"static/main C3D ({static_file})" if static_file else "static/main C3D"
+
         def _mirror_initial_rotation_c3d_source(self, *_args) -> None:
             if self.settings_initial_rotation_method_combo.currentText() == "anatomical_c3d":
                 self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
@@ -2171,7 +2231,9 @@ def launch_model_editor() -> None:
 
         def _update_virtual_marker_preview(self, *_args) -> None:
             self.virtual_marker_preview.set_context(
+                self._selected_virtual_marker_preview_c3d_data(),
                 self._selected_virtual_marker_c3d_data(),
+                self._selected_virtual_marker_preview_label(),
                 self.workflow_draft.segment_marker_groups,
                 self.workflow_draft.virtual_markers,
                 self.virtual_marker_name_edit.text().strip(),
@@ -2496,6 +2558,7 @@ def launch_model_editor() -> None:
                 painter.setBrush(QColor("#f59e0b" if is_selected else "#111827"))
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
+            _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
             self._draw_legend(painter)
 
         def mousePressEvent(self, event) -> None:
