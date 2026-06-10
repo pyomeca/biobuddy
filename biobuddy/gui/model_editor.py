@@ -703,6 +703,9 @@ def launch_model_editor() -> None:
             self.marker_list.setSelectionMode(qt_extended_selection)
             self.marker_mapping_label = QLabel("Load a C3D to check marker names against the selected template.")
             self.marker_mapping_label.setWordWrap(True)
+            self.strip_participant_prefix_checkbox = QCheckBox("Remove participant prefix before ':'")
+            self.strip_participant_prefix_checkbox.setChecked(True)
+            self.strip_participant_prefix_checkbox.stateChanged.connect(self._reload_current_c3d_file)
             self.show_all_markers_checkbox = QCheckBox("Show markers already used by other segments")
             self.show_all_markers_checkbox.setChecked(True)
             self.show_all_markers_checkbox.stateChanged.connect(self._update_available_marker_list)
@@ -906,6 +909,7 @@ def launch_model_editor() -> None:
             layout.addLayout(row)
             layout.addWidget(QLabel("Segments"))
             layout.addWidget(self.segment_marker_list)
+            layout.addWidget(self.strip_participant_prefix_checkbox)
             layout.addWidget(self.marker_mapping_label)
             marker_row = QHBoxLayout()
             parent_column = QVBoxLayout()
@@ -1052,20 +1056,34 @@ def launch_model_editor() -> None:
             if not filepath:
                 return
             try:
-                self.c3d_data = C3dData(filepath)
-                self.c3d_path.setText(filepath)
-                marker_mapping = _marker_name_mapping_for_c3d(
-                    _marker_pool_from_draft(self.workflow_draft),
-                    tuple(self.c3d_data.marker_names),
-                )
-                self.workflow_draft = _remap_c3d_workflow_draft_markers(self.workflow_draft, marker_mapping)
-                self.marker_mapping_label.setText(_format_marker_mapping_summary(marker_mapping))
-                self.workflow_marker_pool = tuple(self.c3d_data.marker_names)
-                self._configure_technical_frame_slider()
-                self._sync_virtual_marker_c3d_files()
-                self._update_preset_details()
+                self._load_c3d_file(filepath)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to load C3D", str(error))
+
+        def _reload_current_c3d_file(self, *_args) -> None:
+            filepath = self.c3d_path.text().strip()
+            if filepath == "":
+                return
+            try:
+                self._load_c3d_file(filepath)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to reload C3D", str(error))
+
+        def _load_c3d_file(self, filepath: str) -> None:
+            self.c3d_data = C3dData(filepath)
+            if self.strip_participant_prefix_checkbox.isChecked():
+                _strip_participant_prefix_from_c3d_data(self.c3d_data)
+            self.c3d_path.setText(filepath)
+            marker_mapping = _marker_name_mapping_for_c3d(
+                _marker_pool_from_draft(self.workflow_draft),
+                tuple(self.c3d_data.marker_names),
+            )
+            self.workflow_draft = _remap_c3d_workflow_draft_markers(self.workflow_draft, marker_mapping)
+            self.marker_mapping_label.setText(_format_marker_mapping_summary(marker_mapping))
+            self.workflow_marker_pool = tuple(self.c3d_data.marker_names)
+            self._configure_technical_frame_slider()
+            self._sync_virtual_marker_c3d_files()
+            self._update_preset_details()
 
         def _choose_c3d_folder(self) -> None:
             folder = QFileDialog.getExistingDirectory(self, "Choose folder containing C3D files", self.c3d_folder_path)
@@ -3057,19 +3075,30 @@ def _marker_name_mapping_for_c3d(
     exact_names = set(c3d_marker_names)
     normalized_to_c3d_name = {}
     for marker_name in c3d_marker_names:
-        normalized = _normalized_marker_name(marker_name)
-        if normalized not in normalized_to_c3d_name:
-            normalized_to_c3d_name[normalized] = marker_name
+        for normalized in _normalized_marker_name_candidates(marker_name):
+            if normalized not in normalized_to_c3d_name:
+                normalized_to_c3d_name[normalized] = marker_name
 
     mapping = {}
     for template_name in template_marker_names:
         if template_name in exact_names:
             mapping[template_name] = template_name
             continue
-        normalized = _normalized_marker_name(template_name)
-        if normalized in normalized_to_c3d_name:
-            mapping[template_name] = normalized_to_c3d_name[normalized]
+        for normalized in _normalized_marker_name_candidates(template_name):
+            if normalized in normalized_to_c3d_name:
+                mapping[template_name] = normalized_to_c3d_name[normalized]
+                break
     return mapping
+
+
+def _normalized_marker_name_candidates(marker_name: str) -> tuple[str, ...]:
+    """
+    Return normalized marker-name variants, including the suffix after a C3D namespace separator.
+    """
+    candidates = [marker_name]
+    if ":" in marker_name:
+        candidates.append(marker_name.split(":")[-1])
+    return tuple(dict.fromkeys(_normalized_marker_name(candidate) for candidate in candidates))
 
 
 def _normalized_marker_name(marker_name: str) -> str:
@@ -3077,6 +3106,25 @@ def _normalized_marker_name(marker_name: str) -> str:
     Normalize marker names for template-to-C3D matching.
     """
     return "".join(character for character in marker_name.upper() if character.isalnum())
+
+
+def _strip_participant_prefix_from_c3d_data(c3d_data) -> None:
+    """
+    Remove a participant namespace prefix such as 'P01_MH:' from C3D marker names in place.
+    """
+    stripped_names = _strip_participant_prefix_from_marker_names(tuple(c3d_data.marker_names))
+    if len(set(stripped_names)) != len(stripped_names):
+        return
+    c3d_data.marker_names = list(stripped_names)
+
+
+def _strip_participant_prefix_from_marker_names(marker_names: tuple[str, ...]) -> tuple[str, ...]:
+    """
+    Strip the text before ':' from marker names, preserving names without a separator.
+    """
+    return tuple(
+        marker_name.split(":", maxsplit=1)[1] if ":" in marker_name else marker_name for marker_name in marker_names
+    )
 
 
 def _remap_c3d_workflow_draft_markers(workflow_draft, marker_mapping: dict[str, str]):

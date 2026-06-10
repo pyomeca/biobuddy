@@ -15,6 +15,8 @@ from biobuddy.gui.model_editor import (
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
     _remap_c3d_workflow_draft_markers,
+    _strip_participant_prefix_from_c3d_data,
+    _strip_participant_prefix_from_marker_names,
     _score_segments_from_payload,
     _split_marker_names,
     _strip_score_segment_payload,
@@ -90,6 +92,36 @@ def test_marker_name_mapping_matches_normalized_c3d_names():
     mapping = _marker_name_mapping_for_c3d(("LASI", "RASI", "LTHIB"), ("L_ASI", "rasi", "L-THIB", "extra"))
 
     assert mapping == {"LASI": "L_ASI", "RASI": "rasi", "LTHIB": "L-THIB"}
+
+
+def test_marker_name_mapping_matches_participant_prefixed_c3d_names():
+    """
+    C3D participant namespaces should not prevent matching markers to a template.
+    """
+    mapping = _marker_name_mapping_for_c3d(("S3", "T6", "C2"), ("P01_MH:S3", "P01_MH:T6", "P01_MH:C2"))
+
+    assert mapping == {"S3": "P01_MH:S3", "T6": "P01_MH:T6", "C2": "P01_MH:C2"}
+
+
+def test_strip_participant_prefix_from_marker_names():
+    """
+    Users can remove C3D participant prefixes such as P01_MH: from marker names.
+    """
+    assert _strip_participant_prefix_from_marker_names(("P01_MH:S3", "P01_MH:T6", "LASI")) == ("S3", "T6", "LASI")
+
+
+def test_strip_participant_prefix_from_c3d_data_changes_marker_names_in_place():
+    """
+    The GUI strips marker names on loaded C3D data while preserving marker order.
+    """
+
+    class FakeC3dData:
+        marker_names = ["P01_MH:S3", "P01_MH:T6"]
+
+    data = FakeC3dData()
+    _strip_participant_prefix_from_c3d_data(data)
+
+    assert data.marker_names == ["S3", "T6"]
 
 
 def test_remap_c3d_workflow_draft_markers_updates_segment_groups():
