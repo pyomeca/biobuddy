@@ -316,6 +316,7 @@ def launch_model_editor() -> None:
             self.marker_names = ()
             self.axes = ()
             self.current_vectors = ()
+            self.current_origin_markers = ()
             self.yaw = -0.6
             self.pitch = 0.35
             self._last_mouse_position = None
@@ -326,11 +327,13 @@ def launch_model_editor() -> None:
             marker_names: tuple[str, ...],
             axes: tuple[object, ...],
             current_vectors: tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...],
+            current_origin_markers: tuple[str, ...] = (),
         ) -> None:
             self.c3d_data = c3d_data
             self.marker_names = marker_names
             self.axes = axes
             self.current_vectors = current_vectors
+            self.current_origin_markers = current_origin_markers
             self.update()
 
         def paintEvent(self, event) -> None:
@@ -352,17 +355,26 @@ def launch_model_editor() -> None:
                 end = _mean_preview_position(self.c3d_data, axis.end_markers)
                 if start is not None and end is not None:
                     axis_segments.append((axis.axis, axis.keep_vector, start, end))
+            saved_origins = []
+            for axis in self.axes:
+                origin = _mean_preview_position(self.c3d_data, axis.origin_markers)
+                if origin is not None:
+                    saved_origins.append(origin)
             temporary_segments = []
             for axis_name, start_markers, end_markers, keep_vector in self.current_vectors:
                 start = _mean_preview_position(self.c3d_data, start_markers)
                 end = _mean_preview_position(self.c3d_data, end_markers)
                 if start is not None and end is not None:
                     temporary_segments.append((axis_name, keep_vector, start, end))
+            temporary_origin = _mean_preview_position(self.c3d_data, self.current_origin_markers)
             points = list(marker_points.values())
             for _, _, start, end in axis_segments:
                 points.extend((start, end))
             for _, _, start, end in temporary_segments:
                 points.extend((start, end))
+            points.extend(saved_origins)
+            if temporary_origin is not None:
+                points.append(temporary_origin)
             if len(points) == 0:
                 painter.drawText(self.rect(), qt_alignment_center, "No visible marker for the selected segment")
                 return
@@ -390,6 +402,18 @@ def launch_model_editor() -> None:
                     transform(_rotate_preview_point(start, self.yaw, self.pitch)),
                     transform(_rotate_preview_point(end, self.yaw, self.pitch)),
                 )
+
+            painter.setBrush(QColor("#111827"))
+            painter.setPen(QPen(QColor("#111827"), 1))
+            for origin in saved_origins:
+                center = transform(_rotate_preview_point(origin, self.yaw, self.pitch))
+                painter.drawRect(int(center.x()) - 4, int(center.y()) - 4, 8, 8)
+
+            if temporary_origin is not None:
+                painter.setBrush(QColor("#f59e0b"))
+                painter.setPen(QPen(QColor("#f59e0b"), 2))
+                center = transform(_rotate_preview_point(temporary_origin, self.yaw, self.pitch))
+                painter.drawRect(int(center.x()) - 5, int(center.y()) - 5, 10, 10)
 
         def mousePressEvent(self, event) -> None:
             self._last_mouse_position = get_event_position(event)
@@ -743,6 +767,18 @@ def launch_model_editor() -> None:
             self.axis_marker_source_list.setMinimumWidth(140)
             self.axis_marker_source_list.setMaximumWidth(180)
             self.axis_marker_source_list.setMinimumHeight(220)
+            self.axis_origin_marker_list = QListWidget()
+            self.axis_origin_marker_list.setSelectionMode(qt_extended_selection)
+            self.axis_origin_marker_list.setMinimumHeight(52)
+            self.axis_origin_marker_list.setMaximumHeight(76)
+            self.axis_origin_marker_list.setMaximumWidth(190)
+            self.add_axis_origin_marker_button = QPushButton("+")
+            self.remove_axis_origin_marker_button = QPushButton("-")
+            for button in (self.add_axis_origin_marker_button, self.remove_axis_origin_marker_button):
+                button.setMaximumWidth(34)
+                button.setMinimumWidth(34)
+            self.add_axis_origin_marker_button.clicked.connect(self._add_selected_axis_origin_markers)
+            self.remove_axis_origin_marker_button.clicked.connect(self._remove_selected_axis_origin_markers)
             self.axis_vector_controls = [_create_axis_vector_controls(index) for index in range(2)]
             for index, controls in enumerate(self.axis_vector_controls):
                 controls["add_start_button"].clicked.connect(
@@ -987,6 +1023,15 @@ def launch_model_editor() -> None:
             source_column = QVBoxLayout()
             source_column.addWidget(QLabel("Available C3D and virtual markers"))
             source_column.addWidget(self.axis_marker_source_list)
+            origin_row = QHBoxLayout()
+            origin_buttons = QVBoxLayout()
+            origin_buttons.addWidget(self.add_axis_origin_marker_button)
+            origin_buttons.addWidget(self.remove_axis_origin_marker_button)
+            origin_buttons.addStretch()
+            origin_row.addLayout(origin_buttons)
+            origin_row.addWidget(self.axis_origin_marker_list)
+            source_column.addWidget(QLabel("Origin markers"))
+            source_column.addLayout(origin_row)
             axis_layout.addLayout(source_column, 0)
             axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 1)
             controls_column.addLayout(axis_layout)
@@ -1481,17 +1526,31 @@ def launch_model_editor() -> None:
 
         def _add_selected_axis_markers(self, vector_index: int, endpoint: str) -> None:
             target_list = self._axis_endpoint_list(vector_index, endpoint)
+            self._add_selected_axis_markers_to_list(target_list)
+            self._update_segment_axis_preview()
+
+        def _add_selected_axis_origin_markers(self) -> None:
+            self._add_selected_axis_markers_to_list(self.axis_origin_marker_list)
+            self._update_segment_axis_preview()
+
+        def _add_selected_axis_markers_to_list(self, target_list) -> None:
             for item in self.axis_marker_source_list.selectedItems():
                 marker_name = item.text().split("|", maxsplit=1)[0].strip()
                 if marker_name:
                     target_list.addItem(marker_name)
-            self._update_segment_axis_preview()
 
         def _remove_selected_axis_markers(self, vector_index: int, endpoint: str) -> None:
             target_list = self._axis_endpoint_list(vector_index, endpoint)
+            self._remove_selected_axis_markers_from_list(target_list)
+            self._update_segment_axis_preview()
+
+        def _remove_selected_axis_origin_markers(self) -> None:
+            self._remove_selected_axis_markers_from_list(self.axis_origin_marker_list)
+            self._update_segment_axis_preview()
+
+        def _remove_selected_axis_markers_from_list(self, target_list) -> None:
             for item in target_list.selectedItems():
                 target_list.takeItem(target_list.row(item))
-            self._update_segment_axis_preview()
 
         def _axis_endpoint_list(self, vector_index: int, endpoint: str):
             key = "start_list" if endpoint == "start" else "end_list"
@@ -1502,8 +1561,12 @@ def launch_model_editor() -> None:
             if segment_name is None:
                 return
             vector_specs = self._axis_vector_specs()
+            origin_markers = _list_widget_texts(self.axis_origin_marker_list)
             if len(vector_specs) != 2:
                 QMessageBox.critical(self, "Unable to save segment axis", "Two complete vectors are required.")
+                return
+            if len(origin_markers) == 0:
+                QMessageBox.critical(self, "Unable to save segment axis", "At least one origin marker is required.")
                 return
             if sum(keep_vector for _, _, _, keep_vector in vector_specs) != 1:
                 QMessageBox.critical(self, "Unable to save segment axis", "Choose exactly one vector to keep.")
@@ -1525,6 +1588,7 @@ def launch_model_editor() -> None:
                         axis=axis_name,
                         start_markers=start_markers,
                         end_markers=end_markers,
+                        origin_markers=origin_markers,
                         method="markers",
                         keep_vector=keep_vector,
                     )
@@ -1704,6 +1768,10 @@ def launch_model_editor() -> None:
         def _load_selected_segment_axes_into_controls(self) -> None:
             segment_name = self._selected_anatomical_segment_name()
             axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)[:2]
+            self.axis_origin_marker_list.clear()
+            origin_markers = axes[0].origin_markers if len(axes) != 0 else ()
+            for marker_name in origin_markers:
+                self.axis_origin_marker_list.addItem(marker_name)
             for index, controls in enumerate(self.axis_vector_controls):
                 controls["start_list"].clear()
                 controls["end_list"].clear()
@@ -1752,6 +1820,7 @@ def launch_model_editor() -> None:
                 segment_marker_names,
                 axes,
                 self._axis_vector_specs(),
+                _list_widget_texts(self.axis_origin_marker_list),
             )
 
         def _selected_virtual_marker_name(self) -> str | None:
@@ -2127,6 +2196,7 @@ def launch_model_editor() -> None:
                 for axis in self.workflow_draft.axes:
                     self.axis_list.addItem(
                         f"{axis.name} | {axis.segment_name} | {axis.axis} | {axis.method} | "
+                        f"origin={','.join(axis.origin_markers) or '-'} | "
                         f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}"
                     )
 
@@ -3265,6 +3335,7 @@ def _remap_c3d_workflow_draft_markers(workflow_draft, marker_mapping: dict[str, 
                 axis,
                 start_markers=remap_names(axis.start_markers),
                 end_markers=remap_names(axis.end_markers),
+                origin_markers=remap_names(axis.origin_markers),
             )
             for axis in workflow_draft.axes
         ),
@@ -3479,6 +3550,7 @@ def _c3d_generation_log(
     for axis in workflow_draft.axes:
         lines.append(
             f"- {axis.segment_name}/{axis.name}: {axis.axis}, "
+            f"origin={','.join(axis.origin_markers) or '-'}, "
             f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}, keep={axis.keep_vector}"
         )
     lines.extend(["", "Segment settings:"])

@@ -144,6 +144,7 @@ class C3dAxisDraft:
     axis: str
     start_markers: tuple[str, ...]
     end_markers: tuple[str, ...]
+    origin_markers: tuple[str, ...] = ()
     method: str = "markers"
     keep_vector: bool = False
 
@@ -301,7 +302,16 @@ def _axis_drafts_from_model_template(template: ModelTemplate | None) -> tuple[C3
             continue
         first_axis = segment.frame.first_axis
         second_axis = segment.frame.second_axis
-        drafts.append(_axis_draft_from_axis_spec(segment.name, "first_axis", first_axis, segment.frame.axis_to_keep))
+        origin_markers = _origin_marker_names_from_spec(segment.frame.origin)
+        drafts.append(
+            _axis_draft_from_axis_spec(
+                segment.name,
+                "first_axis",
+                first_axis,
+                segment.frame.axis_to_keep,
+                origin_markers=origin_markers,
+            )
+        )
         fallback_axis = second_axis.fallback if isinstance(second_axis, FunctionalAxisSpec) else second_axis
         drafts.append(
             _axis_draft_from_axis_spec(
@@ -309,10 +319,26 @@ def _axis_drafts_from_model_template(template: ModelTemplate | None) -> tuple[C3
                 "second_axis",
                 fallback_axis,
                 segment.frame.axis_to_keep,
+                origin_markers=origin_markers,
                 method=second_axis.method.value if isinstance(second_axis, FunctionalAxisSpec) else "markers",
             )
         )
     return tuple(drafts)
+
+
+def _origin_marker_names_from_spec(origin_spec) -> tuple[str, ...]:
+    """
+    Return markers that define or support a frame origin specification.
+    """
+    if hasattr(origin_spec, "marker_names"):
+        return tuple(origin_spec.marker_names)
+    marker_names = []
+    fallback = getattr(origin_spec, "fallback", None)
+    if fallback is not None:
+        marker_names.extend(fallback.marker_names)
+    marker_names.extend(getattr(origin_spec, "parent_marker_names", ()))
+    marker_names.extend(getattr(origin_spec, "child_marker_names", ()))
+    return tuple(dict.fromkeys(marker_names))
 
 
 def _axis_draft_from_axis_spec(
@@ -320,6 +346,7 @@ def _axis_draft_from_axis_spec(
     axis_role: str,
     axis_spec: AxisSpec,
     axis_to_keep,
+    origin_markers: tuple[str, ...] = (),
     method: str = "markers",
 ) -> C3dAxisDraft:
     """
@@ -333,6 +360,7 @@ def _axis_draft_from_axis_spec(
         axis=axis_name.lower(),
         start_markers=axis_spec.start.marker_names,
         end_markers=axis_spec.end.marker_names,
+        origin_markers=origin_markers,
         method=method,
         keep_vector=axis_name == axis_to_keep_name,
     )
@@ -530,7 +558,9 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
             issues.append(C3dDraftIssue("error", "axes", f"Axis '{axis.name}' uses invalid axis '{axis.axis}'."))
         if axis.axis == "":
             issues.append(C3dDraftIssue("warning", "axes", f"Axis '{axis.name}' has no x/y/z axis selected."))
-        unknown_markers = sorted(set(axis.start_markers + axis.end_markers) - known_marker_names)
+        if len(axis.origin_markers) == 0:
+            issues.append(C3dDraftIssue("warning", "axes", f"Axis '{axis.name}' has no origin marker selected."))
+        unknown_markers = sorted(set(axis.start_markers + axis.end_markers + axis.origin_markers) - known_marker_names)
         if unknown_markers:
             issues.append(
                 C3dDraftIssue(
@@ -987,6 +1017,7 @@ def add_axis_to_draft(
     axis: str,
     start_markers: tuple[str, ...],
     end_markers: tuple[str, ...],
+    origin_markers: tuple[str, ...] = (),
     method: str = "markers",
     keep_vector: bool = False,
 ) -> C3dWorkflowDraft:
@@ -999,6 +1030,7 @@ def add_axis_to_draft(
         axis=_require_name(axis, "Axis name"),
         start_markers=tuple(name.strip() for name in start_markers if name.strip() != ""),
         end_markers=tuple(name.strip() for name in end_markers if name.strip() != ""),
+        origin_markers=tuple(name.strip() for name in origin_markers if name.strip() != ""),
         method=_require_name(method, "Axis method"),
         keep_vector=keep_vector,
     )

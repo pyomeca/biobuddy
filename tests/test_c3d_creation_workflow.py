@@ -239,6 +239,7 @@ def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
         axis="x",
         start_markers=("EPICm",),
         end_markers=("EPICl",),
+        origin_markers=("ELB",),
         method="sara",
         keep_vector=True,
     )
@@ -247,6 +248,7 @@ def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
 
     assert any(marker["name"] == "ShoulderCoR" for marker in payload["virtual_markers"])
     assert any(axis["name"] == "ElbowFlexionAxis" and axis["keep_vector"] is True for axis in payload["axes"])
+    assert any(axis["name"] == "ElbowFlexionAxis" and axis["origin_markers"] == ("ELB",) for axis in payload["axes"])
 
     draft = remove_virtual_marker_from_draft(draft, "ShoulderCoR")
     draft = remove_axis_from_draft(draft, "ElbowFlexionAxis")
