@@ -342,6 +342,7 @@ def launch_model_editor() -> None:
             self.setMinimumHeight(220)
             self.c3d_data = None
             self.marker_names = ()
+            self.label_marker_names = ()
             self.axes = ()
             self.current_vectors = ()
             self.current_origin_markers = ()
@@ -353,12 +354,14 @@ def launch_model_editor() -> None:
             self,
             c3d_data,
             marker_names: tuple[str, ...],
+            label_marker_names: tuple[str, ...],
             axes: tuple[object, ...],
             current_vectors: tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...],
             current_origin_markers: tuple[str, ...] = (),
         ) -> None:
             self.c3d_data = c3d_data
             self.marker_names = marker_names
+            self.label_marker_names = label_marker_names
             self.axes = axes
             self.current_vectors = current_vectors
             self.current_origin_markers = current_origin_markers
@@ -411,10 +414,12 @@ def launch_model_editor() -> None:
 
             painter.setPen(QPen(QColor("#2563eb"), 1))
             painter.setBrush(QColor("#2563eb"))
+            label_marker_names = set(self.label_marker_names)
             for marker_name, point in marker_points.items():
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.drawEllipse(center, 4, 4)
-                painter.drawText(center.x() + 5, center.y() - 5, marker_name)
+                if marker_name in label_marker_names:
+                    painter.drawText(center.x() + 5, center.y() - 5, marker_name)
 
             axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb", "": "#6b7280"}
             for axis_name, keep_vector, start, end in axis_segments:
@@ -772,7 +777,8 @@ def launch_model_editor() -> None:
                     painter.drawRect(int(center.x()) - radius, int(center.y()) - radius, 2 * radius, 2 * radius)
                 else:
                     painter.drawEllipse(center, radius, radius)
-                painter.drawText(center.x() + 6, center.y() - 6, f"{marker_name} ({segment_name})")
+                if is_selected:
+                    painter.drawText(center.x() + 6, center.y() - 6, f"{marker_name} ({segment_name})")
 
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
             self._draw_legend(painter)
@@ -1944,17 +1950,31 @@ def launch_model_editor() -> None:
         def _update_segment_axis_preview(self) -> None:
             segment_name = self._selected_anatomical_segment_name()
             if segment_name is None:
-                self.segment_axis_preview.set_context(self.c3d_data, (), (), ())
+                self.segment_axis_preview.set_context(self.c3d_data, (), (), (), ())
                 return
             segment_marker_names = tuple(self.workflow_marker_pool)
+            label_marker_names = self._marker_names_for_segment(segment_name)
             axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)
             self.segment_axis_preview.set_context(
                 self.c3d_data,
                 segment_marker_names,
+                label_marker_names,
                 axes,
                 self._axis_vector_specs(),
                 _list_widget_texts(self.axis_origin_marker_list),
             )
+
+        def _marker_names_for_segment(self, segment_name: str) -> tuple[str, ...]:
+            marker_names = []
+            for group in self.workflow_draft.segment_marker_groups:
+                if group.segment_name == segment_name:
+                    marker_names.extend(group.marker_names)
+                    marker_names.extend(group.technical_marker_names)
+                    break
+            marker_names.extend(
+                marker.name for marker in self.workflow_draft.virtual_markers if marker.segment_name == segment_name
+            )
+            return tuple(dict.fromkeys(marker_names))
 
         def _selected_virtual_marker_name(self) -> str | None:
             if not self.feature_list.selectedItems():
