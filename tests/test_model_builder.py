@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from biobuddy import DictData, Rotations, Translations
-from biobuddy.gui.lower_limb_template import lower_limb_template
+from biobuddy.gui.lower_limb_template import LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES, lower_limb_template
 from biobuddy.gui.c3d_model_creation import (
     C3dModelPreset,
     c3d_model_preset_virtual_features,
@@ -64,6 +64,15 @@ def test_template_reports_required_markers_from_frames_and_functional_trials():
         sorted(("LTHI", "LTHIB", "LTHID", "LTIB", "LTIBF", "LTIBD", "LKNE", "LKNEM"))
     )
     assert all_required_markers["static"] == static_markers
+
+
+def test_lower_limb_template_uses_forced_functional_c3d_names():
+    template = lower_limb_template()
+
+    file_patterns = {trial.name: trial.file_pattern for trial in template.functional_trials}
+
+    assert file_patterns == LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES
+    assert all("*" not in pattern for pattern in file_patterns.values())
 
 
 def test_marker_availability_reports_presence_and_valid_frame_count():

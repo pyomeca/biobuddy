@@ -16,6 +16,15 @@ from ..characteristics import DeLevaTable, SegmentName, Sex
 from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Rotations, Translations
 
+LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES = {
+    "left_hip_score": "functional_left_hip_score.c3d",
+    "left_knee_sara": "functional_left_knee_sara.c3d",
+    "left_ankle_score": "functional_left_ankle_score.c3d",
+    "right_hip_score": "functional_right_hip_score.c3d",
+    "right_knee_sara": "functional_right_knee_sara.c3d",
+    "right_ankle_score": "functional_right_ankle_score.c3d",
+}
+
 
 def lower_limb_template(use_functional: bool = True, include_de_leva: bool = True) -> ModelTemplate:
     """
@@ -127,37 +136,37 @@ def _functional_trials() -> tuple[FunctionalTrialSpec, ...]:
     return (
         FunctionalTrialSpec(
             name="left_hip_score",
-            file_pattern="*func_lhip.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_hip_score"],
             required_markers=("LPSI", "RPSI", "LASI", "RASI", "LTHI", "LTHIB", "LTHID"),
             method=FunctionalMethod.SCORE,
         ),
         FunctionalTrialSpec(
             name="left_knee_sara",
-            file_pattern="*func_lknee.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_knee_sara"],
             required_markers=("LTHI", "LTHIB", "LTHID", "LTIB", "LTIBF", "LTIBD", "LKNE", "LKNEM"),
             method=FunctionalMethod.SARA,
         ),
         FunctionalTrialSpec(
             name="left_ankle_score",
-            file_pattern="*func_lankle.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_ankle_score"],
             required_markers=("LTIB", "LTIBF", "LTIBD", "LHEE", "LNAV", "LTOE", "LTOE5"),
             method=FunctionalMethod.SCORE,
         ),
         FunctionalTrialSpec(
             name="right_hip_score",
-            file_pattern="*func_rhip.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_hip_score"],
             required_markers=("LPSI", "RPSI", "LASI", "RASI", "RTHI", "RTHIB", "RTHID"),
             method=FunctionalMethod.SCORE,
         ),
         FunctionalTrialSpec(
             name="right_knee_sara",
-            file_pattern="*func_rknee.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_knee_sara"],
             required_markers=("RTHI", "RTHIB", "RTHID", "RTIB", "RTIBF", "RTIBD", "RKNE", "RKNEM"),
             method=FunctionalMethod.SARA,
         ),
         FunctionalTrialSpec(
             name="right_ankle_score",
-            file_pattern="*func_rankle.c3d",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_ankle_score"],
             required_markers=("RTIB", "RTIBF", "RTIBD", "RHEE", "RNAV", "RTOE", "RTOE5"),
             method=FunctionalMethod.SCORE,
         ),

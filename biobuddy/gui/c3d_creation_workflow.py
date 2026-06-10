@@ -10,7 +10,7 @@ import numpy as np
 from ..utils.marker_data import C3dData, MarkerData
 from .c3d_model_creation import C3dModelPreset, c3d_model_preset_virtual_features
 from .full_body_bela_template import bela_segment_specs, rotations_from_matlab_dof, translations_from_matlab_dof
-from .lower_limb_template import lower_limb_template
+from .lower_limb_template import LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES, lower_limb_template
 from .model_builder import (
     AxisSpec,
     FunctionalAxisSpec,
@@ -1170,12 +1170,28 @@ def c3d_file_roles_for_preset(preset: C3dModelPreset) -> tuple[C3dFileRole, ...]
     if preset == C3dModelPreset.LOWER_LIMBS:
         return (
             C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),
-            C3dFileRole("left_hip_score", "functional_left_hip_score.c3d", "Left hip SCORE trial."),
-            C3dFileRole("left_knee_sara", "functional_left_knee_sara.c3d", "Left knee SARA trial."),
-            C3dFileRole("left_ankle_score", "functional_left_ankle_score.c3d", "Left ankle SCORE trial."),
-            C3dFileRole("right_hip_score", "functional_right_hip_score.c3d", "Right hip SCORE trial."),
-            C3dFileRole("right_knee_sara", "functional_right_knee_sara.c3d", "Right knee SARA trial."),
-            C3dFileRole("right_ankle_score", "functional_right_ankle_score.c3d", "Right ankle SCORE trial."),
+            C3dFileRole(
+                "left_hip_score", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_hip_score"], "Left hip SCORE trial."
+            ),
+            C3dFileRole(
+                "left_knee_sara", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_knee_sara"], "Left knee SARA trial."
+            ),
+            C3dFileRole(
+                "left_ankle_score",
+                LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_ankle_score"],
+                "Left ankle SCORE trial.",
+            ),
+            C3dFileRole(
+                "right_hip_score", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_hip_score"], "Right hip SCORE trial."
+            ),
+            C3dFileRole(
+                "right_knee_sara", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_knee_sara"], "Right knee SARA trial."
+            ),
+            C3dFileRole(
+                "right_ankle_score",
+                LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["right_ankle_score"],
+                "Right ankle SCORE trial.",
+            ),
         )
     if preset == C3dModelPreset.FROM_SCRATCH:
         return (C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),)
