@@ -3102,7 +3102,7 @@ def _c3d_preset_label(preset: C3dModelPreset) -> str:
     Return the label shown in the C3D creation dialog.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return "Lower-limbs"
+        return "Lower-limbs & trunk"
     if preset == C3dModelPreset.FULL_BODY:
         return "Full body"
     if preset == C3dModelPreset.UPPER_LIMB:

@@ -374,7 +374,7 @@ model-level consistency issues, and clicking near a joint in the preview reselec
 tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
 selects it in the marker editor.
 
-The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs`, `upper-limb`) or from a template-free
+The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs & trunk`, `upper-limb`) or from a template-free
 `from scratch` draft. The draft workflow loads a main C3D, lists the available markers, lets users create technical or
 anatomical segments, assign markers to segments, mark each assigned marker as technical, and choose the parent segment.
 The `Technical segment` tab is used to group the markers that define technical frames for SCoRE/SARA computations. The
