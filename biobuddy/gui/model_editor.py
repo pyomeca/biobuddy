@@ -437,6 +437,7 @@ def launch_model_editor() -> None:
         def __init__(self):
             super().__init__()
             self.setMinimumHeight(280)
+            self.setMinimumWidth(420)
             self.c3d_data = None
             self.groups = ()
             self.virtual_markers = ()
@@ -444,6 +445,7 @@ def launch_model_editor() -> None:
             self.selected_method = "pointing"
             self.proximal_segment_name = ""
             self.distal_segment_name = ""
+            self._score_solution_cache = {}
             self.yaw = -0.6
             self.pitch = 0.35
             self._last_mouse_position = None
@@ -458,6 +460,8 @@ def launch_model_editor() -> None:
             proximal_segment_name: str,
             distal_segment_name: str,
         ) -> None:
+            if c3d_data is not self.c3d_data:
+                self._score_solution_cache.clear()
             self.c3d_data = c3d_data
             self.groups = groups
             self.virtual_markers = virtual_markers
@@ -475,21 +479,36 @@ def launch_model_editor() -> None:
                 painter.drawText(self.rect(), qt_alignment_center, "Choose a C3D to preview virtual markers")
                 return
 
+            highlighted_segments = {self.proximal_segment_name, self.distal_segment_name}
+            highlighted_marker_names = set()
+            technical_marker_names = set()
+            segment_by_marker = {}
+            segment_index_by_name = {group.segment_name: index for index, group in enumerate(self.groups)}
+            for group in self.groups:
+                if group.segment_name not in highlighted_segments:
+                    continue
+                marker_names = tuple(dict.fromkeys(group.marker_names + group.technical_marker_names))
+                highlighted_marker_names.update(marker_names)
+                technical_marker_names.update(group.technical_marker_names)
+                for marker_name in marker_names:
+                    segment_by_marker[marker_name] = group.segment_name
+
             marker_records = []
-            for segment_index, group in enumerate(self.groups):
-                for marker_name in group.marker_names:
-                    point = _marker_preview_position(self.c3d_data, marker_name)
-                    if point is None:
-                        continue
-                    marker_records.append(
-                        (
-                            marker_name,
-                            point,
-                            group.segment_name,
-                            marker_name in group.technical_marker_names,
-                            segment_index,
-                        )
+            for marker_name in self.c3d_data.marker_names:
+                point = _marker_preview_position(self.c3d_data, marker_name)
+                if point is None:
+                    continue
+                segment_name = segment_by_marker.get(marker_name, "")
+                marker_records.append(
+                    (
+                        marker_name,
+                        point,
+                        segment_name,
+                        marker_name in technical_marker_names,
+                        segment_index_by_name.get(segment_name, -1),
+                        marker_name in highlighted_marker_names,
                     )
+                )
 
             virtual_points = []
             for marker in self.virtual_markers:
@@ -501,13 +520,17 @@ def launch_model_editor() -> None:
                     virtual_points.append((marker.name, point, marker.segment_name))
 
             solution_points = []
-            if self.selected_method in {"score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS):
+            if self.selected_method == "score":
+                solution_points.extend(
+                    self._score_solution_points(self.proximal_segment_name, self.distal_segment_name)
+                )
+            elif self.selected_method in {"sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS):
                 proximal_point = self._technical_segment_center(self.proximal_segment_name)
                 distal_point = self._technical_segment_center(self.distal_segment_name)
                 if proximal_point is not None:
-                    solution_points.append(("proximal", proximal_point))
+                    solution_points.append(("parent", proximal_point))
                 if distal_point is not None:
-                    solution_points.append(("distal", distal_point))
+                    solution_points.append(("segment", distal_point))
 
             points = [record[1] for record in marker_records]
             points.extend(point for _, point, _ in virtual_points)
@@ -519,16 +542,19 @@ def launch_model_editor() -> None:
             projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
             transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
 
-            for marker_name, point, segment_name, is_technical, segment_index in marker_records:
-                color = QColor(_segment_preview_color(segment_index))
+            for marker_name, point, segment_name, is_technical, segment_index, is_highlighted in marker_records:
+                color = QColor(_segment_preview_color(segment_index)) if is_highlighted else QColor("#cbd5e1")
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.setPen(QPen(color, 1))
                 painter.setBrush(color)
                 if is_technical:
-                    painter.drawRect(int(center.x()) - 4, int(center.y()) - 4, 8, 8)
+                    size = 8 if is_highlighted else 5
+                    painter.drawRect(int(center.x()) - size // 2, int(center.y()) - size // 2, size, size)
                 else:
-                    painter.drawEllipse(center, 4, 4)
-                painter.drawText(center.x() + 5, center.y() - 5, f"{marker_name} ({segment_name})")
+                    radius = 4 if is_highlighted else 2
+                    painter.drawEllipse(center, radius, radius)
+                if is_highlighted:
+                    painter.drawText(center.x() + 5, center.y() - 5, f"{marker_name} ({segment_name})")
 
             painter.setPen(QPen(QColor("#7c3aed"), 2))
             painter.setBrush(QColor("#7c3aed"))
@@ -537,14 +563,15 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 7, 7)
                 painter.drawText(center.x() + 8, center.y() - 8, f"{marker_name} | {segment_name}")
 
-            solution_colors = {"proximal": "#f97316", "distal": "#0891b2"}
+            solution_colors = {"parent": "#f97316", "segment": "#0891b2", "mean": "#111827"}
             for label, point in solution_points:
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.setPen(QPen(QColor(solution_colors[label]), 3))
                 painter.setBrush(QColor(solution_colors[label]))
                 painter.drawRect(int(center.x()) - 6, int(center.y()) - 6, 12, 12)
-                painter.drawText(center.x() + 8, center.y() - 8, f"{label} solution")
-            if len(solution_points) == 2:
+                prefix = "SCoRE" if self.selected_method == "score" else "center"
+                painter.drawText(center.x() + 8, center.y() - 8, f"{prefix} {label}")
+            if len(solution_points) >= 2:
                 painter.setPen(QPen(QColor("#111827"), 1))
                 painter.drawLine(
                     transform(_rotate_preview_point(solution_points[0][1], self.yaw, self.pitch)),
@@ -560,18 +587,64 @@ def launch_model_editor() -> None:
                     return _mean_preview_position(self.c3d_data, marker_names)
             return None
 
+        def _technical_markers_for_segment(self, segment_name: str) -> tuple[str, ...]:
+            for group in self.groups:
+                if group.segment_name == segment_name:
+                    return group.technical_marker_names if group.technical_marker_names else group.marker_names
+            return ()
+
+        def _score_solution_points(
+            self, parent_segment_name: str, segment_name: str
+        ) -> tuple[tuple[str, tuple[float, float, float]], ...]:
+            parent_marker_names = self._technical_markers_for_segment(parent_segment_name)
+            child_marker_names = self._technical_markers_for_segment(segment_name)
+            if len(parent_marker_names) == 0 or len(child_marker_names) == 0:
+                return ()
+            marker_names = parent_marker_names + child_marker_names
+            if any(marker_name not in self.c3d_data.marker_names for marker_name in marker_names):
+                return ()
+            cache_key = (id(self.c3d_data), parent_marker_names, child_marker_names)
+            if cache_key in self._score_solution_cache:
+                return self._score_solution_cache[cache_key]
+            try:
+                from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
+
+                parent_cor = SegmentCoordinateSystemUtils.score(
+                    self.c3d_data,
+                    parent_marker_names,
+                    child_marker_names,
+                    average_parent_child_static_projection=False,
+                )(self.c3d_data, None)[:3]
+                mean_cor = SegmentCoordinateSystemUtils.score(
+                    self.c3d_data,
+                    parent_marker_names,
+                    child_marker_names,
+                    average_parent_child_static_projection=True,
+                )(self.c3d_data, None)[:3]
+            except Exception:
+                return ()
+            child_cor = 2 * mean_cor - parent_cor
+            solution_points = (
+                ("parent", tuple(float(value) for value in parent_cor)),
+                ("segment", tuple(float(value) for value in child_cor)),
+                ("mean", tuple(float(value) for value in mean_cor)),
+            )
+            self._score_solution_cache[cache_key] = solution_points
+            return solution_points
+
         def _draw_legend(self, painter) -> None:
             painter.setPen(QPen(QColor("#111827"), 1))
             painter.setBrush(QColor(255, 255, 255, 225))
-            painter.drawRect(8, 8, 255, 82)
+            painter.drawRect(8, 8, 275, 100)
             painter.drawText(14, 24, "Legend")
-            _draw_legend_point(painter, QPointF(20, 40), QColor("#2563eb"), "Anatomical/additional marker", 36, 44)
+            _draw_legend_point(painter, QPointF(20, 40), QColor("#2563eb"), "Selected segment/parent marker", 36, 44)
             painter.setPen(QPen(QColor("#2563eb"), 1))
             painter.setBrush(QColor("#2563eb"))
             painter.drawRect(16, 52, 8, 8)
             painter.setPen(QPen(QColor("#111827"), 1))
             painter.drawText(36, 62, "Technical marker")
             _draw_legend_point(painter, QPointF(20, 74), QColor("#7c3aed"), "Virtual marker", 36, 78)
+            _draw_legend_point(painter, QPointF(20, 92), QColor("#cbd5e1"), "Other functional C3D marker", 36, 96)
 
         def mousePressEvent(self, event) -> None:
             self._last_mouse_position = get_event_position(event)
@@ -595,6 +668,7 @@ def launch_model_editor() -> None:
         def __init__(self):
             super().__init__()
             self.setMinimumHeight(260)
+            self.setMinimumWidth(420)
             self.c3d_data = None
             self.groups = ()
             self.selected_segment_name = ""
@@ -695,6 +769,7 @@ def launch_model_editor() -> None:
             self.setWindowTitle("New model from C3D")
             self.presets = supported_c3d_model_presets()
             self.c3d_data = None
+            self._c3d_data_cache = {}
             self.c3d_folder_path = ""
             self.workflow_draft = c3d_workflow_draft(self.presets[0])
             self.workflow_marker_pool = _marker_pool_from_draft(self.workflow_draft)
@@ -957,16 +1032,17 @@ def launch_model_editor() -> None:
 
         def _segment_workflow_tab(self):
             widget = QWidget()
-            layout = QVBoxLayout(widget)
+            layout = QHBoxLayout(widget)
+            controls_column = QVBoxLayout()
             row = QHBoxLayout()
             row.addWidget(self.add_segment_button)
             row.addWidget(self.remove_segment_button)
             row.addStretch()
-            layout.addLayout(row)
-            layout.addWidget(QLabel("Segments"))
-            layout.addWidget(self.segment_marker_list)
-            layout.addWidget(self.strip_participant_prefix_checkbox)
-            layout.addWidget(self.marker_mapping_label)
+            controls_column.addLayout(row)
+            controls_column.addWidget(QLabel("Segments"))
+            controls_column.addWidget(self.segment_marker_list)
+            controls_column.addWidget(self.strip_participant_prefix_checkbox)
+            controls_column.addWidget(self.marker_mapping_label)
             marker_row = QHBoxLayout()
             parent_column = QVBoxLayout()
             parent_column.addWidget(QLabel("Parent segment"))
@@ -994,13 +1070,19 @@ def launch_model_editor() -> None:
             marker_row.addLayout(left_column, 2)
             marker_row.addLayout(transfer_column, 0)
             marker_row.addLayout(right_column, 2)
-            layout.addLayout(marker_row)
+            controls_column.addLayout(marker_row)
+            controls_column.addStretch()
+
+            preview_column = QVBoxLayout()
             preview_row = QHBoxLayout()
             preview_row.addWidget(QLabel("Frame"))
             preview_row.addWidget(self.technical_frame_slider)
             preview_row.addWidget(self.technical_frame_label)
-            layout.addLayout(preview_row)
-            layout.addWidget(self.technical_segment_preview)
+            preview_column.addLayout(preview_row)
+            preview_column.addWidget(self.technical_segment_preview, 1)
+
+            layout.addLayout(controls_column, 2)
+            layout.addLayout(preview_column, 1)
             return widget
 
         def _anatomical_segment_workflow_tab(self):
@@ -1044,7 +1126,7 @@ def launch_model_editor() -> None:
             preview_column.addWidget(self.segment_axis_preview, 1)
             preview_column.addWidget(self.save_segment_axis_button)
 
-            layout.addLayout(controls_column, 0)
+            layout.addLayout(controls_column, 2)
             layout.addLayout(preview_column, 1)
             return widget
 
@@ -1052,6 +1134,7 @@ def launch_model_editor() -> None:
             widget = QWidget()
             layout = QHBoxLayout(widget)
 
+            controls_layout = QHBoxLayout()
             list_column = QVBoxLayout()
             list_column.addWidget(QLabel("Virtual markers"))
             list_column.addWidget(self.feature_list)
@@ -1059,7 +1142,7 @@ def launch_model_editor() -> None:
             row.addWidget(self.add_virtual_marker_button)
             row.addWidget(self.remove_virtual_marker_button)
             list_column.addLayout(row)
-            layout.addLayout(list_column, 1)
+            controls_layout.addLayout(list_column, 1)
 
             form_column = QVBoxLayout()
             form = QFormLayout()
@@ -1078,12 +1161,13 @@ def launch_model_editor() -> None:
             form_column.addWidget(QLabel("Selected marker information"))
             form_column.addWidget(self.virtual_marker_info_label)
             form_column.addStretch()
-            layout.addLayout(form_column, 1)
+            controls_layout.addLayout(form_column, 1)
 
             preview_column = QVBoxLayout()
             preview_column.addWidget(QLabel("3D placement preview"))
-            preview_column.addWidget(self.virtual_marker_preview)
-            layout.addLayout(preview_column, 2)
+            preview_column.addWidget(self.virtual_marker_preview, 1)
+            layout.addLayout(controls_layout, 2)
+            layout.addLayout(preview_column, 1)
             return widget
 
         def _segment_settings_workflow_tab(self):
@@ -1138,6 +1222,7 @@ def launch_model_editor() -> None:
                 QMessageBox.critical(self, "Unable to load C3D", str(error))
 
         def _reload_current_c3d_file(self, *_args) -> None:
+            self._c3d_data_cache.clear()
             filepath = self.c3d_path.text().strip()
             if filepath == "":
                 return
@@ -1996,6 +2081,23 @@ def launch_model_editor() -> None:
                 return str(filepath)
             return str(Path(self.c3d_folder_path) / filename)
 
+        def _c3d_data_from_path(self, filepath: str):
+            if filepath == "":
+                return None
+            if filepath not in self._c3d_data_cache:
+                data = C3dData(filepath)
+                if self.strip_participant_prefix_checkbox.isChecked():
+                    _strip_participant_prefix_from_c3d_data(data)
+                self._c3d_data_cache[filepath] = data
+            return self._c3d_data_cache[filepath]
+
+        def _selected_virtual_marker_c3d_data(self):
+            filepath = self._selected_virtual_marker_c3d_file()
+            try:
+                return self._c3d_data_from_path(filepath) if filepath else self.c3d_data
+            except Exception:
+                return self.c3d_data
+
         def _mirror_initial_rotation_c3d_source(self, *_args) -> None:
             if self.settings_initial_rotation_method_combo.currentText() == "anatomical_c3d":
                 self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
@@ -2069,7 +2171,7 @@ def launch_model_editor() -> None:
 
         def _update_virtual_marker_preview(self, *_args) -> None:
             self.virtual_marker_preview.set_context(
-                self.c3d_data,
+                self._selected_virtual_marker_c3d_data(),
                 self.workflow_draft.segment_marker_groups,
                 self.workflow_draft.virtual_markers,
                 self.virtual_marker_name_edit.text().strip(),
