@@ -1,3 +1,5 @@
+import numpy as np
+
 from biobuddy import (
     BiomechanicalModelReal,
 )
@@ -8,8 +10,11 @@ from biobuddy.gui.model_editor import (
     _c3d_generation_log,
     _export_model_to_path,
     _joint_name_from_segments,
+    _marker_frame_position,
+    _marker_name_mapping_for_c3d,
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
+    _remap_c3d_workflow_draft_markers,
     _score_segments_from_payload,
     _split_marker_names,
     _strip_score_segment_payload,
@@ -76,6 +81,47 @@ def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):
         "left_hip_functional.c3d",
         "right_hip_functional.c3d",
     )
+
+
+def test_marker_name_mapping_matches_normalized_c3d_names():
+    """
+    Template marker names can be automatically matched to participant-specific C3D naming.
+    """
+    mapping = _marker_name_mapping_for_c3d(("LASI", "RASI", "LTHIB"), ("L_ASI", "rasi", "L-THIB", "extra"))
+
+    assert mapping == {"LASI": "L_ASI", "RASI": "rasi", "LTHIB": "L-THIB"}
+
+
+def test_remap_c3d_workflow_draft_markers_updates_segment_groups():
+    """
+    Loading a C3D should update template marker references before the user edits segment assignments.
+    """
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    mapping = {"LASI": "L_ASI", "RASI": "R_ASI"}
+    updated = _remap_c3d_workflow_draft_markers(draft, mapping)
+    pelvis = next(group for group in updated.segment_marker_groups if group.segment_name == "Pelvis")
+
+    assert pelvis.marker_names[:2] == ("LPSI", "RPSI")
+    assert "L_ASI" in pelvis.marker_names
+    assert "R_ASI" in pelvis.marker_names
+
+
+def test_marker_frame_position_reads_selected_frame():
+    """
+    The technical segment preview should display marker coordinates at the slider frame.
+    """
+
+    class FakeC3dData:
+        marker_names = ["LASI"]
+        nb_frames = 2
+
+        def get_position(self, marker_names):
+            values = np.ones((4, 1, 2))
+            values[:3, 0, 0] = (1.0, 2.0, 3.0)
+            values[:3, 0, 1] = (4.0, 5.0, 6.0)
+            return values
+
+    assert _marker_frame_position(FakeC3dData(), "LASI", 1) == (4.0, 5.0, 6.0)
 
 
 def test_c3d_generation_log_reports_virtual_marker_local_offset_context():
