@@ -597,7 +597,7 @@ def launch_model_editor() -> None:
                 else:
                     radius = 4 if is_highlighted else 2
                     painter.drawEllipse(center, radius, radius)
-                if is_highlighted:
+                if is_highlighted and segment_name == self.distal_segment_name:
                     painter.drawText(center.x() + 5, center.y() - 5, f"{marker_name} ({segment_name})")
 
             painter.setPen(QPen(QColor("#7c3aed"), 2))
