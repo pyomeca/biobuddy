@@ -233,10 +233,12 @@ def launch_model_editor() -> None:
         start_list.setSelectionMode(qt_extended_selection)
         start_list.setMinimumHeight(56)
         start_list.setMaximumHeight(80)
+        start_list.setMaximumWidth(260)
         end_list = QListWidget()
         end_list.setSelectionMode(qt_extended_selection)
         end_list.setMinimumHeight(56)
         end_list.setMaximumHeight(80)
+        end_list.setMaximumWidth(260)
         axis_combo = QComboBox()
         axis_combo.addItems(["x", "y", "z"])
         if index == 1:
@@ -249,6 +251,7 @@ def launch_model_editor() -> None:
         remove_end_button = QPushButton("-")
         for button in (add_start_button, add_end_button, remove_start_button, remove_end_button):
             button.setMaximumWidth(34)
+            button.setMinimumWidth(34)
         return {
             "start_list": start_list,
             "end_list": end_list,
@@ -274,12 +277,12 @@ def launch_model_editor() -> None:
             column = QVBoxLayout()
             column.addWidget(QLabel(title))
             row = QHBoxLayout()
-            row.addWidget(marker_list)
             buttons = QVBoxLayout()
             buttons.addWidget(add_button)
             buttons.addWidget(remove_button)
             buttons.addStretch()
             row.addLayout(buttons)
+            row.addWidget(marker_list)
             column.addLayout(row)
             marker_row.addLayout(column)
         layout.addLayout(marker_row)
@@ -963,7 +966,7 @@ def launch_model_editor() -> None:
             source_column.addWidget(QLabel("Available C3D and virtual markers"))
             source_column.addWidget(self.axis_marker_source_list)
             axis_layout.addLayout(source_column, 2)
-            axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 4)
+            axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 3)
             preview_column = QVBoxLayout()
             preview_column.addWidget(QLabel("Dynamic frame preview"))
             preview_column.addWidget(self.segment_axis_preview)
