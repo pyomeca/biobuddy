@@ -189,6 +189,54 @@ def test_yeadon_table_adapts_segments_to_biobuddy_inertia(fake_yeadon):
     npt.assert_array_equal(table.segment_end("K2"), np.array([10.0, 10.25, 11.5, 1.0]))
 
 
+def test_yeadon_table_from_measurement_matches_de_leva_style(fake_yeadon):
+    measurements = {name: 1.0 for name in YEADON_MEASUREMENT_NAMES}
+    table = YeadonTable()
+
+    table.from_measurement(
+        measurements,
+        configuration={"somersault": 0.0},
+        symmetric=False,
+        density_set=YeadonDensitySet.CHANDLER,
+        total_mass=90.0,
+    )
+
+    assert FakeHuman.instances[0].measurements == measurements
+    assert FakeHuman.instances[0].CFG == {"somersault": 0.0}
+    assert FakeHuman.instances[0].symmetric is False
+    assert FakeHuman.instances[0].density_set == "Chandler"
+    assert FakeHuman.instances[0].scale_calls == [90.0]
+    npt.assert_almost_equal(table.mass, 90.0)
+
+
+def test_yeadon_table_from_file_forwards_measurement_path(fake_yeadon, tmp_path):
+    filepath = tmp_path / "measurements.txt"
+    filepath.write_text("measurementconversionfactor: 1\n")
+    table = YeadonTable()
+
+    table.from_file(filepath, total_mass=80.0)
+
+    assert FakeHuman.instances[0].measurements == str(filepath)
+    assert FakeHuman.instances[0].scale_calls == [80.0]
+
+
+def test_yeadon_table_to_file_exports_yeadon_measurements(fake_yeadon, tmp_path):
+    measurements = {name: index + 0.25 for index, name in enumerate(YEADON_MEASUREMENT_NAMES)}
+    table = YeadonTable(measurements, total_mass=75.0)
+    filepath = tmp_path / "exported_measurements.txt"
+
+    table.to_file(filepath)
+
+    lines = filepath.read_text().splitlines()
+    assert lines[0] == "Ls1L: 0.25"
+    assert lines[1] == "Ls2L: 1.25"
+    assert "totalmass: 75" in lines
+    assert lines[-1] == "measurementconversionfactor: 1"
+    assert len([line for line in lines if line.split(":")[0] in YEADON_MEASUREMENT_NAMES]) == len(
+        YEADON_MEASUREMENT_NAMES
+    )
+
+
 def test_yeadon_table_creates_simple_model(fake_yeadon):
     table = YeadonTable({name: 1.0 for name in YEADON_MEASUREMENT_NAMES})
 

@@ -194,24 +194,10 @@ table-like API:
 
 ```python3
 measurements = {name: value_in_meters for name in YEADON_MEASUREMENT_NAMES}
-yeadon_table = YeadonTable(measurements, total_mass=75.0)
+yeadon_table = YeadonTable()
+yeadon_table.from_measurement(measurements, total_mass=75.0)
 pelvis_inertia = yeadon_table[YeadonSegmentName.PELVIS]
 model = yeadon_table.to_simple_model()
-```
-
-The GUI package includes a Yeadon measurement editor with one field per measurement, an illustration panel for the
-selected body level, and export to a simple `.bioMod` model:
-
-```bash
-python -m biobuddy.gui --yeadon-measurements
-```
-
-The main model editor can also apply inertial parameters to the selected segment from the available inertial tables
-(`de Leva` and `Yeadon`). It opens a model-specific input dialog and lets you choose the source segment before applying
-mass, center of mass, and the full inertia matrix:
-
-```bash
-python -m biobuddy.gui
 ```
 
 ```python3
@@ -396,7 +382,7 @@ launch it with:
 
 ```bash
 pip install biobuddy[gui]
-python -m biobuddy.gui
+python examples/launch_model_editor_gui.py
 ```
 If you are working from sources, you will need to install :
 ```bash

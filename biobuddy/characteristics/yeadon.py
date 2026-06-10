@@ -187,7 +187,7 @@ YEADON_MEASUREMENT_SPECS = tuple(_measurement_spec(name) for name in YEADON_MEAS
 class YeadonTable:
     def __init__(
         self,
-        measurements: Mapping[str, float] | str | Path,
+        measurements: Mapping[str, float] | str | Path | None = None,
         configuration: Mapping[str, float] | str | Path | None = None,
         symmetric: bool = True,
         density_set: YeadonDensitySet | str = YeadonDensitySet.DEMPSTER,
@@ -195,6 +195,46 @@ class YeadonTable:
     ):
         """
         Compute subject-specific segment inertia parameters using the Yeadon model.
+
+        Parameters
+        ----------
+        measurements
+            Either a mapping with Yeadon's 95 measurement names in meters, or a path to a Yeadon measurement file.
+        configuration
+            Optional Yeadon configuration mapping or file. If omitted, the neutral configuration is used.
+        symmetric
+            If true, Yeadon averages left/right limb measurements before computing inertia parameters.
+        density_set
+            One of Chandler, Clauser, or Dempster density sets.
+        total_mass
+            Optional measured total mass in kilograms. When provided, Yeadon's density model is scaled to this mass.
+        """
+        self.measurements = None
+        self.configuration = None
+        self.symmetric = symmetric
+        self.density_set = density_set.value if isinstance(density_set, YeadonDensitySet) else density_set
+        self.total_mass = total_mass
+        self.human = None
+        self.inertial_table: dict[YeadonSegmentName, InertiaParametersReal] = {}
+        if measurements is not None:
+            self.from_measurement(
+                measurements=measurements,
+                configuration=configuration,
+                symmetric=symmetric,
+                density_set=density_set,
+                total_mass=total_mass,
+            )
+
+    def from_measurement(
+        self,
+        measurements: Mapping[str, float] | str | Path,
+        configuration: Mapping[str, float] | str | Path | None = None,
+        symmetric: bool = True,
+        density_set: YeadonDensitySet | str = YeadonDensitySet.DEMPSTER,
+        total_mass: float | None = None,
+    ) -> None:
+        """
+        Compute the Yeadon inertial table from anthropometric measurements.
 
         Parameters
         ----------
@@ -232,6 +272,56 @@ class YeadonTable:
             segment_name: self._inertia_parameters_from_segment(self._yeadon_segment(segment_name))
             for segment_name in YeadonSegmentName
         }
+
+    def from_measurements(
+        self,
+        measurements: Mapping[str, float] | str | Path,
+        configuration: Mapping[str, float] | str | Path | None = None,
+        symmetric: bool = True,
+        density_set: YeadonDensitySet | str = YeadonDensitySet.DEMPSTER,
+        total_mass: float | None = None,
+    ) -> None:
+        """
+        Alias for :meth:`from_measurement`.
+        """
+        self.from_measurement(
+            measurements=measurements,
+            configuration=configuration,
+            symmetric=symmetric,
+            density_set=density_set,
+            total_mass=total_mass,
+        )
+
+    def from_file(
+        self,
+        filepath: str | Path,
+        configuration: Mapping[str, float] | str | Path | None = None,
+        symmetric: bool = True,
+        density_set: YeadonDensitySet | str = YeadonDensitySet.DEMPSTER,
+        total_mass: float | None = None,
+    ) -> None:
+        """
+        Compute the Yeadon inertial table from a Yeadon measurement text file.
+        """
+        self.from_measurement(
+            measurements=filepath,
+            configuration=configuration,
+            symmetric=symmetric,
+            density_set=density_set,
+            total_mass=total_mass,
+        )
+
+    def to_file(self, filepath: str | Path) -> None:
+        """
+        Export the current measurements to the YAML-style text format accepted by yeadon.
+        """
+        measurements = self._measurement_mapping_for_export()
+        lines = [f"{name}: {_format_yeadon_file_value(measurements[name])}\n" for name in YEADON_MEASUREMENT_NAMES]
+        total_mass = self._total_mass_for_export()
+        if total_mass is not None:
+            lines.append(f"totalmass: {_format_yeadon_file_value(total_mass)}\n")
+        lines.append("measurementconversionfactor: 1\n")
+        Path(filepath).write_text("".join(lines))
 
     @property
     def mass(self) -> float:
@@ -289,6 +379,27 @@ class YeadonTable:
 
     def _yeadon_segment(self, segment_name: YeadonSegmentName) -> Any:
         return getattr(self.human, segment_name.value)
+
+    def _measurement_mapping_for_export(self) -> Mapping[str, float]:
+        if isinstance(self.measurements, Mapping):
+            measurements = self.measurements
+        elif self.human is not None and isinstance(getattr(self.human, "meas", None), Mapping):
+            measurements = self.human.meas
+        else:
+            raise ValueError("Yeadon measurements are not available for export.")
+        missing = [name for name in YEADON_MEASUREMENT_NAMES if name not in measurements]
+        if missing:
+            raise ValueError(f"Missing Yeadon measurements: {', '.join(missing)}.")
+        return measurements
+
+    def _total_mass_for_export(self) -> float | None:
+        if self.total_mass is not None:
+            return self.total_mass
+        if self.human is not None:
+            measured_mass = getattr(self.human, "meas_mass", None)
+            if measured_mass is not None and measured_mass > 0:
+                return measured_mass
+        return None
 
     @staticmethod
     def _inertia_parameters_from_segment(segment: Any) -> InertiaParametersReal:
@@ -354,6 +465,10 @@ def _coerce_segment_name(segment_name: YeadonSegmentName | str) -> YeadonSegment
 def _homogeneous_point(point: np.ndarray) -> np.ndarray:
     point = np.asarray(point, dtype=float).reshape(3)
     return np.array([point[0], point[1], point[2], 1.0])
+
+
+def _format_yeadon_file_value(value: float) -> str:
+    return f"{float(value):.15g}"
 
 
 def _import_yeadon() -> Any:
