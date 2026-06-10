@@ -44,6 +44,7 @@ from .validation_panel import validate_model_for_editor
 from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
+    create_lower_limb_model_variants_from_c3d_folder,
     create_model_from_marker_data,
     create_model_from_c3d_folder,
     supported_c3d_model_presets,
@@ -978,7 +979,7 @@ def launch_model_editor() -> None:
             self.virtual_marker_distal_combo.currentTextChanged.connect(self._update_virtual_marker_technical_markers)
             self.virtual_marker_info_label = QLabel()
             self.virtual_marker_info_label.setWordWrap(True)
-            self.save_virtual_marker_button = QPushButton("Save virtual marker")
+            self.save_virtual_marker_button = QPushButton("Save virtual marker/axis")
             self.save_virtual_marker_button.clicked.connect(self._save_workflow_virtual_marker_from_form)
             self.virtual_marker_preview = C3dVirtualMarkerPreviewWidget()
             self.segment_settings_list = QListWidget()
@@ -1011,9 +1012,9 @@ def launch_model_editor() -> None:
             self.assign_marker_button.clicked.connect(self._assign_workflow_marker)
             self.unassign_marker_button = QPushButton("Remove selected markers")
             self.unassign_marker_button.clicked.connect(self._unassign_workflow_marker)
-            self.add_virtual_marker_button = QPushButton("Add/edit virtual marker")
+            self.add_virtual_marker_button = QPushButton("Add/edit virtual marker/axis")
             self.add_virtual_marker_button.clicked.connect(self._add_workflow_virtual_marker)
-            self.remove_virtual_marker_button = QPushButton("Remove virtual marker")
+            self.remove_virtual_marker_button = QPushButton("Remove virtual marker/axis")
             self.remove_virtual_marker_button.clicked.connect(self._remove_workflow_virtual_marker)
             self.edit_segment_settings_button = QPushButton("Apply segment settings")
             self.edit_segment_settings_button.clicked.connect(self._apply_workflow_segment_settings_from_form)
@@ -1039,7 +1040,7 @@ def launch_model_editor() -> None:
             workflow_tabs = QTabWidget()
             workflow_tabs.addTab(self._pipeline_workflow_tab(), "Pipeline")
             workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
-            workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers")
+            workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers and axes")
             workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
             workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
             workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
@@ -1189,7 +1190,7 @@ def launch_model_editor() -> None:
 
             controls_layout = QHBoxLayout()
             list_column = QVBoxLayout()
-            list_column.addWidget(QLabel("Virtual markers"))
+            list_column.addWidget(QLabel("Virtual markers and axes"))
             list_column.addWidget(self.feature_list)
             row = QHBoxLayout()
             row.addWidget(self.add_virtual_marker_button)
@@ -2912,17 +2913,30 @@ def launch_model_editor() -> None:
                 return
             try:
                 folder_path = Path(calibration_folder)
-                result = create_model_from_c3d_folder(
-                    calibration_folder=folder_path,
-                    preset=dialog.selected_preset(),
-                )
+                if dialog.selected_preset() == C3dModelPreset.LOWER_LIMBS:
+                    variant_results = create_lower_limb_model_variants_from_c3d_folder(calibration_folder=folder_path)
+                    for variant in (variant_results.score, variant_results.no_score):
+                        variant.model.to_biomod(filepath=str(folder_path / variant.output_filename), with_mesh=False)
+                    result = variant_results.score
+                else:
+                    result = create_model_from_c3d_folder(
+                        calibration_folder=folder_path,
+                        preset=dialog.selected_preset(),
+                    )
                 self.model = result.model
                 self.current_filepath = folder_path / result.output_filename
                 self._refresh_model_views()
                 QMessageBox.information(
                     self,
                     "Model generated from C3D",
-                    _format_c3d_creation_summary(result, folder_path),
+                    _format_c3d_creation_summary(result, folder_path)
+                    + (
+                        "\n\nGenerated lower-limb variants:\n"
+                        "- lower_body_score.bioMod\n"
+                        "- lower_body_no_score.bioMod"
+                        if dialog.selected_preset() == C3dModelPreset.LOWER_LIMBS
+                        else ""
+                    ),
                 )
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate model", str(error))

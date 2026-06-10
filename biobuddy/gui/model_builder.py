@@ -250,6 +250,7 @@ class SegmentSpec:
     rotations: Rotations = Rotations.NONE
     frame: LocalFrameSpec | None = None
     mesh_points: tuple[MarkerEndpointSpec, ...] = ()
+    inertia_name: object | None = None
 
 
 @dataclass(frozen=True)
@@ -324,6 +325,7 @@ class ModelTemplate:
     required_static_markers: tuple[str, ...]
     functional_trials: tuple[FunctionalTrialSpec, ...] = ()
     root_segment_name: str | None = None
+    inertia_parameters_factory: Callable[[MarkerData], dict[str, object]] | None = None
 
     def marker_segments(self) -> dict[str, tuple[str, ...]]:
         """
@@ -451,12 +453,15 @@ def _marker_names_from_axis(axis: AxisSpec | FunctionalAxisSpec) -> set[str]:
 
 
 def build_generic_model(
-    template: ModelTemplate, functional_data: dict[str, MarkerData] | None = None
+    template: ModelTemplate,
+    functional_data: dict[str, MarkerData] | None = None,
+    inertia_parameters_by_segment: dict[str, object] | None = None,
 ) -> BiomechanicalModel:
     """
     Build a generic BioBuddy model from a model template.
     """
     model = BiomechanicalModel()
+    inertia_parameters_by_segment = {} if inertia_parameters_by_segment is None else inertia_parameters_by_segment
     for segment_spec in template.segments:
         segment = Segment(
             name=segment_spec.name,
@@ -471,6 +476,7 @@ def build_generic_model(
                 if len(segment_spec.mesh_points) == 0
                 else Mesh(tuple(point.to_callable() for point in segment_spec.mesh_points), is_local=False)
             ),
+            inertia_parameters=inertia_parameters_by_segment.get(segment_spec.name),
         )
         model.add_segment(segment)
 
@@ -499,7 +505,14 @@ def build_real_model(
     if missing_markers:
         raise ValueError(f"Missing required static markers: {', '.join(missing_markers)}")
 
-    model = build_generic_model(template=template, functional_data=functional_data).to_real(static_data)
+    inertia_parameters_by_segment = (
+        {} if template.inertia_parameters_factory is None else template.inertia_parameters_factory(static_data)
+    )
+    model = build_generic_model(
+        template=template,
+        functional_data=functional_data,
+        inertia_parameters_by_segment=inertia_parameters_by_segment,
+    ).to_real(static_data)
     if template.root_segment_name is not None and "root" in model.segment_names:
         model.segments[template.root_segment_name].parent_name = model.segments["root"].parent_name
         model.segments[template.root_segment_name].segment_coordinate_system = model.segments[

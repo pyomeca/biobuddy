@@ -53,6 +53,16 @@ class C3dModelCreationResult:
 
 
 @dataclass(frozen=True)
+class C3dModelCreationVariantResults:
+    """
+    Pair of lower-limb models generated with and without functional SCoRE/SARA calibration.
+    """
+
+    score: C3dModelCreationResult
+    no_score: C3dModelCreationResult
+
+
+@dataclass(frozen=True)
 class C3dPresetVirtualFeature:
     """
     Point or axis that must be reconstructed before a preset can be generated.
@@ -124,7 +134,7 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
 
 def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
     """
-    Return lower-limb SCoRE centers used by the lower-body template.
+    Return lower-limb functional centers and axes used by the lower-body template.
     """
     score_specs = (
         (
@@ -156,7 +166,7 @@ def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
             ("RHEE", "RNAV", "RTOE", "RTOE5"),
         ),
     )
-    return tuple(
+    score_features = tuple(
         C3dPresetVirtualFeature(
             name=name,
             feature_type="point",
@@ -169,6 +179,38 @@ def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
         )
         for name, segment_name, trial_name, parent_markers, child_markers in score_specs
     )
+    sara_specs = (
+        (
+            "Axis_LKnee_SARA",
+            "LShank",
+            "left_knee_sara",
+            ("LTIBD", "LTIB", "LTIBF"),
+            ("LTHIB", "LTHID", "LTHI"),
+            ("LKNE", "LKNEM"),
+        ),
+        (
+            "Axis_RKnee_SARA",
+            "RShank",
+            "right_knee_sara",
+            ("RTHID", "RTHI", "RTHIB"),
+            ("RTIB", "RTIBF", "RTIBD"),
+            ("RKNEM", "RKNE"),
+        ),
+    )
+    sara_features = tuple(
+        C3dPresetVirtualFeature(
+            name=name,
+            feature_type="axis",
+            segment_name=segment_name,
+            role="sara_axis",
+            description=(
+                f"trial={trial_name}; parent markers={','.join(parent_markers)}; "
+                f"child markers={','.join(child_markers)}; expected axis={','.join(expected_axis)}"
+            ),
+        )
+        for name, segment_name, trial_name, parent_markers, child_markers, expected_axis in sara_specs
+    )
+    return score_features + sara_features
 
 
 def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:
@@ -217,6 +259,54 @@ def create_model_from_c3d_folder(
         static_virtual_axes=static_virtual_axes,
         functional_virtual_points=functional_virtual_points,
         functional_virtual_axes=functional_virtual_axes,
+    )
+
+
+def create_lower_limb_model_variants_from_c3d_folder(
+    calibration_folder: Path,
+    static_patterns: tuple[str, ...] = ("*static*.c3d", "*func_anat.c3d"),
+) -> C3dModelCreationVariantResults:
+    """
+    Create lower-limb models with functional SCoRE/SARA enabled and disabled from a C3D folder.
+    """
+    static_data = C3dData(str(find_static_c3d_file(calibration_folder, static_patterns)))
+    score_template = lower_limb_template(use_functional=True)
+    no_score_template = lower_limb_template(use_functional=False)
+    functional_data = load_functional_c3d_trials(template=score_template, calibration_folder=calibration_folder)
+    return create_lower_limb_model_variants_from_marker_data(
+        static_data=static_data,
+        functional_data=functional_data,
+        score_template=score_template,
+        no_score_template=no_score_template,
+    )
+
+
+def create_lower_limb_model_variants_from_marker_data(
+    static_data: MarkerData,
+    functional_data: dict[str, MarkerData] | None = None,
+    score_template: ModelTemplate | None = None,
+    no_score_template: ModelTemplate | None = None,
+) -> C3dModelCreationVariantResults:
+    """
+    Create lower-limb model variants matching ``use_score=True`` and ``use_score=False`` workflows.
+    """
+    score_template = lower_limb_template(use_functional=True) if score_template is None else score_template
+    no_score_template = lower_limb_template(use_functional=False) if no_score_template is None else no_score_template
+    return C3dModelCreationVariantResults(
+        score=create_model_from_marker_data(
+            template=score_template,
+            static_data=static_data,
+            functional_data=functional_data,
+            preset=C3dModelPreset.LOWER_LIMBS,
+            output_filename="lower_body_score.bioMod",
+        ),
+        no_score=create_model_from_marker_data(
+            template=no_score_template,
+            static_data=static_data,
+            functional_data={},
+            preset=C3dModelPreset.LOWER_LIMBS,
+            output_filename="lower_body_no_score.bioMod",
+        ),
     )
 
 

@@ -6,6 +6,7 @@ from biobuddy.gui.lower_limb_template import lower_limb_template
 from biobuddy.gui.c3d_model_creation import (
     C3dModelPreset,
     c3d_model_preset_virtual_features,
+    create_lower_limb_model_variants_from_marker_data,
     create_model_from_marker_data,
     find_static_c3d_file,
     supported_c3d_model_presets,
@@ -159,7 +160,9 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
         for feature in lower_limb_features
     )
     assert any(feature.name == "CoR_LFoot_in_LShank" and feature.role == "score" for feature in lower_limb_features)
-    assert len(lower_limb_features) == 4
+    assert any(feature.name == "Axis_LKnee_SARA" and feature.role == "sara_axis" for feature in lower_limb_features)
+    assert any(feature.name == "Axis_RKnee_SARA" and feature.feature_type == "axis" for feature in lower_limb_features)
+    assert len(lower_limb_features) == 6
     assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)
     assert any(feature.feature_type == "axis" and feature.name == "Clavicule_u_axis" for feature in upper_limb_features)
@@ -201,6 +204,13 @@ def test_lower_limb_template_builds_expected_generic_model():
     assert "LKNE" in model.segments["LShank"].marker_names
 
 
+def test_lower_limb_template_can_disable_score_and_sara():
+    template = lower_limb_template(use_functional=False)
+
+    assert required_functional_markers(template) == {}
+    assert template.name.endswith("(anatomical markers only)")
+
+
 def test_quality_metrics_are_computed_before_orthonormalization():
     template = lower_limb_template()
     quality = compute_frame_quality(template, _synthetic_lower_limb_data())
@@ -238,6 +248,21 @@ def test_lower_limb_template_generates_real_model_from_static_markers():
     assert model.segments["LShank"].nb_q == 1
     assert "LKNE" in model.segments["LThigh"].marker_names
     assert "LKNE" in model.segments["LShank"].marker_names
+    assert model.segments["Pelvis"].inertia_parameters is None
+    assert model.segments["Trunk"].inertia_parameters.mass > 0
+    assert model.segments["LThigh"].inertia_parameters.mass > 0
+    assert model.segments["RFoot"].inertia_parameters.mass > 0
+
+
+def test_lower_limb_model_creation_returns_score_and_no_score_variants():
+    variants = create_lower_limb_model_variants_from_marker_data(static_data=_synthetic_lower_limb_data())
+
+    assert variants.score.output_filename == "lower_body_score.bioMod"
+    assert variants.no_score.output_filename == "lower_body_no_score.bioMod"
+    assert variants.score.template.name.endswith("(SCoRE/SARA)")
+    assert variants.no_score.template.name.endswith("(anatomical markers only)")
+    assert "left_knee_sara" in required_functional_markers(variants.score.template)
+    assert required_functional_markers(variants.no_score.template) == {}
 
 
 def test_generated_lower_limb_model_can_be_saved_to_biomod(tmp_path):
