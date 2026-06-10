@@ -233,13 +233,14 @@ def launch_model_editor() -> None:
         start_list.setSelectionMode(qt_extended_selection)
         start_list.setMinimumHeight(56)
         start_list.setMaximumHeight(80)
-        start_list.setMaximumWidth(260)
+        start_list.setMaximumWidth(190)
         end_list = QListWidget()
         end_list.setSelectionMode(qt_extended_selection)
         end_list.setMinimumHeight(56)
         end_list.setMaximumHeight(80)
-        end_list.setMaximumWidth(260)
+        end_list.setMaximumWidth(190)
         axis_combo = QComboBox()
+        axis_combo.setMaximumWidth(160)
         axis_combo.addItems(["x", "y", "z"])
         if index == 1:
             axis_combo.setCurrentText("y")
@@ -268,6 +269,7 @@ def launch_model_editor() -> None:
         Build the layout for one repeated anatomical frame vector.
         """
         group = QGroupBox(f"Vector {index + 1}: mean(start markers) -> mean(end markers)")
+        group.setMaximumWidth(520)
         layout = QVBoxLayout(group)
         marker_row = QHBoxLayout()
         for title, marker_list, add_button, remove_button in (
@@ -730,11 +732,16 @@ def launch_model_editor() -> None:
             self.assigned_marker_technical_checkbox = QCheckBox("Selected markers are technical")
             self.assigned_marker_technical_checkbox.stateChanged.connect(self._set_selected_assigned_markers_technical)
             self.axis_list = QListWidget()
+            self.axis_list.setMaximumWidth(720)
+            self.axis_list.setMaximumHeight(120)
             self.anatomical_segment_list = QListWidget()
+            self.anatomical_segment_list.setMaximumWidth(720)
+            self.anatomical_segment_list.setMaximumHeight(110)
             self.anatomical_segment_list.itemSelectionChanged.connect(self._update_anatomical_segment_details)
             self.axis_marker_source_list = QListWidget()
             self.axis_marker_source_list.setSelectionMode(qt_extended_selection)
-            self.axis_marker_source_list.setMinimumWidth(240)
+            self.axis_marker_source_list.setMinimumWidth(140)
+            self.axis_marker_source_list.setMaximumWidth(180)
             self.axis_marker_source_list.setMinimumHeight(220)
             self.axis_vector_controls = [_create_axis_vector_controls(index) for index in range(2)]
             for index, controls in enumerate(self.axis_vector_controls):
@@ -757,7 +764,8 @@ def launch_model_editor() -> None:
             self.save_segment_axis_button = QPushButton("Add/update anatomical frame vectors")
             self.save_segment_axis_button.clicked.connect(self._save_segment_axis_from_lists)
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
-            self.segment_axis_preview.setMinimumWidth(360)
+            self.segment_axis_preview.setMinimumWidth(520)
+            self.segment_axis_preview.setMinimumHeight(520)
             self.virtual_marker_name_edit = QLineEdit()
             self.virtual_marker_suggested_name_label = QLabel()
             self.use_suggested_virtual_marker_name_button = QPushButton("Use suggested name")
@@ -961,30 +969,38 @@ def launch_model_editor() -> None:
 
         def _anatomical_segment_workflow_tab(self):
             widget = QWidget()
-            layout = QVBoxLayout(widget)
-            layout.addWidget(QLabel("Anatomical segments"))
-            layout.addWidget(self.anatomical_segment_list)
-            layout.addWidget(
-                QLabel(
-                    "Define two anatomical vectors from marker groups. The kept vector is preserved; the other one "
-                    "is orthogonalized and the third axis is computed by cross product."
-                )
+            layout = QHBoxLayout(widget)
+
+            controls_column = QVBoxLayout()
+            controls_column.addWidget(QLabel("Anatomical segments"))
+            controls_column.addWidget(self.anatomical_segment_list)
+            instructions_label = QLabel(
+                "Define two anatomical vectors from marker groups. The kept vector is preserved; the other one "
+                "is orthogonalized and the third axis is computed by cross product."
             )
+            instructions_label.setWordWrap(True)
+            instructions_label.setMaximumWidth(720)
+            controls_column.addWidget(instructions_label)
+
+            controls_column.addWidget(QLabel("Segment system of coordinates"))
             axis_layout = QHBoxLayout()
             source_column = QVBoxLayout()
             source_column.addWidget(QLabel("Available C3D and virtual markers"))
             source_column.addWidget(self.axis_marker_source_list)
-            axis_layout.addLayout(source_column, 2)
-            axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 3)
+            axis_layout.addLayout(source_column, 0)
+            axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 1)
+            controls_column.addLayout(axis_layout)
+            controls_column.addWidget(QLabel("Saved anatomical vectors"))
+            controls_column.addWidget(self.axis_list)
+            controls_column.addStretch()
+
             preview_column = QVBoxLayout()
             preview_column.addWidget(QLabel("Dynamic frame preview"))
-            preview_column.addWidget(self.segment_axis_preview)
+            preview_column.addWidget(self.segment_axis_preview, 1)
             preview_column.addWidget(self.save_segment_axis_button)
-            axis_layout.addLayout(preview_column, 3)
-            layout.addWidget(QLabel("Segment system of coordinates"))
-            layout.addLayout(axis_layout)
-            layout.addWidget(QLabel("Saved anatomical vectors"))
-            layout.addWidget(self.axis_list)
+
+            layout.addLayout(controls_column, 0)
+            layout.addLayout(preview_column, 1)
             return widget
 
         def _virtual_marker_workflow_tab(self):
