@@ -818,7 +818,16 @@ def launch_model_editor() -> None:
             self.settings_child_translation_checkbox = QCheckBox("Allow child translation")
             self.settings_initial_rotation_method_combo = QComboBox()
             self.settings_initial_rotation_method_combo.addItems(["identity", "matrix", "anatomical_c3d"])
+            self.settings_initial_rotation_method_combo.currentTextChanged.connect(
+                self._sync_initial_rotation_source_fields
+            )
             self.settings_initial_rotation_source_edit = QLineEdit()
+            self.settings_initial_rotation_c3d_combo = QComboBox()
+            self.settings_initial_rotation_c3d_combo.currentTextChanged.connect(
+                self._mirror_initial_rotation_c3d_source
+            )
+            self.browse_initial_rotation_c3d_button = QPushButton("Browse C3D")
+            self.browse_initial_rotation_c3d_button.clicked.connect(self._browse_initial_rotation_c3d_source)
             self.file_role_list = QListWidget()
             self.issue_list = QListWidget()
             self.example_list = QListWidget()
@@ -1032,7 +1041,11 @@ def launch_model_editor() -> None:
             form.addRow("q max", self.settings_q_max_edit)
             form.addRow("", self.settings_child_translation_checkbox)
             form.addRow("Initial rotation", self.settings_initial_rotation_method_combo)
-            form.addRow("Initial rotation source", self.settings_initial_rotation_source_edit)
+            form.addRow("Matrix source", self.settings_initial_rotation_source_edit)
+            anatomical_c3d_row = QHBoxLayout()
+            anatomical_c3d_row.addWidget(self.settings_initial_rotation_c3d_combo)
+            anatomical_c3d_row.addWidget(self.browse_initial_rotation_c3d_button)
+            form.addRow("Anatomical C3D", anatomical_c3d_row)
             form_column.addLayout(form)
             form_column.addWidget(self.edit_segment_settings_button)
             form_column.addStretch()
@@ -1086,6 +1099,7 @@ def launch_model_editor() -> None:
             self.workflow_marker_pool = tuple(self.c3d_data.marker_names)
             self._configure_technical_frame_slider()
             self._sync_virtual_marker_c3d_files()
+            self._sync_initial_rotation_c3d_files()
             self._update_preset_details()
 
         def _choose_c3d_folder(self) -> None:
@@ -1095,6 +1109,7 @@ def launch_model_editor() -> None:
             self.c3d_folder_path = folder
             self.c3d_folder_edit.setText(folder)
             self._sync_virtual_marker_c3d_files()
+            self._sync_initial_rotation_c3d_files()
             self._update_generation_log()
 
         def _browse_virtual_marker_c3d_source(self) -> None:
@@ -1107,7 +1122,20 @@ def launch_model_editor() -> None:
             if not filepath:
                 return
             self.virtual_marker_source_edit.setText(filepath)
+            self._set_c3d_combo_to_filepath(self.virtual_marker_c3d_file_combo, filepath, "Choose a C3D folder first")
             self._update_virtual_marker_preview()
+
+        def _browse_initial_rotation_c3d_source(self) -> None:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Choose anatomical C3D",
+                self.c3d_folder_path,
+                "C3D files (*.c3d)",
+            )
+            if not filepath:
+                return
+            self._set_c3d_combo_to_filepath(self.settings_initial_rotation_c3d_combo, filepath, "Choose a C3D first")
+            self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
 
         def _generate_template(self) -> None:
             default_name = f"{self.selected_preset().value}_template.json"
@@ -1293,11 +1321,17 @@ def launch_model_editor() -> None:
             self.settings_child_translation_checkbox.setChecked(setting.child_translation)
             self.settings_initial_rotation_method_combo.setCurrentText(setting.initial_rotation_method)
             self.settings_initial_rotation_source_edit.setText(setting.initial_rotation_source)
+            self._sync_initial_rotation_c3d_files(setting.initial_rotation_source)
+            self._sync_initial_rotation_source_fields()
 
         def _apply_workflow_segment_settings_from_form(self) -> None:
             setting = self._selected_segment_setting()
             if setting is None:
                 return
+            initial_rotation_method = self.settings_initial_rotation_method_combo.currentText()
+            initial_rotation_source = self.settings_initial_rotation_source_edit.text()
+            if initial_rotation_method == "anatomical_c3d":
+                initial_rotation_source = self._selected_initial_rotation_c3d_file()
             try:
                 self.workflow_draft = update_segment_settings_in_draft(
                     self.workflow_draft,
@@ -1307,8 +1341,8 @@ def launch_model_editor() -> None:
                     q_min=tuple(_parse_float_list(self.settings_q_min_edit.text())),
                     q_max=tuple(_parse_float_list(self.settings_q_max_edit.text())),
                     child_translation=self.settings_child_translation_checkbox.isChecked(),
-                    initial_rotation_method=self.settings_initial_rotation_method_combo.currentText(),
-                    initial_rotation_source=self.settings_initial_rotation_source_edit.text(),
+                    initial_rotation_method=initial_rotation_method,
+                    initial_rotation_source=initial_rotation_source,
                 )
                 self._update_preset_details()
             except Exception as error:
@@ -1786,17 +1820,54 @@ def launch_model_editor() -> None:
             self._update_suggested_virtual_marker_name()
 
         def _sync_virtual_marker_c3d_files(self) -> None:
-            current_file = self.virtual_marker_c3d_file_combo.currentText()
+            self._sync_c3d_combo(
+                self.virtual_marker_c3d_file_combo,
+                "Choose a C3D folder first",
+                self.virtual_marker_c3d_file_combo.currentText(),
+            )
+
+        def _sync_initial_rotation_c3d_files(self, current_source: str = "") -> None:
+            self._sync_c3d_combo(
+                self.settings_initial_rotation_c3d_combo,
+                "Choose a C3D first",
+                current_source or self.settings_initial_rotation_c3d_combo.currentText(),
+            )
+            self._sync_initial_rotation_source_fields()
+
+        def _available_workflow_c3d_files(self) -> tuple[str, ...]:
             files = _c3d_file_names_from_folder(self.c3d_folder_path)
             if self.c3d_path.text().strip():
                 files = tuple(dict.fromkeys(files + (Path(self.c3d_path.text().strip()).name,)))
-            self.virtual_marker_c3d_file_combo.blockSignals(True)
-            self.virtual_marker_c3d_file_combo.clear()
-            self.virtual_marker_c3d_file_combo.addItems(files if files else ("Choose a C3D folder first",))
-            self.virtual_marker_c3d_file_combo.setEnabled(bool(files))
-            if current_file in files:
-                self.virtual_marker_c3d_file_combo.setCurrentText(current_file)
-            self.virtual_marker_c3d_file_combo.blockSignals(False)
+            return files
+
+        def _sync_c3d_combo(self, combo, placeholder: str, current_value: str = "") -> None:
+            current_value = current_value.strip()
+            files = self._available_workflow_c3d_files()
+            selected_value = ""
+            if current_value and current_value != placeholder:
+                current_path = Path(current_value)
+                if current_value in files:
+                    selected_value = current_value
+                elif current_path.name in files:
+                    selected_value = current_path.name
+                else:
+                    selected_value = current_value
+                    files = tuple(dict.fromkeys(files + (current_value,)))
+
+            combo.blockSignals(True)
+            combo.clear()
+            combo.addItems(files if files else (placeholder,))
+            combo.setEnabled(bool(files))
+            if selected_value:
+                combo.setCurrentText(selected_value)
+            combo.blockSignals(False)
+
+        def _set_c3d_combo_to_filepath(self, combo, filepath: str, placeholder: str) -> None:
+            filepath = str(Path(filepath))
+            selected_value = Path(filepath).name
+            if not self.c3d_folder_path or Path(filepath).parent != Path(self.c3d_folder_path):
+                selected_value = filepath
+            self._sync_c3d_combo(combo, placeholder, selected_value)
 
         def _sync_virtual_marker_segment_context(self, *_args) -> None:
             segment_name = self.virtual_marker_segment_combo.currentText().strip()
@@ -1826,13 +1897,35 @@ def launch_model_editor() -> None:
             self.virtual_marker_technical_markers_label.setText("\n".join(lines) if lines else "-")
 
         def _selected_virtual_marker_c3d_file(self) -> str:
-            filename = self.virtual_marker_c3d_file_combo.currentText().strip()
-            if not filename or filename == "Choose a C3D folder first":
+            return self._selected_c3d_file_from_combo(self.virtual_marker_c3d_file_combo, "Choose a C3D folder first")
+
+        def _selected_initial_rotation_c3d_file(self) -> str:
+            return self._selected_c3d_file_from_combo(self.settings_initial_rotation_c3d_combo, "Choose a C3D first")
+
+        def _selected_c3d_file_from_combo(self, combo, placeholder: str) -> str:
+            filename = combo.currentText().strip()
+            if not filename or filename == placeholder:
                 return ""
             filepath = Path(filename)
             if filepath.is_absolute() or not self.c3d_folder_path:
                 return str(filepath)
             return str(Path(self.c3d_folder_path) / filename)
+
+        def _mirror_initial_rotation_c3d_source(self, *_args) -> None:
+            if self.settings_initial_rotation_method_combo.currentText() == "anatomical_c3d":
+                self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
+
+        def _sync_initial_rotation_source_fields(self, *_args) -> None:
+            method = self.settings_initial_rotation_method_combo.currentText()
+            is_anatomical_c3d = method == "anatomical_c3d"
+            is_matrix = method == "matrix"
+            self.settings_initial_rotation_source_edit.setEnabled(is_matrix or is_anatomical_c3d)
+            self.settings_initial_rotation_c3d_combo.setEnabled(
+                is_anatomical_c3d and self._selected_initial_rotation_c3d_file() != ""
+            )
+            self.browse_initial_rotation_c3d_button.setEnabled(is_anatomical_c3d)
+            if is_anatomical_c3d:
+                self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
 
         def _technical_marker_source_from_selected_segments(self) -> str:
             marker_names = []
