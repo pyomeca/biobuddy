@@ -13,6 +13,7 @@ from biobuddy.gui.model_editor import (
     _marker_frame_position,
     _matching_c3d_file_for_expected_name,
     _marker_name_mapping_for_c3d,
+    _is_virtual_feature_axis,
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
     _remap_c3d_workflow_draft_markers,
@@ -89,6 +90,15 @@ def test_virtual_marker_axis_list_text_can_remove_axis_from_draft():
     assert _virtual_axis_name_from_feature_list_text("CoR_LThigh_in_Pelvis | LThigh | score") is None
     assert any(axis.name == "Axis_LKnee_SARA" for axis in draft.axes)
     assert all(axis.name != "Axis_LKnee_SARA" for axis in updated_draft.axes)
+
+
+def test_virtual_marker_list_shows_only_named_sara_virtual_axes():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    named_sara_axis = next(axis for axis in draft.axes if axis.name == "Axis_LKnee_SARA")
+    anatomical_sara_axis = next(axis for axis in draft.axes if axis.name == "LShank_second_axis")
+
+    assert _is_virtual_feature_axis(named_sara_axis)
+    assert not _is_virtual_feature_axis(anatomical_sara_axis)
 
 
 def test_axis_projection_payload_parses_point_and_axis_sources():

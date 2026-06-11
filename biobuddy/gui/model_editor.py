@@ -622,8 +622,8 @@ def launch_model_editor() -> None:
             for label, point in solution_points:
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.setPen(QPen(QColor(solution_colors[label]), 3))
-                painter.setBrush(QColor(solution_colors[label]))
-                painter.drawRect(int(center.x()) - 6, int(center.y()) - 6, 12, 12)
+                painter.setBrush(QColor("white"))
+                painter.drawEllipse(center, 8, 8)
                 prefix = "SCoRE" if self.selected_method == "score" else "center"
                 painter.drawText(center.x() + 8, center.y() - 8, f"{prefix} {label}")
             if len(solution_points) >= 2:
@@ -832,6 +832,7 @@ def launch_model_editor() -> None:
             self.presets = supported_c3d_model_presets()
             self.c3d_data = None
             self._c3d_data_cache = {}
+            self._is_auto_assigning_c3d_files = False
             self.c3d_folder_path = ""
             self.workflow_draft = c3d_workflow_draft(self.presets[0])
             self.workflow_marker_pool = _marker_pool_from_draft(self.workflow_draft)
@@ -1357,45 +1358,53 @@ def launch_model_editor() -> None:
             self._update_preset_details()
             self._update_generation_log()
 
-        def _auto_assign_c3d_files_from_folder(self) -> None:
-            if not self.c3d_folder_path:
+        def _auto_assign_c3d_files_from_folder(self, load_main: bool = True) -> None:
+            if not self.c3d_folder_path or self._is_auto_assigning_c3d_files:
                 return
-            assignments = []
-            trial_sources = {}
-            for assignment in self.workflow_draft.file_assignments:
-                matched_file = _matching_c3d_file_for_expected_name(self.c3d_folder_path, assignment.generic_name)
-                source_path = str(matched_file) if matched_file is not None else assignment.source_path
-                assignments.append(replace(assignment, source_path=source_path))
-                if source_path:
-                    trial_sources[assignment.role] = source_path
+            self._is_auto_assigning_c3d_files = True
+            try:
+                assignments = []
+                trial_sources = {}
+                for assignment in self.workflow_draft.file_assignments:
+                    matched_file = _matching_c3d_file_for_expected_name(self.c3d_folder_path, assignment.generic_name)
+                    source_path = str(matched_file) if matched_file is not None else assignment.source_path
+                    assignments.append(replace(assignment, source_path=source_path))
+                    if source_path:
+                        trial_sources[assignment.role] = source_path
 
-            updated_virtual_markers = []
-            for marker in self.workflow_draft.virtual_markers:
-                trial_name = _trial_name_from_virtual_feature_source(marker.source)
-                source_path = trial_sources.get(trial_name, "")
-                equation = marker.equation
-                if marker.method in {"score", "sara"} and equation == "":
-                    parent_name = _parent_segment_name(self.workflow_draft, marker.segment_name)
-                    equation = f"proximal={parent_name}; distal={marker.segment_name}" if parent_name else equation
-                updated_virtual_markers.append(
-                    replace(marker, source=_source_with_c3d_assignment(marker.source, source_path), equation=equation)
+                updated_virtual_markers = []
+                for marker in self.workflow_draft.virtual_markers:
+                    trial_name = _trial_name_from_virtual_feature_source(marker.source)
+                    source_path = trial_sources.get(trial_name, "")
+                    equation = marker.equation
+                    if marker.method in {"score", "sara"} and equation == "":
+                        parent_name = _parent_segment_name(self.workflow_draft, marker.segment_name)
+                        equation = f"proximal={parent_name}; distal={marker.segment_name}" if parent_name else equation
+                    updated_virtual_markers.append(
+                        replace(
+                            marker,
+                            source=_source_with_c3d_assignment(marker.source, source_path),
+                            equation=equation,
+                        )
+                    )
+
+                updated_axes = []
+                for axis in self.workflow_draft.axes:
+                    trial_name = _trial_name_from_virtual_feature_source(axis.source)
+                    source_path = trial_sources.get(trial_name, "")
+                    updated_axes.append(replace(axis, source=_source_with_c3d_assignment(axis.source, source_path)))
+
+                self.workflow_draft = replace(
+                    self.workflow_draft,
+                    file_assignments=tuple(assignments),
+                    virtual_markers=tuple(updated_virtual_markers),
+                    axes=tuple(updated_axes),
                 )
-
-            updated_axes = []
-            for axis in self.workflow_draft.axes:
-                trial_name = _trial_name_from_virtual_feature_source(axis.source)
-                source_path = trial_sources.get(trial_name, "")
-                updated_axes.append(replace(axis, source=_source_with_c3d_assignment(axis.source, source_path)))
-
-            self.workflow_draft = replace(
-                self.workflow_draft,
-                file_assignments=tuple(assignments),
-                virtual_markers=tuple(updated_virtual_markers),
-                axes=tuple(updated_axes),
-            )
-            main_source = trial_sources.get("main", "")
-            if main_source and not self.c3d_path.text().strip():
-                self._load_c3d_file(main_source)
+                main_source = trial_sources.get("main", "")
+                if load_main and main_source and not self.c3d_path.text().strip():
+                    self._load_c3d_file(main_source)
+            finally:
+                self._is_auto_assigning_c3d_files = False
 
         def _browse_virtual_marker_c3d_source(self) -> None:
             filepath, _ = QFileDialog.getOpenFileName(
@@ -2119,9 +2128,7 @@ def launch_model_editor() -> None:
                     self.virtual_marker_name_edit.setText(axis.name)
                     self.virtual_marker_segment_combo.setCurrentText(axis.segment_name)
                     self.virtual_marker_method_combo.setCurrentText(axis.method)
-                    source_name = _c3d_source_name_from_virtual_feature_source(axis.source)
-                    if source_name and self.virtual_marker_c3d_file_combo.findText(source_name) >= 0:
-                        self.virtual_marker_c3d_file_combo.setCurrentText(source_name)
+                    self._select_virtual_marker_c3d_from_source(axis.source)
                     self._sync_virtual_marker_method_fields()
                     self._update_virtual_axis_info_label(axis)
                     self._update_virtual_marker_preview()
@@ -2145,13 +2152,20 @@ def launch_model_editor() -> None:
                 self.virtual_marker_proximal_combo.setCurrentText(proximal)
             if distal:
                 self.virtual_marker_distal_combo.setCurrentText(distal)
-            if marker.source:
-                source_name = _c3d_source_name_from_virtual_feature_source(marker.source) or Path(marker.source).name
-                if self.virtual_marker_c3d_file_combo.findText(source_name) >= 0:
-                    self.virtual_marker_c3d_file_combo.setCurrentText(source_name)
+            self._select_virtual_marker_c3d_from_source(marker.source)
             self._sync_virtual_marker_method_fields()
             self._update_virtual_marker_info_label(marker)
             self._update_virtual_marker_preview()
+
+        def _select_virtual_marker_c3d_from_source(self, source: str) -> None:
+            source_name = _c3d_source_name_from_virtual_feature_source(source)
+            if not source_name:
+                trial_name = _trial_name_from_virtual_feature_source(source)
+                source_name = Path(_assigned_c3d_source_for_role(self.workflow_draft, trial_name)).name
+            if not source_name:
+                return
+            if self.virtual_marker_c3d_file_combo.findText(source_name) >= 0:
+                self.virtual_marker_c3d_file_combo.setCurrentText(source_name)
 
         def _sync_virtual_marker_choices(self) -> None:
             current_segment = self.virtual_marker_segment_combo.currentText()
@@ -2414,7 +2428,9 @@ def launch_model_editor() -> None:
                 return
             self.virtual_marker_info_label.setText(
                 f"Name: {marker.name}\nSegment: {marker.segment_name}\nMethod: {marker.method}\n"
-                f"C3D/source: {source}\nSegment pair: {segment_pair}"
+                f"C3D/source: {source}\nSegment pair: {segment_pair}\n"
+                "Preview coordinates are computed from the selected C3D; they are not stored in the main C3D "
+                "until the virtual feature is generated."
             )
 
         def _update_virtual_axis_info_label(self, axis) -> None:
@@ -2425,7 +2441,8 @@ def launch_model_editor() -> None:
             self.virtual_marker_info_label.setText(
                 f"Name: {axis.name}\nSegment: {axis.segment_name}\nMethod: {axis.method}\n"
                 f"Origin markers: {origin}\nAxis fallback/expected orientation: {start} -> {end}\n"
-                f"Functional source: {source}"
+                f"Functional source: {source}\n"
+                "Preview axis coordinates are computed from the selected functional C3D."
             )
 
         def _update_virtual_marker_preview(self, *_args) -> None:
@@ -2500,6 +2517,7 @@ def launch_model_editor() -> None:
                 )
                 previously_selected_segment = None
                 previously_selected_anatomical_segment = None
+                self._auto_assign_c3d_files_from_folder(load_main=not bool(self.c3d_path.text().strip()))
             workflow = c3d_creation_workflow(preset)
             self.step_list.clear()
             self.marker_list.clear()
@@ -2553,7 +2571,7 @@ def launch_model_editor() -> None:
             self._update_technical_segment_preview()
 
             if len(self.workflow_draft.virtual_markers) == 0:
-                if not any(axis.method == "sara" for axis in self.workflow_draft.axes):
+                if not any(_is_virtual_feature_axis(axis) for axis in self.workflow_draft.axes):
                     self.feature_list.addItem("No additional virtual feature required by this preset.")
             else:
                 for feature in self.workflow_draft.virtual_markers:
@@ -2561,7 +2579,7 @@ def launch_model_editor() -> None:
                         f"{feature.name} | {feature.segment_name} | {feature.method} | {feature.source}"
                     )
             for axis in self.workflow_draft.axes:
-                if axis.method != "sara":
+                if not _is_virtual_feature_axis(axis):
                     continue
                 self.feature_list.addItem(
                     f"[axis] {axis.name} | {axis.segment_name} | {axis.method} | {axis.source or 'functional trial'}"
@@ -3858,6 +3876,25 @@ def _trial_name_from_virtual_feature_source(source: str) -> str:
     """
     match = re.search(r"(?:^|;\s*)trial=([^;]+)", source)
     return match.group(1).strip() if match is not None else ""
+
+
+def _assigned_c3d_source_for_role(workflow_draft, role: str) -> str:
+    """
+    Return the participant C3D path assigned to one workflow role.
+    """
+    if not role:
+        return ""
+    for assignment in workflow_draft.file_assignments:
+        if assignment.role == role:
+            return assignment.source_path
+    return ""
+
+
+def _is_virtual_feature_axis(axis) -> bool:
+    """
+    Return whether an axis should appear in the Virtual markers and axes list.
+    """
+    return axis.method == "sara" and axis.name.startswith("Axis_")
 
 
 def _source_with_c3d_assignment(source: str, source_path: str) -> str:
