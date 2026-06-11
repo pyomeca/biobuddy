@@ -3,7 +3,7 @@ import numpy as np
 from biobuddy import (
     BiomechanicalModelReal,
 )
-from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft
+from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft, remove_axis_from_draft
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 from biobuddy.gui.model_editor import (
     _c3d_file_names_from_folder,
@@ -20,6 +20,7 @@ from biobuddy.gui.model_editor import (
     _score_segments_from_payload,
     _split_marker_names,
     _strip_score_segment_payload,
+    _virtual_axis_name_from_feature_list_text,
 )
 from biobuddy.gui.segment_editor import load_model
 
@@ -69,6 +70,19 @@ def test_virtual_marker_editor_suggests_joint_names_from_segment_pairs():
     """
     assert _joint_name_from_segments("Pelvis", "LThigh") == "Left_Hip"
     assert _joint_name_from_segments("LThigh", "LShank") == "Left_Knee"
+
+
+def test_virtual_marker_axis_list_text_can_remove_axis_from_draft():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    axis_list_text = "[axis] Axis_LKnee_SARA | LShank | sara | trial=left_knee_sara"
+
+    axis_name = _virtual_axis_name_from_feature_list_text(axis_list_text)
+    updated_draft = remove_axis_from_draft(draft, axis_name)
+
+    assert axis_name == "Axis_LKnee_SARA"
+    assert _virtual_axis_name_from_feature_list_text("CoR_LThigh_in_Pelvis | LThigh | score") is None
+    assert any(axis.name == "Axis_LKnee_SARA" for axis in draft.axes)
+    assert all(axis.name != "Axis_LKnee_SARA" for axis in updated_draft.axes)
 
 
 def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):

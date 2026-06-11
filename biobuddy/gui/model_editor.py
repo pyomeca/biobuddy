@@ -62,6 +62,7 @@ from .c3d_creation_workflow import (
     c3d_workflow_progress,
     c3d_workflow_summary,
     clear_c3d_file_role_from_draft,
+    remove_axis_from_draft,
     remove_segment_from_draft,
     remove_virtual_marker_from_draft,
     set_segment_marker_technical,
@@ -1504,6 +1505,11 @@ def launch_model_editor() -> None:
             self.virtual_marker_name_edit.setText(self._suggested_virtual_marker_name())
 
         def _remove_workflow_virtual_marker(self) -> None:
+            axis = self._selected_virtual_axis()
+            if axis is not None:
+                self.workflow_draft = remove_axis_from_draft(self.workflow_draft, axis.name)
+                self._update_preset_details()
+                return
             name = self._selected_virtual_marker_name()
             if name is None:
                 return
@@ -1988,9 +1994,9 @@ def launch_model_editor() -> None:
             if not self.feature_list.selectedItems():
                 return None
             text = self.feature_list.selectedItems()[0].text()
-            if not text.startswith("[axis]"):
+            axis_name = _virtual_axis_name_from_feature_list_text(text)
+            if axis_name is None:
                 return None
-            axis_name = text.removeprefix("[axis]").split("|", maxsplit=1)[0].strip()
             for axis in self.workflow_draft.axes:
                 if axis.name == axis_name:
                     return axis
@@ -3800,6 +3806,16 @@ def _split_marker_names(text: str) -> tuple[str, ...]:
     Split a comma/semicolon separated marker list while preserving duplicated markers.
     """
     return tuple(marker.strip() for marker in text.replace(";", ",").split(",") if marker.strip())
+
+
+def _virtual_axis_name_from_feature_list_text(text: str) -> str | None:
+    """
+    Extract an axis name from the virtual marker/axis list item text.
+    """
+    if not text.startswith("[axis]"):
+        return None
+    axis_name = text.removeprefix("[axis]").split("|", maxsplit=1)[0].strip()
+    return axis_name or None
 
 
 def _score_segments_from_payload(text: str) -> tuple[str, str]:
