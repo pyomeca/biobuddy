@@ -7,6 +7,7 @@ from biobuddy.gui.model_builder import AxisSpec, MarkerEndpointSpec
 from biobuddy.gui.virtual_points import (
     compute_virtual_axes,
     compute_virtual_points,
+    axis_projection_virtual_point,
     example_predictive_hip_cor,
     example_predictive_shoulder_cor,
     global_linear_regression_virtual_point,
@@ -62,6 +63,29 @@ def test_marker_pair_virtual_axis_is_evaluated_from_marker_groups():
     np.testing.assert_allclose(start[:3, 0], np.array([0.0, 0.0, 0.0]))
     np.testing.assert_allclose(end[:3, 0], np.array([1.0, 0.0, 0.0]))
     np.testing.assert_allclose(axis.vector(data)[:, 0], np.array([1.0, 0.0, 0.0]))
+
+
+def test_axis_projection_virtual_point_projects_marker_mean_onto_marker_axis():
+    data = _simple_marker_data()
+    point = marker_mean_virtual_point("MeanBC", ("B", "C"))
+    axis = marker_pair_virtual_axis("ABAxis", ("A",), ("B",))
+    projection = axis_projection_virtual_point("MeanBC_on_AB", point, axis)
+
+    projected_point = projection.evaluate(data)
+
+    np.testing.assert_allclose(projected_point[:3, 0], np.array([0.5, 0.0, 0.0]))
+    np.testing.assert_allclose(projected_point[:3, 1], np.array([0.5, 0.0, 0.0]))
+
+
+def test_axis_projection_virtual_point_projects_single_marker_onto_marker_axis():
+    data = _simple_marker_data()
+    point = pointing_virtual_point("PointC", "C")
+    axis = marker_pair_virtual_axis("ABAxis", ("A",), ("B",))
+    projection = axis_projection_virtual_point("C_on_AB", point, axis)
+
+    projected_point = compute_virtual_points(data, (projection,))["C_on_AB"]
+
+    np.testing.assert_allclose(projected_point[:3, 0], np.array([0.0, 0.0, 0.0]))
 
 
 def test_point_pair_virtual_axis_uses_two_virtual_points():

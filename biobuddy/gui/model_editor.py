@@ -942,6 +942,7 @@ def launch_model_editor() -> None:
                     "score",
                     "sara",
                     "marker_mean",
+                    "axis_projection",
                     "predictive",
                 ]
             )
@@ -952,8 +953,10 @@ def launch_model_editor() -> None:
                 self._sync_virtual_marker_method_fields
             )
             self.virtual_marker_source_edit = QLineEdit()
+            self.virtual_marker_source_label = QLabel("Source")
             self.virtual_marker_source_edit.textChanged.connect(self._update_virtual_marker_preview)
             self.virtual_marker_source_edit.hide()
+            self.virtual_marker_source_label.hide()
             self.virtual_marker_c3d_file_combo = QComboBox()
             self.virtual_marker_c3d_file_combo.currentTextChanged.connect(self._update_virtual_marker_preview)
             self.virtual_marker_c3d_file_combo.currentTextChanged.connect(self._update_suggested_virtual_marker_name)
@@ -963,7 +966,9 @@ def launch_model_editor() -> None:
             self.virtual_marker_show_functional_c3d_checkbox.setChecked(True)
             self.virtual_marker_show_functional_c3d_checkbox.stateChanged.connect(self._update_virtual_marker_preview)
             self.virtual_marker_equation_edit = QLineEdit()
+            self.virtual_marker_equation_label = QLabel("Settings")
             self.virtual_marker_equation_edit.hide()
+            self.virtual_marker_equation_label.hide()
             self.virtual_marker_c3d_role_combo = QComboBox()
             self.virtual_marker_c3d_role_combo.hide()
             self.virtual_marker_parent_label = QLabel("-")
@@ -1206,6 +1211,8 @@ def launch_model_editor() -> None:
             form.addRow("Predictive method", self.virtual_marker_predictive_method_combo)
             form.addRow("Functional C3D", self.virtual_marker_c3d_file_combo)
             form.addRow("", self.virtual_marker_show_functional_c3d_checkbox)
+            form.addRow(self.virtual_marker_source_label, self.virtual_marker_source_edit)
+            form.addRow(self.virtual_marker_equation_label, self.virtual_marker_equation_edit)
             form.addRow("Suggested name", self.virtual_marker_suggested_name_label)
             form.addRow("Name", self.virtual_marker_name_edit)
             form_column.addLayout(form)
@@ -1462,11 +1469,15 @@ def launch_model_editor() -> None:
                 QMessageBox.critical(self, "Unable to save virtual marker", str(error))
 
         def _virtual_marker_source_from_form(self, method: str) -> str:
+            if method == "axis_projection":
+                return self.virtual_marker_source_edit.text().strip()
             if method == "marker_mean":
                 return self._technical_marker_source_from_selected_segments()
             return self._selected_virtual_marker_c3d_file()
 
         def _virtual_marker_equation_from_form(self, method: str) -> str:
+            if method == "axis_projection":
+                return self.virtual_marker_equation_edit.text().strip()
             methods_with_segment_context = {"score", "sara"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
             if method not in methods_with_segment_context:
                 return ""
@@ -1483,7 +1494,12 @@ def launch_model_editor() -> None:
             segment_name = self.virtual_marker_segment_combo.currentText().strip()
             distal = segment_name
             joint_name = _joint_name_from_segments(proximal, distal) if proximal or distal else segment_name or "Marker"
-            method_label = {"score": "SCoRE", "sara": "SARA", "marker_mean": "Average"}.get(
+            method_label = {
+                "score": "SCoRE",
+                "sara": "SARA",
+                "marker_mean": "Average",
+                "axis_projection": "Projection",
+            }.get(
                 method,
                 method.capitalize() if method else "Virtual",
             )
@@ -2043,7 +2059,7 @@ def launch_model_editor() -> None:
             else:
                 self.virtual_marker_method_combo.setCurrentText(marker.method)
             self.virtual_marker_source_edit.setText(marker.source)
-            self.virtual_marker_equation_edit.clear()
+            self.virtual_marker_equation_edit.setText(marker.equation if marker.method == "axis_projection" else "")
             proximal, distal = _score_segments_from_payload(marker.equation)
             if proximal:
                 self.virtual_marker_proximal_combo.setCurrentText(proximal)
@@ -2245,9 +2261,25 @@ def launch_model_editor() -> None:
             is_predictive = self.virtual_marker_method_combo.currentText().strip() == "predictive"
             self.virtual_marker_predictive_method_combo.setEnabled(is_predictive)
             has_c3d_file = self.virtual_marker_c3d_file_combo.currentText().strip() != "Choose a C3D folder first"
-            self.virtual_marker_c3d_file_combo.setEnabled(method != "marker_mean" and has_c3d_file)
+            self.virtual_marker_c3d_file_combo.setEnabled(
+                method not in {"marker_mean", "axis_projection"} and has_c3d_file
+            )
             self.virtual_marker_proximal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
             self.virtual_marker_distal_combo.setEnabled(method in {"score", "sara"} or is_predictive)
+            is_axis_projection = method == "axis_projection"
+            self.virtual_marker_source_label.setVisible(is_axis_projection)
+            self.virtual_marker_source_edit.setVisible(is_axis_projection)
+            self.virtual_marker_equation_label.setVisible(is_axis_projection)
+            self.virtual_marker_equation_edit.setVisible(is_axis_projection)
+            if is_axis_projection:
+                self.virtual_marker_source_label.setText("Source markers")
+                self.virtual_marker_equation_label.setText("Projection axis")
+                if self.virtual_marker_source_edit.text().strip() == "":
+                    self.virtual_marker_source_edit.setPlaceholderText("point=LKNE,LKNEM")
+                if self.virtual_marker_equation_edit.text().strip() == "":
+                    self.virtual_marker_equation_edit.setPlaceholderText(
+                        "axis=Axis_LKnee_SARA or axis_start=LKNE,LKNEM; axis_end=LANK,LANKM"
+                    )
             hints = {
                 "pointing": (
                     "Pointing is not implemented yet: the workflow still needs a dedicated pointing object "
@@ -2256,6 +2288,10 @@ def launch_model_editor() -> None:
                 "score": "Choose the functional C3D plus proximal and distal technical segments. SCoRE estimates a joint center.",
                 "sara": "Choose the functional C3D plus proximal and distal technical segments. SARA estimates a rotation axis.",
                 "marker_mean": "Average the technical markers shown for the proximal and distal segments.",
+                "axis_projection": (
+                    "Project one marker or a marker mean onto an axis. Use source 'point=A,B' and either "
+                    "'axis=Axis_LKnee_SARA' or 'axis_start=A,B; axis_end=C,D'."
+                ),
                 "hara2016_hip": "Predict a hip CoR from the selected C3D and segment pair.",
                 "harrington2007_hip": "Predict a hip CoR from the selected C3D and segment pair.",
                 "sobral2025_shoulder": "Predict a shoulder CoR from the selected C3D and segment pair.",
@@ -2273,6 +2309,15 @@ def launch_model_editor() -> None:
             source = marker.source if marker.source else "-"
             proximal, distal = _score_segments_from_payload(marker.equation)
             segment_pair = f"{proximal or '-'} -> {distal or '-'}"
+            if marker.method == "axis_projection":
+                point_markers = _axis_projection_point_markers_from_payload(marker.source)
+                axis_reference, axis_start, axis_end = _axis_projection_axis_from_payload(marker.equation)
+                axis_text = axis_reference or f"{','.join(axis_start) or '-'} -> {','.join(axis_end) or '-'}"
+                self.virtual_marker_info_label.setText(
+                    f"Name: {marker.name}\nSegment: {marker.segment_name}\nMethod: {marker.method}\n"
+                    f"Projected markers: {','.join(point_markers) or '-'}\nProjection axis: {axis_text}"
+                )
+                return
             self.virtual_marker_info_label.setText(
                 f"Name: {marker.name}\nSegment: {marker.segment_name}\nMethod: {marker.method}\n"
                 f"C3D/source: {source}\nSegment pair: {segment_pair}"
@@ -3647,7 +3692,9 @@ def _visible_virtual_marker_methods() -> set[str]:
     """
     Return virtual marker methods shown in the GUI.
     """
-    return {"pointing", "score", "sara", "marker_mean"} | set(PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS)
+    return {"pointing", "score", "sara", "marker_mean", "axis_projection"} | set(
+        PREDICTIVE_VIRTUAL_MARKER_METHOD_LABELS
+    )
 
 
 def _parent_segment_name(workflow_draft, segment_name: str) -> str:
@@ -3816,6 +3863,43 @@ def _virtual_axis_name_from_feature_list_text(text: str) -> str | None:
         return None
     axis_name = text.removeprefix("[axis]").split("|", maxsplit=1)[0].strip()
     return axis_name or None
+
+
+def _axis_projection_point_markers_from_payload(text: str) -> tuple[str, ...]:
+    """
+    Extract markers defining the point to project for an axis-projection virtual marker.
+    """
+    payload = _key_value_payload(text)
+    point_text = payload.get("point", text)
+    return _split_marker_names(point_text)
+
+
+def _axis_projection_axis_from_payload(text: str) -> tuple[str, tuple[str, ...], tuple[str, ...]]:
+    """
+    Extract the axis source for an axis-projection virtual marker.
+
+    Returns ``(axis_name, axis_start_markers, axis_end_markers)``. ``axis_name`` is used when projecting onto an
+    existing virtual axis such as a SARA AoR; start/end markers are used for marker-defined axes.
+    """
+    payload = _key_value_payload(text)
+    return (
+        payload.get("axis", ""),
+        _split_marker_names(payload.get("axis_start", "")),
+        _split_marker_names(payload.get("axis_end", "")),
+    )
+
+
+def _key_value_payload(text: str) -> dict[str, str]:
+    """
+    Parse semicolon-separated ``key=value`` snippets.
+    """
+    values = {}
+    for item in text.split(";"):
+        if "=" not in item:
+            continue
+        key, value = item.split("=", maxsplit=1)
+        values[key.strip()] = value.strip()
+    return values
 
 
 def _score_segments_from_payload(text: str) -> tuple[str, str]:

@@ -15,6 +15,8 @@ from biobuddy.gui.model_editor import (
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
     _remap_c3d_workflow_draft_markers,
+    _axis_projection_axis_from_payload,
+    _axis_projection_point_markers_from_payload,
     _strip_participant_prefix_from_c3d_data,
     _strip_participant_prefix_from_marker_names,
     _score_segments_from_payload,
@@ -83,6 +85,22 @@ def test_virtual_marker_axis_list_text_can_remove_axis_from_draft():
     assert _virtual_axis_name_from_feature_list_text("CoR_LThigh_in_Pelvis | LThigh | score") is None
     assert any(axis.name == "Axis_LKnee_SARA" for axis in draft.axes)
     assert all(axis.name != "Axis_LKnee_SARA" for axis in updated_draft.axes)
+
+
+def test_axis_projection_payload_parses_point_and_axis_sources():
+    point_markers = _axis_projection_point_markers_from_payload("point=LKNE,LKNEM")
+    axis_reference, axis_start, axis_end = _axis_projection_axis_from_payload("axis=Axis_LKnee_SARA")
+    marker_axis_reference, marker_axis_start, marker_axis_end = _axis_projection_axis_from_payload(
+        "axis_start=LKNE,LKNEM; axis_end=LANK,LANKM"
+    )
+
+    assert point_markers == ("LKNE", "LKNEM")
+    assert axis_reference == "Axis_LKnee_SARA"
+    assert axis_start == ()
+    assert axis_end == ()
+    assert marker_axis_reference == ""
+    assert marker_axis_start == ("LKNE", "LKNEM")
+    assert marker_axis_end == ("LANK", "LANKM")
 
 
 def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):

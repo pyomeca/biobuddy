@@ -26,6 +26,7 @@ SOURCE_REQUIRED_VIRTUAL_MARKER_METHODS = {
     "regression",
     "score",
     "sara",
+    "axis_projection",
     "hara2016_hip",
     "harrington2007_hip",
     "sobral2025_shoulder",
@@ -576,6 +577,14 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
                     f"Virtual marker '{marker.name}' has method '{marker.method}' but no source.",
                 )
             )
+        if marker.method == "axis_projection" and marker.equation == "":
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "virtual markers",
+                    f"Virtual marker '{marker.name}' projects onto an axis but has no axis definition.",
+                )
+            )
 
     for axis in draft.axes:
         if axis.segment_name not in {group.segment_name for group in draft.segment_marker_groups}:
@@ -811,6 +820,12 @@ def c3d_virtual_marker_method_examples() -> tuple[C3dVirtualMarkerMethodExample,
             source_example="functional_left_knee_sara.c3d",
             equation_example="axis direction from condyles",
             description="Use SARA to estimate a functional joint axis, then orient it with anatomical markers.",
+        ),
+        C3dVirtualMarkerMethodExample(
+            method="axis_projection",
+            source_example="point=LKNE,LKNEM",
+            equation_example="axis=Axis_LKnee_SARA or axis_start=LKNE,LKNEM; axis_end=LANK,LANKM",
+            description="Project a marker or marker mean onto a marker-defined axis or a functional SARA axis.",
         ),
     )
 

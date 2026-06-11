@@ -20,6 +20,7 @@ class VirtualPointMethod(Enum):
     MARKER_MEAN = "marker_mean"
     GLOBAL_LINEAR_REGRESSION = "global_linear_regression"
     LOCAL_FRAME_REGRESSION = "local_frame_regression"
+    AXIS_PROJECTION = "axis_projection"
     SCORE = "score"
     SARA_AXIS = "sara_axis"
 
@@ -220,6 +221,39 @@ def marker_pair_virtual_axis(
     start_point = marker_mean_virtual_point(f"{name}_start", start_markers)
     end_point = marker_mean_virtual_point(f"{name}_end", end_markers)
     return point_pair_virtual_axis(name=name, start_point=start_point, end_point=end_point, description=description)
+
+
+def axis_projection_virtual_point(
+    name: str,
+    point: VirtualPointDefinition,
+    axis: VirtualAxisDefinition,
+    description: str = "",
+) -> VirtualPointDefinition:
+    """
+    Project a point onto an axis.
+
+    The projected point is computed independently at each frame. ``point`` may be a raw marker copy, a marker mean, or
+    any other virtual point. ``axis`` may come from marker groups or from a functional axis definition once that axis is
+    evaluable in the current marker data.
+    """
+    required_markers = tuple(sorted(set(point.required_markers) | set(axis.required_markers)))
+
+    def evaluator(data: MarkerData) -> np.ndarray:
+        point_position = point.evaluate(data)[:3, :]
+        axis_start, axis_end = axis.evaluate(data)
+        axis_start = axis_start[:3, :]
+        axis_vector = axis_end[:3, :] - axis_start
+        axis_unit = _normalize(axis_vector)
+        distance_along_axis = np.sum((point_position - axis_start) * axis_unit, axis=0, keepdims=True)
+        return axis_start + axis_unit * distance_along_axis
+
+    return VirtualPointDefinition(
+        name=name,
+        method=VirtualPointMethod.AXIS_PROJECTION,
+        required_markers=required_markers,
+        evaluator=evaluator,
+        description=description,
+    )
 
 
 def global_vector_virtual_axis(

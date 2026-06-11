@@ -414,6 +414,22 @@ def test_c3d_workflow_draft_validation_reports_axis_marker_typo():
     assert any(issue.category == "axes" and "MISSPELLED_MARKER" in issue.message for issue in issues)
 
 
+def test_c3d_workflow_draft_validation_reports_axis_projection_missing_axis():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    draft = add_virtual_marker_to_draft(
+        draft,
+        name="KneeProjection",
+        method="axis_projection",
+        segment_name="LShank",
+        source="point=LKNE,LKNEM",
+        equation="",
+    )
+
+    issues = validate_c3d_workflow_draft(draft)
+
+    assert any(issue.category == "virtual markers" and "no axis definition" in issue.message for issue in issues)
+
+
 def test_c3d_workflow_draft_validation_reports_dof_limit_length_mismatch():
     draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
     draft = update_segment_settings_in_draft(
