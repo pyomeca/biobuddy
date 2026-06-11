@@ -832,6 +832,8 @@ def launch_model_editor() -> None:
 
             self.c3d_path = QLineEdit()
             self.c3d_path.setReadOnly(True)
+            self.c3d_path.hide()
+            self.main_c3d_name_label = QLabel("No main C3D selected")
             self.choose_c3d_button = QPushButton("Choose C3D file")
             self.choose_c3d_button.clicked.connect(self._choose_c3d_file)
             self.generate_template_button = QPushButton("Generate template")
@@ -1035,8 +1037,15 @@ def launch_model_editor() -> None:
             layout = QVBoxLayout(self)
             layout.addWidget(QLabel("Model preset"))
             layout.addWidget(self.preset_combo)
+            folder_row = QHBoxLayout()
+            folder_row.addWidget(QLabel("C3D folder"))
+            folder_row.addWidget(self.c3d_folder_edit)
+            folder_row.addWidget(self.choose_c3d_folder_button)
+            layout.addLayout(folder_row)
             c3d_row = QHBoxLayout()
-            c3d_row.addWidget(self.c3d_path)
+            c3d_row.addWidget(QLabel("Main C3D"))
+            c3d_row.addWidget(self.main_c3d_name_label)
+            c3d_row.addStretch()
             c3d_row.addWidget(self.choose_c3d_button)
             c3d_row.addWidget(self.generate_template_button)
             layout.addLayout(c3d_row)
@@ -1073,11 +1082,6 @@ def launch_model_editor() -> None:
         def _pipeline_workflow_tab(self):
             widget = QWidget()
             layout = QVBoxLayout(widget)
-            folder_row = QHBoxLayout()
-            folder_row.addWidget(QLabel("C3D folder"))
-            folder_row.addWidget(self.c3d_folder_edit)
-            folder_row.addWidget(self.choose_c3d_folder_button)
-            layout.addLayout(folder_row)
             layout.addWidget(QLabel("Workflow status"))
             layout.addWidget(self.step_list)
             log_row = QHBoxLayout()
@@ -1298,6 +1302,7 @@ def launch_model_editor() -> None:
             if self.strip_participant_prefix_checkbox.isChecked():
                 _strip_participant_prefix_from_c3d_data(self.c3d_data)
             self.c3d_path.setText(filepath)
+            self._update_main_c3d_name_label()
             marker_mapping = _marker_name_mapping_for_c3d(
                 _marker_pool_from_draft(self.workflow_draft),
                 tuple(self.c3d_data.marker_names),
@@ -1309,6 +1314,10 @@ def launch_model_editor() -> None:
             self._sync_virtual_marker_c3d_files()
             self._sync_initial_rotation_c3d_files()
             self._update_preset_details()
+
+        def _update_main_c3d_name_label(self) -> None:
+            filepath = self.c3d_path.text().strip()
+            self.main_c3d_name_label.setText(Path(filepath).name if filepath else "No main C3D selected")
 
         def _choose_c3d_folder(self) -> None:
             folder = QFileDialog.getExistingDirectory(self, "Choose folder containing C3D files", self.c3d_folder_path)
