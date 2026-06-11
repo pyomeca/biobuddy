@@ -175,9 +175,13 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
         for feature in lower_limb_features
     )
     assert any(feature.name == "CoR_LFoot_in_LShank" and feature.role == "score" for feature in lower_limb_features)
+    assert any(
+        feature.name == "Proj_LKnee_on_Axis_LKnee_SARA" and feature.role == "axis_projection"
+        for feature in lower_limb_features
+    )
     assert any(feature.name == "Axis_LKnee_SARA" and feature.role == "sara_axis" for feature in lower_limb_features)
     assert any(feature.name == "Axis_RKnee_SARA" and feature.feature_type == "axis" for feature in lower_limb_features)
-    assert len(lower_limb_features) == 6
+    assert len(lower_limb_features) == 8
     assert lower_limb_anatomical_features == ()
     assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)

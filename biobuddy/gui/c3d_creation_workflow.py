@@ -269,7 +269,8 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
                 name=feature.name,
                 method=_virtual_feature_default_method(feature.feature_type, feature.role),
                 segment_name=feature.segment_name,
-                source=feature.description,
+                source=_virtual_marker_source_from_feature(feature),
+                equation=_virtual_marker_equation_from_feature(feature),
             )
             for feature in virtual_features
             if feature.feature_type == "point"
@@ -306,6 +307,32 @@ def _expected_axis_markers_from_feature(feature) -> tuple[str, ...]:
     if marker_match is None:
         return ()
     return tuple(marker.strip() for marker in marker_match.group(1).split(",") if marker.strip())
+
+
+def _virtual_marker_source_from_feature(feature) -> str:
+    """
+    Return the editable source field for a preset virtual marker.
+    """
+    if feature.role == "axis_projection":
+        point_match = re.search(r"point=([^;]+)", feature.description)
+        return f"point={point_match.group(1).strip()}" if point_match is not None else ""
+    return feature.description
+
+
+def _virtual_marker_equation_from_feature(feature) -> str:
+    """
+    Return the editable equation/settings field for a preset virtual marker.
+    """
+    if feature.role == "axis_projection":
+        axis_match = re.search(r"axis=([^;]+)", feature.description)
+        trial_match = re.search(r"trial=([^;]+)", feature.description)
+        parts = []
+        if axis_match is not None:
+            parts.append(f"axis={axis_match.group(1).strip()}")
+        if trial_match is not None:
+            parts.append(f"trial={trial_match.group(1).strip()}")
+        return "; ".join(parts)
+    return ""
 
 
 def _template_for_axis_prefill(preset: C3dModelPreset) -> ModelTemplate | None:
@@ -389,8 +416,8 @@ def _axis_draft_from_axis_spec(
         name=f"{segment_name}_{axis_role}",
         segment_name=segment_name,
         axis=axis_name.lower(),
-        start_markers=axis_spec.start.marker_names,
-        end_markers=axis_spec.end.marker_names,
+        start_markers=_origin_marker_names_from_spec(axis_spec.start),
+        end_markers=_origin_marker_names_from_spec(axis_spec.end),
         origin_markers=origin_markers,
         method=method,
         keep_vector=axis_name == axis_to_keep_name,
@@ -1420,6 +1447,8 @@ def _require_name(value: str, label: str) -> str:
 def _virtual_feature_default_method(feature_type: str, role: str) -> str:
     if feature_type == "axis":
         return "sara" if "axis" in role else "markers"
+    if role == "axis_projection":
+        return "axis_projection"
     if role in {"score", "sara"}:
         return role
     if "legacy" in role:

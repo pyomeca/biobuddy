@@ -617,10 +617,17 @@ def launch_model_editor() -> None:
                 marker for marker in self.virtual_markers if marker.name == self.selected_marker_name
             ]
             for marker in selected_virtual_markers:
-                if marker.method == "marker_mean":
-                    point = _mean_frame_position(self.c3d_data, _split_marker_names(marker.source), self.frame_index)
-                else:
-                    point = _mean_frame_position(self.c3d_data, _split_marker_names(marker.source), self.frame_index)
+                if marker.method not in {"marker_mean", "axis_projection"}:
+                    continue
+                point = _mean_frame_position(
+                    self.c3d_data,
+                    (
+                        _axis_projection_point_markers_from_payload(marker.source)
+                        if marker.method == "axis_projection"
+                        else _split_marker_names(marker.source)
+                    ),
+                    self.frame_index,
+                )
                 if point is not None:
                     virtual_points.append((marker.name, point, marker.segment_name))
 
@@ -673,13 +680,15 @@ def launch_model_editor() -> None:
                 painter.drawText(center.x() + 8, center.y() - 8, f"{marker_name} | {segment_name}")
 
             solution_colors = {"parent": "#f97316", "segment": "#0891b2", "mean": "#111827"}
+            solution_offsets = {"parent": (10, -12), "segment": (10, 6), "mean": (10, 24)}
             for label, point in solution_points:
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.setPen(QPen(QColor(solution_colors[label]), 3))
                 painter.setBrush(QColor("white"))
                 painter.drawEllipse(center, 8, 8)
                 prefix = "SCoRE" if self.selected_method == "score" else "center"
-                painter.drawText(center.x() + 8, center.y() - 8, f"{prefix} {label}")
+                offset_x, offset_y = solution_offsets.get(label, (8, -8))
+                painter.drawText(center.x() + offset_x, center.y() + offset_y, f"{prefix} {label}")
             if len(solution_points) >= 2:
                 painter.setPen(QPen(QColor("#111827"), 1))
                 painter.drawLine(
@@ -714,36 +723,50 @@ def launch_model_editor() -> None:
             if len(parent_marker_names) == 0 or len(child_marker_names) == 0:
                 return ()
             marker_names = parent_marker_names + child_marker_names
-            c3d_data = self.solution_c3d_data or self.c3d_data
-            if c3d_data is None or any(marker_name not in c3d_data.marker_names for marker_name in marker_names):
+            functional_data = self.solution_c3d_data
+            preview_data = self.c3d_data
+            if functional_data is None or preview_data is None:
                 return ()
-            cache_key = (id(c3d_data), parent_marker_names, child_marker_names)
+            if any(marker_name not in functional_data.marker_names for marker_name in marker_names):
+                return ()
+            if any(marker_name not in preview_data.marker_names for marker_name in marker_names):
+                return ()
+            cache_key = (id(functional_data), parent_marker_names, child_marker_names)
             if cache_key in self._score_solution_cache:
-                return self._score_solution_cache[cache_key]
+                cor_parent_local, cor_child_local = self._score_solution_cache[cache_key]
+            else:
+                try:
+                    from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
+                    from ..model_modifiers.joint_center_tool import Score
+
+                    parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
+                    child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
+                    rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                        functional_data=parent_functional_marker_data
+                    )
+                    rt_child_func = SegmentCoordinateSystemUtils.rigidify(functional_data=child_functional_marker_data)
+                    _, cor_parent_local, cor_child_local, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
+                    self._score_solution_cache[cache_key] = (cor_parent_local, cor_child_local)
+                except Exception:
+                    return ()
             try:
                 from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
 
-                parent_cor = SegmentCoordinateSystemUtils.score(
-                    c3d_data,
-                    parent_marker_names,
-                    child_marker_names,
-                    average_parent_child_static_projection=False,
-                )(c3d_data, None)[:3]
-                mean_cor = SegmentCoordinateSystemUtils.score(
-                    c3d_data,
-                    parent_marker_names,
-                    child_marker_names,
-                    average_parent_child_static_projection=True,
-                )(c3d_data, None)[:3]
+                parent_preview_marker_data = preview_data.get_partial_dict_data(parent_marker_names)
+                child_preview_marker_data = preview_data.get_partial_dict_data(child_marker_names)
+                rt_parent_preview = SegmentCoordinateSystemUtils.rigidify(parent_preview_marker_data)
+                rt_child_preview = SegmentCoordinateSystemUtils.rigidify(child_preview_marker_data)
             except Exception:
                 return ()
-            child_cor = 2 * mean_cor - parent_cor
+            frame_index = max(0, min(self.frame_index, len(rt_parent_preview) - 1))
+            parent_cor = (rt_parent_preview[frame_index] @ np.hstack((cor_parent_local, 1))).reshape(4)[:3]
+            child_cor = (rt_child_preview[frame_index] @ np.hstack((cor_child_local, 1))).reshape(4)[:3]
+            mean_cor = 0.5 * (parent_cor + child_cor)
             solution_points = (
                 ("parent", tuple(float(value) for value in parent_cor)),
                 ("segment", tuple(float(value) for value in child_cor)),
                 ("mean", tuple(float(value) for value in mean_cor)),
             )
-            self._score_solution_cache[cache_key] = solution_points
             return solution_points
 
         def _draw_legend(self, painter) -> None:
@@ -1438,7 +1461,9 @@ def launch_model_editor() -> None:
 
                 updated_virtual_markers = []
                 for marker in self.workflow_draft.virtual_markers:
-                    trial_name = _trial_name_from_virtual_feature_source(marker.source)
+                    trial_name = _trial_name_from_virtual_feature_source(
+                        marker.source
+                    ) or _trial_name_from_virtual_feature_source(marker.equation)
                     source_path = trial_sources.get(trial_name, "")
                     equation = marker.equation
                     if marker.method in {"score", "sara"} and equation == "":
@@ -2235,7 +2260,7 @@ def launch_model_editor() -> None:
                 self.virtual_marker_proximal_combo.setCurrentText(proximal)
             if distal:
                 self.virtual_marker_distal_combo.setCurrentText(distal)
-            self._select_virtual_marker_c3d_from_source(marker.source)
+            self._select_virtual_marker_c3d_from_source("; ".join((marker.source, marker.equation)))
             self._sync_virtual_marker_method_fields()
             self._update_virtual_marker_info_label(marker)
             self._update_virtual_marker_preview()

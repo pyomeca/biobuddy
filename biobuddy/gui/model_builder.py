@@ -53,7 +53,9 @@ class MarkerEndpointSpec:
             return cls((value,))
         return cls(tuple(value))
 
-    def to_callable(self) -> Callable[[MarkerData, BiomechanicalModelReal], np.ndarray]:
+    def to_callable(
+        self, functional_data: dict[str, MarkerData] | None = None
+    ) -> Callable[[MarkerData, BiomechanicalModelReal], np.ndarray]:
         """
         Return a BioBuddy-compatible callable that evaluates this point.
         """
@@ -95,14 +97,83 @@ class FunctionalCenterSpec:
 
 
 @dataclass(frozen=True)
+class FunctionalAxisProjectionPointSpec:
+    """
+    Point obtained by projecting a marker group onto a functional SARA axis.
+    """
+
+    method: FunctionalMethod
+    trial_name: str
+    parent_marker_names: tuple[str, ...]
+    child_marker_names: tuple[str, ...]
+    expected_axis: "AxisSpec"
+    origin_marker_names: tuple[str, ...]
+    point_marker_names: tuple[str, ...]
+    fallback: MarkerEndpointSpec
+
+    @property
+    def marker_names(self) -> tuple[str, ...]:
+        marker_names = list(self.fallback.marker_names)
+        marker_names.extend(self.parent_marker_names)
+        marker_names.extend(self.child_marker_names)
+        marker_names.extend(self.expected_axis.start.marker_names)
+        marker_names.extend(self.expected_axis.end.marker_names)
+        marker_names.extend(self.origin_marker_names)
+        marker_names.extend(self.point_marker_names)
+        return tuple(dict.fromkeys(marker_names))
+
+    def to_callable(
+        self, functional_data: dict[str, MarkerData] | None
+    ) -> Callable[[MarkerData, BiomechanicalModelReal], np.ndarray]:
+        """
+        Return the projection callable when SARA data is available, otherwise use the fallback point.
+        """
+        if self.method != FunctionalMethod.SARA or functional_data is None or self.trial_name not in functional_data:
+            return self.fallback.to_callable()
+
+        functional_trial = functional_data[self.trial_name]
+
+        def projected_point(markers: MarkerData, model: BiomechanicalModelReal) -> np.ndarray:
+            sara_axis = SegmentCoordinateSystemUtils.sara(
+                name=self.expected_axis.name,
+                functional_data=functional_trial,
+                parent_marker_names=list(self.parent_marker_names),
+                child_marker_names=list(self.child_marker_names),
+                expected_rotation_axis_orientation=self.expected_axis.to_axis(functional_data=None),
+                origin_positions_global=lambda sara_markers, sara_model: sara_markers.markers_center_position(
+                    list(self.origin_marker_names)
+                )[:3, :],
+                visualize=False,
+            )
+            axis_start = sara_axis.start.function(markers, model)[:3].reshape(3, 1)
+            axis_end = sara_axis.end.function(markers, model)[:3].reshape(3, 1)
+            point = markers.markers_center_position(list(self.point_marker_names))[:3, :]
+            axis_vector = axis_end - axis_start
+            axis_norm = np.linalg.norm(axis_vector, axis=0, keepdims=True)
+            axis_unit = np.divide(axis_vector, axis_norm, out=np.zeros_like(axis_vector), where=axis_norm > 1e-12)
+            distance = np.sum((point - axis_start) * axis_unit, axis=0, keepdims=True)
+            projected = np.ones((4, markers.nb_frames))
+            projected[:3, :] = axis_start + axis_unit * distance
+            return np.nanmean(projected, axis=1)
+
+        return projected_point
+
+    def evaluate(self, data: MarkerData) -> np.ndarray:
+        """
+        Evaluate the anatomical fallback over all frames for quality metrics.
+        """
+        return self.fallback.evaluate(data)
+
+
+@dataclass(frozen=True)
 class AxisSpec:
     """
     A local-frame axis defined from two marker endpoints.
     """
 
     name: Axis.Name
-    start: MarkerEndpointSpec
-    end: MarkerEndpointSpec
+    start: MarkerEndpointSpec | FunctionalCenterSpec | FunctionalAxisProjectionPointSpec
+    end: MarkerEndpointSpec | FunctionalCenterSpec | FunctionalAxisProjectionPointSpec
 
     @classmethod
     def from_markers(
@@ -120,21 +191,39 @@ class AxisSpec:
             end=MarkerEndpointSpec.from_value(end),
         )
 
-    def to_axis(self) -> Axis:
+    def to_axis(self, functional_data: dict[str, MarkerData] | None = None) -> Axis:
         """
         Return the BioBuddy generic axis object.
         """
         return Axis(
             name=self.name,
-            start=self.start.marker_names[0] if len(self.start.marker_names) == 1 else self.start.to_callable(),
-            end=self.end.marker_names[0] if len(self.end.marker_names) == 1 else self.end.to_callable(),
+            start=_axis_endpoint_to_axis_value(self.start, functional_data),
+            end=_axis_endpoint_to_axis_value(self.end, functional_data),
         )
 
     def vector(self, data: MarkerData) -> np.ndarray:
         """
         Evaluate the raw, non-normalized axis vector over all frames.
         """
-        return self.end.evaluate(data) - self.start.evaluate(data)
+        return _evaluate_axis_endpoint(self.end, data) - _evaluate_axis_endpoint(self.start, data)
+
+
+def _axis_endpoint_to_axis_value(endpoint, functional_data: dict[str, MarkerData] | None):
+    """
+    Return a marker-name shortcut when possible, otherwise a callable endpoint.
+    """
+    if isinstance(endpoint, MarkerEndpointSpec) and len(endpoint.marker_names) == 1:
+        return endpoint.marker_names[0]
+    return endpoint.to_callable(functional_data)
+
+
+def _evaluate_axis_endpoint(endpoint, data: MarkerData) -> np.ndarray:
+    """
+    Evaluate an endpoint for quality metrics, using functional fallbacks when needed.
+    """
+    if isinstance(endpoint, FunctionalCenterSpec):
+        return endpoint.fallback.evaluate(data)
+    return endpoint.evaluate(data)
 
 
 @dataclass(frozen=True)
@@ -156,16 +245,16 @@ class FunctionalAxisSpec:
         Return the functional axis when possible, otherwise return the anatomical fallback.
         """
         if self.method != FunctionalMethod.SARA or functional_data is None or self.trial_name not in functional_data:
-            return self.fallback.to_axis()
+            return self.fallback.to_axis(functional_data=None)
         if self.expected_axis is None or len(self.origin_marker_names) == 0:
-            return self.fallback.to_axis()
+            return self.fallback.to_axis(functional_data=None)
 
         return SegmentCoordinateSystemUtils.sara(
             name=self.fallback.name,
             functional_data=functional_data[self.trial_name],
             parent_marker_names=list(self.parent_marker_names),
             child_marker_names=list(self.child_marker_names),
-            expected_rotation_axis_orientation=self.expected_axis.to_axis(),
+            expected_rotation_axis_orientation=self.expected_axis.to_axis(functional_data=None),
             origin_positions_global=lambda markers, model: markers.markers_center_position(
                 list(self.origin_marker_names)
             )[:3, :],
@@ -179,7 +268,7 @@ class LocalFrameSpec:
     Segment coordinate-system definition.
     """
 
-    origin: MarkerEndpointSpec | FunctionalCenterSpec
+    origin: MarkerEndpointSpec | FunctionalCenterSpec | FunctionalAxisProjectionPointSpec
     first_axis: AxisSpec
     second_axis: AxisSpec | FunctionalAxisSpec
     axis_to_keep: Axis.Name
@@ -190,17 +279,18 @@ class LocalFrameSpec:
         """
         origin = (
             self.origin.to_callable(functional_data)
-            if isinstance(self.origin, FunctionalCenterSpec)
+            if isinstance(self.origin, (FunctionalCenterSpec, FunctionalAxisProjectionPointSpec))
             else self.origin.to_callable()
         )
+        first_axis = self.first_axis.to_axis(functional_data=functional_data)
         second_axis = (
             self.second_axis.to_axis(functional_data)
             if isinstance(self.second_axis, FunctionalAxisSpec)
-            else self.second_axis.to_axis()
+            else self.second_axis.to_axis(functional_data=functional_data)
         )
         return SegmentCoordinateSystem(
             origin=origin,
-            first_axis=self.first_axis.to_axis(),
+            first_axis=first_axis,
             second_axis=second_axis,
             axis_to_keep=self.axis_to_keep,
         )
@@ -218,7 +308,7 @@ class LocalFrameSpec:
         """
         Return a marker-defined origin for dynamic visualization.
         """
-        if isinstance(self.origin, FunctionalCenterSpec):
+        if isinstance(self.origin, (FunctionalCenterSpec, FunctionalAxisProjectionPointSpec)):
             return self.origin.fallback
         return self.origin
 
@@ -429,7 +519,9 @@ def _marker_names_from_frame(frame: LocalFrameSpec) -> set[str]:
     return marker_names
 
 
-def _marker_names_from_origin(origin: MarkerEndpointSpec | FunctionalCenterSpec) -> set[str]:
+def _marker_names_from_origin(
+    origin: MarkerEndpointSpec | FunctionalCenterSpec | FunctionalAxisProjectionPointSpec,
+) -> set[str]:
     if isinstance(origin, FunctionalCenterSpec):
         marker_names = set(origin.fallback.marker_names)
         marker_names.update(origin.parent_marker_names)
@@ -447,8 +539,8 @@ def _marker_names_from_axis(axis: AxisSpec | FunctionalAxisSpec) -> set[str]:
         if axis.expected_axis is not None:
             marker_names.update(_marker_names_from_axis(axis.expected_axis))
         return marker_names
-    marker_names = set(axis.start.marker_names)
-    marker_names.update(axis.end.marker_names)
+    marker_names = _marker_names_from_origin(axis.start)
+    marker_names.update(_marker_names_from_origin(axis.end))
     return marker_names
 
 

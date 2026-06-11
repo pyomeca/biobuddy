@@ -214,7 +214,23 @@ def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
         )
         for name, segment_name, trial_name, parent_markers, child_markers, expected_axis in sara_specs
     )
-    return score_features + sara_features
+    projected_knee_features = (
+        C3dPresetVirtualFeature(
+            name="Proj_LKnee_on_Axis_LKnee_SARA",
+            feature_type="point",
+            segment_name="LShank",
+            role="axis_projection",
+            description="point=LKNE,LKNEM; axis=Axis_LKnee_SARA; trial=left_knee_sara",
+        ),
+        C3dPresetVirtualFeature(
+            name="Proj_RKnee_on_Axis_RKnee_SARA",
+            feature_type="point",
+            segment_name="RShank",
+            role="axis_projection",
+            description="point=RKNE,RKNEM; axis=Axis_RKnee_SARA; trial=right_knee_sara",
+        ),
+    )
+    return score_features + projected_knee_features + sara_features
 
 
 def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:

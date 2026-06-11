@@ -2,6 +2,7 @@ import numpy as np
 
 from .model_builder import (
     AxisSpec,
+    FunctionalAxisProjectionPointSpec,
     FunctionalAxisSpec,
     FunctionalCenterSpec,
     FunctionalMethod,
@@ -109,7 +110,7 @@ def lower_limb_template(use_functional: bool = True, include_de_leva: bool = Tru
                 use_functional=use_functional,
             ),
             _thigh_segment(
-                side="R", hip_fallback="RASI", knee_axis_start=("RKNE", "RKNEM"), use_functional=use_functional
+                side="R", hip_fallback="RASI", knee_axis_start=("RKNEM", "RKNE"), use_functional=use_functional
             ),
             _shank_segment(
                 side="R",
@@ -173,19 +174,75 @@ def _functional_trials() -> tuple[FunctionalTrialSpec, ...]:
     )
 
 
+def _hip_center_spec(side: str, fallback_marker: str, use_functional: bool):
+    if not use_functional:
+        return _p(fallback_marker)
+    return FunctionalCenterSpec(
+        method=FunctionalMethod.SCORE,
+        trial_name="left_hip_score" if side == "L" else "right_hip_score",
+        parent_marker_names=("LPSI", "RPSI", "LASI", "RASI"),
+        child_marker_names=(f"{side}THI", f"{side}THIB", f"{side}THID"),
+        fallback=_p(fallback_marker),
+    )
+
+
+def _ankle_center_spec(side: str, fallback_markers: tuple[str, str], use_functional: bool):
+    if not use_functional:
+        return _p(*fallback_markers)
+    return FunctionalCenterSpec(
+        method=FunctionalMethod.SCORE,
+        trial_name="left_ankle_score" if side == "L" else "right_ankle_score",
+        parent_marker_names=(f"{side}TIB", f"{side}TIBF", f"{side}TIBD"),
+        child_marker_names=(f"{side}HEE", f"{side}NAV", f"{side}TOE", f"{side}TOE5"),
+        fallback=_p(*fallback_markers),
+    )
+
+
+def _knee_sara_axis_spec(side: str, knee_axis_start: tuple[str, str], use_functional: bool):
+    fallback_axis = AxisSpec.from_markers(Axis.Name.X, knee_axis_start[0], knee_axis_start[1])
+    if not use_functional:
+        return fallback_axis
+    return FunctionalAxisSpec(
+        method=FunctionalMethod.SARA,
+        trial_name="left_knee_sara" if side == "L" else "right_knee_sara",
+        fallback=fallback_axis,
+        parent_marker_names=(
+            (f"{side}TIBD", f"{side}TIB", f"{side}TIBF")
+            if side == "L"
+            else (f"{side}THID", f"{side}THI", f"{side}THIB")
+        ),
+        child_marker_names=(
+            (f"{side}THIB", f"{side}THID", f"{side}THI")
+            if side == "L"
+            else (f"{side}TIB", f"{side}TIBF", f"{side}TIBD")
+        ),
+        expected_axis=fallback_axis,
+        origin_marker_names=knee_axis_start,
+    )
+
+
+def _knee_projection_spec(side: str, knee_axis_start: tuple[str, str], use_functional: bool):
+    fallback = _p(*knee_axis_start)
+    if not use_functional:
+        return fallback
+    sara_axis = _knee_sara_axis_spec(side, knee_axis_start, use_functional=True)
+    return FunctionalAxisProjectionPointSpec(
+        method=FunctionalMethod.SARA,
+        trial_name=sara_axis.trial_name,
+        parent_marker_names=sara_axis.parent_marker_names,
+        child_marker_names=sara_axis.child_marker_names,
+        expected_axis=sara_axis.expected_axis,
+        origin_marker_names=knee_axis_start,
+        point_marker_names=knee_axis_start,
+        fallback=fallback,
+    )
+
+
 def _thigh_segment(side: str, hip_fallback: str, knee_axis_start: tuple[str, str], use_functional: bool) -> SegmentSpec:
     thigh = f"{side}Thigh"
-    origin = (
-        FunctionalCenterSpec(
-            method=FunctionalMethod.SCORE,
-            trial_name="left_hip_score" if side == "L" else "right_hip_score",
-            parent_marker_names=("LPSI", "RPSI", "LASI", "RASI"),
-            child_marker_names=(f"{side}THI", f"{side}THIB", f"{side}THID"),
-            fallback=_p(hip_fallback),
-        )
-        if use_functional
-        else _p(hip_fallback)
-    )
+    origin = _hip_center_spec(side, hip_fallback, use_functional)
+    knee_projection = _knee_projection_spec(side, knee_axis_start, use_functional)
+    knee_axis = _knee_sara_axis_spec(side, knee_axis_start, use_functional)
     return SegmentSpec(
         name=thigh,
         parent_name="Pelvis",
@@ -193,8 +250,8 @@ def _thigh_segment(side: str, hip_fallback: str, knee_axis_start: tuple[str, str
         inertia_name=SegmentName.THIGH,
         frame=LocalFrameSpec(
             origin=origin,
-            first_axis=AxisSpec.from_markers(Axis.Name.Z, knee_axis_start, hip_fallback),
-            second_axis=AxisSpec.from_markers(Axis.Name.X, "LASI", "RASI"),
+            first_axis=AxisSpec(Axis.Name.Z, knee_projection, origin),
+            second_axis=knee_axis,
             axis_to_keep=Axis.Name.Z,
         ),
         mesh_points=(
@@ -219,29 +276,17 @@ def _shank_segment(
     ankle_axis_start: tuple[str, str],
     use_functional: bool,
 ) -> SegmentSpec:
-    sara_trial = "left_knee_sara" if side == "L" else "right_knee_sara"
-    fallback_axis = AxisSpec.from_markers(Axis.Name.X, knee_axis_start[0], knee_axis_start[1])
-    second_axis = (
-        FunctionalAxisSpec(
-            method=FunctionalMethod.SARA,
-            trial_name=sara_trial,
-            fallback=fallback_axis,
-            parent_marker_names=(f"{side}TIBD", f"{side}TIB", f"{side}TIBF"),
-            child_marker_names=(f"{side}THIB", f"{side}THID", f"{side}THI"),
-            expected_axis=fallback_axis,
-            origin_marker_names=knee_axis_start,
-        )
-        if use_functional
-        else fallback_axis
-    )
+    knee_projection = _knee_projection_spec(side, knee_axis_start, use_functional)
+    ankle_center = _ankle_center_spec(side, ankle_axis_start, use_functional)
+    second_axis = _knee_sara_axis_spec(side, knee_axis_start, use_functional)
     return SegmentSpec(
         name=f"{side}Shank",
         parent_name=f"{side}Thigh",
         rotations=Rotations.X,
         inertia_name=SegmentName.SHANK,
         frame=LocalFrameSpec(
-            origin=_p(*knee_axis_start),
-            first_axis=AxisSpec.from_markers(Axis.Name.Z, ankle_axis_start, knee_axis_start),
+            origin=knee_projection,
+            first_axis=AxisSpec(Axis.Name.Z, ankle_center, knee_projection),
             second_axis=second_axis,
             axis_to_keep=Axis.Name.X,
         ),
@@ -263,17 +308,7 @@ def _foot_segment(
     ankle_axis: tuple[str, str],
     use_functional: bool,
 ) -> SegmentSpec:
-    origin = (
-        FunctionalCenterSpec(
-            method=FunctionalMethod.SCORE,
-            trial_name="left_ankle_score" if side == "L" else "right_ankle_score",
-            parent_marker_names=(f"{side}TIB", f"{side}TIBF", f"{side}TIBD"),
-            child_marker_names=(f"{side}HEE", f"{side}NAV", f"{side}TOE", f"{side}TOE5"),
-            fallback=_p(*ankle_origin),
-        )
-        if use_functional
-        else _p(*ankle_origin)
-    )
+    origin = _ankle_center_spec(side, ankle_origin, use_functional)
     return SegmentSpec(
         name=f"{side}Foot",
         parent_name=f"{side}Shank",
