@@ -44,7 +44,6 @@ from .validation_panel import validate_model_for_editor
 from .c3d_model_creation import (
     C3dModelCreationResult,
     C3dModelPreset,
-    create_lower_limb_model_variants_from_c3d_folder,
     create_model_from_marker_data,
     create_model_from_c3d_folder,
     supported_c3d_model_presets,
@@ -2342,6 +2341,10 @@ def launch_model_editor() -> None:
                 self.status_label.setText(
                     "Status: upper-limb template exists; virtual markers/axes must be supplied before generation."
                 )
+            elif preset == C3dModelPreset.LOWER_LIMBS:
+                self.status_label.setText("Status: ready with main marker C3D and functional SCoRE/SARA trials.")
+            elif preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+                self.status_label.setText("Status: ready with main marker C3D; segment frames are marker-defined.")
             else:
                 self.status_label.setText("Status: ready with main marker C3D and optional functional trials.")
 
@@ -2913,30 +2916,17 @@ def launch_model_editor() -> None:
                 return
             try:
                 folder_path = Path(calibration_folder)
-                if dialog.selected_preset() == C3dModelPreset.LOWER_LIMBS:
-                    variant_results = create_lower_limb_model_variants_from_c3d_folder(calibration_folder=folder_path)
-                    for variant in (variant_results.score, variant_results.no_score):
-                        variant.model.to_biomod(filepath=str(folder_path / variant.output_filename), with_mesh=False)
-                    result = variant_results.score
-                else:
-                    result = create_model_from_c3d_folder(
-                        calibration_folder=folder_path,
-                        preset=dialog.selected_preset(),
-                    )
+                result = create_model_from_c3d_folder(
+                    calibration_folder=folder_path,
+                    preset=dialog.selected_preset(),
+                )
                 self.model = result.model
                 self.current_filepath = folder_path / result.output_filename
                 self._refresh_model_views()
                 QMessageBox.information(
                     self,
                     "Model generated from C3D",
-                    _format_c3d_creation_summary(result, folder_path)
-                    + (
-                        "\n\nGenerated lower-limb variants:\n"
-                        "- lower_body_score.bioMod\n"
-                        "- lower_body_no_score.bioMod"
-                        if dialog.selected_preset() == C3dModelPreset.LOWER_LIMBS
-                        else ""
-                    ),
+                    _format_c3d_creation_summary(result, folder_path),
                 )
             except Exception as error:
                 QMessageBox.critical(self, "Unable to generate model", str(error))
@@ -3387,6 +3377,8 @@ def _c3d_preset_label(preset: C3dModelPreset) -> str:
     Return the label shown in the C3D creation dialog.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
+        return "Lower-limbs & trunk (with functional trials)"
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
         return "Lower-limbs & trunk"
     if preset == C3dModelPreset.FULL_BODY:
         return "Full body"

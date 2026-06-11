@@ -108,7 +108,7 @@ def test_c3d_model_creation_from_marker_data_returns_model_and_reports():
     )
 
     assert result.preset == C3dModelPreset.LOWER_LIMBS
-    assert result.output_filename == "lower_body.bioMod"
+    assert result.output_filename == "lower_body_functional.bioMod"
     assert "Pelvis" in result.model.segment_names
     assert result.marker_reports["static"].complete_frame_count == 3
     assert result.frame_quality["Pelvis"].mean_angle_degrees == pytest.approx(90.0)
@@ -146,9 +146,12 @@ def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
         C3dModelPreset.FROM_SCRATCH,
         C3dModelPreset.FULL_BODY,
         C3dModelPreset.LOWER_LIMBS,
+        C3dModelPreset.LOWER_LIMBS_ANATOMICAL,
         C3dModelPreset.UPPER_LIMB,
     )
     assert template_for_c3d_model_preset(C3dModelPreset.LOWER_LIMBS).root_segment_name == "Pelvis"
+    assert required_functional_markers(template_for_c3d_model_preset(C3dModelPreset.LOWER_LIMBS)) != {}
+    assert required_functional_markers(template_for_c3d_model_preset(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)) == {}
     assert template_for_c3d_model_preset(C3dModelPreset.UPPER_LIMB).name == "Upper-limb from calibration C3D"
     with pytest.raises(NotImplementedError, match="Full-body C3D model creation"):
         template_for_c3d_model_preset(C3dModelPreset.FULL_BODY)
@@ -158,6 +161,7 @@ def test_c3d_model_creation_presets_are_explicit_about_supported_generation():
 
 def test_c3d_model_presets_report_virtual_features_to_reconstruct():
     lower_limb_features = c3d_model_preset_virtual_features(C3dModelPreset.LOWER_LIMBS)
+    lower_limb_anatomical_features = c3d_model_preset_virtual_features(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)
     upper_limb_features = c3d_model_preset_virtual_features(C3dModelPreset.UPPER_LIMB)
     full_body_features = c3d_model_preset_virtual_features(C3dModelPreset.FULL_BODY)
 
@@ -172,6 +176,7 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
     assert any(feature.name == "Axis_LKnee_SARA" and feature.role == "sara_axis" for feature in lower_limb_features)
     assert any(feature.name == "Axis_RKnee_SARA" and feature.feature_type == "axis" for feature in lower_limb_features)
     assert len(lower_limb_features) == 6
+    assert lower_limb_anatomical_features == ()
     assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)
     assert any(feature.feature_type == "axis" and feature.name == "Clavicule_u_axis" for feature in upper_limb_features)

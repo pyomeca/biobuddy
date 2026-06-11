@@ -284,7 +284,9 @@ def _template_for_axis_prefill(preset: C3dModelPreset) -> ModelTemplate | None:
     Return the Python model template used to prefill anatomical axis definitions, when available.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return lower_limb_template()
+        return lower_limb_template(use_functional=True)
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return lower_limb_template(use_functional=False)
     if preset == C3dModelPreset.UPPER_LIMB:
         return upper_limb_template()
     return None
@@ -1193,6 +1195,8 @@ def c3d_file_roles_for_preset(preset: C3dModelPreset) -> tuple[C3dFileRole, ...]
                 "Right ankle SCORE trial.",
             ),
         )
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return (C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),)
     if preset == C3dModelPreset.FROM_SCRATCH:
         return (C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),)
     if preset == C3dModelPreset.UPPER_LIMB:
@@ -1220,7 +1224,9 @@ def c3d_segment_marker_groups_for_preset(preset: C3dModelPreset) -> tuple[C3dSeg
     Return segment marker groups for raw markers in a preset.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return _groups_from_model_template(lower_limb_template())
+        return _groups_from_model_template(lower_limb_template(use_functional=True))
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return _groups_from_model_template(lower_limb_template(use_functional=False))
     if preset == C3dModelPreset.FROM_SCRATCH:
         return ()
     if preset == C3dModelPreset.UPPER_LIMB:
@@ -1320,8 +1326,10 @@ def _groups_from_model_template(template: ModelTemplate) -> tuple[C3dSegmentMark
 
 def _expected_marker_names_for_preset(preset: C3dModelPreset) -> set[str]:
     if preset == C3dModelPreset.LOWER_LIMBS:
-        template = lower_limb_template()
+        template = lower_limb_template(use_functional=True)
         return set(required_static_markers(template)) | set().union(*required_functional_markers(template).values())
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return set(required_static_markers(lower_limb_template(use_functional=False)))
     if preset == C3dModelPreset.UPPER_LIMB:
         return set(required_static_markers(upper_limb_template()))
     if preset == C3dModelPreset.FULL_BODY:
@@ -1396,7 +1404,9 @@ def _file_role_is_required(preset: C3dModelPreset, role_name: str) -> bool:
 
 def _initial_segment_settings(preset: C3dModelPreset) -> tuple[C3dSegmentSettingsDraft, ...]:
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return tuple(_settings_from_model_template(lower_limb_template()))
+        return tuple(_settings_from_model_template(lower_limb_template(use_functional=True)))
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return tuple(_settings_from_model_template(lower_limb_template(use_functional=False)))
     if preset == C3dModelPreset.UPPER_LIMB:
         return tuple(_settings_from_model_template(upper_limb_template()))
     if preset == C3dModelPreset.FULL_BODY:

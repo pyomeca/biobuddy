@@ -57,12 +57,16 @@ def test_c3d_creation_workflow_steps_match_expected_pipeline():
 def test_c3d_file_roles_use_generic_names_for_three_presets():
     from_scratch_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FROM_SCRATCH)}
     lower_limb_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.LOWER_LIMBS)}
+    lower_limb_anatomical_names = {
+        role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)
+    }
     upper_limb_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.UPPER_LIMB)}
     full_body_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FULL_BODY)}
 
     assert from_scratch_names == {"main_markers.c3d"}
     assert "main_markers.c3d" in lower_limb_names
     assert "functional_left_knee_sara.c3d" in lower_limb_names
+    assert lower_limb_anatomical_names == {"main_markers.c3d"}
     assert "pointing_virtual_markers.c3d" in upper_limb_names
     assert "functional_upper_limb_score_sara.c3d" in full_body_names
 
@@ -70,11 +74,15 @@ def test_c3d_file_roles_use_generic_names_for_three_presets():
 def test_c3d_segment_marker_groups_cover_three_models():
     from_scratch_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.FROM_SCRATCH)
     lower_limb_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.LOWER_LIMBS)
+    lower_limb_anatomical_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)
     upper_limb_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.UPPER_LIMB)
     full_body_groups = c3d_segment_marker_groups_for_preset(C3dModelPreset.FULL_BODY)
 
     assert from_scratch_groups == ()
     assert any(group.segment_name == "Pelvis" and "LASI" in group.marker_names for group in lower_limb_groups)
+    assert any(
+        group.segment_name == "Pelvis" and "LASI" in group.marker_names for group in lower_limb_anatomical_groups
+    )
     assert any(group.segment_name == "Arm" and "EPICl" in group.marker_names for group in upper_limb_groups)
     assert any(group.segment_name == "Thorax" and "MANU" in group.marker_names for group in full_body_groups)
     assert any(group.segment_name == "Trunk" and group.parent_name == "Pelvis" for group in lower_limb_groups)

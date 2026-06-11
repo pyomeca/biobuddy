@@ -32,6 +32,7 @@ class C3dModelPreset(Enum):
 
     FULL_BODY = "full_body"
     LOWER_LIMBS = "lower_limbs"
+    LOWER_LIMBS_ANATOMICAL = "lower_limbs_anatomical"
     UPPER_LIMB = "upper_limb"
     FROM_SCRATCH = "from_scratch"
 
@@ -83,6 +84,7 @@ def supported_c3d_model_presets() -> tuple[C3dModelPreset, ...]:
         C3dModelPreset.FROM_SCRATCH,
         C3dModelPreset.FULL_BODY,
         C3dModelPreset.LOWER_LIMBS,
+        C3dModelPreset.LOWER_LIMBS_ANATOMICAL,
         C3dModelPreset.UPPER_LIMB,
     )
 
@@ -93,6 +95,8 @@ def c3d_model_preset_virtual_features(preset: C3dModelPreset) -> tuple[C3dPreset
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
         return _lower_limb_score_virtual_features()
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return ()
     if preset == C3dModelPreset.FROM_SCRATCH:
         return ()
     if preset == C3dModelPreset.UPPER_LIMB:
@@ -218,7 +222,9 @@ def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:
     Return the model template associated with a C3D creation preset.
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
-        return lower_limb_template()
+        return lower_limb_template(use_functional=True)
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
+        return lower_limb_template(use_functional=False)
     if preset == C3dModelPreset.FROM_SCRATCH:
         raise NotImplementedError(
             "Template-free C3D model creation is an interactive drafting workflow. Add segments, markers, axes, "
@@ -304,7 +310,7 @@ def create_lower_limb_model_variants_from_marker_data(
             template=no_score_template,
             static_data=static_data,
             functional_data={},
-            preset=C3dModelPreset.LOWER_LIMBS,
+            preset=C3dModelPreset.LOWER_LIMBS_ANATOMICAL,
             output_filename="lower_body_no_score.bioMod",
         ),
     )
@@ -369,6 +375,8 @@ def find_static_c3d_file(
 
 def _default_output_filename(preset: C3dModelPreset) -> str:
     if preset == C3dModelPreset.LOWER_LIMBS:
+        return "lower_body_functional.bioMod"
+    if preset == C3dModelPreset.LOWER_LIMBS_ANATOMICAL:
         return "lower_body.bioMod"
     if preset == C3dModelPreset.FULL_BODY:
         return "full_body.bioMod"
