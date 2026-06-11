@@ -15,6 +15,7 @@ from biobuddy.gui.c3d_model_creation import (
 from biobuddy.gui.virtual_points import marker_pair_virtual_axis, pointing_virtual_point
 from biobuddy.gui.model_builder import (
     AxisSpec,
+    FunctionalAxisSpec,
     MarkerEndpointSpec,
     build_generic_model,
     build_real_model,
@@ -224,6 +225,25 @@ def test_lower_limb_template_can_disable_score_and_sara():
 
     assert required_functional_markers(template) == {}
     assert template.name.endswith("(anatomical markers only)")
+
+
+def test_lower_limb_functional_template_uses_sara_for_knee_axis():
+    template = lower_limb_template(use_functional=True)
+    left_shank = next(segment for segment in template.segments if segment.name == "LShank")
+    right_shank = next(segment for segment in template.segments if segment.name == "RShank")
+
+    left_axis = left_shank.frame.second_axis
+    right_axis = right_shank.frame.second_axis
+
+    assert isinstance(left_axis, FunctionalAxisSpec)
+    assert left_axis.trial_name == "left_knee_sara"
+    assert left_axis.parent_marker_names == ("LTIBD", "LTIB", "LTIBF")
+    assert left_axis.child_marker_names == ("LTHIB", "LTHID", "LTHI")
+    assert left_axis.expected_axis.start.marker_names == ("LKNE",)
+    assert left_axis.expected_axis.end.marker_names == ("LKNEM",)
+    assert left_axis.origin_marker_names == ("LKNE", "LKNEM")
+    assert isinstance(right_axis, FunctionalAxisSpec)
+    assert right_axis.trial_name == "right_knee_sara"
 
 
 def test_quality_metrics_are_computed_before_orthonormalization():

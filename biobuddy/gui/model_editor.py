@@ -1980,7 +1980,21 @@ def launch_model_editor() -> None:
             if not self.feature_list.selectedItems():
                 return None
             text = self.feature_list.selectedItems()[0].text()
-            return None if text.startswith("No additional") else text.split("|", maxsplit=1)[0].strip()
+            if text.startswith("No additional") or text.startswith("[axis]"):
+                return None
+            return text.split("|", maxsplit=1)[0].strip()
+
+        def _selected_virtual_axis(self):
+            if not self.feature_list.selectedItems():
+                return None
+            text = self.feature_list.selectedItems()[0].text()
+            if not text.startswith("[axis]"):
+                return None
+            axis_name = text.removeprefix("[axis]").split("|", maxsplit=1)[0].strip()
+            for axis in self.workflow_draft.axes:
+                if axis.name == axis_name:
+                    return axis
+            return None
 
         def _selected_virtual_marker(self):
             name = self._selected_virtual_marker_name()
@@ -2001,6 +2015,15 @@ def launch_model_editor() -> None:
         def _load_selected_virtual_marker_into_form(self) -> None:
             marker = self._selected_virtual_marker()
             if marker is None:
+                axis = self._selected_virtual_axis()
+                if axis is not None:
+                    self.virtual_marker_name_edit.setText(axis.name)
+                    self.virtual_marker_segment_combo.setCurrentText(axis.segment_name)
+                    self.virtual_marker_method_combo.setCurrentText(axis.method)
+                    self._sync_virtual_marker_method_fields()
+                    self._update_virtual_axis_info_label(axis)
+                    self._update_virtual_marker_preview()
+                    return
                 self._sync_virtual_marker_method_fields()
                 self._update_virtual_marker_preview()
                 return
@@ -2249,6 +2272,17 @@ def launch_model_editor() -> None:
                 f"C3D/source: {source}\nSegment pair: {segment_pair}"
             )
 
+        def _update_virtual_axis_info_label(self, axis) -> None:
+            source = axis.source if axis.source else "-"
+            origin = ",".join(axis.origin_markers) if len(axis.origin_markers) != 0 else "-"
+            start = ",".join(axis.start_markers) if len(axis.start_markers) != 0 else "-"
+            end = ",".join(axis.end_markers) if len(axis.end_markers) != 0 else "-"
+            self.virtual_marker_info_label.setText(
+                f"Name: {axis.name}\nSegment: {axis.segment_name}\nMethod: {axis.method}\n"
+                f"Origin markers: {origin}\nAxis fallback/expected orientation: {start} -> {end}\n"
+                f"Functional source: {source}"
+            )
+
         def _update_virtual_marker_preview(self, *_args) -> None:
             self.virtual_marker_preview.set_context(
                 self._selected_virtual_marker_preview_c3d_data(),
@@ -2369,14 +2403,21 @@ def launch_model_editor() -> None:
             self._update_technical_segment_preview()
 
             if len(self.workflow_draft.virtual_markers) == 0:
-                self.feature_list.addItem("No additional virtual feature required by this preset.")
+                if not any(axis.method == "sara" for axis in self.workflow_draft.axes):
+                    self.feature_list.addItem("No additional virtual feature required by this preset.")
             else:
                 for feature in self.workflow_draft.virtual_markers:
                     self.feature_list.addItem(
                         f"{feature.name} | {feature.segment_name} | {feature.method} | {feature.source}"
                     )
-                if self.feature_list.currentItem() is None:
-                    self.feature_list.setCurrentItem(self.feature_list.item(0))
+            for axis in self.workflow_draft.axes:
+                if axis.method != "sara":
+                    continue
+                self.feature_list.addItem(
+                    f"[axis] {axis.name} | {axis.segment_name} | {axis.method} | {axis.source or 'functional trial'}"
+                )
+            if self.feature_list.count() != 0 and self.feature_list.currentItem() is None:
+                self.feature_list.setCurrentItem(self.feature_list.item(0))
 
             if len(self.workflow_draft.axes) == 0:
                 self.axis_list.addItem("No axis definition yet.")
@@ -3739,10 +3780,11 @@ def _c3d_generation_log(
         )
     lines.extend(["", "Anatomical axes:"])
     for axis in workflow_draft.axes:
+        source = f", source={axis.source}" if axis.source else ""
         lines.append(
             f"- {axis.segment_name}/{axis.name}: {axis.axis}, "
             f"origin={','.join(axis.origin_markers) or '-'}, "
-            f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}, keep={axis.keep_vector}"
+            f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}, keep={axis.keep_vector}{source}"
         )
     lines.extend(["", "Segment settings:"])
     for setting in workflow_draft.segment_settings:

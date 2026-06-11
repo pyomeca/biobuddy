@@ -147,6 +147,7 @@ class C3dAxisDraft:
     origin_markers: tuple[str, ...] = ()
     method: str = "markers"
     keep_vector: bool = False
+    source: str = ""
 
 
 @dataclass(frozen=True)
@@ -250,9 +251,11 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             name=feature.name,
             segment_name=feature.segment_name,
             axis="",
-            start_markers=(f"{feature.name}_start",),
-            end_markers=(f"{feature.name}_end",),
+            start_markers=_axis_start_markers_from_feature(feature),
+            end_markers=_axis_end_markers_from_feature(feature),
+            origin_markers=_axis_origin_markers_from_feature(feature),
             method=_virtual_feature_default_method(feature.feature_type, feature.role),
+            source=feature.description,
         )
         for feature in virtual_features
         if feature.feature_type == "axis"
@@ -277,6 +280,31 @@ def c3d_workflow_draft(preset: C3dModelPreset) -> C3dWorkflowDraft:
             for role in c3d_file_roles_for_preset(preset)
         ),
     )
+
+
+def _axis_start_markers_from_feature(feature) -> tuple[str, ...]:
+    expected_markers = _expected_axis_markers_from_feature(feature)
+    if len(expected_markers) >= 1:
+        return (expected_markers[0],)
+    return (f"{feature.name}_start",)
+
+
+def _axis_end_markers_from_feature(feature) -> tuple[str, ...]:
+    expected_markers = _expected_axis_markers_from_feature(feature)
+    if len(expected_markers) >= 2:
+        return (expected_markers[1],)
+    return (f"{feature.name}_end",)
+
+
+def _axis_origin_markers_from_feature(feature) -> tuple[str, ...]:
+    return _expected_axis_markers_from_feature(feature)
+
+
+def _expected_axis_markers_from_feature(feature) -> tuple[str, ...]:
+    marker_match = re.search(r"expected axis=([^;]+)", feature.description)
+    if marker_match is None:
+        return ()
+    return tuple(marker.strip() for marker in marker_match.group(1).split(",") if marker.strip())
 
 
 def _template_for_axis_prefill(preset: C3dModelPreset) -> ModelTemplate | None:

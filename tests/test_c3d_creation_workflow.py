@@ -123,6 +123,23 @@ def test_c3d_template_payload_is_serializable_and_contains_virtual_features():
     assert any(feature["name"] == "Thorax_virtual_7" for feature in payload["virtual_features"])
 
 
+def test_lower_limb_functional_draft_exposes_sara_knee_axes():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    anatomical_draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)
+
+    left_knee_axis = next(axis for axis in draft.axes if axis.name == "Axis_LKnee_SARA")
+
+    assert left_knee_axis.method == "sara"
+    assert "trial=left_knee_sara" in left_knee_axis.source
+    assert "parent markers=LTIBD,LTIB,LTIBF" in left_knee_axis.source
+    assert "child markers=LTHIB,LTHID,LTHI" in left_knee_axis.source
+    assert "expected axis=LKNE,LKNEM" in left_knee_axis.source
+    assert left_knee_axis.start_markers == ("LKNE",)
+    assert left_knee_axis.end_markers == ("LKNEM",)
+    assert left_knee_axis.origin_markers == ("LKNE", "LKNEM")
+    assert not any(axis.name == "Axis_LKnee_SARA" for axis in anatomical_draft.axes)
+
+
 def test_c3d_workflow_draft_edits_segment_marker_assignments():
     draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
 
