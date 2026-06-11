@@ -17,12 +17,12 @@ from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Rotations, Translations
 
 LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES = {
-    "left_hip_score": "functional_left_hip_score.c3d",
-    "left_knee_sara": "functional_left_knee_sara.c3d",
-    "left_ankle_score": "functional_left_ankle_score.c3d",
-    "right_hip_score": "functional_right_hip_score.c3d",
-    "right_knee_sara": "functional_right_knee_sara.c3d",
-    "right_ankle_score": "functional_right_ankle_score.c3d",
+    "left_hip_score": "*func_lhip.c3d",
+    "left_knee_sara": "*func_lknee.c3d",
+    "left_ankle_score": "*func_lankle.c3d",
+    "right_hip_score": "*func_rhip.c3d",
+    "right_knee_sara": "*func_rknee.c3d",
+    "right_ankle_score": "*func_rankle.c3d",
 }
 
 

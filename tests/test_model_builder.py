@@ -68,13 +68,13 @@ def test_template_reports_required_markers_from_frames_and_functional_trials():
     assert all_required_markers["static"] == static_markers
 
 
-def test_lower_limb_template_uses_forced_functional_c3d_names():
+def test_lower_limb_template_uses_lower_body_functional_c3d_patterns():
     template = lower_limb_template()
 
     file_patterns = {trial.name: trial.file_pattern for trial in template.functional_trials}
 
     assert file_patterns == LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES
-    assert all("*" not in pattern for pattern in file_patterns.values())
+    assert all(pattern.startswith("*func_") for pattern in file_patterns.values())
 
 
 def test_marker_availability_reports_presence_and_valid_frame_count():

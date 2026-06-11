@@ -1,5 +1,6 @@
 import json
 import math
+import re
 from dataclasses import asdict, replace
 from pathlib import Path
 
@@ -482,6 +483,8 @@ def launch_model_editor() -> None:
             self.selected_method = "pointing"
             self.proximal_segment_name = ""
             self.distal_segment_name = ""
+            self.frame_index = 0
+            self.show_whole_body = False
             self._score_solution_cache = {}
             self.yaw = -0.6
             self.pitch = 0.35
@@ -498,6 +501,8 @@ def launch_model_editor() -> None:
             selected_method: str,
             proximal_segment_name: str,
             distal_segment_name: str,
+            frame_index: int,
+            show_whole_body: bool,
         ) -> None:
             if c3d_data is not self.c3d_data or solution_c3d_data is not self.solution_c3d_data:
                 self._score_solution_cache.clear()
@@ -510,6 +515,8 @@ def launch_model_editor() -> None:
             self.selected_method = selected_method
             self.proximal_segment_name = proximal_segment_name
             self.distal_segment_name = distal_segment_name
+            self.frame_index = frame_index
+            self.show_whole_body = show_whole_body
             self.update()
 
         def paintEvent(self, event) -> None:
@@ -536,7 +543,7 @@ def launch_model_editor() -> None:
 
             marker_records = []
             for marker_name in self.c3d_data.marker_names:
-                point = _marker_preview_position(self.c3d_data, marker_name)
+                point = _marker_frame_position(self.c3d_data, marker_name, self.frame_index)
                 if point is None:
                     continue
                 segment_name = segment_by_marker.get(marker_name, "")
@@ -557,9 +564,9 @@ def launch_model_editor() -> None:
             ]
             for marker in selected_virtual_markers:
                 if marker.method == "marker_mean":
-                    point = _mean_preview_position(self.c3d_data, _split_marker_names(marker.source))
+                    point = _mean_frame_position(self.c3d_data, _split_marker_names(marker.source), self.frame_index)
                 else:
-                    point = _mean_preview_position(self.c3d_data, _split_marker_names(marker.source))
+                    point = _mean_frame_position(self.c3d_data, _split_marker_names(marker.source), self.frame_index)
                 if point is not None:
                     virtual_points.append((marker.name, point, marker.segment_name))
 
@@ -583,7 +590,11 @@ def launch_model_editor() -> None:
                 painter.drawText(self.rect(), qt_alignment_center, "No visible marker for this virtual marker context")
                 return
 
-            projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
+            focus_points = [record[1] for record in marker_records if record[-1]]
+            focus_points.extend(point for _, point, _ in virtual_points)
+            focus_points.extend(point for _, point in solution_points)
+            points_to_fit = points if self.show_whole_body or len(focus_points) == 0 else focus_points
+            projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points_to_fit]
             transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
 
             for marker_name, point, segment_name, is_technical, segment_index, is_highlighted in marker_records:
@@ -632,7 +643,7 @@ def launch_model_editor() -> None:
             for group in self.groups:
                 if group.segment_name == segment_name:
                     marker_names = group.technical_marker_names if group.technical_marker_names else group.marker_names
-                    return _mean_preview_position(self.c3d_data, marker_names)
+                    return _mean_frame_position(self.c3d_data, marker_names, self.frame_index)
             return None
 
         def _technical_markers_for_segment(self, segment_name: str) -> tuple[str, ...]:
@@ -967,6 +978,13 @@ def launch_model_editor() -> None:
             self.virtual_marker_show_functional_c3d_checkbox = QCheckBox("Preview functional C3D")
             self.virtual_marker_show_functional_c3d_checkbox.setChecked(True)
             self.virtual_marker_show_functional_c3d_checkbox.stateChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_whole_body_preview_checkbox = QCheckBox("Whole body view")
+            self.virtual_marker_whole_body_preview_checkbox.setChecked(False)
+            self.virtual_marker_whole_body_preview_checkbox.stateChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_frame_slider = QSlider(qt_horizontal)
+            self.virtual_marker_frame_slider.setEnabled(False)
+            self.virtual_marker_frame_slider.valueChanged.connect(self._update_virtual_marker_preview)
+            self.virtual_marker_frame_label = QLabel("Frame 1/1")
             self.virtual_marker_equation_edit = QLineEdit()
             self.virtual_marker_equation_label = QLabel("Settings")
             self.virtual_marker_equation_edit.hide()
@@ -1197,15 +1215,16 @@ def launch_model_editor() -> None:
             widget = QWidget()
             layout = QHBoxLayout(widget)
 
-            controls_layout = QHBoxLayout()
+            controls_layout = QVBoxLayout()
             list_column = QVBoxLayout()
             list_column.addWidget(QLabel("Virtual markers and axes"))
+            self.feature_list.setMaximumHeight(155)
             list_column.addWidget(self.feature_list)
             row = QHBoxLayout()
             row.addWidget(self.add_virtual_marker_button)
             row.addWidget(self.remove_virtual_marker_button)
             list_column.addLayout(row)
-            controls_layout.addLayout(list_column, 1)
+            controls_layout.addLayout(list_column)
 
             form_column = QVBoxLayout()
             form = QFormLayout()
@@ -1214,7 +1233,6 @@ def launch_model_editor() -> None:
             form.addRow("Method", self.virtual_marker_method_combo)
             form.addRow("Predictive method", self.virtual_marker_predictive_method_combo)
             form.addRow("Functional C3D", self.virtual_marker_c3d_file_combo)
-            form.addRow("", self.virtual_marker_show_functional_c3d_checkbox)
             form.addRow(self.virtual_marker_source_label, self.virtual_marker_source_edit)
             form.addRow(self.virtual_marker_equation_label, self.virtual_marker_equation_edit)
             form.addRow("Suggested name", self.virtual_marker_suggested_name_label)
@@ -1227,10 +1245,18 @@ def launch_model_editor() -> None:
             form_column.addWidget(QLabel("Selected marker information"))
             form_column.addWidget(self.virtual_marker_info_label)
             form_column.addStretch()
-            controls_layout.addLayout(form_column, 1)
+            controls_layout.addLayout(form_column)
 
             preview_column = QVBoxLayout()
             preview_column.addWidget(QLabel("3D placement preview"))
+            preview_options = QHBoxLayout()
+            preview_options.addWidget(self.virtual_marker_show_functional_c3d_checkbox)
+            preview_options.addWidget(self.virtual_marker_whole_body_preview_checkbox)
+            preview_column.addLayout(preview_options)
+            frame_row = QHBoxLayout()
+            frame_row.addWidget(self.virtual_marker_frame_label)
+            frame_row.addWidget(self.virtual_marker_frame_slider, 1)
+            preview_column.addLayout(frame_row)
             preview_column.addWidget(self.virtual_marker_preview, 1)
             layout.addLayout(controls_layout, 2)
             layout.addLayout(preview_column, 1)
@@ -1325,9 +1351,51 @@ def launch_model_editor() -> None:
                 return
             self.c3d_folder_path = folder
             self.c3d_folder_edit.setText(folder)
+            self._auto_assign_c3d_files_from_folder()
             self._sync_virtual_marker_c3d_files()
             self._sync_initial_rotation_c3d_files()
+            self._update_preset_details()
             self._update_generation_log()
+
+        def _auto_assign_c3d_files_from_folder(self) -> None:
+            if not self.c3d_folder_path:
+                return
+            assignments = []
+            trial_sources = {}
+            for assignment in self.workflow_draft.file_assignments:
+                matched_file = _matching_c3d_file_for_expected_name(self.c3d_folder_path, assignment.generic_name)
+                source_path = str(matched_file) if matched_file is not None else assignment.source_path
+                assignments.append(replace(assignment, source_path=source_path))
+                if source_path:
+                    trial_sources[assignment.role] = source_path
+
+            updated_virtual_markers = []
+            for marker in self.workflow_draft.virtual_markers:
+                trial_name = _trial_name_from_virtual_feature_source(marker.source)
+                source_path = trial_sources.get(trial_name, "")
+                equation = marker.equation
+                if marker.method in {"score", "sara"} and equation == "":
+                    parent_name = _parent_segment_name(self.workflow_draft, marker.segment_name)
+                    equation = f"proximal={parent_name}; distal={marker.segment_name}" if parent_name else equation
+                updated_virtual_markers.append(
+                    replace(marker, source=_source_with_c3d_assignment(marker.source, source_path), equation=equation)
+                )
+
+            updated_axes = []
+            for axis in self.workflow_draft.axes:
+                trial_name = _trial_name_from_virtual_feature_source(axis.source)
+                source_path = trial_sources.get(trial_name, "")
+                updated_axes.append(replace(axis, source=_source_with_c3d_assignment(axis.source, source_path)))
+
+            self.workflow_draft = replace(
+                self.workflow_draft,
+                file_assignments=tuple(assignments),
+                virtual_markers=tuple(updated_virtual_markers),
+                axes=tuple(updated_axes),
+            )
+            main_source = trial_sources.get("main", "")
+            if main_source and not self.c3d_path.text().strip():
+                self._load_c3d_file(main_source)
 
         def _browse_virtual_marker_c3d_source(self) -> None:
             filepath, _ = QFileDialog.getOpenFileName(
@@ -2051,6 +2119,9 @@ def launch_model_editor() -> None:
                     self.virtual_marker_name_edit.setText(axis.name)
                     self.virtual_marker_segment_combo.setCurrentText(axis.segment_name)
                     self.virtual_marker_method_combo.setCurrentText(axis.method)
+                    source_name = _c3d_source_name_from_virtual_feature_source(axis.source)
+                    if source_name and self.virtual_marker_c3d_file_combo.findText(source_name) >= 0:
+                        self.virtual_marker_c3d_file_combo.setCurrentText(source_name)
                     self._sync_virtual_marker_method_fields()
                     self._update_virtual_axis_info_label(axis)
                     self._update_virtual_marker_preview()
@@ -2075,7 +2146,7 @@ def launch_model_editor() -> None:
             if distal:
                 self.virtual_marker_distal_combo.setCurrentText(distal)
             if marker.source:
-                source_name = Path(marker.source).name
+                source_name = _c3d_source_name_from_virtual_feature_source(marker.source) or Path(marker.source).name
                 if self.virtual_marker_c3d_file_combo.findText(source_name) >= 0:
                     self.virtual_marker_c3d_file_combo.setCurrentText(source_name)
             self._sync_virtual_marker_method_fields()
@@ -2232,6 +2303,20 @@ def launch_model_editor() -> None:
             static_file = Path(self.c3d_path.text().strip()).name if self.c3d_path.text().strip() else ""
             return f"static/main C3D ({static_file})" if static_file else "static/main C3D"
 
+        def _sync_virtual_marker_frame_slider(self, c3d_data) -> None:
+            frame_count = 0 if c3d_data is None else c3d_data.nb_frames
+            current_frame = min(self.virtual_marker_frame_slider.value(), max(frame_count - 1, 0))
+            self.virtual_marker_frame_slider.blockSignals(True)
+            self.virtual_marker_frame_slider.setEnabled(frame_count > 1)
+            self.virtual_marker_frame_slider.setMinimum(0)
+            self.virtual_marker_frame_slider.setMaximum(max(frame_count - 1, 0))
+            self.virtual_marker_frame_slider.setValue(current_frame)
+            self.virtual_marker_frame_slider.blockSignals(False)
+            if frame_count == 0:
+                self.virtual_marker_frame_label.setText("Frame 0/0")
+            else:
+                self.virtual_marker_frame_label.setText(f"Frame {current_frame + 1}/{frame_count}")
+
         def _mirror_initial_rotation_c3d_source(self, *_args) -> None:
             if self.settings_initial_rotation_method_combo.currentText() == "anatomical_c3d":
                 self.settings_initial_rotation_source_edit.setText(self._selected_initial_rotation_c3d_file())
@@ -2344,9 +2429,12 @@ def launch_model_editor() -> None:
             )
 
         def _update_virtual_marker_preview(self, *_args) -> None:
+            preview_c3d_data = self._selected_virtual_marker_preview_c3d_data()
+            solution_c3d_data = self._selected_virtual_marker_c3d_data()
+            self._sync_virtual_marker_frame_slider(preview_c3d_data)
             self.virtual_marker_preview.set_context(
-                self._selected_virtual_marker_preview_c3d_data(),
-                self._selected_virtual_marker_c3d_data(),
+                preview_c3d_data,
+                solution_c3d_data,
                 self._selected_virtual_marker_preview_label(),
                 self.workflow_draft.segment_marker_groups,
                 self.workflow_draft.virtual_markers,
@@ -2354,6 +2442,8 @@ def launch_model_editor() -> None:
                 self._selected_virtual_marker_method(),
                 self.virtual_marker_proximal_combo.currentText().strip(),
                 self.virtual_marker_segment_combo.currentText().strip(),
+                self.virtual_marker_frame_slider.value(),
+                self.virtual_marker_whole_body_preview_checkbox.isChecked(),
             )
 
         def _update_generation_log(self) -> None:
@@ -3738,6 +3828,57 @@ def _c3d_file_names_from_folder(folder_path: str) -> tuple[str, ...]:
     return tuple(sorted(path.name for path in folder.glob("*.c3d")))
 
 
+def _matching_c3d_file_for_expected_name(folder_path: str, expected_name: str) -> Path | None:
+    """
+    Return the single C3D file matching an expected template name or participant-independent pattern.
+    """
+    folder = Path(folder_path)
+    if not folder.exists():
+        return None
+    exact_path = folder / expected_name
+    if exact_path.exists():
+        return exact_path
+
+    patterns = [expected_name]
+    if expected_name.startswith("Test_"):
+        patterns.append(f"*{expected_name.removeprefix('Test_')}")
+    elif "_func_" in expected_name:
+        patterns.append(f"*{expected_name.split('_func_', maxsplit=1)[1]}")
+
+    matches = []
+    for pattern in dict.fromkeys(patterns):
+        matches.extend(folder.glob(pattern))
+    unique_matches = tuple(sorted(dict.fromkeys(path for path in matches if path.suffix.lower() == ".c3d")))
+    return unique_matches[0] if len(unique_matches) == 1 else None
+
+
+def _trial_name_from_virtual_feature_source(source: str) -> str:
+    """
+    Extract the functional trial identifier from a virtual marker or axis source string.
+    """
+    match = re.search(r"(?:^|;\s*)trial=([^;]+)", source)
+    return match.group(1).strip() if match is not None else ""
+
+
+def _source_with_c3d_assignment(source: str, source_path: str) -> str:
+    """
+    Store a matched C3D next to the existing descriptive source without erasing the source metadata.
+    """
+    if not source_path:
+        return source
+    c3d_name = Path(source_path).name
+    parts = [part.strip() for part in source.split(";") if part.strip() and not part.strip().startswith("c3d=")]
+    return "; ".join((f"c3d={c3d_name}", *parts))
+
+
+def _c3d_source_name_from_virtual_feature_source(source: str) -> str:
+    """
+    Return the C3D filename embedded in a virtual marker or axis source string.
+    """
+    match = re.search(r"(?:^|;\s*)c3d=([^;]+)", source)
+    return Path(match.group(1).strip()).name if match is not None else ""
+
+
 def _predictive_virtual_marker_method_from_label(label_or_key: str) -> str:
     """
     Return the stored predictive method key from the readable GUI label.
@@ -3981,6 +4122,19 @@ def _mean_preview_position(c3d_data, marker_names: tuple[str, ...]) -> tuple[flo
     Return the mean point for a possibly duplicated marker list.
     """
     points = [_marker_preview_position(c3d_data, marker_name) for marker_name in marker_names]
+    points = [point for point in points if point is not None]
+    if len(points) == 0:
+        return None
+    return tuple(float(value) for value in np.mean(np.asarray(points, dtype=float), axis=0))
+
+
+def _mean_frame_position(
+    c3d_data, marker_names: tuple[str, ...], frame_index: int
+) -> tuple[float, float, float] | None:
+    """
+    Return the mean point for a possibly duplicated marker list at one frame.
+    """
+    points = [_marker_frame_position(c3d_data, marker_name, frame_index) for marker_name in marker_names]
     points = [point for point in points if point is not None]
     if len(points) == 0:
         return None

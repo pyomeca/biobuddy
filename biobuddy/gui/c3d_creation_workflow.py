@@ -811,13 +811,13 @@ def c3d_virtual_marker_method_examples() -> tuple[C3dVirtualMarkerMethodExample,
         ),
         C3dVirtualMarkerMethodExample(
             method="score",
-            source_example="functional_left_hip_score.c3d",
+            source_example="*func_lhip.c3d",
             equation_example="proximal/distal center",
             description="Use a functional calibration trial to estimate a center of rotation.",
         ),
         C3dVirtualMarkerMethodExample(
             method="sara",
-            source_example="functional_left_knee_sara.c3d",
+            source_example="*func_lknee.c3d",
             equation_example="axis direction from condyles",
             description="Use SARA to estimate a functional joint axis, then orient it with anatomical markers.",
         ),
@@ -1214,7 +1214,7 @@ def c3d_file_roles_for_preset(preset: C3dModelPreset) -> tuple[C3dFileRole, ...]
     """
     if preset == C3dModelPreset.LOWER_LIMBS:
         return (
-            C3dFileRole("main", "main_markers.c3d", "C3D containing all visible markers.", required=True),
+            C3dFileRole("main", "Test_func_anat.c3d", "C3D containing all visible markers.", required=True),
             C3dFileRole(
                 "left_hip_score", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_hip_score"], "Left hip SCORE trial."
             ),

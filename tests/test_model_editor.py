@@ -11,6 +11,7 @@ from biobuddy.gui.model_editor import (
     _export_model_to_path,
     _joint_name_from_segments,
     _marker_frame_position,
+    _matching_c3d_file_for_expected_name,
     _marker_name_mapping_for_c3d,
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
@@ -22,6 +23,9 @@ from biobuddy.gui.model_editor import (
     _score_segments_from_payload,
     _split_marker_names,
     _strip_score_segment_payload,
+    _source_with_c3d_assignment,
+    _c3d_source_name_from_virtual_feature_source,
+    _trial_name_from_virtual_feature_source,
     _virtual_axis_name_from_feature_list_text,
 )
 from biobuddy.gui.segment_editor import load_model
@@ -115,6 +119,24 @@ def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):
         "left_hip_functional.c3d",
         "right_hip_functional.c3d",
     )
+
+
+def test_c3d_file_matching_accepts_template_names_and_functional_patterns(tmp_path):
+    (tmp_path / "Test_func_anat.c3d").write_text("")
+    (tmp_path / "Test_func_lknee.c3d").write_text("")
+
+    assert _matching_c3d_file_for_expected_name(str(tmp_path), "Test_func_anat.c3d").name == "Test_func_anat.c3d"
+    assert _matching_c3d_file_for_expected_name(str(tmp_path), "*func_lknee.c3d").name == "Test_func_lknee.c3d"
+    assert _matching_c3d_file_for_expected_name(str(tmp_path), "missing.c3d") is None
+
+
+def test_virtual_feature_source_keeps_trial_metadata_with_c3d_assignment():
+    source = "trial=left_knee_sara; parent markers=LTIBD,LTIB,LTIBF"
+    assigned = _source_with_c3d_assignment(source, "/tmp/Test_func_lknee.c3d")
+
+    assert _trial_name_from_virtual_feature_source(assigned) == "left_knee_sara"
+    assert _c3d_source_name_from_virtual_feature_source(assigned) == "Test_func_lknee.c3d"
+    assert "parent markers=LTIBD,LTIB,LTIBF" in assigned
 
 
 def test_marker_name_mapping_matches_normalized_c3d_names():

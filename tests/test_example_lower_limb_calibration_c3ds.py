@@ -8,11 +8,14 @@ from biobuddy.gui.lower_limb_template import LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES
 from biobuddy.utils.marker_data import C3dData
 
 EXAMPLE_FOLDER = Path(__file__).parent.parent / "examples" / "data" / "lower_limb_calibration"
+EXPECTED_FUNCTIONAL_C3D_FILES = tuple(
+    pattern.replace("*", "Test_") for pattern in LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES.values()
+)
 EXPECTED_C3D_FILES = (
-    "main_markers.c3d",
+    "Test_func_anat.c3d",
     "anatomical_posture.c3d",
     "functional_trunk.c3d",
-    *LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES.values(),
+    *EXPECTED_FUNCTIONAL_C3D_FILES,
 )
 
 
@@ -36,7 +39,7 @@ def test_lower_limb_calibration_example_c3ds_are_lightweight_and_readable(filena
 def test_lower_limb_calibration_example_generates_functional_model():
     result = create_model_from_c3d_folder(EXAMPLE_FOLDER, preset=C3dModelPreset.LOWER_LIMBS)
 
-    assert find_static_c3d_file(EXAMPLE_FOLDER).name == "main_markers.c3d"
+    assert find_static_c3d_file(EXAMPLE_FOLDER).name == "Test_func_anat.c3d"
     assert result.output_filename == "lower_body_functional.bioMod"
     assert result.marker_reports["static"].missing_markers == ()
     assert set(result.functional_data) == set(LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES)

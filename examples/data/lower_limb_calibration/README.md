@@ -10,15 +10,18 @@ They were generated from the C3D files in `/Users/mickaelbegon/Downloads/calibra
 - analog data were removed;
 - point frame rate was divided by ten.
 
-The lower-limb preset with functional trials expects these generic file names:
+The lower-limb preset with functional trials expects these file names in the example dataset:
 
-- `main_markers.c3d`
-- `functional_left_hip_score.c3d`
-- `functional_left_knee_sara.c3d`
-- `functional_left_ankle_score.c3d`
-- `functional_right_hip_score.c3d`
-- `functional_right_knee_sara.c3d`
-- `functional_right_ankle_score.c3d`
+- `Test_func_anat.c3d`
+- `Test_func_lhip.c3d`
+- `Test_func_lknee.c3d`
+- `Test_func_lankle.c3d`
+- `Test_func_rhip.c3d`
+- `Test_func_rknee.c3d`
+- `Test_func_rankle.c3d`
+
+The template matches participant-independent patterns such as `*func_lhip.c3d`, so another participant prefix can be
+used without changing the model definition.
 
 Additional calibration files are included for examples that need an anatomical posture or trunk functional trial:
 

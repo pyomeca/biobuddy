@@ -64,8 +64,8 @@ def test_c3d_file_roles_use_generic_names_for_three_presets():
     full_body_names = {role.generic_name for role in c3d_file_roles_for_preset(C3dModelPreset.FULL_BODY)}
 
     assert from_scratch_names == {"main_markers.c3d"}
-    assert "main_markers.c3d" in lower_limb_names
-    assert "functional_left_knee_sara.c3d" in lower_limb_names
+    assert "Test_func_anat.c3d" in lower_limb_names
+    assert "*func_lknee.c3d" in lower_limb_names
     assert lower_limb_anatomical_names == {"main_markers.c3d"}
     assert "pointing_virtual_markers.c3d" in upper_limb_names
     assert "functional_upper_limb_score_sara.c3d" in full_body_names
@@ -484,9 +484,7 @@ def test_c3d_virtual_marker_method_examples_document_regression_and_sara():
         example.method == "regression" and "example_predictive_hip_cor" in example.equation_example
         for example in examples
     )
-    assert any(
-        example.method == "sara" and "functional_left_knee_sara.c3d" in example.source_example for example in examples
-    )
+    assert any(example.method == "sara" and "*func_lknee.c3d" in example.source_example for example in examples)
 
 
 def test_c3d_template_payload_from_draft_includes_progress_and_method_examples():
