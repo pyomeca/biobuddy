@@ -126,8 +126,8 @@ class AxisSpec:
         """
         return Axis(
             name=self.name,
-            start=self.start.to_callable(),
-            end=self.end.to_callable(),
+            start=self.start.marker_names[0] if len(self.start.marker_names) == 1 else self.start.to_callable(),
+            end=self.end.marker_names[0] if len(self.end.marker_names) == 1 else self.end.to_callable(),
         )
 
     def vector(self, data: MarkerData) -> np.ndarray:

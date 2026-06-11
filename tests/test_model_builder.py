@@ -241,6 +241,8 @@ def test_lower_limb_functional_template_uses_sara_for_knee_axis():
     assert left_axis.child_marker_names == ("LTHIB", "LTHID", "LTHI")
     assert left_axis.expected_axis.start.marker_names == ("LKNE",)
     assert left_axis.expected_axis.end.marker_names == ("LKNEM",)
+    assert left_axis.expected_axis.to_axis().start.name == "LKNE"
+    assert left_axis.expected_axis.to_axis().end.name == "LKNEM"
     assert left_axis.origin_marker_names == ("LKNE", "LKNEM")
     assert isinstance(right_axis, FunctionalAxisSpec)
     assert right_axis.trial_name == "right_knee_sara"

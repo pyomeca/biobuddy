@@ -243,7 +243,7 @@ def template_for_c3d_model_preset(preset: C3dModelPreset) -> ModelTemplate:
 def create_model_from_c3d_folder(
     calibration_folder: Path,
     preset: C3dModelPreset = C3dModelPreset.LOWER_LIMBS,
-    static_patterns: tuple[str, ...] = ("*static*.c3d", "*func_anat.c3d"),
+    static_patterns: tuple[str, ...] = ("main_markers.c3d", "*static*.c3d", "*func_anat.c3d", "anatomical_posture.c3d"),
     static_virtual_points: tuple[VirtualPointDefinition, ...] = (),
     static_virtual_axes: tuple[VirtualAxisDefinition, ...] = (),
     functional_virtual_points: dict[str, tuple[VirtualPointDefinition, ...]] | None = None,
@@ -270,7 +270,7 @@ def create_model_from_c3d_folder(
 
 def create_lower_limb_model_variants_from_c3d_folder(
     calibration_folder: Path,
-    static_patterns: tuple[str, ...] = ("*static*.c3d", "*func_anat.c3d"),
+    static_patterns: tuple[str, ...] = ("main_markers.c3d", "*static*.c3d", "*func_anat.c3d", "anatomical_posture.c3d"),
 ) -> C3dModelCreationVariantResults:
     """
     Create lower-limb models with functional SCoRE/SARA enabled and disabled from a C3D folder.
@@ -358,7 +358,7 @@ def create_model_from_marker_data(
 
 def find_static_c3d_file(
     calibration_folder: Path,
-    static_patterns: tuple[str, ...] = ("*static*.c3d", "*func_anat.c3d"),
+    static_patterns: tuple[str, ...] = ("main_markers.c3d", "*static*.c3d", "*func_anat.c3d", "anatomical_posture.c3d"),
 ) -> Path:
     """
     Find the static/anatomical C3D used to instantiate marker-defined frames.

@@ -389,6 +389,8 @@ functional trials, knee axes are defined from SARA functional trials and oriente
 personalized model is generated from the evaluated marker-defined frames. At the moment, the GUI can draft these
 ingredients and generate the existing lower-limb template; fully converting an arbitrary template-free draft to a
 BioMod model still requires the remaining template-builder bridge.
+The lightweight C3D files in `examples/data/lower_limb_calibration` provide a ready-to-use lower-limb calibration
+folder for this preset.
 ![model_graph](docs/images/model_graph.png)
 
 
