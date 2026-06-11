@@ -121,6 +121,7 @@ def launch_model_editor() -> None:
         qt_horizontal = Qt.Orientation.Horizontal
         qt_match_exact = Qt.MatchFlag.MatchExactly
         qt_match_recursive = Qt.MatchFlag.MatchRecursive
+        qt_dash_line = Qt.PenStyle.DashLine
         qt_extended_selection = QAbstractItemView.SelectionMode.ExtendedSelection
         qpaint_antialiasing = QPainter.RenderHint.Antialiasing
         get_event_position = lambda event: event.position()
@@ -161,6 +162,7 @@ def launch_model_editor() -> None:
             qt_horizontal = Qt.Horizontal
             qt_match_exact = Qt.MatchExactly
             qt_match_recursive = Qt.MatchRecursive
+            qt_dash_line = Qt.DashLine
             qt_extended_selection = QAbstractItemView.ExtendedSelection
             qpaint_antialiasing = QPainter.Antialiasing
             get_event_position = lambda event: event.localPos()
@@ -345,9 +347,12 @@ def launch_model_editor() -> None:
             self.c3d_data = None
             self.marker_names = ()
             self.label_marker_names = ()
+            self.segment_marker_groups = ()
+            self.selected_segment_name = ""
             self.axes = ()
             self.current_vectors = ()
             self.current_origin_markers = ()
+            self.frame_index = 0
             self.yaw = -0.6
             self.pitch = 0.35
             self._last_mouse_position = None
@@ -357,16 +362,22 @@ def launch_model_editor() -> None:
             c3d_data,
             marker_names: tuple[str, ...],
             label_marker_names: tuple[str, ...],
+            segment_marker_groups: tuple[object, ...],
+            selected_segment_name: str,
             axes: tuple[object, ...],
             current_vectors: tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...],
             current_origin_markers: tuple[str, ...] = (),
+            frame_index: int = 0,
         ) -> None:
             self.c3d_data = c3d_data
             self.marker_names = marker_names
             self.label_marker_names = label_marker_names
+            self.segment_marker_groups = segment_marker_groups
+            self.selected_segment_name = selected_segment_name
             self.axes = axes
             self.current_vectors = current_vectors
             self.current_origin_markers = current_origin_markers
+            self.frame_index = frame_index
             self.update()
 
         def paintEvent(self, event) -> None:
@@ -376,31 +387,46 @@ def launch_model_editor() -> None:
             if self.c3d_data is None:
                 painter.drawText(self.rect(), qt_alignment_center, "Choose a C3D to preview marker axes")
                 return
-            marker_points = {
-                marker_name: _marker_preview_position(self.c3d_data, marker_name)
-                for marker_name in self.marker_names
-                if marker_name in self.c3d_data.marker_names
-            }
-            marker_points = {name: point for name, point in marker_points.items() if point is not None}
+            marker_records = []
+            seen_records = set()
+            for segment_index, group in enumerate(self.segment_marker_groups):
+                marker_names = tuple(dict.fromkeys(group.marker_names + group.technical_marker_names))
+                for marker_name in marker_names:
+                    if marker_name not in self.marker_names or marker_name not in self.c3d_data.marker_names:
+                        continue
+                    point = _marker_frame_position(self.c3d_data, marker_name, self.frame_index)
+                    record_key = (group.segment_name, marker_name)
+                    if point is None or record_key in seen_records:
+                        continue
+                    seen_records.add(record_key)
+                    marker_records.append(
+                        (
+                            marker_name,
+                            point,
+                            group.segment_name,
+                            marker_name in group.technical_marker_names,
+                            segment_index,
+                        )
+                    )
             axis_segments = []
             for axis in self.axes:
-                start = _mean_preview_position(self.c3d_data, axis.start_markers)
-                end = _mean_preview_position(self.c3d_data, axis.end_markers)
+                start = _mean_frame_position(self.c3d_data, axis.start_markers, self.frame_index)
+                end = _mean_frame_position(self.c3d_data, axis.end_markers, self.frame_index)
                 if start is not None and end is not None:
                     axis_segments.append((axis.axis, axis.keep_vector, start, end))
             saved_origins = []
             for axis in self.axes:
-                origin = _mean_preview_position(self.c3d_data, axis.origin_markers)
+                origin = _mean_frame_position(self.c3d_data, axis.origin_markers, self.frame_index)
                 if origin is not None:
                     saved_origins.append(origin)
             temporary_segments = []
             for axis_name, start_markers, end_markers, keep_vector in self.current_vectors:
-                start = _mean_preview_position(self.c3d_data, start_markers)
-                end = _mean_preview_position(self.c3d_data, end_markers)
+                start = _mean_frame_position(self.c3d_data, start_markers, self.frame_index)
+                end = _mean_frame_position(self.c3d_data, end_markers, self.frame_index)
                 if start is not None and end is not None:
                     temporary_segments.append((axis_name, keep_vector, start, end))
-            temporary_origin = _mean_preview_position(self.c3d_data, self.current_origin_markers)
-            points = list(marker_points.values())
+            temporary_origin = _mean_frame_position(self.c3d_data, self.current_origin_markers, self.frame_index)
+            points = [point for _, point, _, _, _ in marker_records]
             for _, _, start, end in axis_segments:
                 points.extend((start, end))
             for _, _, start, end in temporary_segments:
@@ -414,14 +440,20 @@ def launch_model_editor() -> None:
             projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
             transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
 
-            painter.setPen(QPen(QColor("#2563eb"), 1))
-            painter.setBrush(QColor("#2563eb"))
             label_marker_names = set(self.label_marker_names)
-            for marker_name, point in marker_points.items():
+            for marker_name, point, segment_name, is_technical, segment_index in marker_records:
+                is_selected = segment_name == self.selected_segment_name
+                color = QColor(_segment_preview_color(segment_index))
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
-                painter.drawEllipse(center, 4, 4)
-                if marker_name in label_marker_names:
-                    painter.drawText(center.x() + 5, center.y() - 5, marker_name)
+                painter.setPen(QPen(color, 3 if is_selected else 1))
+                painter.setBrush(color)
+                radius = 6 if is_selected else 4
+                if is_technical:
+                    painter.drawRect(int(center.x()) - radius, int(center.y()) - radius, 2 * radius, 2 * radius)
+                else:
+                    painter.drawEllipse(center, radius, radius)
+                if is_selected and marker_name in label_marker_names:
+                    painter.drawText(center.x() + 5, center.y() - 5, f"{marker_name} ({segment_name})")
 
             axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb", "": "#6b7280"}
             for axis_name, keep_vector, start, end in axis_segments:
@@ -432,7 +464,9 @@ def launch_model_editor() -> None:
                 )
 
             for axis_name, keep_vector, start, end in temporary_segments:
-                painter.setPen(QPen(QColor("#f59e0b"), 4 if keep_vector else 2))
+                pen = QPen(QColor(axis_colors.get(axis_name, "#6b7280")), 4 if keep_vector else 2)
+                pen.setStyle(qt_dash_line)
+                painter.setPen(pen)
                 painter.drawLine(
                     transform(_rotate_preview_point(start, self.yaw, self.pitch)),
                     transform(_rotate_preview_point(end, self.yaw, self.pitch)),
@@ -449,7 +483,27 @@ def launch_model_editor() -> None:
                 painter.setPen(QPen(QColor("#f59e0b"), 2))
                 center = transform(_rotate_preview_point(temporary_origin, self.yaw, self.pitch))
                 painter.drawRect(int(center.x()) - 5, int(center.y()) - 5, 10, 10)
+                self._draw_local_frame(painter, transform, temporary_origin, temporary_segments, points)
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
+
+        def _draw_local_frame(self, painter, transform, origin, temporary_segments, scene_points) -> None:
+            local_axes = _orthonormal_axes_from_vector_segments(temporary_segments)
+            if len(local_axes) == 0:
+                return
+            positions = np.asarray(scene_points, dtype=float)
+            scene_span = float(np.nanmax(np.ptp(positions, axis=0))) if positions.size != 0 else 1.0
+            axis_length = max(scene_span * 0.18, 1e-6)
+            axis_colors = {"x": "#dc2626", "y": "#16a34a", "z": "#2563eb"}
+            origin_array = np.asarray(origin, dtype=float)
+            origin_screen = transform(_rotate_preview_point(tuple(origin_array), self.yaw, self.pitch))
+            for axis_name in ("x", "y", "z"):
+                if axis_name not in local_axes:
+                    continue
+                endpoint = origin_array + axis_length * local_axes[axis_name]
+                endpoint_screen = transform(_rotate_preview_point(tuple(endpoint), self.yaw, self.pitch))
+                painter.setPen(QPen(QColor(axis_colors[axis_name]), 3))
+                painter.drawLine(origin_screen, endpoint_screen)
+                painter.drawText(endpoint_screen.x() + 4, endpoint_screen.y() - 4, axis_name.upper())
 
         def mousePressEvent(self, event) -> None:
             self._last_mouse_position = get_event_position(event)
@@ -942,6 +996,10 @@ def launch_model_editor() -> None:
             self.segment_axis_preview = C3dSegmentAxisPreviewWidget()
             self.segment_axis_preview.setMinimumWidth(520)
             self.segment_axis_preview.setMinimumHeight(520)
+            self.anatomical_frame_slider = QSlider(qt_horizontal)
+            self.anatomical_frame_slider.setEnabled(False)
+            self.anatomical_frame_slider.valueChanged.connect(self._update_segment_axis_preview)
+            self.anatomical_frame_label = QLabel("Frame 1/1")
             self.virtual_marker_name_edit = QLineEdit()
             self.virtual_marker_suggested_name_label = QLabel()
             self.use_suggested_virtual_marker_name_button = QPushButton("Use suggested name")
@@ -1205,6 +1263,11 @@ def launch_model_editor() -> None:
 
             preview_column = QVBoxLayout()
             preview_column.addWidget(QLabel("Dynamic frame preview"))
+            preview_frame_row = QHBoxLayout()
+            preview_frame_row.addWidget(QLabel("Frame"))
+            preview_frame_row.addWidget(self.anatomical_frame_slider, 1)
+            preview_frame_row.addWidget(self.anatomical_frame_label)
+            preview_column.addLayout(preview_frame_row)
             preview_column.addWidget(self.segment_axis_preview, 1)
             preview_column.addWidget(self.save_segment_axis_button)
 
@@ -1338,6 +1401,7 @@ def launch_model_editor() -> None:
             self.marker_mapping_label.setText(_format_marker_mapping_summary(marker_mapping))
             self.workflow_marker_pool = tuple(self.c3d_data.marker_names)
             self._configure_technical_frame_slider()
+            self._configure_anatomical_frame_slider()
             self._sync_virtual_marker_c3d_files()
             self._sync_initial_rotation_c3d_files()
             self._update_preset_details()
@@ -1926,6 +1990,16 @@ def launch_model_editor() -> None:
             self.technical_frame_slider.blockSignals(False)
             self._update_technical_segment_preview()
 
+        def _configure_anatomical_frame_slider(self) -> None:
+            frame_count = 0 if self.c3d_data is None else self.c3d_data.nb_frames
+            self.anatomical_frame_slider.blockSignals(True)
+            self.anatomical_frame_slider.setEnabled(frame_count > 1)
+            self.anatomical_frame_slider.setMinimum(0)
+            self.anatomical_frame_slider.setMaximum(max(frame_count - 1, 0))
+            self.anatomical_frame_slider.setValue(0)
+            self.anatomical_frame_slider.blockSignals(False)
+            self._update_segment_axis_preview()
+
         def _update_technical_segment_preview(self, *_args) -> None:
             frame_index = self.technical_frame_slider.value()
             frame_count = 0 if self.c3d_data is None else self.c3d_data.nb_frames
@@ -2058,8 +2132,14 @@ def launch_model_editor() -> None:
         def _update_segment_axis_preview(self) -> None:
             segment_name = self._selected_anatomical_segment_name()
             if segment_name is None:
-                self.segment_axis_preview.set_context(self.c3d_data, (), (), (), ())
+                self.segment_axis_preview.set_context(self.c3d_data, (), (), (), "", (), ())
                 return
+            frame_index = self.anatomical_frame_slider.value()
+            frame_count = 0 if self.c3d_data is None else self.c3d_data.nb_frames
+            if frame_count == 0:
+                self.anatomical_frame_label.setText("Frame 0/0")
+            else:
+                self.anatomical_frame_label.setText(f"Frame {frame_index + 1}/{frame_count}")
             segment_marker_names = tuple(self.workflow_marker_pool)
             label_marker_names = self._marker_names_for_segment(segment_name)
             axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)
@@ -2067,9 +2147,12 @@ def launch_model_editor() -> None:
                 self.c3d_data,
                 segment_marker_names,
                 label_marker_names,
+                self.workflow_draft.segment_marker_groups,
+                segment_name,
                 axes,
                 self._axis_vector_specs(),
                 _list_widget_texts(self.axis_origin_marker_list),
+                frame_index,
             )
 
         def _marker_names_for_segment(self, segment_name: str) -> tuple[str, ...]:
@@ -4176,6 +4259,55 @@ def _mean_frame_position(
     if len(points) == 0:
         return None
     return tuple(float(value) for value in np.mean(np.asarray(points, dtype=float), axis=0))
+
+
+def _orthonormal_axes_from_vector_segments(segments) -> dict[str, np.ndarray]:
+    """
+    Build a local triad from two marker-defined vectors.
+    """
+    raw_axes = {}
+    kept_axis = ""
+    for axis_name, keep_vector, start, end in segments[:2]:
+        axis_name = axis_name if axis_name in {"x", "y", "z"} else ""
+        if not axis_name:
+            continue
+        vector = np.asarray(end, dtype=float) - np.asarray(start, dtype=float)
+        norm = np.linalg.norm(vector)
+        if norm <= 1e-12:
+            continue
+        raw_axes[axis_name] = vector / norm
+        if keep_vector:
+            kept_axis = axis_name
+    if len(raw_axes) < 2:
+        return raw_axes
+
+    axis_names = tuple(raw_axes)
+    kept_axis = kept_axis if kept_axis in raw_axes else axis_names[0]
+    other_axis = next(axis_name for axis_name in axis_names if axis_name != kept_axis)
+    kept_vector = raw_axes[kept_axis]
+    other_vector = raw_axes[other_axis] - np.dot(raw_axes[other_axis], kept_vector) * kept_vector
+    other_norm = np.linalg.norm(other_vector)
+    if other_norm <= 1e-12:
+        return {kept_axis: kept_vector}
+    axes = {kept_axis: kept_vector, other_axis: other_vector / other_norm}
+
+    missing_axis = next(axis_name for axis_name in ("x", "y", "z") if axis_name not in axes)
+    if missing_axis == "x":
+        axes["x"] = _normalized_cross(axes["y"], axes["z"])
+    elif missing_axis == "y":
+        axes["y"] = _normalized_cross(axes["z"], axes["x"])
+    else:
+        axes["z"] = _normalized_cross(axes["x"], axes["y"])
+    return axes
+
+
+def _normalized_cross(first: np.ndarray, second: np.ndarray) -> np.ndarray:
+    """
+    Return a normalized cross product, or zeros if the vectors are degenerate.
+    """
+    vector = np.cross(first, second)
+    norm = np.linalg.norm(vector)
+    return vector / norm if norm > 1e-12 else np.zeros(3)
 
 
 def _rotate_preview_point(point: tuple[float, float, float], yaw: float, pitch: float) -> tuple[float, float]:

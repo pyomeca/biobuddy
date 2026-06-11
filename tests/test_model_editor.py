@@ -14,6 +14,7 @@ from biobuddy.gui.model_editor import (
     _matching_c3d_file_for_expected_name,
     _marker_name_mapping_for_c3d,
     _is_virtual_feature_axis,
+    _orthonormal_axes_from_vector_segments,
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
     _remap_c3d_workflow_draft_markers,
@@ -99,6 +100,19 @@ def test_virtual_marker_list_shows_only_named_sara_virtual_axes():
 
     assert _is_virtual_feature_axis(named_sara_axis)
     assert not _is_virtual_feature_axis(anatomical_sara_axis)
+
+
+def test_anatomical_axis_preview_builds_rgb_local_frame_from_two_vectors():
+    axes = _orthonormal_axes_from_vector_segments(
+        (
+            ("x", True, (0.0, 0.0, 0.0), (2.0, 0.0, 0.0)),
+            ("y", False, (0.0, 0.0, 0.0), (1.0, 2.0, 0.0)),
+        )
+    )
+
+    assert np.allclose(axes["x"], (1.0, 0.0, 0.0))
+    assert np.allclose(axes["y"], (0.0, 1.0, 0.0))
+    assert np.allclose(axes["z"], (0.0, 0.0, 1.0))
 
 
 def test_axis_projection_payload_parses_point_and_axis_sources():
