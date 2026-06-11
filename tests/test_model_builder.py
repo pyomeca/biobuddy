@@ -30,12 +30,13 @@ from biobuddy.gui.marker_editor import attach_marker_to_segment
 from biobuddy.components.generic.rigidbody.axis import Axis
 
 
-def test_lower_limb_template_classifies_markers_on_multiple_segments():
+def test_lower_limb_template_classifies_only_shared_joint_markers_on_multiple_segments():
     template = lower_limb_template()
 
     marker_segments = template.marker_segments()
 
-    assert marker_segments["LASI"] == ("Pelvis", "LThigh", "RThigh")
+    assert marker_segments["LASI"] == ("Pelvis",)
+    assert marker_segments["RASI"] == ("Pelvis",)
     assert marker_segments["LKNE"] == ("LThigh", "LShank")
     assert marker_segments["LANK"] == ("LShank", "LFoot")
 
@@ -262,6 +263,9 @@ def test_lower_limb_template_generates_real_model_from_static_markers():
     assert model.segments["LShank"].nb_q == 1
     assert "LKNE" in model.segments["LThigh"].marker_names
     assert "LKNE" in model.segments["LShank"].marker_names
+    assert "LASI" in model.segments["Pelvis"].marker_names
+    assert "LASI" not in model.segments["LThigh"].marker_names
+    assert "RASI" not in model.segments["RThigh"].marker_names
     assert model.segments["Pelvis"].inertia_parameters is None
     assert model.segments["Trunk"].inertia_parameters.mass > 0
     assert model.segments["LThigh"].inertia_parameters.mass > 0

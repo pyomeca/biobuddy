@@ -83,6 +83,8 @@ def test_c3d_segment_marker_groups_cover_three_models():
     assert any(
         group.segment_name == "Pelvis" and "LASI" in group.marker_names for group in lower_limb_anatomical_groups
     )
+    assert all("LASI" not in group.marker_names for group in lower_limb_groups if group.segment_name != "Pelvis")
+    assert all("RASI" not in group.marker_names for group in lower_limb_groups if group.segment_name != "Pelvis")
     assert any(group.segment_name == "Arm" and "EPICl" in group.marker_names for group in upper_limb_groups)
     assert any(group.segment_name == "Thorax" and "MANU" in group.marker_names for group in full_body_groups)
     assert any(group.segment_name == "Trunk" and group.parent_name == "Pelvis" for group in lower_limb_groups)

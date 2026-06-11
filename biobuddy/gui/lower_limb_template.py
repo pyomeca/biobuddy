@@ -374,8 +374,8 @@ def _markers() -> tuple[MarkerAttachmentSpec, ...]:
     return (
         _marker("LPSI", "Pelvis", anatomical=True),
         _marker("RPSI", "Pelvis", anatomical=True),
-        _marker("LASI", "Pelvis", "LThigh", "RThigh", anatomical=True),
-        _marker("RASI", "Pelvis", "LThigh", "RThigh", anatomical=True),
+        _marker("LASI", "Pelvis", anatomical=True),
+        _marker("RASI", "Pelvis", anatomical=True),
         _marker("C7", "Trunk", anatomical=True),
         _marker("C2", "Trunk", anatomical=True),
         _marker("T6", "Trunk", anatomical=True),
