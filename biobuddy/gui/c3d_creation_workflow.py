@@ -708,7 +708,7 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
             )
 
     for axis in draft.axes:
-        is_virtual_reference_axis = axis.method != "markers" and axis.name.startswith("Axis_")
+        is_virtual_reference_axis = _is_virtual_reference_axis(axis)
         if axis.segment_name not in {group.segment_name for group in draft.segment_marker_groups}:
             issues.append(
                 C3dDraftIssue(
@@ -852,7 +852,10 @@ def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = Non
         marker.method in SOURCE_REQUIRED_VIRTUAL_MARKER_METHODS and marker.source == ""
         for marker in draft.virtual_markers
     )
-    incomplete_axis_count = sum(axis.axis == "" for axis in draft.axes)
+    anatomical_axes = tuple(axis for axis in draft.axes if not _is_virtual_reference_axis(axis))
+    virtual_reference_axes = tuple(axis for axis in draft.axes if _is_virtual_reference_axis(axis))
+    incomplete_anatomical_axes = tuple(axis for axis in anatomical_axes if axis.axis == "")
+    virtual_reference_without_xyz = tuple(axis for axis in virtual_reference_axes if axis.axis == "")
     child_translation_count = sum(setting.child_translation for setting in draft.segment_settings)
     initial_rotation_source_missing_count = sum(
         setting.initial_rotation_method in {"matrix", "anatomical_c3d"} and setting.initial_rotation_source == ""
@@ -903,8 +906,12 @@ def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = Non
         C3dWorkflowStepStatus(
             6,
             "Segment coordinate systems",
-            _step_status("axes" not in issue_categories and incomplete_axis_count == 0, len(draft.axes) != 0),
-            f"{len(draft.axes)} axes; {incomplete_axis_count} without selected x/y/z axis.",
+            _step_status("axes" not in issue_categories and len(incomplete_anatomical_axes) == 0, len(draft.axes) != 0),
+            _segment_coordinate_system_progress_detail(
+                anatomical_axes,
+                incomplete_anatomical_axes,
+                virtual_reference_without_xyz,
+            ),
         ),
         C3dWorkflowStepStatus(
             7,
@@ -1646,6 +1653,36 @@ def _step_status(is_done: bool, has_started: bool) -> str:
     if has_started:
         return "warning"
     return "pending"
+
+
+def _is_virtual_reference_axis(axis: C3dAxisDraft) -> bool:
+    """
+    Return whether an axis is a reusable functional source rather than a final anatomical frame vector.
+    """
+    return axis.method != "markers" and axis.name.startswith("Axis_")
+
+
+def _segment_coordinate_system_progress_detail(
+    anatomical_axes: tuple[C3dAxisDraft, ...],
+    incomplete_anatomical_axes: tuple[C3dAxisDraft, ...],
+    virtual_reference_without_xyz: tuple[C3dAxisDraft, ...],
+) -> str:
+    """
+    Describe segment coordinate system completion with actionable details.
+    """
+    if len(incomplete_anatomical_axes) != 0:
+        missing_names = ", ".join(axis.name for axis in incomplete_anatomical_axes)
+        return (
+            f"{len(anatomical_axes)} anatomical frame vectors; {len(incomplete_anatomical_axes)} missing x/y/z: "
+            f"{missing_names}."
+        )
+    if len(virtual_reference_without_xyz) != 0:
+        virtual_names = ", ".join(axis.name for axis in virtual_reference_without_xyz)
+        return (
+            f"{len(anatomical_axes)} anatomical frame vectors complete; "
+            f"{len(virtual_reference_without_xyz)} functional reference axis/axes do not need x/y/z: {virtual_names}."
+        )
+    return f"{len(anatomical_axes)} anatomical frame vectors complete."
 
 
 def _file_role_is_required(preset: C3dModelPreset, role_name: str) -> bool:

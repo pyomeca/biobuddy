@@ -363,7 +363,7 @@ launch it with:
 
 ```bash
 pip install biobuddy[gui]
-python -m biobuddy.gui
+python examples/launch_model_editor_gui.py
 ```
 
 The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment

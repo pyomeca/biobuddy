@@ -8,6 +8,7 @@ from biobuddy.gui.c3d_creation_workflow import (
     add_axis_to_draft,
     add_segment_to_draft,
     c3d_workflow_draft,
+    c3d_workflow_progress,
     remove_axis_from_draft,
 )
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
@@ -153,6 +154,17 @@ def test_virtual_marker_list_shows_only_named_sara_virtual_axes():
 
     assert _is_virtual_feature_axis(named_sara_axis)
     assert not _is_virtual_feature_axis(anatomical_sara_axis)
+
+
+def test_lower_limb_functional_sara_axes_do_not_trigger_missing_xyz_warning():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    coordinate_system_step = next(step for step in c3d_workflow_progress(draft) if step.number == 6)
+
+    assert coordinate_system_step.status == "done"
+    assert "functional reference" in coordinate_system_step.detail
+    assert "Axis_LKnee_SARA" in coordinate_system_step.detail
+    assert "Axis_RKnee_SARA" in coordinate_system_step.detail
 
 
 def test_anatomical_axis_preview_builds_rgb_local_frame_from_two_vectors():

@@ -121,6 +121,7 @@ def launch_model_editor() -> None:
             QScrollArea,
             QSplitter,
             QSlider,
+            QStackedWidget,
             QTabWidget,
             QTextEdit,
             QTreeWidget,
@@ -135,8 +136,11 @@ def launch_model_editor() -> None:
         qt_match_recursive = Qt.MatchFlag.MatchRecursive
         qt_dash_line = Qt.PenStyle.DashLine
         qt_extended_selection = QAbstractItemView.SelectionMode.ExtendedSelection
+        qt_open_hand_cursor = Qt.CursorShape.OpenHandCursor
+        qt_closed_hand_cursor = Qt.CursorShape.ClosedHandCursor
         qpaint_antialiasing = QPainter.RenderHint.Antialiasing
         get_event_position = lambda event: event.position()
+        get_wheel_delta = lambda event: event.angleDelta().y()
     except ImportError:
         try:
             from PyQt5.QtCore import QPointF, Qt
@@ -164,6 +168,7 @@ def launch_model_editor() -> None:
                 QScrollArea,
                 QSplitter,
                 QSlider,
+                QStackedWidget,
                 QTabWidget,
                 QTextEdit,
                 QTreeWidget,
@@ -178,8 +183,11 @@ def launch_model_editor() -> None:
             qt_match_recursive = Qt.MatchRecursive
             qt_dash_line = Qt.DashLine
             qt_extended_selection = QAbstractItemView.ExtendedSelection
+            qt_open_hand_cursor = Qt.OpenHandCursor
+            qt_closed_hand_cursor = Qt.ClosedHandCursor
             qpaint_antialiasing = QPainter.Antialiasing
             get_event_position = lambda event: event.localPos()
+            get_wheel_delta = lambda event: event.angleDelta().y()
         except ImportError as error:
             raise ImportError(
                 "The model editor requires a working Qt binding. Install BioBuddy with `pip install biobuddy[gui]` "
@@ -268,6 +276,24 @@ def launch_model_editor() -> None:
         label.setWordWrap(True)
         return label
 
+    def _workflow_step_item(step_status) -> QListWidgetItem:
+        """
+        Create a colored workflow-progress item.
+        """
+        item = QListWidgetItem(
+            f"{step_status.number}. [{step_status.status}] {step_status.name} - {step_status.detail}"
+        )
+        if step_status.status == "warning":
+            item.setForeground(QColor("#92400e"))
+            item.setBackground(QColor("#fef3c7"))
+        elif step_status.status == "error":
+            item.setForeground(QColor("#991b1b"))
+            item.setBackground(QColor("#fee2e2"))
+        elif step_status.status == "done":
+            item.setForeground(QColor("#166534"))
+            item.setBackground(QColor("#dcfce7"))
+        return item
+
     def _configure_panel_layout(layout, *, margin: int = 14, spacing: int = 10) -> None:
         """
         Apply consistent spacing to manually assembled Qt layouts.
@@ -290,6 +316,27 @@ def launch_model_editor() -> None:
         layout.setSpacing(8)
         group.setLayout(layout)
         return group
+
+    def _list_with_side_buttons(title: str, item_list, add_button, remove_button):
+        """
+        Build a compact selector with plus/minus buttons aligned beside the list.
+        """
+        layout = QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setHorizontalSpacing(8)
+        layout.setVerticalSpacing(4)
+        layout.addWidget(QLabel(title), 0, 0, 1, 2)
+        button_column = QVBoxLayout()
+        button_column.setContentsMargins(0, 0, 0, 0)
+        button_column.setSpacing(6)
+        button_column.addStretch(1)
+        button_column.addWidget(add_button)
+        button_column.addWidget(remove_button)
+        button_column.addStretch(1)
+        layout.addLayout(button_column, 1, 0)
+        layout.addWidget(item_list, 1, 1)
+        layout.setColumnStretch(1, 1)
+        return layout
 
     def _draw_preview_marker(
         painter,
@@ -356,6 +403,18 @@ def launch_model_editor() -> None:
             painter.setPen(QPen(color, 1))
             painter.drawText(endpoint.x() + 3, endpoint.y() - 3, label)
 
+    def _draw_preview_interaction_hint(painter, width: int) -> None:
+        """
+        Draw a compact reminder of the interactive 3D preview controls.
+        """
+        text = "Drag rotate | Wheel zoom | Double-click reset"
+        hint_width = 250
+        hint_x = max(width - hint_width - 10, 10)
+        painter.setPen(QPen(QColor("#64748b"), 1))
+        painter.setBrush(QColor(255, 255, 255, 220))
+        painter.drawRect(hint_x, 8, hint_width, 22)
+        painter.drawText(hint_x + 8, 24, text)
+
     def _scrollable_widget(widget):
         """
         Wrap a form-heavy tab so all controls remain reachable on smaller screens.
@@ -384,6 +443,62 @@ def launch_model_editor() -> None:
         Execute a dialog across PySide6 and PyQt5.
         """
         return dialog.exec() if hasattr(dialog, "exec") else dialog.exec_()
+
+    def _initialize_preview_camera(widget) -> None:
+        """
+        Initialize the shared orbit-camera state used by lightweight 3D previews.
+        """
+        widget.yaw = -0.6
+        widget.pitch = 0.35
+        widget.zoom = 1.0
+        widget._last_mouse_position = None
+        widget._is_preview_dragging = False
+        widget.setMouseTracking(True)
+        widget.setCursor(qt_open_hand_cursor)
+        widget.setToolTip("Drag to rotate, use the mouse wheel to zoom, and double-click to reset the view.")
+
+    def _reset_preview_camera(widget) -> None:
+        """
+        Reset the lightweight 3D preview camera.
+        """
+        widget.yaw = -0.6
+        widget.pitch = 0.35
+        widget.zoom = 1.0
+        widget._last_mouse_position = None
+        widget._is_preview_dragging = False
+        widget.setCursor(qt_open_hand_cursor)
+        widget.update()
+
+    def _start_preview_camera_drag(widget, event) -> None:
+        widget._last_mouse_position = get_event_position(event)
+        widget._is_preview_dragging = True
+        widget.setCursor(qt_closed_hand_cursor)
+
+    def _drag_preview_camera(widget, event) -> None:
+        if not getattr(widget, "_is_preview_dragging", False):
+            return
+        if widget._last_mouse_position is None:
+            _start_preview_camera_drag(widget, event)
+            return
+        position = get_event_position(event)
+        widget.yaw += (position.x() - widget._last_mouse_position.x()) * 0.01
+        widget.pitch += (position.y() - widget._last_mouse_position.y()) * 0.01
+        widget.pitch = max(-1.4, min(1.4, widget.pitch))
+        widget._last_mouse_position = position
+        widget.update()
+
+    def _end_preview_camera_drag(widget) -> None:
+        widget._last_mouse_position = None
+        widget._is_preview_dragging = False
+        widget.setCursor(qt_open_hand_cursor)
+
+    def _zoom_preview_camera(widget, event) -> None:
+        delta = get_wheel_delta(event)
+        if delta == 0:
+            return
+        widget.zoom = max(0.35, min(8.0, widget.zoom * (1.12 ** (delta / 120.0))))
+        event.accept()
+        widget.update()
 
     def _create_axis_vector_controls(index: int) -> dict[str, object]:
         """
@@ -477,12 +592,12 @@ def launch_model_editor() -> None:
             self.selected_segment_name = ""
             self.axes = ()
             self.virtual_markers = ()
+            self.virtual_feature_c3d_data = {}
+            self._score_solution_cache = {}
             self.current_vectors = ()
             self.current_origin_markers = ()
             self.frame_index = 0
-            self.yaw = -0.6
-            self.pitch = 0.35
-            self._last_mouse_position = None
+            _initialize_preview_camera(self)
 
         def set_context(
             self,
@@ -494,6 +609,7 @@ def launch_model_editor() -> None:
             axes: tuple[object, ...],
             current_vectors: tuple[tuple[str, tuple[str, ...], tuple[str, ...], bool], ...],
             virtual_markers: tuple[object, ...] = (),
+            virtual_feature_c3d_data: dict[str, object] | None = None,
             current_origin_markers: tuple[str, ...] = (),
             frame_index: int = 0,
         ) -> None:
@@ -504,6 +620,7 @@ def launch_model_editor() -> None:
             self.selected_segment_name = selected_segment_name
             self.axes = axes
             self.virtual_markers = virtual_markers
+            self.virtual_feature_c3d_data = {} if virtual_feature_c3d_data is None else virtual_feature_c3d_data
             self.current_vectors = current_vectors
             self.current_origin_markers = current_origin_markers
             self.frame_index = frame_index
@@ -537,13 +654,26 @@ def launch_model_editor() -> None:
                             segment_index,
                         )
                     )
+            referenced_virtual_marker_names = self._referenced_virtual_marker_names()
+            virtual_marker_records = []
             for marker in self.virtual_markers:
-                if marker.segment_name != self.selected_segment_name or marker.name not in self.c3d_data.marker_names:
+                if (
+                    marker.segment_name != self.selected_segment_name
+                    and marker.name not in referenced_virtual_marker_names
+                ):
                     continue
-                point = _marker_frame_position(self.c3d_data, marker.name, self.frame_index)
+                point = self._virtual_marker_position(marker)
                 if point is None:
                     continue
-                marker_records.append((marker.name, point, marker.segment_name, False, -1))
+                virtual_marker_records.append((marker.name, point, marker.segment_name, False, -1))
+            marker_records.extend(virtual_marker_records)
+            virtual_axis_segments = []
+            for axis in self.axes:
+                if not _is_virtual_feature_axis(axis):
+                    continue
+                start, end = self._line_points_from_axis_definition(axis)
+                if start is not None and end is not None:
+                    virtual_axis_segments.append((axis.name, start, end))
             axis_segments = []
             for axis in self.axes:
                 if _is_virtual_feature_axis(axis):
@@ -553,7 +683,7 @@ def launch_model_editor() -> None:
                     axis_segments.append((axis.axis, axis.keep_vector, start, end))
             saved_origins = []
             for axis in self.axes:
-                origin = _mean_frame_position(self.c3d_data, axis.origin_markers, self.frame_index)
+                origin = self._mean_source_position(axis.origin_markers)
                 if origin is not None:
                     saved_origins.append(origin)
             temporary_segments = []
@@ -561,11 +691,13 @@ def launch_model_editor() -> None:
                 start, end = self._line_points_from_axis_sources(start_markers, end_markers)
                 if start is not None and end is not None:
                     temporary_segments.append((axis_name, keep_vector, start, end))
-            temporary_origin = _mean_frame_position(self.c3d_data, self.current_origin_markers, self.frame_index)
+            temporary_origin = self._mean_source_position(self.current_origin_markers)
             points = [point for _, point, _, _, _ in marker_records]
             for _, _, start, end in axis_segments:
                 points.extend((start, end))
             for _, _, start, end in temporary_segments:
+                points.extend((start, end))
+            for _, start, end in virtual_axis_segments:
                 points.extend((start, end))
             points.extend(saved_origins)
             if temporary_origin is not None:
@@ -574,11 +706,13 @@ def launch_model_editor() -> None:
                 painter.drawText(self.rect(), qt_alignment_center, "No visible marker for the selected segment")
                 return
             projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points]
-            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
+            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF, self.zoom)
 
             _set_preview_label_font(painter)
             label_marker_names = set(self.label_marker_names)
-            for marker_name, point, segment_name, is_technical, segment_index in marker_records:
+            for marker_name, point, segment_name, is_technical, segment_index in sorted(
+                marker_records, key=lambda record: _preview_depth(record[1], self.yaw, self.pitch)
+            ):
                 is_selected = segment_name == self.selected_segment_name
                 color = QColor("#7c3aed") if segment_index < 0 else QColor(_segment_preview_color(segment_index))
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
@@ -610,6 +744,16 @@ def launch_model_editor() -> None:
                     transform(_rotate_preview_point(end, self.yaw, self.pitch)),
                 )
 
+            for axis_name, start, end in virtual_axis_segments:
+                pen = QPen(QColor("#7c3aed"), 2)
+                pen.setStyle(qt_dash_line)
+                painter.setPen(pen)
+                start_screen = transform(_rotate_preview_point(start, self.yaw, self.pitch))
+                end_screen = transform(_rotate_preview_point(end, self.yaw, self.pitch))
+                painter.drawLine(start_screen, end_screen)
+                painter.setPen(QPen(QColor("#7c3aed"), 1))
+                painter.drawText(end_screen.x() + 5, end_screen.y() - 5, axis_name)
+
             painter.setBrush(QColor("#111827"))
             painter.setPen(QPen(QColor("#111827"), 1))
             for origin in saved_origins:
@@ -623,20 +767,248 @@ def launch_model_editor() -> None:
                 painter.drawRect(int(center.x()) - 5, int(center.y()) - 5, 10, 10)
                 self._draw_local_frame(painter, transform, temporary_origin, temporary_segments, points)
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
+            _draw_preview_interaction_hint(painter, self.width())
 
         def _line_points_from_axis_sources(
             self, start_markers: tuple[str, ...], end_markers: tuple[str, ...]
         ) -> tuple[tuple[float, float, float] | None, tuple[float, float, float] | None]:
             reference_axis = _virtual_axis_from_source_names(start_markers, self.axes)
             if reference_axis is not None:
-                return (
-                    _mean_frame_position(self.c3d_data, reference_axis.start_markers, self.frame_index),
-                    _mean_frame_position(self.c3d_data, reference_axis.end_markers, self.frame_index),
-                )
-            return (
-                _mean_frame_position(self.c3d_data, start_markers, self.frame_index),
-                _mean_frame_position(self.c3d_data, end_markers, self.frame_index),
+                return self._line_points_from_axis_definition(reference_axis)
+            return (self._mean_source_position(start_markers), self._mean_source_position(end_markers))
+
+        def _line_points_from_axis_definition(
+            self, axis
+        ) -> tuple[tuple[float, float, float] | None, tuple[float, float, float] | None]:
+            if _is_virtual_feature_axis(axis):
+                sara_line = self._sara_axis_line(axis)
+                if sara_line != (None, None):
+                    return sara_line
+            start = self._mean_source_position(axis.start_markers)
+            end = self._mean_source_position(axis.end_markers)
+            if start is not None and end is not None:
+                return start, end
+            origin = self._mean_source_position(axis.origin_markers)
+            if origin is None or start is None:
+                return start, end
+            vector = np.asarray(start, dtype=float) - np.asarray(origin, dtype=float)
+            if np.linalg.norm(vector) < 1e-12:
+                return start, end
+            end = tuple(float(value) for value in np.asarray(origin, dtype=float) + vector)
+            return origin, end
+
+        def _mean_source_position(self, source_names: tuple[str, ...]) -> tuple[float, float, float] | None:
+            points = [self._source_position(source_name) for source_name in source_names]
+            points = [point for point in points if point is not None]
+            if len(points) == 0:
+                return None
+            point = np.nanmean(np.asarray(points, dtype=float), axis=0)
+            if np.any(~np.isfinite(point)):
+                return None
+            return tuple(float(value) for value in point)
+
+        def _source_position(self, source_name: str) -> tuple[float, float, float] | None:
+            if self.c3d_data is None or source_name == "":
+                return None
+            if source_name in self.c3d_data.marker_names:
+                return _marker_frame_position(self.c3d_data, source_name, self.frame_index)
+            virtual_marker = next((marker for marker in self.virtual_markers if marker.name == source_name), None)
+            if virtual_marker is None:
+                return None
+            return self._virtual_marker_position(virtual_marker)
+
+        def _virtual_marker_position(self, marker) -> tuple[float, float, float] | None:
+            if marker.name in self.c3d_data.marker_names:
+                return _marker_frame_position(self.c3d_data, marker.name, self.frame_index)
+            if marker.method == "marker_mean":
+                return self._mean_source_position(_split_marker_names(marker.source))
+            if marker.method == "axis_projection":
+                return self._axis_projection_marker_position(marker)
+            if marker.method == "score":
+                return self._score_virtual_marker_position(marker)
+            return self._functional_marker_preview_fallback(marker)
+
+        def _axis_projection_marker_position(self, marker) -> tuple[float, float, float] | None:
+            point = self._mean_source_position(_axis_projection_point_markers_from_payload(marker.source))
+            axis_name, axis_start_markers, axis_end_markers = _axis_projection_axis_from_payload(marker.equation)
+            if axis_name:
+                axis = next((candidate for candidate in self.axes if candidate.name == axis_name), None)
+                if axis is None:
+                    return point
+                axis_start, axis_end = self._line_points_from_axis_definition(axis)
+            else:
+                axis_start = self._mean_source_position(axis_start_markers)
+                axis_end = self._mean_source_position(axis_end_markers)
+            if point is None or axis_start is None or axis_end is None:
+                return point
+            axis_start_array = np.asarray(axis_start, dtype=float)
+            axis_vector = np.asarray(axis_end, dtype=float) - axis_start_array
+            norm = float(np.linalg.norm(axis_vector))
+            if norm < 1e-12:
+                return point
+            axis_unit = axis_vector / norm
+            projected = axis_start_array + axis_unit * np.dot(
+                np.asarray(point, dtype=float) - axis_start_array, axis_unit
             )
+            return tuple(float(value) for value in projected)
+
+        def _functional_marker_preview_fallback(self, marker) -> tuple[float, float, float] | None:
+            payload = _key_value_payload(marker.source)
+            for key in ("fallback", "point"):
+                marker_names = _split_marker_names(payload.get(key, ""))
+                point = self._mean_source_position(marker_names)
+                if point is not None:
+                    return point
+            return None
+
+        def _score_virtual_marker_position(self, marker) -> tuple[float, float, float] | None:
+            payload = _key_value_payload(marker.source)
+            parent_marker_names = _split_marker_names(payload.get("parent markers", ""))
+            child_marker_names = _split_marker_names(payload.get("child markers", ""))
+            functional_data = self._feature_c3d_data(marker.source)
+            preview_data = self.c3d_data
+            if functional_data is None or preview_data is None:
+                return None
+            if len(parent_marker_names) == 0 or len(child_marker_names) == 0:
+                return None
+            if any(
+                marker_name not in functional_data.marker_names
+                for marker_name in parent_marker_names + child_marker_names
+            ):
+                return None
+            if any(
+                marker_name not in preview_data.marker_names for marker_name in parent_marker_names + child_marker_names
+            ):
+                return None
+            cache_key = (id(functional_data), parent_marker_names, child_marker_names)
+            if cache_key in self._score_solution_cache:
+                cor_parent_local, cor_child_local = self._score_solution_cache[cache_key]
+            else:
+                try:
+                    from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
+                    from ..model_modifiers.joint_center_tool import Score
+
+                    parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
+                    child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
+                    rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                        functional_data=parent_functional_marker_data
+                    )
+                    rt_child_func = SegmentCoordinateSystemUtils.rigidify(functional_data=child_functional_marker_data)
+                    _, cor_parent_local, cor_child_local, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
+                    self._score_solution_cache[cache_key] = (cor_parent_local, cor_child_local)
+                except Exception:
+                    return None
+            try:
+                from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
+
+                parent_preview_marker_data = preview_data.get_partial_dict_data(parent_marker_names)
+                child_preview_marker_data = preview_data.get_partial_dict_data(child_marker_names)
+                rt_parent_preview = SegmentCoordinateSystemUtils.rigidify(parent_preview_marker_data)
+                rt_child_preview = SegmentCoordinateSystemUtils.rigidify(child_preview_marker_data)
+            except Exception:
+                return None
+            frame_index = max(0, min(self.frame_index, len(rt_parent_preview) - 1))
+            parent_cor = (
+                rt_parent_preview[frame_index] @ np.hstack((np.asarray(cor_parent_local).reshape(3), 1))
+            ).reshape(4)[:3]
+            child_cor = (
+                rt_child_preview[frame_index] @ np.hstack((np.asarray(cor_child_local).reshape(3), 1))
+            ).reshape(4)[:3]
+            cor = 0.5 * (parent_cor + child_cor)
+            return tuple(float(value) for value in cor)
+
+        def _sara_axis_line(self, axis) -> tuple[tuple[float, float, float] | None, tuple[float, float, float] | None]:
+            functional_data = self._feature_c3d_data(axis.source)
+            preview_data = self.c3d_data
+            if functional_data is None or preview_data is None:
+                return (None, None)
+            payload = _key_value_payload(axis.source)
+            parent_marker_names = _split_marker_names(payload.get("parent markers", ""))
+            child_marker_names = _split_marker_names(payload.get("child markers", ""))
+            expected_start_markers = (
+                tuple(axis.start_markers) or _split_marker_names(payload.get("expected axis", ""))[:1]
+            )
+            expected_end_markers = tuple(axis.end_markers) or _split_marker_names(payload.get("expected axis", ""))[1:]
+            origin_markers = tuple(axis.origin_markers) or _split_marker_names(payload.get("origin markers", ""))
+            if len(parent_marker_names) == 0 or len(child_marker_names) == 0:
+                return (None, None)
+            required_functional_markers = (
+                parent_marker_names + child_marker_names + expected_start_markers + expected_end_markers
+            )
+            if any(marker_name not in functional_data.marker_names for marker_name in required_functional_markers):
+                return (None, None)
+            if any(
+                marker_name not in preview_data.marker_names
+                for marker_name in origin_markers + expected_start_markers + expected_end_markers
+            ):
+                return (None, None)
+            try:
+                from ..components.generic.rigidbody.segment_coordinate_system import SegmentCoordinateSystemUtils
+                from ..model_modifiers.joint_center_tool import Sara
+
+                parent_preview_marker_data = preview_data.get_partial_dict_data(parent_marker_names)
+                child_preview_marker_data = preview_data.get_partial_dict_data(child_marker_names)
+                parent_functional_marker_data = functional_data.get_partial_dict_data(parent_marker_names)
+                child_functional_marker_data = functional_data.get_partial_dict_data(child_marker_names)
+                rt_parent_func = SegmentCoordinateSystemUtils.rigidify(
+                    functional_data=parent_functional_marker_data,
+                    static_data=parent_preview_marker_data,
+                )
+                rt_child_func = SegmentCoordinateSystemUtils.rigidify(
+                    functional_data=child_functional_marker_data,
+                    static_data=child_preview_marker_data,
+                )
+                original_axis_global = _mean_marker_series(
+                    functional_data,
+                    expected_end_markers,
+                ) - _mean_marker_series(functional_data, expected_start_markers)
+                origin_positions_global = (
+                    functional_data.markers_center_position(origin_markers) if len(origin_markers) != 0 else None
+                )
+                aor_mean_global, _, _, cor_mean_global, _, _, _, _ = Sara.perform_algorithm(
+                    rt_parent=rt_parent_func,
+                    rt_child=rt_child_func,
+                    original_axis_global=original_axis_global,
+                    origin_positions_global=origin_positions_global,
+                )
+            except Exception:
+                return (None, None)
+            frame_index = max(0, min(self.frame_index, preview_data.nb_frames - 1))
+            origin_preview = self._mean_source_position(origin_markers)
+            start_global = (
+                np.asarray(origin_preview, dtype=float)
+                if origin_preview is not None
+                else np.asarray(cor_mean_global, dtype=float).reshape(3)
+            )
+            direction_global = np.asarray(aor_mean_global, dtype=float).reshape(3)
+            start_point = tuple(float(value) for value in start_global)
+            raw_end_point = tuple(float(value) for value in start_global + direction_global)
+            end_point = _scaled_axis_end_point(
+                preview_data, start_point, raw_end_point, required_functional_markers, frame_index
+            )
+            return start_point, end_point
+
+        def _feature_c3d_data(self, source: str):
+            c3d_name = _c3d_source_name_from_virtual_feature_source(source)
+            if c3d_name and c3d_name in self.virtual_feature_c3d_data:
+                return self.virtual_feature_c3d_data[c3d_name]
+            trial_name = _trial_name_from_virtual_feature_source(source)
+            if trial_name and trial_name in self.virtual_feature_c3d_data:
+                return self.virtual_feature_c3d_data[trial_name]
+            return None
+
+        def _referenced_virtual_marker_names(self) -> set[str]:
+            referenced_names = set(self.current_origin_markers)
+            for _, start_markers, end_markers, _ in self.current_vectors:
+                referenced_names.update(start_markers)
+                referenced_names.update(end_markers)
+            for axis in self.axes:
+                if _is_virtual_feature_axis(axis):
+                    continue
+                referenced_names.update(axis.origin_markers)
+                referenced_names.update(axis.start_markers)
+                referenced_names.update(axis.end_markers)
+            return {marker.name for marker in self.virtual_markers if marker.name in referenced_names}
 
         def _draw_local_frame(self, painter, transform, origin, temporary_segments, scene_points) -> None:
             local_axes = _orthonormal_axes_from_vector_segments(temporary_segments)
@@ -657,18 +1029,19 @@ def launch_model_editor() -> None:
                 painter.drawText(endpoint_screen.x() + 4, endpoint_screen.y() - 4, axis_name.upper())
 
         def mousePressEvent(self, event) -> None:
-            self._last_mouse_position = get_event_position(event)
+            _start_preview_camera_drag(self, event)
 
         def mouseMoveEvent(self, event) -> None:
-            if self._last_mouse_position is None:
-                self._last_mouse_position = get_event_position(event)
-                return
-            position = get_event_position(event)
-            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
-            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
-            self.pitch = max(-1.4, min(1.4, self.pitch))
-            self._last_mouse_position = position
-            self.update()
+            _drag_preview_camera(self, event)
+
+        def mouseReleaseEvent(self, event) -> None:
+            _end_preview_camera_drag(self)
+
+        def mouseDoubleClickEvent(self, event) -> None:
+            _reset_preview_camera(self)
+
+        def wheelEvent(self, event) -> None:
+            _zoom_preview_camera(self, event)
 
     class C3dVirtualMarkerPreviewWidget(QWidget):
         """
@@ -692,9 +1065,7 @@ def launch_model_editor() -> None:
             self.frame_index = 0
             self.show_whole_body = False
             self._score_solution_cache = {}
-            self.yaw = -0.6
-            self.pitch = 0.35
-            self._last_mouse_position = None
+            _initialize_preview_camera(self)
 
         def set_context(
             self,
@@ -817,10 +1188,12 @@ def launch_model_editor() -> None:
                 focus_points.extend((start_point, end_point))
             points_to_fit = points if self.show_whole_body or len(focus_points) == 0 else focus_points
             projected_points = [_rotate_preview_point(point, self.yaw, self.pitch) for point in points_to_fit]
-            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
+            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF, self.zoom)
 
             _set_preview_label_font(painter)
-            for marker_name, point, segment_name, is_technical, segment_index, is_highlighted in marker_records:
+            for marker_name, point, segment_name, is_technical, segment_index, is_highlighted in sorted(
+                marker_records, key=lambda record: _preview_depth(record[1], self.yaw, self.pitch)
+            ):
                 color = QColor(_segment_preview_color(segment_index)) if is_highlighted else QColor("#cbd5e1")
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 if is_technical:
@@ -834,7 +1207,9 @@ def launch_model_editor() -> None:
 
             painter.setPen(QPen(QColor("#7c3aed"), 2))
             painter.setBrush(QColor("#7c3aed"))
-            for marker_name, point, segment_name in virtual_points:
+            for marker_name, point, segment_name in sorted(
+                virtual_points, key=lambda record: _preview_depth(record[1], self.yaw, self.pitch)
+            ):
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
                 painter.drawEllipse(center, 7, 7)
                 painter.drawText(center.x() + 8, center.y() - 8, marker_name)
@@ -872,6 +1247,7 @@ def launch_model_editor() -> None:
             if self.preview_source_label:
                 painter.drawText(12, self.height() - 12, f"Preview: {self.preview_source_label}")
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
+            _draw_preview_interaction_hint(painter, self.width())
             self._draw_legend(painter)
 
         def _technical_segment_center(self, segment_name: str) -> tuple[float, float, float] | None:
@@ -1049,18 +1425,19 @@ def launch_model_editor() -> None:
             _draw_legend_point(painter, QPointF(20, 92), QColor("#cbd5e1"), "Other functional C3D marker", 36, 96)
 
         def mousePressEvent(self, event) -> None:
-            self._last_mouse_position = get_event_position(event)
+            _start_preview_camera_drag(self, event)
 
         def mouseMoveEvent(self, event) -> None:
-            if self._last_mouse_position is None:
-                self._last_mouse_position = get_event_position(event)
-                return
-            position = get_event_position(event)
-            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
-            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
-            self.pitch = max(-1.4, min(1.4, self.pitch))
-            self._last_mouse_position = position
-            self.update()
+            _drag_preview_camera(self, event)
+
+        def mouseReleaseEvent(self, event) -> None:
+            _end_preview_camera_drag(self)
+
+        def mouseDoubleClickEvent(self, event) -> None:
+            _reset_preview_camera(self)
+
+        def wheelEvent(self, event) -> None:
+            _zoom_preview_camera(self, event)
 
     class C3dTechnicalSegmentPreviewWidget(QWidget):
         """
@@ -1075,9 +1452,7 @@ def launch_model_editor() -> None:
             self.groups = ()
             self.selected_segment_name = ""
             self.frame_index = 0
-            self.yaw = -0.6
-            self.pitch = 0.35
-            self._last_mouse_position = None
+            _initialize_preview_camera(self)
 
         def set_context(
             self, c3d_data, groups: tuple[object, ...], selected_segment_name: str, frame_index: int
@@ -1118,10 +1493,12 @@ def launch_model_editor() -> None:
             projected_points = [
                 _rotate_preview_point(point, self.yaw, self.pitch) for _, point, _, _, _ in marker_records
             ]
-            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF)
+            transform = _fit_projection(projected_points, self.width(), self.height(), QPointF, self.zoom)
 
             _set_preview_label_font(painter)
-            for marker_name, point, segment_name, is_technical, segment_index in marker_records:
+            for marker_name, point, segment_name, is_technical, segment_index in sorted(
+                marker_records, key=lambda record: _preview_depth(record[1], self.yaw, self.pitch)
+            ):
                 is_selected = segment_name == self.selected_segment_name
                 color = QColor(_segment_preview_color(segment_index))
                 center = transform(_rotate_preview_point(point, self.yaw, self.pitch))
@@ -1138,6 +1515,7 @@ def launch_model_editor() -> None:
                     painter.drawText(center.x() + 6, center.y() - 6, marker_name)
 
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
+            _draw_preview_interaction_hint(painter, self.width())
             self._draw_legend(painter)
 
         def _draw_legend(self, painter) -> None:
@@ -1153,18 +1531,19 @@ def launch_model_editor() -> None:
             painter.drawText(36, 62, "Technical")
 
         def mousePressEvent(self, event) -> None:
-            self._last_mouse_position = get_event_position(event)
+            _start_preview_camera_drag(self, event)
 
         def mouseMoveEvent(self, event) -> None:
-            if self._last_mouse_position is None:
-                self._last_mouse_position = get_event_position(event)
-                return
-            position = get_event_position(event)
-            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
-            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
-            self.pitch = max(-1.4, min(1.4, self.pitch))
-            self._last_mouse_position = position
-            self.update()
+            _drag_preview_camera(self, event)
+
+        def mouseReleaseEvent(self, event) -> None:
+            _end_preview_camera_drag(self)
+
+        def mouseDoubleClickEvent(self, event) -> None:
+            _reset_preview_camera(self)
+
+        def wheelEvent(self, event) -> None:
+            _zoom_preview_camera(self, event)
 
     class C3dModelCreationDialog(QDialog):
         """
@@ -1501,20 +1880,31 @@ def launch_model_editor() -> None:
             input_layout.addWidget(self.status_label)
             layout.addWidget(input_group)
 
-            workflow_tabs = QTabWidget()
-            workflow_tabs.addTab(self._pipeline_workflow_tab(), "Pipeline")
-            workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
-            workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers and axes")
-            workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
-            workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
-            workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
-            workflow_tabs.addTab(self.issue_list, "Checks")
-            workflow_tabs.addTab(self.example_list, "Examples")
-            workflow_tabs.addTab(self.summary_label, "Summary")
-            layout.addWidget(workflow_tabs)
+            self.workflow_tabs = QTabWidget()
+            self.workflow_tabs.addTab(self._pipeline_workflow_tab(), "Pipeline")
+            self.workflow_tabs.addTab(self._segment_workflow_tab(), "Technical segment")
+            self.workflow_tabs.addTab(self._virtual_marker_workflow_tab(), "Virtual markers and axes")
+            self.workflow_tabs.addTab(self._anatomical_segment_workflow_tab(), "Anatomical segment")
+            self.workflow_tabs.addTab(self._segment_settings_workflow_tab(), "Segment settings")
+            self.workflow_tabs.addTab(self._file_role_workflow_tab(), "C3D names")
+            self.workflow_tabs.addTab(self.issue_list, "Checks")
+            self.workflow_tabs.addTab(self.example_list, "Examples")
+            self.workflow_tabs.addTab(self.summary_label, "Summary")
+
+            workflow_splitter = QSplitter(qt_horizontal)
+            workflow_splitter.addWidget(self.workflow_tabs)
+            workflow_splitter.addWidget(self._workflow_preview_panel())
+            workflow_splitter.setStretchFactor(0, 2)
+            workflow_splitter.setStretchFactor(1, 1)
+            workflow_splitter.setCollapsible(0, False)
+            workflow_splitter.setCollapsible(1, False)
+            workflow_splitter.setSizes([920, 460])
+            self.workflow_tabs.currentChanged.connect(self._sync_workflow_preview_panel)
+            layout.addWidget(workflow_splitter, 1)
             layout.addWidget(buttons)
-            self.resize(900, 650)
+            self.resize(1280, 760)
             self._update_preset_details()
+            self._sync_workflow_preview_panel(self.workflow_tabs.currentIndex())
 
         def selected_preset(self) -> C3dModelPreset:
             """
@@ -1544,6 +1934,105 @@ def launch_model_editor() -> None:
             layout.addLayout(log_row)
             layout.addWidget(self.generation_log_edit)
             return widget
+
+        def _workflow_preview_panel(self):
+            """
+            Build the fixed right-hand 3D preview area shared by the workflow tabs.
+            """
+            panel = QWidget()
+            panel.setObjectName("WorkflowPreviewPanel")
+            panel.setMinimumWidth(360)
+            layout = QVBoxLayout(panel)
+            _configure_panel_layout(layout)
+            self.workflow_preview_stack = QStackedWidget()
+            self.workflow_preview_empty_index = self.workflow_preview_stack.addWidget(
+                self._empty_workflow_preview_page()
+            )
+            self.workflow_preview_technical_index = self.workflow_preview_stack.addWidget(
+                self._technical_workflow_preview_page()
+            )
+            self.workflow_preview_virtual_index = self.workflow_preview_stack.addWidget(
+                self._virtual_marker_workflow_preview_page()
+            )
+            self.workflow_preview_anatomical_index = self.workflow_preview_stack.addWidget(
+                self._anatomical_workflow_preview_page()
+            )
+            layout.addWidget(self.workflow_preview_stack, 1)
+            return panel
+
+        def _empty_workflow_preview_page(self):
+            page = QWidget()
+            layout = QVBoxLayout(page)
+            _configure_panel_layout(layout, margin=0)
+            layout.addWidget(_section_label("3D preview"))
+            empty_label = _muted_label(
+                "The fixed preview is used while assigning technical markers, defining virtual markers and axes, "
+                "or building anatomical segment frames."
+            )
+            empty_label.setAlignment(qt_alignment_center)
+            layout.addWidget(empty_label, 1)
+            return page
+
+        def _technical_workflow_preview_page(self):
+            page = QWidget()
+            layout = QVBoxLayout(page)
+            _configure_panel_layout(layout, margin=0)
+            layout.addWidget(_section_label("Technical segment preview"))
+            frame_row = QHBoxLayout()
+            _configure_panel_layout(frame_row, margin=0, spacing=8)
+            frame_row.addWidget(QLabel("Frame"))
+            frame_row.addWidget(self.technical_frame_slider, 1)
+            frame_row.addWidget(self.technical_frame_label)
+            layout.addLayout(frame_row)
+            layout.addWidget(self.technical_segment_preview, 1)
+            return page
+
+        def _virtual_marker_workflow_preview_page(self):
+            page = QWidget()
+            layout = QVBoxLayout(page)
+            _configure_panel_layout(layout, margin=0)
+            layout.addWidget(_section_label("Virtual marker/axis preview"))
+            options_row = QHBoxLayout()
+            _configure_panel_layout(options_row, margin=0, spacing=8)
+            options_row.addWidget(self.virtual_marker_show_functional_c3d_checkbox)
+            options_row.addWidget(self.virtual_marker_whole_body_preview_checkbox)
+            options_row.addStretch()
+            layout.addLayout(options_row)
+            frame_row = QHBoxLayout()
+            _configure_panel_layout(frame_row, margin=0, spacing=8)
+            frame_row.addWidget(self.virtual_marker_frame_label)
+            frame_row.addWidget(self.virtual_marker_frame_slider, 1)
+            layout.addLayout(frame_row)
+            layout.addWidget(self.virtual_marker_preview, 1)
+            return page
+
+        def _anatomical_workflow_preview_page(self):
+            page = QWidget()
+            layout = QVBoxLayout(page)
+            _configure_panel_layout(layout, margin=0)
+            layout.addWidget(_section_label("Anatomical frame preview"))
+            frame_row = QHBoxLayout()
+            _configure_panel_layout(frame_row, margin=0, spacing=8)
+            frame_row.addWidget(QLabel("Frame"))
+            frame_row.addWidget(self.anatomical_frame_slider, 1)
+            frame_row.addWidget(self.anatomical_frame_label)
+            layout.addLayout(frame_row)
+            layout.addWidget(self.segment_axis_preview, 1)
+            return page
+
+        def _sync_workflow_preview_panel(self, tab_index: int) -> None:
+            """
+            Show the preview that matches the active construction step.
+            """
+            tab_text = self.workflow_tabs.tabText(tab_index)
+            preview_index = self.workflow_preview_anatomical_index
+            if tab_text == "Pipeline":
+                preview_index = self.workflow_preview_empty_index
+            if tab_text == "Technical segment":
+                preview_index = self.workflow_preview_technical_index
+            elif tab_text == "Virtual markers and axes":
+                preview_index = self.workflow_preview_virtual_index
+            self.workflow_preview_stack.setCurrentIndex(preview_index)
 
         def _segment_workflow_tab(self):
             widget = QWidget()
@@ -1596,20 +2085,7 @@ def launch_model_editor() -> None:
             controls_column.addLayout(marker_row)
             controls_column.addStretch()
 
-            preview_column = QVBoxLayout()
-            _configure_panel_layout(preview_column, margin=0)
-            preview_row = QHBoxLayout()
-            _configure_panel_layout(preview_row, margin=0, spacing=8)
-            preview_row.addWidget(_section_label("Frame"))
-            preview_row.addWidget(self.technical_frame_slider)
-            preview_row.addWidget(self.technical_frame_label)
-            preview_column.addLayout(preview_row)
-            preview_column.addWidget(self.technical_segment_preview, 1)
-
-            layout.addLayout(controls_column, 2)
-            layout.addLayout(preview_column, 1)
-            layout.setStretch(0, 2)
-            layout.setStretch(1, 1)
+            layout.addLayout(controls_column, 1)
             return widget
 
         def _anatomical_segment_workflow_tab(self):
@@ -1649,26 +2125,18 @@ def launch_model_editor() -> None:
             axis_layout.addLayout(source_column, 0)
             axis_layout.addLayout(_axis_vectors_layout(self.axis_vector_controls), 1)
             controls_column.addLayout(axis_layout)
-            controls_column.addWidget(_section_label("Saved anatomical vectors"))
+            controls_column.addWidget(self.save_segment_axis_button)
+            controls_column.addWidget(_section_label("Saved anatomical frames"))
+            controls_column.addWidget(
+                _muted_label(
+                    "One saved frame recipe per segment: origin + vector 1 + vector 2. "
+                    "The third axis is computed automatically."
+                )
+            )
             controls_column.addWidget(self.axis_list)
             controls_column.addStretch()
 
-            preview_column = QVBoxLayout()
-            _configure_panel_layout(preview_column, margin=0)
-            preview_column.addWidget(_section_label("Dynamic frame preview"))
-            preview_frame_row = QHBoxLayout()
-            _configure_panel_layout(preview_frame_row, margin=0, spacing=8)
-            preview_frame_row.addWidget(QLabel("Frame"))
-            preview_frame_row.addWidget(self.anatomical_frame_slider, 1)
-            preview_frame_row.addWidget(self.anatomical_frame_label)
-            preview_column.addLayout(preview_frame_row)
-            preview_column.addWidget(self.segment_axis_preview, 1)
-            preview_column.addWidget(self.save_segment_axis_button)
-
-            layout.addLayout(controls_column, 2)
-            layout.addLayout(preview_column, 1)
-            layout.setStretch(0, 2)
-            layout.setStretch(1, 1)
+            layout.addLayout(controls_column, 1)
             return widget
 
         def _virtual_marker_workflow_tab(self):
@@ -1713,24 +2181,37 @@ def launch_model_editor() -> None:
 
             self.virtual_marker_projection_group = QGroupBox("Projection on axis: project marker(s) onto an axis")
             projection_layout = QGridLayout(self.virtual_marker_projection_group)
-            projection_layout.setHorizontalSpacing(8)
+            projection_layout.setHorizontalSpacing(14)
             projection_layout.setVerticalSpacing(6)
-            projection_layout.addWidget(QLabel("Available markers and axes"), 0, 0, 1, 2)
-            projection_layout.addWidget(QLabel("Marker(s) to project"), 0, 2, 1, 2)
-            projection_layout.addWidget(QLabel("Projection axis"), 0, 4, 1, 2)
-            projection_layout.addWidget(self.virtual_marker_projection_available_list, 1, 0, 2, 2)
-            projection_marker_buttons = QVBoxLayout()
-            projection_marker_buttons.addWidget(self.add_projected_marker_button)
-            projection_marker_buttons.addWidget(self.remove_projected_marker_button)
-            projection_marker_buttons.addStretch()
-            projection_layout.addLayout(projection_marker_buttons, 1, 2)
-            projection_layout.addWidget(self.virtual_marker_projected_marker_list, 1, 3)
-            projection_axis_buttons = QVBoxLayout()
-            projection_axis_buttons.addWidget(self.add_projection_axis_button)
-            projection_axis_buttons.addWidget(self.remove_projection_axis_button)
-            projection_axis_buttons.addStretch()
-            projection_layout.addLayout(projection_axis_buttons, 1, 4)
-            projection_layout.addWidget(self.virtual_marker_projection_axis_list, 1, 5)
+            projection_layout.addWidget(QLabel("Available markers and axes"), 0, 0)
+            projection_layout.addWidget(self.virtual_marker_projection_available_list, 1, 0)
+            projection_layout.addLayout(
+                _list_with_side_buttons(
+                    "Marker(s) to project",
+                    self.virtual_marker_projected_marker_list,
+                    self.add_projected_marker_button,
+                    self.remove_projected_marker_button,
+                ),
+                0,
+                1,
+                2,
+                1,
+            )
+            projection_layout.addLayout(
+                _list_with_side_buttons(
+                    "Projection axis",
+                    self.virtual_marker_projection_axis_list,
+                    self.add_projection_axis_button,
+                    self.remove_projection_axis_button,
+                ),
+                0,
+                2,
+                2,
+                1,
+            )
+            projection_layout.setColumnStretch(0, 1)
+            projection_layout.setColumnStretch(1, 1)
+            projection_layout.setColumnStretch(2, 1)
             form_column.addWidget(self.virtual_marker_projection_group)
 
             form_column.addWidget(_section_label("Technical markers used"))
@@ -1741,24 +2222,7 @@ def launch_model_editor() -> None:
             form_column.addStretch()
             controls_layout.addLayout(form_column)
 
-            preview_column = QVBoxLayout()
-            _configure_panel_layout(preview_column, margin=0)
-            preview_column.addWidget(_section_label("3D placement preview"))
-            preview_options = QHBoxLayout()
-            _configure_panel_layout(preview_options, margin=0, spacing=8)
-            preview_options.addWidget(self.virtual_marker_show_functional_c3d_checkbox)
-            preview_options.addWidget(self.virtual_marker_whole_body_preview_checkbox)
-            preview_column.addLayout(preview_options)
-            frame_row = QHBoxLayout()
-            _configure_panel_layout(frame_row, margin=0, spacing=8)
-            frame_row.addWidget(self.virtual_marker_frame_label)
-            frame_row.addWidget(self.virtual_marker_frame_slider, 1)
-            preview_column.addLayout(frame_row)
-            preview_column.addWidget(self.virtual_marker_preview, 1)
-            layout.addLayout(controls_layout, 2)
-            layout.addLayout(preview_column, 1)
-            layout.setStretch(0, 2)
-            layout.setStretch(1, 1)
+            layout.addLayout(controls_layout, 1)
             return widget
 
         def _segment_settings_workflow_tab(self):
@@ -1769,58 +2233,84 @@ def launch_model_editor() -> None:
             _configure_panel_layout(left_column, margin=0)
             left_column.addWidget(_section_label("Segments"))
             left_column.addWidget(self.segment_settings_list)
+            self.segment_settings_list.setMinimumWidth(280)
+            self.segment_settings_list.setMaximumWidth(360)
             layout.addLayout(left_column, 1)
 
             form_column = QVBoxLayout()
-            _configure_panel_layout(form_column, margin=0)
-            form = QGridLayout()
-            form.setHorizontalSpacing(10)
-            form.setVerticalSpacing(8)
-            dof_row = QHBoxLayout()
-            _configure_panel_layout(dof_row, margin=0, spacing=8)
-            dof_row.addWidget(QLabel("Translations"))
-            dof_row.addWidget(self.settings_translations_edit)
-            dof_row.addWidget(QLabel("Rotations"))
-            dof_row.addWidget(self.settings_rotations_edit)
-            dof_row.addStretch()
-            form.addWidget(QLabel("DoF axes"), 0, 0)
-            form.addLayout(dof_row, 0, 1, 1, 3)
-            q_range_row = QHBoxLayout()
-            _configure_panel_layout(q_range_row, margin=0, spacing=8)
-            q_range_row.addWidget(QLabel("q min"))
-            q_range_row.addWidget(self.settings_q_min_edit)
-            q_range_row.addWidget(QLabel("q max"))
-            q_range_row.addWidget(self.settings_q_max_edit)
-            q_range_row.addStretch()
-            form.addWidget(QLabel("Bounds"), 1, 0)
-            form.addLayout(q_range_row, 1, 1, 1, 3)
-            form.addWidget(self.settings_child_translation_checkbox, 2, 1, 1, 3)
-            form.addWidget(QLabel("Initial rotation"), 3, 0)
-            form.addWidget(self.settings_initial_rotation_method_combo, 3, 1)
-            form.addWidget(QLabel("Matrix source"), 3, 2)
-            form.addWidget(self.settings_initial_rotation_source_edit, 3, 3)
+            _configure_panel_layout(form_column, margin=0, spacing=12)
+
+            for compact_widget in (
+                self.settings_translations_edit,
+                self.settings_rotations_edit,
+                self.settings_q_min_edit,
+                self.settings_q_max_edit,
+                self.settings_initial_rotation_method_combo,
+                self.settings_initial_rotation_source_edit,
+                self.settings_initial_rotation_c3d_combo,
+                self.settings_segment_length_edit,
+                self.settings_anthropometry_model_combo,
+                self.settings_anthropometry_sex_combo,
+                self.settings_anthropometry_mass_edit,
+            ):
+                compact_widget.setMinimumWidth(130)
+                compact_widget.setMaximumWidth(240)
+
+            dof_form = QGridLayout()
+            dof_form.setHorizontalSpacing(10)
+            dof_form.setVerticalSpacing(8)
+            dof_form.addWidget(QLabel("Translations"), 0, 0)
+            dof_form.addWidget(self.settings_translations_edit, 0, 1)
+            dof_form.addWidget(QLabel("Rotations"), 0, 2)
+            dof_form.addWidget(self.settings_rotations_edit, 0, 3)
+            dof_form.addWidget(QLabel("q min"), 1, 0)
+            dof_form.addWidget(self.settings_q_min_edit, 1, 1)
+            dof_form.addWidget(QLabel("q max"), 1, 2)
+            dof_form.addWidget(self.settings_q_max_edit, 1, 3)
+            dof_form.addWidget(self.settings_child_translation_checkbox, 2, 1, 1, 3)
+            dof_form.setColumnStretch(4, 1)
+            form_column.addWidget(_layout_group("DoF axes and bounds", dof_form))
+
+            rotation_form = QGridLayout()
+            rotation_form.setHorizontalSpacing(10)
+            rotation_form.setVerticalSpacing(8)
+            rotation_form.addWidget(QLabel("Initial rotation"), 0, 0)
+            rotation_form.addWidget(self.settings_initial_rotation_method_combo, 0, 1)
+            rotation_form.addWidget(QLabel("Matrix source"), 0, 2)
+            rotation_form.addWidget(self.settings_initial_rotation_source_edit, 0, 3)
             anatomical_c3d_row = QHBoxLayout()
             _configure_panel_layout(anatomical_c3d_row, margin=0, spacing=8)
             anatomical_c3d_row.addWidget(self.settings_initial_rotation_c3d_combo)
             anatomical_c3d_row.addWidget(self.browse_initial_rotation_c3d_button)
             anatomical_c3d_row.addStretch()
-            form.addWidget(QLabel("Anatomical C3D"), 4, 0)
-            form.addLayout(anatomical_c3d_row, 4, 1, 1, 3)
-            form.addWidget(QLabel("Segment length"), 5, 0)
-            form.addWidget(self.settings_segment_length_edit, 5, 1)
-            form.addWidget(QLabel("Anthropometry"), 5, 2)
-            form.addWidget(self.settings_anthropometry_model_combo, 5, 3)
-            form.addWidget(QLabel("Length source"), 6, 0)
-            form.addWidget(self.settings_segment_length_source_label, 6, 1, 1, 3)
-            form.addWidget(QLabel("Sex"), 7, 0)
-            form.addWidget(self.settings_anthropometry_sex_combo, 7, 1)
-            form.addWidget(QLabel("Body mass"), 7, 2)
-            form.addWidget(self.settings_anthropometry_mass_edit, 7, 3)
-            form.setColumnStretch(1, 1)
-            form.setColumnStretch(3, 1)
-            form_column.addWidget(_layout_group("Kinematics and anthropometry", form))
-            form_column.addWidget(self.apply_anthropometry_button)
-            form_column.addWidget(self.edit_segment_settings_button)
+            rotation_form.addWidget(QLabel("Anatomical C3D"), 1, 0)
+            rotation_form.addLayout(anatomical_c3d_row, 1, 1, 1, 3)
+            form_column.addWidget(_layout_group("Initial rotation", rotation_form))
+
+            anthropometry_form = QGridLayout()
+            anthropometry_form.setHorizontalSpacing(10)
+            anthropometry_form.setVerticalSpacing(8)
+            anthropometry_form.addWidget(QLabel("Segment length"), 0, 0)
+            anthropometry_form.addWidget(self.settings_segment_length_edit, 0, 1)
+            anthropometry_form.addWidget(QLabel("Anthropometry"), 0, 2)
+            anthropometry_form.addWidget(self.settings_anthropometry_model_combo, 0, 3)
+            anthropometry_form.addWidget(QLabel("Length source"), 1, 0)
+            anthropometry_form.addWidget(self.settings_segment_length_source_label, 1, 1, 1, 3)
+            anthropometry_form.addWidget(QLabel("Sex"), 2, 0)
+            anthropometry_form.addWidget(self.settings_anthropometry_sex_combo, 2, 1)
+            anthropometry_form.addWidget(QLabel("Body mass"), 2, 2)
+            anthropometry_form.addWidget(self.settings_anthropometry_mass_edit, 2, 3)
+            anthropometry_form.setColumnStretch(4, 1)
+            form_column.addWidget(_layout_group("Anthropometry", anthropometry_form))
+
+            action_row = QHBoxLayout()
+            _configure_panel_layout(action_row, margin=0, spacing=10)
+            self.apply_anthropometry_button.setMinimumWidth(260)
+            self.edit_segment_settings_button.setMinimumWidth(260)
+            action_row.addWidget(self.apply_anthropometry_button)
+            action_row.addWidget(self.edit_segment_settings_button)
+            action_row.addStretch()
+            form_column.addLayout(action_row)
             form_column.addStretch()
             layout.addLayout(form_column, 2)
             return widget
@@ -2448,12 +2938,21 @@ def launch_model_editor() -> None:
                 )
                 return
             try:
-                updated_draft = self.workflow_draft
+                # Saving from this tab replaces the whole local-frame recipe for the selected segment.
+                # Functional axes such as Axis_LKnee_SARA are kept because they are sources, not the final frame.
+                updated_draft = replace(
+                    self.workflow_draft,
+                    axes=tuple(
+                        axis
+                        for axis in self.workflow_draft.axes
+                        if axis.segment_name != segment_name or _is_virtual_feature_axis(axis)
+                    ),
+                )
                 for index, (axis_name, start_markers, end_markers, keep_vector) in enumerate(vector_specs, start=1):
                     method = "sara" if self._contains_virtual_axis_source(start_markers) else "markers"
                     updated_draft = add_axis_to_draft(
                         updated_draft,
-                        name=f"{segment_name}_vector_{index}",
+                        name=f"{segment_name}_frame_vector_{index}",
                         segment_name=segment_name,
                         axis=axis_name,
                         start_markers=start_markers,
@@ -2643,7 +3142,7 @@ def launch_model_editor() -> None:
 
         def _load_selected_segment_axes_into_controls(self) -> None:
             segment_name = self._selected_anatomical_segment_name()
-            axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)[:2]
+            axes = self._local_frame_axes_for_segment(segment_name)[:2]
             self.axis_origin_marker_list.clear()
             origin_markers = axes[0].origin_markers if len(axes) != 0 else ()
             for marker_name in origin_markers:
@@ -2666,6 +3165,15 @@ def launch_model_editor() -> None:
                     controls["end_list"].addItem(marker_name)
                 self._sync_axis_vector_endpoint_state(index)
             self._ensure_single_kept_axis_vector(0)
+
+        def _local_frame_axes_for_segment(self, segment_name: str | None):
+            if segment_name is None:
+                return ()
+            return tuple(
+                axis
+                for axis in self.workflow_draft.axes
+                if axis.segment_name == segment_name and not _is_virtual_feature_axis(axis)
+            )
 
         def _ensure_single_kept_axis_vector(self, selected_index: int) -> None:
             """
@@ -2699,7 +3207,7 @@ def launch_model_editor() -> None:
                 self.anatomical_frame_label.setText(f"Frame {frame_index + 1}/{frame_count}")
             segment_marker_names = tuple(self.workflow_marker_pool)
             label_marker_names = self._marker_names_for_segment(segment_name)
-            segment_axes = tuple(axis for axis in self.workflow_draft.axes if axis.segment_name == segment_name)
+            segment_axes = self._local_frame_axes_for_segment(segment_name)
             current_vector_specs = self._axis_vector_specs()
             referenced_axis_names = {
                 source_name
@@ -2727,10 +3235,35 @@ def launch_model_editor() -> None:
                 segment_name,
                 axes,
                 current_vector_specs,
-                tuple(marker for marker in self.workflow_draft.virtual_markers if marker.segment_name == segment_name),
+                self.workflow_draft.virtual_markers,
+                self._virtual_feature_c3d_preview_data_map(),
                 _list_widget_texts(self.axis_origin_marker_list),
                 frame_index,
             )
+
+        def _virtual_feature_c3d_preview_data_map(self) -> dict[str, object]:
+            c3d_data_by_key = {}
+            for feature in tuple(self.workflow_draft.virtual_markers) + tuple(self.workflow_draft.axes):
+                sources = (getattr(feature, "source", ""), getattr(feature, "equation", ""))
+                for source in sources:
+                    c3d_name = _c3d_source_name_from_virtual_feature_source(source)
+                    trial_name = _trial_name_from_virtual_feature_source(source)
+                    filepath = ""
+                    if c3d_name:
+                        filepath = str(Path(self.c3d_folder_path) / c3d_name) if self.c3d_folder_path else c3d_name
+                    elif trial_name:
+                        filepath = _assigned_c3d_source_for_role(self.workflow_draft, trial_name)
+                    if not filepath:
+                        continue
+                    try:
+                        data = self._c3d_data_from_path(filepath)
+                    except Exception:
+                        continue
+                    if c3d_name:
+                        c3d_data_by_key[c3d_name] = data
+                    if trial_name:
+                        c3d_data_by_key[trial_name] = data
+            return c3d_data_by_key
 
         def _marker_names_for_segment(self, segment_name: str) -> tuple[str, ...]:
             marker_names = []
@@ -3313,9 +3846,7 @@ def launch_model_editor() -> None:
                 self.status_label.setText("Status: ready with main marker C3D and optional functional trials.")
 
             for step_status in c3d_workflow_progress(self.workflow_draft, self.c3d_data):
-                self.step_list.addItem(
-                    f"{step_status.number}. [{step_status.status}] {step_status.name} - {step_status.detail}"
-                )
+                self.step_list.addItem(_workflow_step_item(step_status))
 
             for group in self.workflow_draft.segment_marker_groups:
                 markers = ", ".join(group.marker_names) if len(group.marker_names) != 0 else "no marker assigned yet"
@@ -3350,15 +3881,12 @@ def launch_model_editor() -> None:
             if self.feature_list.count() != 0 and self.feature_list.currentItem() is None:
                 self.feature_list.setCurrentItem(self.feature_list.item(0))
 
-            if len(self.workflow_draft.axes) == 0:
-                self.axis_list.addItem("No axis definition yet.")
+            anatomical_frame_lines = _anatomical_frame_instruction_lines(self.workflow_draft)
+            if len(anatomical_frame_lines) == 0:
+                self.axis_list.addItem("No anatomical frame recipe yet.")
             else:
-                for axis in self.workflow_draft.axes:
-                    self.axis_list.addItem(
-                        f"{axis.name} | {axis.segment_name} | {axis.axis} | {axis.method} | "
-                        f"origin={','.join(axis.origin_markers) or '-'} | "
-                        f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}"
-                    )
+                for line in anatomical_frame_lines:
+                    self.axis_list.addItem(line)
 
             for setting in self.workflow_draft.segment_settings:
                 anthropometry = setting.anthropometry_model or "-"
@@ -3488,9 +4016,8 @@ def launch_model_editor() -> None:
             self.on_marker_selected = None
             self._projected_joint_positions = {}
             self._projected_marker_positions = {}
-            self.yaw = -0.6
-            self.pitch = 0.35
-            self._last_mouse_position = None
+            self._press_mouse_position = None
+            _initialize_preview_camera(self)
 
         def set_model(self, model) -> None:
             self.scene = None if model is None else build_preview_scene(model)
@@ -3527,7 +4054,7 @@ def launch_model_editor() -> None:
                 all_points.extend(_rotate_preview_point(point, self.yaw, self.pitch) for point in path)
             for _, start, end in projected_axes:
                 all_points.extend([start, end])
-            transform = _fit_projection(all_points, self.width(), self.height(), QPointF)
+            transform = _fit_projection(all_points, self.width(), self.height(), QPointF, self.zoom)
             self._projected_joint_positions = {name: transform(point) for name, point in projected_joints.items()}
             self._projected_marker_positions = {name: transform(point) for name, point in projected_markers.items()}
 
@@ -3552,11 +4079,15 @@ def launch_model_editor() -> None:
 
             painter.setPen(QPen(QColor("#2563eb"), 1))
             painter.setBrush(QColor("#2563eb"))
-            for marker_point in projected_markers.values():
-                center = transform(marker_point)
+            for marker_name, marker_point in sorted(
+                self.scene.markers.items(), key=lambda item: _preview_depth(item[1], self.yaw, self.pitch)
+            ):
+                center = transform(projected_markers[marker_name])
                 painter.drawEllipse(center, 4, 4)
 
-            for name, point in projected_joints.items():
+            for name, point in sorted(
+                self.scene.joints.items(), key=lambda item: _preview_depth(item[1], self.yaw, self.pitch)
+            ):
                 center = self._projected_joint_positions[name]
                 is_selected = name == self.selected_segment_name
                 painter.setPen(QPen(QColor("#111827"), 1))
@@ -3564,21 +4095,8 @@ def launch_model_editor() -> None:
                 painter.drawEllipse(center, 5 if is_selected else 3, 5 if is_selected else 3)
 
             _draw_preview_orientation_axes(painter, self.width(), self.height(), self.yaw, self.pitch)
+            _draw_preview_interaction_hint(painter, self.width())
             self._draw_legend(painter)
-
-        def mousePressEvent(self, event) -> None:
-            self._last_mouse_position = get_event_position(event)
-
-        def mouseMoveEvent(self, event) -> None:
-            if self._last_mouse_position is None:
-                self._last_mouse_position = get_event_position(event)
-                return
-            position = get_event_position(event)
-            self.yaw += (position.x() - self._last_mouse_position.x()) * 0.01
-            self.pitch += (position.y() - self._last_mouse_position.y()) * 0.01
-            self.pitch = max(-1.4, min(1.4, self.pitch))
-            self._last_mouse_position = position
-            self.update()
 
         def _draw_legend(self, painter) -> None:
             """
@@ -3609,7 +4127,22 @@ def launch_model_editor() -> None:
             _draw_legend_line(painter, QColor(PREVIEW_AXIS_COLORS["z"]), 4, x, y - 4, "Rotational axis", x + 36, y)
 
         def mousePressEvent(self, event) -> None:
-            clicked = get_event_position(event)
+            self._press_mouse_position = get_event_position(event)
+            _start_preview_camera_drag(self, event)
+
+        def mouseMoveEvent(self, event) -> None:
+            _drag_preview_camera(self, event)
+
+        def mouseReleaseEvent(self, event) -> None:
+            released = get_event_position(event)
+            pressed = self._press_mouse_position
+            _end_preview_camera_drag(self)
+            self._press_mouse_position = None
+            if pressed is None:
+                return
+            if abs(released.x() - pressed.x()) > 4 or abs(released.y() - pressed.y()) > 4:
+                return
+            clicked = released
             marker_name = _nearest_projected_segment(self._projected_marker_positions, clicked)
             if marker_name is not None and self.on_marker_selected is not None:
                 self.on_marker_selected(marker_name)
@@ -3617,6 +4150,12 @@ def launch_model_editor() -> None:
             segment_name = _nearest_projected_segment(self._projected_joint_positions, clicked)
             if segment_name is not None and self.on_segment_selected is not None:
                 self.on_segment_selected(segment_name)
+
+        def mouseDoubleClickEvent(self, event) -> None:
+            _reset_preview_camera(self)
+
+        def wheelEvent(self, event) -> None:
+            _zoom_preview_camera(self, event)
 
     class ModelEditorWindow(QMainWindow):
         """
@@ -4920,14 +5459,8 @@ def _c3d_generation_log(
             f"- {marker.name}: method={marker.method}, segment={marker.segment_name}, source={source}, "
             f"settings={equation}{local_note}"
         )
-    lines.extend(["", "Anatomical axes:"])
-    for axis in workflow_draft.axes:
-        source = f", source={axis.source}" if axis.source else ""
-        lines.append(
-            f"- {axis.segment_name}/{axis.name}: {axis.axis}, "
-            f"origin={','.join(axis.origin_markers) or '-'}, "
-            f"{','.join(axis.start_markers)} -> {','.join(axis.end_markers)}, keep={axis.keep_vector}{source}"
-        )
+    lines.extend(["", "Anatomical frames:"])
+    lines.extend(_anatomical_frame_instruction_lines(workflow_draft, prefix="- "))
     lines.extend(["", "Segment settings:"])
     for setting in workflow_draft.segment_settings:
         anthropometry = setting.anthropometry_model or "-"
@@ -4938,6 +5471,38 @@ def _c3d_generation_log(
             f"child_translation={setting.child_translation}, initial_rotation={setting.initial_rotation_method}, "
             f"anthropometry={anthropometry}, sex={setting.anthropometry_sex or '-'}, mass={mass}, length={length}"
         )
+    return tuple(lines)
+
+
+def _anatomical_frame_instruction_lines(workflow_draft, prefix: str = "") -> tuple[str, ...]:
+    """
+    Return one readable local-frame recipe per segment.
+
+    Internally the draft stores the two user-defined vectors as two axis records because that is what the model
+    builder consumes. The GUI presents them as one frame recipe: origin, vector 1, vector 2, and the kept vector.
+    """
+    lines = []
+    for group in workflow_draft.segment_marker_groups:
+        axes = tuple(
+            axis
+            for axis in workflow_draft.axes
+            if axis.segment_name == group.segment_name and not _is_virtual_feature_axis(axis)
+        )[:2]
+        if len(axes) == 0:
+            continue
+        origin = ",".join(axes[0].origin_markers) if len(axes[0].origin_markers) != 0 else "-"
+        vector_lines = []
+        for index, axis in enumerate(axes, start=1):
+            start = ",".join(axis.start_markers) if len(axis.start_markers) != 0 else "-"
+            if len(axis.end_markers) == 0:
+                vector_source = start
+            else:
+                vector_source = f"{start} -> {','.join(axis.end_markers)}"
+            keep = ", keep" if axis.keep_vector else ""
+            vector_lines.append(f"v{index}={axis.axis}{keep}: {vector_source}")
+        if len(axes) < 2:
+            vector_lines.append("v2=missing")
+        lines.append(f"{prefix}{group.segment_name}: origin={origin} | " + " | ".join(vector_lines))
     return tuple(lines)
 
 
@@ -5197,7 +5762,28 @@ def _normalized_cross(first: np.ndarray, second: np.ndarray) -> np.ndarray:
 
 def _rotate_preview_point(point: tuple[float, float, float], yaw: float, pitch: float) -> tuple[float, float]:
     """
-    Project a 3D point with a user-controlled yaw/pitch rotation.
+    Project a 3D point with a user-controlled yaw/pitch camera rotation.
+
+    The preview is orthographic: screen coordinates are kept separate from depth. This avoids the oblique shear that
+    made rotations look like a mirror flip when the view changed.
+    """
+    screen_x, screen_y, _depth = _preview_camera_coordinates(point, yaw, pitch)
+    return screen_x, screen_y
+
+
+def _preview_depth(point: tuple[float, float, float], yaw: float, pitch: float) -> float:
+    """
+    Return the camera-space depth of a 3D point for painter ordering.
+    """
+    _screen_x, _screen_y, depth = _preview_camera_coordinates(point, yaw, pitch)
+    return depth
+
+
+def _preview_camera_coordinates(
+    point: tuple[float, float, float], yaw: float, pitch: float
+) -> tuple[float, float, float]:
+    """
+    Rotate a 3D point into a compact camera coordinate system.
     """
     x, y, z = point
     cos_yaw = math.cos(yaw)
@@ -5208,7 +5794,7 @@ def _rotate_preview_point(point: tuple[float, float, float], yaw: float, pitch: 
     yaw_y = sin_yaw * x + cos_yaw * y
     pitch_y = cos_pitch * yaw_y - sin_pitch * z
     pitch_z = sin_pitch * yaw_y + cos_pitch * z
-    return yaw_x + 0.25 * pitch_y, -pitch_z + 0.15 * pitch_y
+    return yaw_x, -pitch_z, pitch_y
 
 
 def _segment_parent_choices(workflow_draft, excluded_segment_name: str = "") -> list[str]:
@@ -5262,7 +5848,7 @@ def _project_point(point) -> tuple[float, float]:
     return (x - 0.6 * y, z + 0.4 * y)
 
 
-def _fit_projection(points: list[tuple[float, float]], width: int, height: int, point_type):
+def _fit_projection(points: list[tuple[float, float]], width: int, height: int, point_type, zoom: float = 1.0):
     """
     Build a transform that fits projected points inside a widget rectangle.
     """
@@ -5272,7 +5858,7 @@ def _fit_projection(points: list[tuple[float, float]], width: int, height: int, 
     max_y = max(point[1] for point in points)
     span_x = max(max_x - min_x, 1e-9)
     span_y = max(max_y - min_y, 1e-9)
-    scale = 0.8 * min(width / span_x, height / span_y)
+    scale = 0.8 * min(width / span_x, height / span_y) * zoom
     offset_x = (width - scale * (min_x + max_x)) / 2
     offset_y = (height + scale * (min_y + max_y)) / 2
 
