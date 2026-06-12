@@ -921,18 +921,19 @@ class Sara(RigidSegmentIdentification):
         cor_parent_local = cor[3:]
         cor_child_local = cor[:3]
 
-        # Compute transformed AoR positions in global frame
+        # Compute transformed AoR directions in global frame. The AoR is a vector, not a point, so its homogeneous
+        # coordinate must be 0 to avoid applying the segment translation.
         aor_parent_global = np.zeros((4, nb_frames))
         aor_child_global = np.zeros((4, nb_frames))
         cor_parent_global = np.zeros((4, nb_frames))
         cor_child_global = np.zeros((4, nb_frames))
         residuals = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
-            aor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((aor_parent_local, 1)))[:, 0]
-            aor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((aor_child_local, 1)))[:, 0]
+            aor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((aor_parent_local, 0.0)))[:, 0]
+            aor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((aor_child_local, 0.0)))[:, 0]
             residuals[i_frame] = np.arccos(
-                np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
-                / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
+                np.dot(aor_parent_global[:3, i_frame], aor_child_global[:3, i_frame])
+                / (np.linalg.norm(aor_parent_global[:3, i_frame]) * np.linalg.norm(aor_child_global[:3, i_frame]))
             )
 
             cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]

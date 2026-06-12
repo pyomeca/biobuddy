@@ -364,7 +364,7 @@ launch it with:
 
 ```bash
 pip install biobuddy[gui]
-python -m biobuddy.gui
+python examples/launch_model_editor_gui.py
 ```
 If you are working from sources, you will need to install :
 ```bash
@@ -378,6 +378,24 @@ the user edits the model. The muscle tab also exposes editable origin and insert
 model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
 tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
 selects it in the marker editor.
+
+The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs & trunk`, `upper-limb`) or from a template-free
+`from scratch` draft. The draft workflow loads a main C3D, lists the available markers, lets users create technical or
+anatomical segments, assign markers to segments, mark each assigned marker as technical, and choose the parent segment.
+The `Technical segment` tab is used to group the markers that define technical frames for SCoRE/SARA computations. The
+`Anatomical segment` tab is used after virtual points such as CoR/AoR have been defined; it defines the anatomical
+frame from two start-to-end marker vectors, each with an axis name, and one vector selected as the one to keep during
+orthonormalization. Axis endpoints may contain several markers; they are averaged when converted to a model template.
+The segment axis panel also previews the marker cloud and saved/temporary vectors for the selected segment.
+
+The lower-limb preset follows the same calibration logic as the walking reconstruction example: a static/anatomical C3D
+defines marker-based segment frames and anthropometric measurements, hip and ankle centers are defined from SCoRE
+functional trials, knee axes are defined from SARA functional trials and oriented with condyle markers, then the
+personalized model is generated from the evaluated marker-defined frames. At the moment, the GUI can draft these
+ingredients and generate the existing lower-limb template; fully converting an arbitrary template-free draft to a
+BioMod model still requires the remaining template-builder bridge.
+The lightweight C3D files in `examples/data/lower_limb_calibration` provide a ready-to-use lower-limb calibration
+folder for this preset.
 ![model_graph](docs/images/model_graph.png)
 
 

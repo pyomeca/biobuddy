@@ -18,6 +18,7 @@ class Rotations(Enum):
     YZX = "yzx"
     ZXY = "zxy"
     ZYX = "zyx"
+    ZYZ = "zyz"
 
 
 class Translations(Enum):

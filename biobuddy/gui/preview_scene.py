@@ -97,4 +97,4 @@ def _preview_axis_length(joints: dict[str, np.ndarray]) -> float:
         return 0.1
     points = np.array(list(joints.values()), dtype=float)
     span = np.ptp(points, axis=0)
-    return max(float(np.linalg.norm(span)) * 0.08, 0.1)
+    return max(float(np.linalg.norm(span)) * 0.04, 0.05)
