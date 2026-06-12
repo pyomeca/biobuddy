@@ -142,28 +142,35 @@ def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
     """
     score_specs = (
         (
-            "CoR_LThigh_in_Pelvis",
+            "CoR_Trunk_wrt_Pelvis",
+            "Trunk",
+            "trunk_score",
+            ("LPSI", "RPSI", "LASI", "RASI"),
+            ("T10", "T6", "C7", "C2", "CLAV", "STRN"),
+        ),
+        (
+            "CoR_LThigh_wrt_Pelvis",
             "LThigh",
             "left_hip_score",
             ("LPSI", "RPSI", "LASI", "RASI"),
             ("LTHI", "LTHIB", "LTHID"),
         ),
         (
-            "CoR_LFoot_in_LShank",
+            "CoR_LFoot_wrt_LShank",
             "LFoot",
             "left_ankle_score",
             ("LTIB", "LTIBF", "LTIBD"),
             ("LHEE", "LNAV", "LTOE", "LTOE5"),
         ),
         (
-            "CoR_RThigh_in_Pelvis",
+            "CoR_RThigh_wrt_Pelvis",
             "RThigh",
             "right_hip_score",
             ("LPSI", "RPSI", "LASI", "RASI"),
             ("RTHI", "RTHIB", "RTHID"),
         ),
         (
-            "CoR_RFoot_in_RShank",
+            "CoR_RFoot_wrt_RShank",
             "RFoot",
             "right_ankle_score",
             ("RTIB", "RTIBF", "RTIBD"),
@@ -209,7 +216,8 @@ def _lower_limb_score_virtual_features() -> tuple[C3dPresetVirtualFeature, ...]:
             role="sara_axis",
             description=(
                 f"trial={trial_name}; parent markers={','.join(parent_markers)}; "
-                f"child markers={','.join(child_markers)}; expected axis={','.join(expected_axis)}"
+                f"child markers={','.join(child_markers)}; expected axis={','.join(expected_axis)}; "
+                f"origin markers={','.join(expected_axis)}"
             ),
         )
         for name, segment_name, trial_name, parent_markers, child_markers, expected_axis in sara_specs

@@ -1798,7 +1798,10 @@ def test_sara_with_expected_rotation_axis():
 
     # The axis should be aligned with the expected direction (positive)
     axis_vector = result_aor.axis()[:3, 0]
-    npt.assert_almost_equal(axis_vector, np.array([0.60139438, -0.21820071, -0.0799947]))
+    npt.assert_almost_equal(
+        axis_vector / np.linalg.norm(axis_vector),
+        np.array([0.98873651, -0.1193859, 0.09026138]),
+    )
 
     # Test in the other direction as well
     # Create expected rotation axis (-X-axis direction)
@@ -1824,7 +1827,10 @@ def test_sara_with_expected_rotation_axis():
 
     # The axis should be aligned with the expected direction (negative)
     axis_vector = result_aor.axis()[:3, 0]
-    npt.assert_almost_equal(axis_vector, np.array([-1.20366083, 0.4501699, 0.46319628]))
+    npt.assert_almost_equal(
+        axis_vector / np.linalg.norm(axis_vector),
+        np.array([-0.77505657, 0.49178449, 0.39678122]),
+    )
 
     # TODO: this test should be updated when the scs origin is modified by SARA as well.
 
@@ -1881,7 +1887,11 @@ def test_sara_with_callable_origin_positions():
     mock_model = BiomechanicalModelReal()
     result_aor = sara_axis.to_axis(static_data, mock_model, scs=RotoTransMatrix())
 
-    npt.assert_almost_equal(result_aor.axis()[:3, 0], np.array([0.37383181, 0.47738288, 0.64757445]))
+    axis_vector = result_aor.axis()[:3, 0]
+    npt.assert_almost_equal(
+        axis_vector / np.linalg.norm(axis_vector),
+        np.array([0.3738031, 0.54549047, 0.75014092]),
+    )
 
     # Check that the result is different from the case without origin_positions_global (since the origin is different)
     # It should also be the same result as the first test in test_sara_with_expected_rotation_axis
@@ -1893,9 +1903,13 @@ def test_sara_with_callable_origin_positions():
         visualize=False,
     )
     result_aor_no_origin = sara_axis_no_origin.to_axis(static_data, mock_model, scs=RotoTransMatrix())
-    npt.assert_almost_equal(result_aor_no_origin.axis()[:3, 0], np.array([0.30331516, 0.38009301, 0.51492922]))
+    no_origin_axis_vector = result_aor_no_origin.axis()[:3, 0]
+    npt.assert_almost_equal(
+        no_origin_axis_vector / np.linalg.norm(no_origin_axis_vector),
+        np.array([0.3738031, 0.54549047, 0.75014092]),
+    )
 
-    assert np.all(np.abs(result_aor_no_origin.axis()[:3, 0] - result_aor.axis()[:3, 0])) > 1e-4
+    assert np.linalg.norm(result_aor_no_origin.start_point.position[:3] - result_aor.start_point.position[:3]) > 1e-4
 
 
 def test_original_rotation_axis_errors():

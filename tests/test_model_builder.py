@@ -15,7 +15,9 @@ from biobuddy.gui.c3d_model_creation import (
 from biobuddy.gui.virtual_points import marker_pair_virtual_axis, pointing_virtual_point
 from biobuddy.gui.model_builder import (
     AxisSpec,
+    FunctionalAxisProjectionPointSpec,
     FunctionalAxisSpec,
+    FunctionalCenterSpec,
     MarkerEndpointSpec,
     build_generic_model,
     build_real_model,
@@ -61,6 +63,10 @@ def test_template_reports_required_markers_from_frames_and_functional_trials():
     assert static_markers == tuple(sorted(set(static_markers)))
     assert "LASI" in static_markers
     assert "LTOE5" in static_markers
+    assert "trunk_score" in functional_markers
+    assert functional_markers["trunk_score"] == tuple(
+        sorted(("LPSI", "RPSI", "LASI", "RASI", "T10", "T6", "C7", "C2", "CLAV", "STRN"))
+    )
     assert "left_knee_sara" in functional_markers
     assert functional_markers["left_knee_sara"] == tuple(
         sorted(("LTHI", "LTHIB", "LTHID", "LTIB", "LTIBF", "LTIBD", "LKNE", "LKNEM"))
@@ -75,6 +81,34 @@ def test_lower_limb_template_uses_lower_body_functional_c3d_patterns():
 
     assert file_patterns == LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES
     assert all(pattern.startswith("*func_") for pattern in file_patterns.values())
+
+
+def test_lower_limb_functional_origins_use_expected_virtual_points():
+    template = lower_limb_template(use_functional=True)
+    anatomical_template = lower_limb_template(use_functional=False)
+    segments = {segment.name: segment for segment in template.segments}
+    anatomical_segments = {segment.name: segment for segment in anatomical_template.segments}
+
+    assert isinstance(segments["Trunk"].frame.origin, FunctionalCenterSpec)
+    assert segments["Trunk"].frame.origin.trial_name == "trunk_score"
+    assert segments["Trunk"].frame.origin.parent_marker_names == ("LPSI", "RPSI", "LASI", "RASI")
+    assert segments["Trunk"].frame.origin.child_marker_names == ("T10", "T6", "C7", "C2", "CLAV", "STRN")
+    assert isinstance(segments["LThigh"].frame.origin, FunctionalCenterSpec)
+    assert segments["LThigh"].frame.origin.trial_name == "left_hip_score"
+    assert segments["LThigh"].frame.first_axis.name == Axis.Name.X
+    assert segments["LThigh"].frame.second_axis.fallback.name == Axis.Name.Y
+    assert segments["LThigh"].frame.axis_to_keep == Axis.Name.Y
+    assert isinstance(segments["LShank"].frame.origin, FunctionalAxisProjectionPointSpec)
+    assert segments["LShank"].frame.origin.point_marker_names == ("LKNE", "LKNEM")
+    assert segments["LShank"].frame.first_axis.name == Axis.Name.X
+    assert segments["LShank"].frame.second_axis.fallback.name == Axis.Name.Y
+    assert segments["LShank"].frame.axis_to_keep == Axis.Name.Y
+    assert isinstance(segments["LFoot"].frame.origin, FunctionalCenterSpec)
+    assert segments["LFoot"].frame.origin.trial_name == "left_ankle_score"
+    assert segments["LFoot"].frame.first_axis.name == Axis.Name.X
+    assert segments["LFoot"].frame.first_axis.start.marker_names == ("LHEE",)
+    assert segments["LFoot"].frame.first_axis.end.marker_names == ("LTOE", "LTOE5")
+    assert anatomical_segments["Trunk"].frame.origin.marker_names == ("CLAV",)
 
 
 def test_marker_availability_reports_presence_and_valid_frame_count():
@@ -168,20 +202,28 @@ def test_c3d_model_presets_report_virtual_features_to_reconstruct():
     full_body_features = c3d_model_preset_virtual_features(C3dModelPreset.FULL_BODY)
 
     assert any(
-        feature.name == "CoR_LThigh_in_Pelvis"
+        feature.name == "CoR_Trunk_wrt_Pelvis"
+        and feature.role == "score"
+        and "trial=trunk_score" in feature.description
+        and "parent markers=LPSI,RPSI,LASI,RASI" in feature.description
+        and "child markers=T10,T6,C7,C2,CLAV,STRN" in feature.description
+        for feature in lower_limb_features
+    )
+    assert any(
+        feature.name == "CoR_LThigh_wrt_Pelvis"
         and feature.role == "score"
         and "parent markers=LPSI,RPSI,LASI,RASI" in feature.description
         and "child markers=LTHI,LTHIB,LTHID" in feature.description
         for feature in lower_limb_features
     )
-    assert any(feature.name == "CoR_LFoot_in_LShank" and feature.role == "score" for feature in lower_limb_features)
+    assert any(feature.name == "CoR_LFoot_wrt_LShank" and feature.role == "score" for feature in lower_limb_features)
     assert any(
         feature.name == "Proj_LKnee_on_Axis_LKnee_SARA" and feature.role == "axis_projection"
         for feature in lower_limb_features
     )
     assert any(feature.name == "Axis_LKnee_SARA" and feature.role == "sara_axis" for feature in lower_limb_features)
     assert any(feature.name == "Axis_RKnee_SARA" and feature.feature_type == "axis" for feature in lower_limb_features)
-    assert len(lower_limb_features) == 8
+    assert len(lower_limb_features) == 9
     assert lower_limb_anatomical_features == ()
     assert c3d_model_preset_virtual_features(C3dModelPreset.FROM_SCRATCH) == ()
     assert any(feature.name == "Thorax_virtual_7" for feature in upper_limb_features)

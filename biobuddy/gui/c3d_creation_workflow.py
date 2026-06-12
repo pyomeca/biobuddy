@@ -13,7 +13,9 @@ from .full_body_bela_template import bela_segment_specs, rotations_from_matlab_d
 from .lower_limb_template import LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES, lower_limb_template
 from .model_builder import (
     AxisSpec,
+    FunctionalAxisProjectionPointSpec,
     FunctionalAxisSpec,
+    FunctionalCenterSpec,
     ModelTemplate,
     required_functional_markers,
     required_static_markers,
@@ -170,6 +172,11 @@ class C3dSegmentSettingsDraft:
         (0.0, 1.0, 0.0),
         (0.0, 0.0, 1.0),
     )
+    anthropometry_model: str = ""
+    anthropometry_sex: str = "male"
+    anthropometry_mass: float | None = None
+    segment_length: float | None = None
+    segment_length_source: str = ""
 
 
 @dataclass(frozen=True)
@@ -299,6 +306,9 @@ def _axis_end_markers_from_feature(feature) -> tuple[str, ...]:
 
 
 def _axis_origin_markers_from_feature(feature) -> tuple[str, ...]:
+    marker_match = re.search(r"origin markers=([^;]+)", feature.description)
+    if marker_match is not None:
+        return tuple(marker.strip() for marker in marker_match.group(1).split(",") if marker.strip())
     return _expected_axis_markers_from_feature(feature)
 
 
@@ -370,17 +380,27 @@ def _axis_drafts_from_model_template(template: ModelTemplate | None) -> tuple[C3
                 origin_markers=origin_markers,
             )
         )
-        fallback_axis = second_axis.fallback if isinstance(second_axis, FunctionalAxisSpec) else second_axis
-        drafts.append(
-            _axis_draft_from_axis_spec(
-                segment.name,
-                "second_axis",
-                fallback_axis,
-                segment.frame.axis_to_keep,
-                origin_markers=origin_markers,
-                method=second_axis.method.value if isinstance(second_axis, FunctionalAxisSpec) else "markers",
+        if isinstance(second_axis, FunctionalAxisSpec):
+            drafts.append(
+                _axis_draft_from_functional_axis_spec(
+                    segment.name,
+                    "second_axis",
+                    second_axis,
+                    segment.frame.axis_to_keep,
+                    origin_markers=origin_markers,
+                )
             )
-        )
+        else:
+            drafts.append(
+                _axis_draft_from_axis_spec(
+                    segment.name,
+                    "second_axis",
+                    second_axis,
+                    segment.frame.axis_to_keep,
+                    origin_markers=origin_markers,
+                    method="markers",
+                )
+            )
     return tuple(drafts)
 
 
@@ -388,6 +408,10 @@ def _origin_marker_names_from_spec(origin_spec) -> tuple[str, ...]:
     """
     Return markers that define or support a frame origin specification.
     """
+    if isinstance(origin_spec, FunctionalCenterSpec):
+        return (_functional_center_virtual_marker_name(origin_spec),)
+    if isinstance(origin_spec, FunctionalAxisProjectionPointSpec):
+        return (_functional_projection_virtual_marker_name(origin_spec),)
     if hasattr(origin_spec, "marker_names"):
         return tuple(origin_spec.marker_names)
     marker_names = []
@@ -397,6 +421,42 @@ def _origin_marker_names_from_spec(origin_spec) -> tuple[str, ...]:
     marker_names.extend(getattr(origin_spec, "parent_marker_names", ()))
     marker_names.extend(getattr(origin_spec, "child_marker_names", ()))
     return tuple(dict.fromkeys(marker_names))
+
+
+def _functional_center_virtual_marker_name(spec: FunctionalCenterSpec) -> str:
+    """
+    Return the virtual marker name exposed in the GUI for one SCoRE center.
+    """
+    names_by_trial = {
+        "trunk_score": "CoR_Trunk_wrt_Pelvis",
+        "left_hip_score": "CoR_LThigh_wrt_Pelvis",
+        "right_hip_score": "CoR_RThigh_wrt_Pelvis",
+        "left_ankle_score": "CoR_LFoot_wrt_LShank",
+        "right_ankle_score": "CoR_RFoot_wrt_RShank",
+    }
+    return names_by_trial.get(spec.trial_name, f"CoR_{spec.trial_name}_wrt_parent")
+
+
+def _functional_projection_virtual_marker_name(spec: FunctionalAxisProjectionPointSpec) -> str:
+    """
+    Return the virtual marker name exposed in the GUI for one projected point.
+    """
+    names_by_trial = {
+        "left_knee_sara": "Proj_LKnee_on_Axis_LKnee_SARA",
+        "right_knee_sara": "Proj_RKnee_on_Axis_RKnee_SARA",
+    }
+    return names_by_trial.get(spec.trial_name, f"Projection_{spec.trial_name}")
+
+
+def _functional_axis_virtual_axis_name(spec: FunctionalAxisSpec) -> str:
+    """
+    Return the virtual axis name exposed in the GUI for one SARA axis.
+    """
+    names_by_trial = {
+        "left_knee_sara": "Axis_LKnee_SARA",
+        "right_knee_sara": "Axis_RKnee_SARA",
+    }
+    return names_by_trial.get(spec.trial_name, f"Axis_{spec.trial_name}")
 
 
 def _axis_draft_from_axis_spec(
@@ -410,8 +470,8 @@ def _axis_draft_from_axis_spec(
     """
     Build a C3D axis draft from one template AxisSpec.
     """
-    axis_name = axis_spec.name.value if hasattr(axis_spec.name, "value") else str(axis_spec.name)
-    axis_to_keep_name = axis_to_keep.value if hasattr(axis_to_keep, "value") else str(axis_to_keep)
+    axis_name = _axis_name_to_text(axis_spec.name)
+    axis_to_keep_name = _axis_name_to_text(axis_to_keep)
     return C3dAxisDraft(
         name=f"{segment_name}_{axis_role}",
         segment_name=segment_name,
@@ -422,6 +482,39 @@ def _axis_draft_from_axis_spec(
         method=method,
         keep_vector=axis_name == axis_to_keep_name,
     )
+
+
+def _axis_draft_from_functional_axis_spec(
+    segment_name: str,
+    axis_role: str,
+    axis_spec: FunctionalAxisSpec,
+    axis_to_keep,
+    origin_markers: tuple[str, ...] = (),
+) -> C3dAxisDraft:
+    """
+    Build a C3D axis draft that references a SARA virtual axis instead of marker endpoints.
+    """
+    axis_name = _axis_name_to_text(axis_spec.fallback.name)
+    axis_to_keep_name = _axis_name_to_text(axis_to_keep)
+    return C3dAxisDraft(
+        name=f"{segment_name}_{axis_role}",
+        segment_name=segment_name,
+        axis=axis_name.lower(),
+        start_markers=(_functional_axis_virtual_axis_name(axis_spec),),
+        end_markers=(),
+        origin_markers=origin_markers,
+        method=axis_spec.method.value,
+        source=f"trial={axis_spec.trial_name}",
+        keep_vector=axis_name == axis_to_keep_name,
+    )
+
+
+def _axis_name_to_text(axis_name) -> str:
+    """
+    Normalize BioBuddy's Axis.Name constants to GUI-facing x/y/z labels.
+    """
+    axis_value = axis_name.value if hasattr(axis_name, "value") else axis_name
+    return {0: "x", 1: "y", 2: "z", "0": "x", "1": "y", "2": "z"}.get(axis_value, str(axis_value).lower())
 
 
 def four_marker_groups(marker_positions: np.ndarray) -> C3dFourGroupsResult:
@@ -535,7 +628,7 @@ def score_virtual_marker_names_from_entry(entry: C3dScoreReportEntry) -> tuple[s
     """
     proximal_name = entry.proximal_segment_name or "parent"
     distal_name = entry.distal_segment_name or f"segment_{entry.segment_index}"
-    return (f"CoR_{distal_name}_in_{proximal_name}", f"CoR_{distal_name}_in_{distal_name}")
+    return (f"CoR_{distal_name}_wrt_{proximal_name}", f"CoR_{distal_name}_wrt_{distal_name}")
 
 
 def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None = None) -> tuple[C3dDraftIssue, ...]:
@@ -546,7 +639,8 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
     raw_marker_names = set(data.marker_names) if data is not None else set()
     assigned_marker_names = {marker_name for group in draft.segment_marker_groups for marker_name in group.marker_names}
     virtual_marker_names = {marker.name for marker in draft.virtual_markers}
-    known_marker_names = assigned_marker_names | virtual_marker_names
+    virtual_axis_names = {axis.name for axis in draft.axes if axis.method != "markers"}
+    known_marker_names = assigned_marker_names | virtual_marker_names | virtual_axis_names
     if data is not None:
         known_marker_names |= raw_marker_names
     segment_names = {group.segment_name for group in draft.segment_marker_groups}
@@ -614,18 +708,50 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
             )
 
     for axis in draft.axes:
+        is_virtual_reference_axis = axis.method != "markers" and axis.name.startswith("Axis_")
         if axis.segment_name not in {group.segment_name for group in draft.segment_marker_groups}:
             issues.append(
                 C3dDraftIssue(
                     "error", "axes", f"Axis '{axis.name}' is attached to unknown segment '{axis.segment_name}'."
                 )
             )
-        if axis.axis not in {"", "x", "y", "z"}:
-            issues.append(C3dDraftIssue("error", "axes", f"Axis '{axis.name}' uses invalid axis '{axis.axis}'."))
-        if axis.axis == "":
-            issues.append(C3dDraftIssue("warning", "axes", f"Axis '{axis.name}' has no x/y/z axis selected."))
+        if not is_virtual_reference_axis and axis.axis not in {"", "x", "y", "z"}:
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "axes",
+                    f"Axis '{axis.name}' on segment '{axis.segment_name}' uses invalid axis '{axis.axis}'. "
+                    "Open Anatomical segment, select this segment, and choose x, y, or z.",
+                )
+            )
+        if not is_virtual_reference_axis and axis.axis == "":
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "axes",
+                    f"Axis '{axis.name}' on segment '{axis.segment_name}' has no x/y/z axis selected. "
+                    "Open Anatomical segment, select this segment, and choose the vector axis.",
+                )
+            )
         if len(axis.origin_markers) == 0:
-            issues.append(C3dDraftIssue("warning", "axes", f"Axis '{axis.name}' has no origin marker selected."))
+            issues.append(
+                C3dDraftIssue(
+                    "warning",
+                    "axes",
+                    f"Axis '{axis.name}' on segment '{axis.segment_name}' has no origin marker selected. "
+                    "Open Anatomical segment and add one or more origin markers.",
+                )
+            )
+        if axis.method == "markers" and (len(axis.start_markers) == 0 or len(axis.end_markers) == 0):
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "axes",
+                    f"Axis '{axis.name}' on segment '{axis.segment_name}' is marker-defined but has incomplete "
+                    f"endpoints: start={','.join(axis.start_markers) or '-'}, "
+                    f"end={','.join(axis.end_markers) or '-'}. Open Anatomical segment and fill both endpoints.",
+                )
+            )
         unknown_markers = sorted(set(axis.start_markers + axis.end_markers + axis.origin_markers) - known_marker_names)
         if unknown_markers:
             issues.append(
@@ -633,6 +759,24 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
                     "warning",
                     "axes",
                     f"Axis '{axis.name}' references unknown markers: {', '.join(unknown_markers)}.",
+                )
+            )
+
+    axes_by_segment: dict[str, list[C3dAxisDraft]] = {}
+    for axis in draft.axes:
+        if axis.axis in {"x", "y", "z"}:
+            axes_by_segment.setdefault(axis.segment_name, []).append(axis)
+    for segment_name, axes in axes_by_segment.items():
+        axis_names = [axis.axis for axis in axes]
+        duplicated_axis_names = sorted({axis_name for axis_name in axis_names if axis_names.count(axis_name) > 1})
+        for duplicated_axis_name in duplicated_axis_names:
+            duplicated_drafts = ", ".join(axis.name for axis in axes if axis.axis == duplicated_axis_name)
+            issues.append(
+                C3dDraftIssue(
+                    "error",
+                    "axes",
+                    f"Segment '{segment_name}' defines axis '{duplicated_axis_name}' more than once "
+                    f"({duplicated_drafts}). Open Anatomical segment and choose two distinct axes.",
                 )
             )
 
@@ -678,6 +822,17 @@ def validate_c3d_workflow_draft(draft: C3dWorkflowDraft, data: MarkerData | None
     return tuple(issues)
 
 
+def _has_functional_marker_set(group: C3dSegmentMarkerGroup) -> bool:
+    """
+    Return whether a segment has enough markers to provide a technical frame for functional methods.
+
+    Some presets use anatomical segments directly as the marker groups for SCoRE/SARA. In that case the segment is not
+    tagged as ``technical``, but its markers are still the technical marker set used to rigidify the functional trial.
+    """
+    marker_names = group.technical_marker_names if len(group.technical_marker_names) != 0 else group.marker_names
+    return len(marker_names) >= 3
+
+
 def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = None) -> tuple[C3dWorkflowStepStatus, ...]:
     """
     Return user-facing completion states for the guided C3D workflow.
@@ -704,6 +859,14 @@ def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = Non
         for setting in draft.segment_settings
     )
     dof_issue_count = sum(issue.category == "dof" for issue in issues)
+    explicit_technical_segment_count = sum(group.segment_type == "technical" for group in draft.segment_marker_groups)
+    functional_marker_set_count = sum(_has_functional_marker_set(group) for group in draft.segment_marker_groups)
+    technical_segment_detail = (
+        f"{explicit_technical_segment_count} technical-only segments; "
+        f"{functional_marker_set_count} segment marker sets usable for functional trials."
+        if explicit_technical_segment_count != functional_marker_set_count
+        else f"{explicit_technical_segment_count} technical segments."
+    )
 
     return (
         C3dWorkflowStepStatus(1, "New from C3D", "done", f"Draft initialized for {draft.preset.value}."),
@@ -717,10 +880,10 @@ def c3d_workflow_progress(draft: C3dWorkflowDraft, data: MarkerData | None = Non
             3,
             "Create technical segments",
             _step_status(
-                any(group.segment_type == "technical" for group in draft.segment_marker_groups),
+                functional_marker_set_count != 0,
                 len(draft.segment_marker_groups) != 0,
             ),
-            f"{sum(group.segment_type == 'technical' for group in draft.segment_marker_groups)} technical segments.",
+            technical_segment_detail,
         ),
         C3dWorkflowStepStatus(
             4,
@@ -1106,8 +1269,12 @@ def add_axis_to_draft(
         method=_require_name(method, "Axis method"),
         keep_vector=keep_vector,
     )
-    if len(axis_definition.start_markers) == 0 or len(axis_definition.end_markers) == 0:
+    if axis_definition.method == "markers" and (
+        len(axis_definition.start_markers) == 0 or len(axis_definition.end_markers) == 0
+    ):
         raise ValueError("An axis needs at least one start marker and one end marker.")
+    if axis_definition.method != "markers" and len(axis_definition.start_markers) == 0:
+        raise ValueError("A functional axis reference needs an axis source.")
     return C3dWorkflowDraft(
         preset=draft.preset,
         segment_marker_groups=draft.segment_marker_groups,
@@ -1143,6 +1310,11 @@ def update_segment_settings_in_draft(
     initial_rotation_method: str = "identity",
     initial_rotation_source: str = "",
     initial_rotation_matrix: tuple[tuple[float, float, float], ...] | None = None,
+    anthropometry_model: str = "",
+    anthropometry_sex: str = "male",
+    anthropometry_mass: float | None = None,
+    segment_length: float | None = None,
+    segment_length_source: str = "",
 ) -> C3dWorkflowDraft:
     """
     Add or replace kinematic settings for one segment.
@@ -1160,6 +1332,11 @@ def update_segment_settings_in_draft(
         initial_rotation_method=_require_name(initial_rotation_method, "Initial rotation method"),
         initial_rotation_source=initial_rotation_source.strip(),
         initial_rotation_matrix=matrix,
+        anthropometry_model=anthropometry_model.strip(),
+        anthropometry_sex=anthropometry_sex.strip(),
+        anthropometry_mass=None if anthropometry_mass is None else float(anthropometry_mass),
+        segment_length=None if segment_length is None else float(segment_length),
+        segment_length_source=segment_length_source.strip(),
     )
     return C3dWorkflowDraft(
         preset=draft.preset,
@@ -1242,6 +1419,7 @@ def c3d_file_roles_for_preset(preset: C3dModelPreset) -> tuple[C3dFileRole, ...]
     if preset == C3dModelPreset.LOWER_LIMBS:
         return (
             C3dFileRole("main", "Test_func_anat.c3d", "C3D containing all visible markers.", required=True),
+            C3dFileRole("trunk_score", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["trunk_score"], "Trunk SCORE trial."),
             C3dFileRole(
                 "left_hip_score", LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_hip_score"], "Left hip SCORE trial."
             ),

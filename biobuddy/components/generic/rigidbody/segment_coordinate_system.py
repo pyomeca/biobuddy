@@ -454,16 +454,18 @@ class SegmentCoordinateSystemUtils:
                 ]
 
             rt_parent_static = sara_cache[static_markers_hash][0]
-            aor_parent = sara_cache[static_markers_hash][3]
-            cor_parent = sara_cache[static_markers_hash][4]
+            aor_parent = np.asarray(sara_cache[static_markers_hash][3], dtype=float).reshape(3)
+            cor_parent = np.asarray(sara_cache[static_markers_hash][4], dtype=float).reshape(3)
 
-            # Project the optimal point into the static parent segment
+            # Build the axis line in the static parent segment. The origin is a point (w=1), while the AoR is a
+            # direction (w=0); only the origin should receive the parent segment translation.
             frame_count_static = len(rt_parent_static)
             end_aor_static = np.ones((4, frame_count_static))
             start_aor_static = np.ones((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
-                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
+                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ np.hstack((cor_parent, 1.0))).reshape(4)
+                direction_global = (rt_parent_static[i_frame] @ np.hstack((aor_parent, 0.0))).reshape(4)
+                end_aor_static[:, i_frame] = start_aor_static[:, i_frame] + direction_global
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
@@ -478,8 +480,9 @@ class SegmentCoordinateSystemUtils:
                 end_aor_func = np.zeros((4, frame_count_func))
                 start_aor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent).reshape(4)
-                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent).reshape(4)
+                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ np.hstack((cor_parent, 1.0))).reshape(4)
+                    direction_global = (rt_parent_func[i_frame] @ np.hstack((aor_parent, 0.0))).reshape(4)
+                    end_aor_func[:, i_frame] = start_aor_func[:, i_frame] + direction_global
                 _visualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
 
             # Collapse across frames

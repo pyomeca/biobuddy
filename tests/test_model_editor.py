@@ -2,8 +2,14 @@ import numpy as np
 
 from biobuddy import (
     BiomechanicalModelReal,
+    DictData,
 )
-from biobuddy.gui.c3d_creation_workflow import c3d_workflow_draft, remove_axis_from_draft
+from biobuddy.gui.c3d_creation_workflow import (
+    add_axis_to_draft,
+    add_segment_to_draft,
+    c3d_workflow_draft,
+    remove_axis_from_draft,
+)
 from biobuddy.gui.c3d_model_creation import C3dModelPreset
 from biobuddy.gui.model_editor import (
     _c3d_file_names_from_folder,
@@ -14,6 +20,8 @@ from biobuddy.gui.model_editor import (
     _matching_c3d_file_for_expected_name,
     _marker_name_mapping_for_c3d,
     _is_virtual_feature_axis,
+    _anatomical_axis_source_labels,
+    _axis_source_name_from_list_text,
     _orthonormal_axes_from_vector_segments,
     _predictive_virtual_marker_method_from_label,
     _python_code_from_c3d_draft,
@@ -23,6 +31,8 @@ from biobuddy.gui.model_editor import (
     _strip_participant_prefix_from_c3d_data,
     _strip_participant_prefix_from_marker_names,
     _score_segments_from_payload,
+    _segment_length_from_draft,
+    _segment_length_marker_groups,
     _split_marker_names,
     _strip_score_segment_payload,
     _source_with_c3d_assignment,
@@ -70,6 +80,49 @@ def test_virtual_marker_editor_payload_helpers_preserve_score_settings():
     assert _score_segments_from_payload(payload) == ("PelvisTech", "ThighTech")
     assert _strip_score_segment_payload(payload) == "condyles=ME,LE"
     assert _split_marker_names("LASI, RASI; LPSI") == ("LASI", "RASI", "LPSI")
+
+
+def test_segment_length_uses_selected_segment_and_child_origins():
+    """
+    Estimate segment length from the anatomical origin of a segment and its child.
+    """
+    draft = c3d_workflow_draft(C3dModelPreset.FROM_SCRATCH)
+    draft = add_segment_to_draft(draft, "Thigh")
+    draft = add_segment_to_draft(draft, "Shank", parent_name="Thigh")
+    draft = add_axis_to_draft(
+        draft,
+        name="Thigh_axis",
+        segment_name="Thigh",
+        axis="z",
+        start_markers=("Hip",),
+        end_markers=("Knee",),
+        origin_markers=("Hip",),
+    )
+    draft = add_axis_to_draft(
+        draft,
+        name="Shank_axis",
+        segment_name="Shank",
+        axis="z",
+        start_markers=("Knee",),
+        end_markers=("Ankle",),
+        origin_markers=("Knee",),
+    )
+    c3d_data = DictData(
+        {
+            "Hip": np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0], [1.0, 1.0]]),
+            "Knee": np.array([[0.0, 0.0], [3.0, 3.0], [4.0, 4.0], [1.0, 1.0]]),
+            "Ankle": np.array([[0.0, 0.0], [6.0, 6.0], [8.0, 8.0], [1.0, 1.0]]),
+        }
+    )
+
+    proximal_markers, distal_markers, source = _segment_length_marker_groups(draft, "Thigh")
+    length, length_source = _segment_length_from_draft(draft, c3d_data, "Thigh")
+
+    assert proximal_markers == ("Hip",)
+    assert distal_markers == ("Knee",)
+    assert source == "proximal=Hip; distal=Knee; child=Shank"
+    assert length == 5.0
+    assert length_source == source
 
 
 def test_virtual_marker_editor_suggests_joint_names_from_segment_pairs():
@@ -129,6 +182,21 @@ def test_axis_projection_payload_parses_point_and_axis_sources():
     assert marker_axis_reference == ""
     assert marker_axis_start == ("LKNE", "LKNEM")
     assert marker_axis_end == ("LANK", "LANKM")
+
+
+def test_anatomical_axis_source_labels_include_all_virtual_markers_and_axes():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+    labels = _anatomical_axis_source_labels(draft, ("LASI", "RASI"))
+
+    assert labels[:2] == ("LASI", "RASI")
+    assert "CoR_LThigh_wrt_Pelvis | virtual marker | LThigh" in labels
+    assert "CoR_LFoot_wrt_LShank | virtual marker | LFoot" in labels
+    assert "[axis] Axis_LKnee_SARA | virtual axis | LShank" in labels
+    assert "[axis] LShank_second_axis | virtual axis | LShank" not in labels
+    assert _axis_source_name_from_list_text("[axis] Axis_LKnee_SARA | virtual axis | LShank") == "Axis_LKnee_SARA"
+    assert (
+        _axis_source_name_from_list_text("CoR_LThigh_wrt_Pelvis | virtual marker | LThigh") == "CoR_LThigh_wrt_Pelvis"
+    )
 
 
 def test_c3d_file_names_from_folder_lists_available_c3d_files(tmp_path):

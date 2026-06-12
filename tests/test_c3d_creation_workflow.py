@@ -65,6 +65,7 @@ def test_c3d_file_roles_use_generic_names_for_three_presets():
 
     assert from_scratch_names == {"main_markers.c3d"}
     assert "Test_func_anat.c3d" in lower_limb_names
+    assert "*func_trunk.c3d" in lower_limb_names
     assert "*func_lknee.c3d" in lower_limb_names
     assert lower_limb_anatomical_names == {"main_markers.c3d"}
     assert "pointing_virtual_markers.c3d" in upper_limb_names
@@ -128,15 +129,39 @@ def test_lower_limb_functional_draft_exposes_sara_knee_axes():
     anatomical_draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS_ANATOMICAL)
 
     left_knee_axis = next(axis for axis in draft.axes if axis.name == "Axis_LKnee_SARA")
+    left_thigh_first_axis = next(axis for axis in draft.axes if axis.name == "LThigh_first_axis")
+    left_thigh_second_axis = next(axis for axis in draft.axes if axis.name == "LThigh_second_axis")
+    left_shank_first_axis = next(axis for axis in draft.axes if axis.name == "LShank_first_axis")
+    left_shank_second_axis = next(axis for axis in draft.axes if axis.name == "LShank_second_axis")
 
+    assert all(axis.axis in {"", "x", "y", "z"} for axis in draft.axes)
     assert left_knee_axis.method == "sara"
     assert "trial=left_knee_sara" in left_knee_axis.source
     assert "parent markers=LTIBD,LTIB,LTIBF" in left_knee_axis.source
     assert "child markers=LTHIB,LTHID,LTHI" in left_knee_axis.source
     assert "expected axis=LKNE,LKNEM" in left_knee_axis.source
+    assert "origin markers=LKNE,LKNEM" in left_knee_axis.source
     assert left_knee_axis.start_markers == ("LKNE",)
     assert left_knee_axis.end_markers == ("LKNEM",)
     assert left_knee_axis.origin_markers == ("LKNE", "LKNEM")
+    assert left_thigh_first_axis.axis == "x"
+    assert left_thigh_first_axis.start_markers == ("Proj_LKnee_on_Axis_LKnee_SARA",)
+    assert left_thigh_first_axis.end_markers == ("CoR_LThigh_wrt_Pelvis",)
+    assert left_thigh_first_axis.origin_markers == ("CoR_LThigh_wrt_Pelvis",)
+    assert left_thigh_second_axis.axis == "y"
+    assert left_thigh_second_axis.method == "sara"
+    assert left_thigh_second_axis.start_markers == ("Axis_LKnee_SARA",)
+    assert left_thigh_second_axis.end_markers == ()
+    assert left_thigh_second_axis.keep_vector is True
+    assert left_shank_first_axis.axis == "x"
+    assert left_shank_first_axis.start_markers == ("CoR_LFoot_wrt_LShank",)
+    assert left_shank_first_axis.end_markers == ("Proj_LKnee_on_Axis_LKnee_SARA",)
+    assert left_shank_first_axis.origin_markers == ("Proj_LKnee_on_Axis_LKnee_SARA",)
+    assert left_shank_second_axis.axis == "y"
+    assert left_shank_second_axis.method == "sara"
+    assert left_shank_second_axis.start_markers == ("Axis_LKnee_SARA",)
+    assert left_shank_second_axis.end_markers == ()
+    assert left_shank_second_axis.keep_vector is True
     assert not any(axis.name == "Axis_LKnee_SARA" for axis in anatomical_draft.axes)
 
 
@@ -245,7 +270,7 @@ def test_parse_score_report_extracts_joint_center_entries():
     assert entry.distal_column == 7
     assert entry.proximal_segment_name == "Pelvis"
     assert entry.distal_segment_name == "Thorax"
-    assert score_virtual_marker_names_from_entry(entry) == ("CoR_Thorax_in_Pelvis", "CoR_Thorax_in_Thorax")
+    assert score_virtual_marker_names_from_entry(entry) == ("CoR_Thorax_wrt_Pelvis", "CoR_Thorax_wrt_Thorax")
 
 
 def test_c3d_workflow_draft_edits_virtual_markers_and_axes():
@@ -343,6 +368,11 @@ def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
         child_translation=True,
         initial_rotation_method="anatomical_c3d",
         initial_rotation_source="static_anatomical.c3d",
+        anthropometry_model="de_leva",
+        anthropometry_sex="female",
+        anthropometry_mass=62.0,
+        segment_length=0.42,
+        segment_length_source="proximal=LKNE,LKNEM; distal=LANK,LANKM; child=LFoot",
     )
     draft = assign_c3d_file_role_to_draft(draft, "main", "/tmp/main_markers.c3d")
 
@@ -353,6 +383,11 @@ def test_c3d_workflow_draft_edits_segment_settings_and_file_assignments():
     assert lshank_settings["rotations"] == "xz"
     assert lshank_settings["child_translation"] is True
     assert lshank_settings["initial_rotation_method"] == "anatomical_c3d"
+    assert lshank_settings["anthropometry_model"] == "de_leva"
+    assert lshank_settings["anthropometry_sex"] == "female"
+    assert lshank_settings["anthropometry_mass"] == 62.0
+    assert lshank_settings["segment_length"] == 0.42
+    assert lshank_settings["segment_length_source"] == "proximal=LKNE,LKNEM; distal=LANK,LANKM; child=LFoot"
     assert any(
         assignment["role"] == "main" and assignment["source_path"] == "/tmp/main_markers.c3d"
         for assignment in payload["c3d_file_assignments"]
@@ -475,6 +510,16 @@ def test_c3d_workflow_progress_reports_loaded_markers_and_assigned_required_role
 
     assert progress_by_name["Choose main C3D"].status == "done"
     assert progress_by_name["Generate model"].status == "done"
+
+
+def test_c3d_workflow_progress_accepts_anatomical_segments_as_functional_marker_sets():
+    draft = c3d_workflow_draft(C3dModelPreset.LOWER_LIMBS)
+
+    progress = c3d_workflow_progress(draft)
+    progress_by_name = {step.name: step for step in progress}
+
+    assert progress_by_name["Create technical segments"].status == "done"
+    assert "segment marker sets usable for functional trials" in progress_by_name["Create technical segments"].detail
 
 
 def test_c3d_virtual_marker_method_examples_document_regression_and_sara():

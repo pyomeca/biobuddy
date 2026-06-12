@@ -18,6 +18,7 @@ from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Rotations, Translations
 
 LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES = {
+    "trunk_score": "*func_trunk.c3d",
     "left_hip_score": "*func_lhip.c3d",
     "left_knee_sara": "*func_lknee.c3d",
     "left_ankle_score": "*func_lankle.c3d",
@@ -68,7 +69,7 @@ def lower_limb_template(use_functional: bool = True, include_de_leva: bool = Tru
                 rotations=Rotations.XYZ,
                 inertia_name=SegmentName.TRUNK,
                 frame=LocalFrameSpec(
-                    origin=_p("CLAV"),
+                    origin=_trunk_center_spec(use_functional),
                     first_axis=AxisSpec.from_markers(
                         Axis.Name.Y,
                         ("T10", "C7"),
@@ -82,8 +83,6 @@ def lower_limb_template(use_functional: bool = True, include_de_leva: bool = Tru
                     axis_to_keep=Axis.Name.Z,
                 ),
                 mesh_points=(
-                    _p("S3"),
-                    _p("S1"),
                     _p("T10"),
                     _p("T6"),
                     _p("C7"),
@@ -136,6 +135,23 @@ def lower_limb_template(use_functional: bool = True, include_de_leva: bool = Tru
 def _functional_trials() -> tuple[FunctionalTrialSpec, ...]:
     return (
         FunctionalTrialSpec(
+            name="trunk_score",
+            file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["trunk_score"],
+            required_markers=(
+                "LPSI",
+                "RPSI",
+                "LASI",
+                "RASI",
+                "T10",
+                "T6",
+                "C7",
+                "C2",
+                "CLAV",
+                "STRN",
+            ),
+            method=FunctionalMethod.SCORE,
+        ),
+        FunctionalTrialSpec(
             name="left_hip_score",
             file_pattern=LOWER_LIMB_FUNCTIONAL_C3D_FILENAMES["left_hip_score"],
             required_markers=("LPSI", "RPSI", "LASI", "RASI", "LTHI", "LTHIB", "LTHID"),
@@ -174,6 +190,18 @@ def _functional_trials() -> tuple[FunctionalTrialSpec, ...]:
     )
 
 
+def _trunk_center_spec(use_functional: bool):
+    if not use_functional:
+        return _p("CLAV")
+    return FunctionalCenterSpec(
+        method=FunctionalMethod.SCORE,
+        trial_name="trunk_score",
+        parent_marker_names=("LPSI", "RPSI", "LASI", "RASI"),
+        child_marker_names=("T10", "T6", "C7", "C2", "CLAV", "STRN"),
+        fallback=_p("CLAV"),
+    )
+
+
 def _hip_center_spec(side: str, fallback_marker: str, use_functional: bool):
     if not use_functional:
         return _p(fallback_marker)
@@ -198,8 +226,13 @@ def _ankle_center_spec(side: str, fallback_markers: tuple[str, str], use_functio
     )
 
 
-def _knee_sara_axis_spec(side: str, knee_axis_start: tuple[str, str], use_functional: bool):
-    fallback_axis = AxisSpec.from_markers(Axis.Name.X, knee_axis_start[0], knee_axis_start[1])
+def _knee_sara_axis_spec(
+    side: str,
+    knee_axis_start: tuple[str, str],
+    use_functional: bool,
+    axis_name=Axis.Name.Y,
+):
+    fallback_axis = AxisSpec.from_markers(axis_name, knee_axis_start[0], knee_axis_start[1])
     if not use_functional:
         return fallback_axis
     return FunctionalAxisSpec(
@@ -250,9 +283,9 @@ def _thigh_segment(side: str, hip_fallback: str, knee_axis_start: tuple[str, str
         inertia_name=SegmentName.THIGH,
         frame=LocalFrameSpec(
             origin=origin,
-            first_axis=AxisSpec(Axis.Name.Z, knee_projection, origin),
+            first_axis=AxisSpec(Axis.Name.X, knee_projection, origin),
             second_axis=knee_axis,
-            axis_to_keep=Axis.Name.Z,
+            axis_to_keep=Axis.Name.Y,
         ),
         mesh_points=(
             _p(hip_fallback),
@@ -286,9 +319,9 @@ def _shank_segment(
         inertia_name=SegmentName.SHANK,
         frame=LocalFrameSpec(
             origin=knee_projection,
-            first_axis=AxisSpec(Axis.Name.Z, ankle_center, knee_projection),
+            first_axis=AxisSpec(Axis.Name.X, ankle_center, knee_projection),
             second_axis=second_axis,
-            axis_to_keep=Axis.Name.X,
+            axis_to_keep=Axis.Name.Y,
         ),
         mesh_points=(
             _p(f"{side}TIBD"),
@@ -316,9 +349,9 @@ def _foot_segment(
         inertia_name=SegmentName.FOOT,
         frame=LocalFrameSpec(
             origin=origin,
-            first_axis=AxisSpec.from_markers(Axis.Name.Z, f"{side}TOE", f"{side}HEE"),
-            second_axis=AxisSpec.from_markers(Axis.Name.X, ankle_axis[0], ankle_axis[1]),
-            axis_to_keep=Axis.Name.Z,
+            first_axis=AxisSpec.from_markers(Axis.Name.X, f"{side}HEE", (f"{side}TOE", f"{side}TOE5")),
+            second_axis=AxisSpec.from_markers(Axis.Name.Z, ankle_axis[0], ankle_axis[1]),
+            axis_to_keep=Axis.Name.X,
         ),
         mesh_points=(
             _p(f"{side}HEE"),
@@ -334,12 +367,18 @@ def _foot_segment(
     )
 
 
-def lower_limb_de_leva_inertia_parameters(data) -> dict[str, object]:
+def lower_limb_de_leva_inertia_parameters(
+    data,
+    total_mass: float = 100,
+    sex: Sex = Sex.MALE,
+) -> dict[str, object]:
     """
     Build De Leva inertial parameters from marker-origin distances.
 
     The calibration C3Ds used by this project can have their Z axis pointing downward, so the measurements below are
     Euclidean distances between anatomical marker groups rather than signed vertical coordinates.
+    ``total_mass`` and ``sex`` are explicit parameters so the GUI can later route other anthropometric models through
+    the same factory-style entry point.
     """
     pelvis = _mean_position(data, ("LPSI", "RPSI", "LASI", "RASI"))
     trunk_top = _mean_position(data, ("CLAV", "C7"))
@@ -371,7 +410,7 @@ def lower_limb_de_leva_inertia_parameters(data) -> dict[str, object]:
     total_height = shoulder_height
     shoulder_span = max(float(hip_width), 1e-6)
 
-    de_leva = DeLevaTable(total_mass=100, sex=Sex.MALE)
+    de_leva = DeLevaTable(total_mass=total_mass, sex=sex)
     de_leva.from_measurements(
         total_height=total_height,
         ankle_height=ankle_height,
@@ -415,8 +454,6 @@ def _markers() -> tuple[MarkerAttachmentSpec, ...]:
         _marker("C2", "Trunk", anatomical=True),
         _marker("T6", "Trunk", anatomical=True),
         _marker("T10", "Trunk", anatomical=True),
-        _marker("S1", "Trunk", anatomical=True),
-        _marker("S3", "Trunk", anatomical=True),
         _marker("CLAV", "Trunk", anatomical=True),
         _marker("STRN", "Trunk", anatomical=True),
         _marker("LTHI", "LThigh"),
