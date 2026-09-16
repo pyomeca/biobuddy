@@ -36,6 +36,202 @@ class YeadonDensitySet(Enum):
     DEMPSTER = "Dempster"
 
 
+class YeadonMeasures:
+    def __init__(
+        self,
+        Ls1L: float,
+        Ls2L: float,
+        Ls3L: float,
+        Ls4L: float,
+        Ls5L: float,
+        Ls6L: float,
+        Ls7L: float,
+        Ls8L: float,
+        Ls0p: float,
+        Ls1p: float,
+        Ls2p: float,
+        Ls3p: float,
+        Ls5p: float,
+        Ls6p: float,
+        Ls7p: float,
+        Ls0w: float,
+        Ls1w: float,
+        Ls2w: float,
+        Ls3w: float,
+        Ls4w: float,
+        Ls4d: float,
+        La2L: float,
+        La3L: float,
+        La4L: float,
+        La5L: float,
+        La6L: float,
+        La7L: float,
+        La0p: float,
+        La1p: float,
+        La2p: float,
+        La3p: float,
+        La4p: float,
+        La5p: float,
+        La6p: float,
+        La7p: float,
+        La4w: float,
+        La5w: float,
+        La6w: float,
+        La7w: float,
+        Lb2L: float,
+        Lb3L: float,
+        Lb4L: float,
+        Lb5L: float,
+        Lb6L: float,
+        Lb7L: float,
+        Lb0p: float,
+        Lb1p: float,
+        Lb2p: float,
+        Lb3p: float,
+        Lb4p: float,
+        Lb5p: float,
+        Lb6p: float,
+        Lb7p: float,
+        Lb4w: float,
+        Lb5w: float,
+        Lb6w: float,
+        Lb7w: float,
+        Lj1L: float,
+        Lj3L: float,
+        Lj4L: float,
+        Lj5L: float,
+        Lj6L: float,
+        Lj8L: float,
+        Lj9L: float,
+        Lj1p: float,
+        Lj2p: float,
+        Lj3p: float,
+        Lj4p: float,
+        Lj5p: float,
+        Lj6p: float,
+        Lj7p: float,
+        Lj8p: float,
+        Lj9p: float,
+        Lj8w: float,
+        Lj9w: float,
+        Lj6d: float,
+        Lk1L: float,
+        Lk3L: float,
+        Lk4L: float,
+        Lk5L: float,
+        Lk6L: float,
+        Lk8L: float,
+        Lk9L: float,
+        Lk1p: float,
+        Lk2p: float,
+        Lk3p: float,
+        Lk4p: float,
+        Lk5p: float,
+        Lk6p: float,
+        Lk7p: float,
+        Lk8p: float,
+        Lk9p: float,
+        Lk8w: float,
+        Lk9w: float,
+        Lk6d: float,
+    ):
+        self.Ls1L = Ls1L
+        self.Ls2L = Ls2L
+        self.Ls3L = Ls3L
+        self.Ls4L = Ls4L
+        self.Ls5L = Ls5L
+        self.Ls6L = Ls6L
+        self.Ls7L = Ls7L
+        self.Ls8L = Ls8L
+        self.Ls0p = Ls0p
+        self.Ls1p = Ls1p
+        self.Ls2p = Ls2p
+        self.Ls3p = Ls3p
+        self.Ls5p = Ls5p
+        self.Ls6p = Ls6p
+        self.Ls7p = Ls7p
+        self.Ls0w = Ls0w
+        self.Ls1w = Ls1w
+        self.Ls2w = Ls2w
+        self.Ls3w = Ls3w
+        self.Ls4w = Ls4w
+        self.Ls4d = Ls4d
+        self.La2L = La2L
+        self.La3L = La3L
+        self.La4L = La4L
+        self.La5L = La5L
+        self.La6L = La6L
+        self.La7L = La7L
+        self.La0p = La0p
+        self.La1p = La1p
+        self.La2p = La2p
+        self.La3p = La3p
+        self.La4p = La4p
+        self.La5p = La5p
+        self.La6p = La6p
+        self.La7p = La7p
+        self.La4w = La4w
+        self.La5w = La5w
+        self.La6w = La6w
+        self.La7w = La7w
+        self.Lb2L = Lb2L
+        self.Lb3L = Lb3L
+        self.Lb4L = Lb4L
+        self.Lb5L = Lb5L
+        self.Lb6L = Lb6L
+        self.Lb7L = Lb7L
+        self.Lb0p = Lb0p
+        self.Lb1p = Lb1p
+        self.Lb2p = Lb2p
+        self.Lb3p = Lb3p
+        self.Lb4p = Lb4p
+        self.Lb5p = Lb5p
+        self.Lb6p = Lb6p
+        self.Lb7p = Lb7p
+        self.Lb4w = Lb4w
+        self.Lb5w = Lb5w
+        self.Lb6w = Lb6w
+        self.Lb7w = Lb7w
+        self.Lj1L = Lj1L
+        self.Lj3L = Lj3L
+        self.Lj4L = Lj4L
+        self.Lj5L = Lj5L
+        self.Lj6L = Lj6L
+        self.Lj8L = Lj8L
+        self.Lj9L = Lj9L
+        self.Lj1p = Lj1p
+        self.Lj2p = Lj2p
+        self.Lj3p = Lj3p
+        self.Lj4p = Lj4p
+        self.Lj5p = Lj5p
+        self.Lj6p = Lj6p
+        self.Lj7p = Lj7p
+        self.Lj8p = Lj8p
+        self.Lj9p = Lj9p
+        self.Lj8w = Lj8w
+        self.Lj9w = Lj9w
+        self.Lj6d = Lj6d
+        self.Lk1L = Lk1L
+        self.Lk3L = Lk3L
+        self.Lk4L = Lk4L
+        self.Lk5L = Lk5L
+        self.Lk6L = Lk6L
+        self.Lk8L = Lk8L
+        self.Lk9L = Lk9L
+        self.Lk1p = Lk1p
+        self.Lk2p = Lk2p
+        self.Lk3p = Lk3p
+        self.Lk4p = Lk4p
+        self.Lk5p = Lk5p
+        self.Lk6p = Lk6p
+        self.Lk7p = Lk7p
+        self.Lk8p = Lk8p
+        self.Lk9p = Lk9p
+        self.Lk8w = Lk8w
+        self.Lk9w = Lk9w
+        self.Lk6d = Lk6d
+
+
 @dataclass(frozen=True)
 class YeadonMeasurementSpec:
     name: str
