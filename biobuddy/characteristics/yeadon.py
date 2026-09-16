@@ -406,32 +406,41 @@ class YeadonTable:
         # The following attributes will be set by from_measurements
         self.human = None
         self.inertial_table: dict[YeadonSegmentName, InertiaParametersReal] = {}
+        self.measures: YeadonMeasures = None
 
+        # The following attributes will be set by get_joint_position_from_measurements
+        self.pelvis_position: np.ndarray = None
+        self.thorax_position: np.ndarray = None
+        self.chest_head_position: np.ndarray = None
+        self.top_head_position: np.ndarray = None
+        self.right_shoulder_position: np.ndarray = None
+        self.right_elbow_position: np.ndarray = None
+        self.right_wrist_position: np.ndarray = None
+        self.left_shoulder_position: np.ndarray = None
+        self.left_elbow_position: np.ndarray = None
+        self.left_wrist_position: np.ndarray = None
+        self.right_hip_position: np.ndarray = None
+        self.right_knee_position: np.ndarray = None
+        self.right_ankle_position: np.ndarray = None
+        self.left_hip_position: np.ndarray = None
+        self.left_knee_position: np.ndarray = None
+        self.left_ankle_position: np.ndarray = None
 
-    def from_measurements(
-        self,
-        measurements: Mapping[str, float] | str | Path,
-        configuration: Mapping[str, float] | str | Path | None = None,
-    ) -> None:
+    def define_inertial_table(self):
         """
-        Compute the Yeadon inertial table from anthropometric measurements.
-
-        Parameters
-        ----------
-        measurements
-            Either a mapping with Yeadon's 95 measurement names in meters, or a path to a Yeadon measurement file.
-        configuration
-            Optional Yeadon configuration mapping or file. If omitted, the neutral configuration is used.
+        Define the inertial characteristics of the segments based on the Yeadon anthropometric model.
         """
-        yeadon = _import_yeadon()
-        measurements = str(measurements) if isinstance(measurements, Path) else measurements
-        configuration = str(configuration) if isinstance(configuration, Path) else configuration
+        # Try importing the yeadon package that is needed for this table
+        try:
+            import yeadon
+        except ImportError as error:
+            raise ImportError(
+                "YeadonTable requires the `yeadon` package. Install it with `pip install yeadon` "
+                "or install BioBuddy with its declared dependencies."
+            ) from error
 
-        self.measurements = measurements
-        self.configuration = configuration
         self.human = yeadon.Human(
-            measurements,
-            CFG=configuration,
+            vars(self.measures),
             symmetric=self.symmetric,
             density_set=self.density_set,
         )
@@ -443,21 +452,65 @@ class YeadonTable:
             for segment_name in YeadonSegmentName
         }
 
+
+    def get_joint_position_from_measurements(self) -> None:
+        """
+        Define the position of the joint centers based on the Yeadon anthropometric model.
+        This must be called after define_inertial_table since the joint centers are computed by the
+        yeadon package while building the Human model.
+        """
+        self.pelvis_position = self.segment_origin(YeadonSegmentName.PELVIS)
+        self.thorax_position = self.segment_origin(YeadonSegmentName.THORAX)
+        self.chest_head_position = self.segment_origin(YeadonSegmentName.CHEST_HEAD)
+        self.top_head_position = self.segment_end(YeadonSegmentName.CHEST_HEAD)
+
+        # Right arm
+        self.right_shoulder_position = self.segment_origin(YeadonSegmentName.RIGHT_UPPER_ARM)
+        self.right_elbow_position = self.segment_origin(YeadonSegmentName.RIGHT_FOREARM_HAND)
+        self.right_wrist_position = self.segment_end(YeadonSegmentName.RIGHT_FOREARM_HAND)
+
+        # Left arm
+        self.left_shoulder_position = self.segment_origin(YeadonSegmentName.LEFT_UPPER_ARM)
+        self.left_elbow_position = self.segment_origin(YeadonSegmentName.LEFT_FOREARM_HAND)
+        self.left_wrist_position = self.segment_end(YeadonSegmentName.LEFT_FOREARM_HAND)
+
+        # Right leg
+        self.right_hip_position = self.segment_origin(YeadonSegmentName.RIGHT_THIGH)
+        self.right_knee_position = self.segment_origin(YeadonSegmentName.RIGHT_SHANK_FOOT)
+        self.right_ankle_position = self.segment_end(YeadonSegmentName.RIGHT_SHANK_FOOT)
+
+        # Left leg
+        self.left_hip_position = self.segment_origin(YeadonSegmentName.LEFT_THIGH)
+        self.left_knee_position = self.segment_origin(YeadonSegmentName.LEFT_SHANK_FOOT)
+        self.left_ankle_position = self.segment_end(YeadonSegmentName.LEFT_SHANK_FOOT)
+
+    def from_measurements(
+        self,
+        measures: YeadonMeasures,
+    ) -> None:
+        """
+        Create the Yeadon inertial table from anthropometric measurements.
+
+        Parameters
+        ----------
+        measures
+            Yeadon's 95 measurements in meters
+        """
+
+        self.measures = measures
+
+        self.define_inertial_table()
+        self.get_joint_position_from_measurements()
+
     def from_file(
         self,
         filepath: str | Path,
-        configuration: Mapping[str, float] | str | Path | None = None,
-        symmetric: bool = True,
-        density_set: YeadonDensitySet | str = YeadonDensitySet.DEMPSTER,
-        total_mass: float | None = None,
     ) -> None:
         """
-        Compute the Yeadon inertial table from a Yeadon measurement text file.
+        Create the Yeadon inertial table from a Yeadon measurement text file.
         """
-        self.from_measurements(
-            measurements=filepath,
-            configuration=configuration,
-        )
+        # TODO
+        pass
 
     def to_file(self, filepath: str | Path) -> None:
         """
