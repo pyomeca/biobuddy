@@ -430,14 +430,7 @@ class YeadonTable:
         """
         Define the inertial characteristics of the segments based on the Yeadon anthropometric model.
         """
-        # Try importing the yeadon package that is needed for this table
-        try:
-            import yeadon
-        except ImportError as error:
-            raise ImportError(
-                "YeadonTable requires the `yeadon` package. Install it with `pip install yeadon` "
-                "or install BioBuddy with its declared dependencies."
-            ) from error
+        yeadon = _import_yeadon()
 
         self.human = yeadon.Human(
             vars(self.measures),
@@ -447,11 +440,7 @@ class YeadonTable:
         if self.total_mass is not None:
             self.human.scale_human_by_mass(self.total_mass)
 
-        self.inertial_table = {
-            segment_name: self._inertia_parameters_from_segment(self._yeadon_segment(segment_name))
-            for segment_name in YeadonSegmentName
-        }
-
+        self.inertial_table = self._inertial_table_from_human()
 
     def get_joint_position_from_measurements(self) -> None:
         """
@@ -508,9 +497,29 @@ class YeadonTable:
     ) -> None:
         """
         Create the Yeadon inertial table from a Yeadon measurement text file.
+
+        Parameters
+        ----------
+        filepath
+            Path to a YAML-style measurement file, as produced by `to_file`: one `name: value` line
+            per measurement, a `measurementconversionfactor` (e.g., 0.01 if the measurements are in
+            centimeters), and an optional `totalmass` (in kilograms).
         """
-        # TODO
-        pass
+        yeadon = _import_yeadon()
+
+        self.human = yeadon.Human(
+            str(filepath),
+            symmetric=self.symmetric,
+            density_set=self.density_set,
+        )
+        self.measures = YeadonMeasures(**{name: float(self.human.meas[name]) for name in YEADON_MEASUREMENT_NAMES})
+        if self.total_mass is not None:
+            self.human.scale_human_by_mass(self.total_mass)
+        elif self.human.meas_mass > 0:
+            self.total_mass = float(self.human.meas_mass)
+
+        self.inertial_table = self._inertial_table_from_human()
+        self.get_joint_position_from_measurements()
 
     def to_file(self, filepath: str | Path) -> None:
         """
@@ -581,9 +590,15 @@ class YeadonTable:
     def _yeadon_segment(self, segment_name: YeadonSegmentName) -> Any:
         return getattr(self.human, segment_name.value)
 
+    def _inertial_table_from_human(self) -> dict[YeadonSegmentName, InertiaParametersReal]:
+        return {
+            segment_name: self._inertia_parameters_from_segment(self._yeadon_segment(segment_name))
+            for segment_name in YeadonSegmentName
+        }
+
     def _measurement_mapping_for_export(self) -> Mapping[str, float]:
-        if isinstance(self.measurements, Mapping):
-            measurements = self.measurements
+        if self.measures is not None:
+            measurements = vars(self.measures)
         elif self.human is not None and isinstance(getattr(self.human, "meas", None), Mapping):
             measurements = self.human.meas
         else:
