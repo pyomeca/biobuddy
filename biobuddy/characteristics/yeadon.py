@@ -443,7 +443,7 @@ class YeadonTable:
         yeadon = _import_yeadon()
 
         self.human = yeadon.Human(
-            vars(self.measures),
+            dict(vars(self.measures)),
             symmetric=self.symmetric,
             density_set=self.density_set,
         )
