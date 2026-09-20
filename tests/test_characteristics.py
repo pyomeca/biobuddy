@@ -757,7 +757,11 @@ def test_de_leva_table_getitem():
 
     # Test that we can access all segments
     for segment in DeLevaSegmentName:
-        if segment == DeLevaSegmentName.LOWER_TRUNK or segment == DeLevaSegmentName.MID_TRUNK or segment == DeLevaSegmentName.UPPER_TRUNK:
+        if (
+            segment == DeLevaSegmentName.LOWER_TRUNK
+            or segment == DeLevaSegmentName.MID_TRUNK
+            or segment == DeLevaSegmentName.UPPER_TRUNK
+        ):
             # These segments are not in the static table
             continue
         male_params = male_table[segment]
@@ -823,9 +827,15 @@ def test_de_leva_table_mass_calculations():
         DeLevaSegmentName.LOWER_ARM: np.array(
             [0, 0, (1 - 0.4574) * (mock_data.values["WRIST"][2] - mock_data.values["ELBOW"][2])]
         ),
-        DeLevaSegmentName.HAND: np.array([0, 0, 0.3624 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]),
-        DeLevaSegmentName.THIGH: np.array([0, 0, 0.4095 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]),
-        DeLevaSegmentName.SHANK: np.array([0, 0, 0.4459 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]),
+        DeLevaSegmentName.HAND: np.array(
+            [0, 0, 0.3624 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]
+        ),
+        DeLevaSegmentName.THIGH: np.array(
+            [0, 0, 0.4095 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]
+        ),
+        DeLevaSegmentName.SHANK: np.array(
+            [0, 0, 0.4459 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]
+        ),
         DeLevaSegmentName.FOOT: np.array([0.4415 * (mock_data.values["TOE"][1] - mock_data.values["HEEL"][1]), 0, 0]),
     }
     expected_female_com = {
@@ -837,9 +847,15 @@ def test_de_leva_table_mass_calculations():
         DeLevaSegmentName.LOWER_ARM: np.array(
             [0, 0, (1 - 0.4559) * (mock_data.values["WRIST"][2] - mock_data.values["ELBOW"][2])]
         ),
-        DeLevaSegmentName.HAND: np.array([0, 0, 0.3427 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]),
-        DeLevaSegmentName.THIGH: np.array([0, 0, 0.3612 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]),
-        DeLevaSegmentName.SHANK: np.array([0, 0, 0.4416 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]),
+        DeLevaSegmentName.HAND: np.array(
+            [0, 0, 0.3427 * (mock_data.values["FINGER"][2] - mock_data.values["WRIST"][2])]
+        ),
+        DeLevaSegmentName.THIGH: np.array(
+            [0, 0, 0.3612 * (mock_data.values["KNEE"][2] - mock_data.values["PELVIS"][2])]
+        ),
+        DeLevaSegmentName.SHANK: np.array(
+            [0, 0, 0.4416 * (mock_data.values["ANKLE"][2] - mock_data.values["KNEE"][2])]
+        ),
         DeLevaSegmentName.FOOT: np.array([0.4014 * (mock_data.values["TOE"][1] - mock_data.values["HEEL"][1]), 0, 0]),
     }
     for segment in expected_male_com.keys():

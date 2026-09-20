@@ -8,10 +8,10 @@ Please note that this feature depends on the Yeadon library, installable using `
 
 REF: Yeadon, M. R. (1990). The simulation of aerial movement—II. A mathematical inertia model of the human body. Journal of biomechanics, 23(1), 67-74.
 """
+
 from pathlib import Path
 
 from biobuddy import launch_yeadon_measurement_editor, YeadonTable, YeadonDensitySet, YeadonMeasures
-
 
 if __name__ == "__main__":
 
