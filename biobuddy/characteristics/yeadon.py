@@ -13,7 +13,7 @@ from ..components.real.rigidbody.segment_coordinate_system_real import (
     SegmentCoordinateSystemReal,
 )
 from ..components.real.rigidbody.segment_real import SegmentReal
-from ..utils.enums import Rotations, Translations
+from ..utils.enums import Rotations, Translations, LengthUnits
 
 
 class YeadonSegmentName(Enum):
@@ -134,102 +134,112 @@ class YeadonMeasures:
         Lk8w: float,
         Lk9w: float,
         Lk6d: float,
+        units: LengthUnits = LengthUnits.M,
     ):
-        self.Ls1L = Ls1L
-        self.Ls2L = Ls2L
-        self.Ls3L = Ls3L
-        self.Ls4L = Ls4L
-        self.Ls5L = Ls5L
-        self.Ls6L = Ls6L
-        self.Ls7L = Ls7L
-        self.Ls8L = Ls8L
-        self.Ls0p = Ls0p
-        self.Ls1p = Ls1p
-        self.Ls2p = Ls2p
-        self.Ls3p = Ls3p
-        self.Ls5p = Ls5p
-        self.Ls6p = Ls6p
-        self.Ls7p = Ls7p
-        self.Ls0w = Ls0w
-        self.Ls1w = Ls1w
-        self.Ls2w = Ls2w
-        self.Ls3w = Ls3w
-        self.Ls4w = Ls4w
-        self.Ls4d = Ls4d
-        self.La2L = La2L
-        self.La3L = La3L
-        self.La4L = La4L
-        self.La5L = La5L
-        self.La6L = La6L
-        self.La7L = La7L
-        self.La0p = La0p
-        self.La1p = La1p
-        self.La2p = La2p
-        self.La3p = La3p
-        self.La4p = La4p
-        self.La5p = La5p
-        self.La6p = La6p
-        self.La7p = La7p
-        self.La4w = La4w
-        self.La5w = La5w
-        self.La6w = La6w
-        self.La7w = La7w
-        self.Lb2L = Lb2L
-        self.Lb3L = Lb3L
-        self.Lb4L = Lb4L
-        self.Lb5L = Lb5L
-        self.Lb6L = Lb6L
-        self.Lb7L = Lb7L
-        self.Lb0p = Lb0p
-        self.Lb1p = Lb1p
-        self.Lb2p = Lb2p
-        self.Lb3p = Lb3p
-        self.Lb4p = Lb4p
-        self.Lb5p = Lb5p
-        self.Lb6p = Lb6p
-        self.Lb7p = Lb7p
-        self.Lb4w = Lb4w
-        self.Lb5w = Lb5w
-        self.Lb6w = Lb6w
-        self.Lb7w = Lb7w
-        self.Lj1L = Lj1L
-        self.Lj3L = Lj3L
-        self.Lj4L = Lj4L
-        self.Lj5L = Lj5L
-        self.Lj6L = Lj6L
-        self.Lj8L = Lj8L
-        self.Lj9L = Lj9L
-        self.Lj1p = Lj1p
-        self.Lj2p = Lj2p
-        self.Lj3p = Lj3p
-        self.Lj4p = Lj4p
-        self.Lj5p = Lj5p
-        self.Lj6p = Lj6p
-        self.Lj7p = Lj7p
-        self.Lj8p = Lj8p
-        self.Lj9p = Lj9p
-        self.Lj8w = Lj8w
-        self.Lj9w = Lj9w
-        self.Lj6d = Lj6d
-        self.Lk1L = Lk1L
-        self.Lk3L = Lk3L
-        self.Lk4L = Lk4L
-        self.Lk5L = Lk5L
-        self.Lk6L = Lk6L
-        self.Lk8L = Lk8L
-        self.Lk9L = Lk9L
-        self.Lk1p = Lk1p
-        self.Lk2p = Lk2p
-        self.Lk3p = Lk3p
-        self.Lk4p = Lk4p
-        self.Lk5p = Lk5p
-        self.Lk6p = Lk6p
-        self.Lk7p = Lk7p
-        self.Lk8p = Lk8p
-        self.Lk9p = Lk9p
-        self.Lk8w = Lk8w
-        self.Lk9w = Lk9w
-        self.Lk6d = Lk6d
+        if units == LengthUnits.M:
+            multiplier = 1
+        elif units == LengthUnits.CM:
+            multiplier = 0.01
+        elif units == LengthUnits.MM:
+            multiplier = 0.001
+        else:
+            raise ValueError(f"The units should be an LengthUnits enum, not {units}.")
+
+        self.Ls1L = Ls1L * multiplier
+        self.Ls2L = Ls2L * multiplier
+        self.Ls3L = Ls3L * multiplier
+        self.Ls4L = Ls4L * multiplier
+        self.Ls5L = Ls5L * multiplier
+        self.Ls6L = Ls6L * multiplier
+        self.Ls7L = Ls7L * multiplier
+        self.Ls8L = Ls8L * multiplier
+        self.Ls0p = Ls0p * multiplier
+        self.Ls1p = Ls1p * multiplier
+        self.Ls2p = Ls2p * multiplier
+        self.Ls3p = Ls3p * multiplier
+        self.Ls5p = Ls5p * multiplier
+        self.Ls6p = Ls6p * multiplier
+        self.Ls7p = Ls7p * multiplier
+        self.Ls0w = Ls0w * multiplier
+        self.Ls1w = Ls1w * multiplier
+        self.Ls2w = Ls2w * multiplier
+        self.Ls3w = Ls3w * multiplier
+        self.Ls4w = Ls4w * multiplier
+        self.Ls4d = Ls4d * multiplier
+        self.La2L = La2L * multiplier
+        self.La3L = La3L * multiplier
+        self.La4L = La4L * multiplier
+        self.La5L = La5L * multiplier
+        self.La6L = La6L * multiplier
+        self.La7L = La7L * multiplier
+        self.La0p = La0p * multiplier
+        self.La1p = La1p * multiplier
+        self.La2p = La2p * multiplier
+        self.La3p = La3p * multiplier
+        self.La4p = La4p * multiplier
+        self.La5p = La5p * multiplier
+        self.La6p = La6p * multiplier
+        self.La7p = La7p * multiplier
+        self.La4w = La4w * multiplier
+        self.La5w = La5w * multiplier
+        self.La6w = La6w * multiplier
+        self.La7w = La7w * multiplier
+        self.Lb2L = Lb2L * multiplier
+        self.Lb3L = Lb3L * multiplier
+        self.Lb4L = Lb4L * multiplier
+        self.Lb5L = Lb5L * multiplier
+        self.Lb6L = Lb6L * multiplier
+        self.Lb7L = Lb7L * multiplier
+        self.Lb0p = Lb0p * multiplier
+        self.Lb1p = Lb1p * multiplier
+        self.Lb2p = Lb2p * multiplier
+        self.Lb3p = Lb3p * multiplier
+        self.Lb4p = Lb4p * multiplier
+        self.Lb5p = Lb5p * multiplier
+        self.Lb6p = Lb6p * multiplier
+        self.Lb7p = Lb7p * multiplier
+        self.Lb4w = Lb4w * multiplier
+        self.Lb5w = Lb5w * multiplier
+        self.Lb6w = Lb6w * multiplier
+        self.Lb7w = Lb7w * multiplier
+        self.Lj1L = Lj1L * multiplier
+        self.Lj3L = Lj3L * multiplier
+        self.Lj4L = Lj4L * multiplier
+        self.Lj5L = Lj5L * multiplier
+        self.Lj6L = Lj6L * multiplier
+        self.Lj8L = Lj8L * multiplier
+        self.Lj9L = Lj9L * multiplier
+        self.Lj1p = Lj1p * multiplier
+        self.Lj2p = Lj2p * multiplier
+        self.Lj3p = Lj3p * multiplier
+        self.Lj4p = Lj4p * multiplier
+        self.Lj5p = Lj5p * multiplier
+        self.Lj6p = Lj6p * multiplier
+        self.Lj7p = Lj7p * multiplier
+        self.Lj8p = Lj8p * multiplier
+        self.Lj9p = Lj9p * multiplier
+        self.Lj8w = Lj8w * multiplier
+        self.Lj9w = Lj9w * multiplier
+        self.Lj6d = Lj6d * multiplier
+        self.Lk1L = Lk1L * multiplier
+        self.Lk3L = Lk3L * multiplier
+        self.Lk4L = Lk4L * multiplier
+        self.Lk5L = Lk5L * multiplier
+        self.Lk6L = Lk6L * multiplier
+        self.Lk8L = Lk8L * multiplier
+        self.Lk9L = Lk9L * multiplier
+        self.Lk1p = Lk1p * multiplier
+        self.Lk2p = Lk2p * multiplier
+        self.Lk3p = Lk3p * multiplier
+        self.Lk4p = Lk4p * multiplier
+        self.Lk5p = Lk5p * multiplier
+        self.Lk6p = Lk6p * multiplier
+        self.Lk7p = Lk7p * multiplier
+        self.Lk8p = Lk8p * multiplier
+        self.Lk9p = Lk9p * multiplier
+        self.Lk8w = Lk8w * multiplier
+        self.Lk9w = Lk9w * multiplier
+        self.Lk6d = Lk6d * multiplier
 
 
 @dataclass(frozen=True)

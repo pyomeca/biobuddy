@@ -53,3 +53,8 @@ class ViewAs(Enum):
 class ViewerType(Enum):
     PYORERUN = "pyorerun"
     BIOVIZ = "bioviz"
+
+class LengthUnits(Enum):
+    M = "meter"
+    CM = "centimeter"
+    MM = "milimeter"

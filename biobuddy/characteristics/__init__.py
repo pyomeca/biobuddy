@@ -6,6 +6,7 @@ from .yeadon import (
     YeadonMeasurementSpec,
     YeadonSegmentName,
     YeadonTable,
+    YeadonMeasures,
 )
 
 __all__ = [
@@ -16,6 +17,7 @@ __all__ = [
     YeadonSegmentName.__name__,
     YeadonDensitySet.__name__,
     YeadonMeasurementSpec.__name__,
+    YeadonMeasures.__name__,
     "YEADON_MEASUREMENT_NAMES",
     "YEADON_MEASUREMENT_SPECS",
 ]
