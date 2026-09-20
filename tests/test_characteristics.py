@@ -1012,8 +1012,8 @@ def test_sex_differences():
     female_table.from_static(mock_data)
 
     # Test that head mass is different between males and females
-    male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_data, None)
-    female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_data, None)
+    male_head_mass = male_table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
+    female_head_mass = female_table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
 
     # Should be 0.0694 vs 0.0669 * total_mass
     npt.assert_almost_equal(male_head_mass, 0.0694 * total_mass)
@@ -1021,8 +1021,8 @@ def test_sex_differences():
     assert male_head_mass != female_head_mass
 
     # Test that trunk mass is different
-    male_trunk_mass = male_table[SegmentName.TRUNK].relative_mass(mock_data, None)
-    female_trunk_mass = female_table[SegmentName.TRUNK].relative_mass(mock_data, None)
+    male_trunk_mass = male_table[DeLevaSegmentName.TRUNK].relative_mass(mock_data, None)
+    female_trunk_mass = female_table[DeLevaSegmentName.TRUNK].relative_mass(mock_data, None)
 
     # Should be 0.4346 vs 0.4257 * total_mass
     npt.assert_almost_equal(male_trunk_mass, 0.4346 * total_mass)
@@ -1042,8 +1042,8 @@ def test_de_leva_table_different_masses():
         female_table.from_static(mock_data)
 
         # Test head mass scales correctly
-        male_head_mass = male_table[SegmentName.HEAD].relative_mass(mock_data, None)
-        female_head_mass = female_table[SegmentName.HEAD].relative_mass(mock_data, None)
+        male_head_mass = male_table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
+        female_head_mass = female_table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
 
         npt.assert_almost_equal(male_head_mass, 0.0694 * total_mass)
         npt.assert_almost_equal(female_head_mass, 0.0669 * total_mass)
@@ -1058,7 +1058,7 @@ def test_de_leva_table_edge_cases():
     table.from_static(mock_data)
 
     # Should still work with very small masses
-    head_mass = table[SegmentName.HEAD].relative_mass(mock_data, None)
+    head_mass = table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
     expected = 0.0694 * small_mass
     npt.assert_almost_equal(head_mass, expected)
 
@@ -1066,7 +1066,7 @@ def test_de_leva_table_edge_cases():
     large_mass = 200.0
     table = DeLevaTable(large_mass, Sex.FEMALE)
     table.from_static(mock_data)
-    head_mass = table[SegmentName.HEAD].relative_mass(mock_data, None)
+    head_mass = table[DeLevaSegmentName.HEAD].relative_mass(mock_data, None)
     expected = 0.0669 * large_mass
     npt.assert_almost_equal(head_mass, expected)
 
@@ -1083,7 +1083,7 @@ def test_model_evaluation():
 
     # Check only the trunk segment
     segment = model.segments[1]
-    assert segment.name == SegmentName.TRUNK.value
+    assert segment.name == DeLevaSegmentName.TRUNK.value
     assert segment.parent_name == "root"
     assert segment.translations == Translations.YZ
     assert segment.rotations == Rotations.X
@@ -1116,7 +1116,7 @@ def test_model_evaluation():
 
     # Check only the trunk segment
     segment = model_real.segments[1]
-    assert segment.name == SegmentName.TRUNK.value
+    assert segment.name == DeLevaSegmentName.TRUNK.value
     assert segment.parent_name == "root"
     assert segment.translations == Translations.YZ
     assert segment.rotations == Rotations.X
