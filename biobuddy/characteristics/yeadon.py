@@ -559,10 +559,6 @@ class YeadonTable:
     def measurement_names() -> tuple[str, ...]:
         return YEADON_MEASUREMENT_NAMES
 
-    @staticmethod
-    def measurement_specs() -> tuple[YeadonMeasurementSpec, ...]:
-        return YEADON_MEASUREMENT_SPECS
-
     def __getitem__(self, segment_name: YeadonSegmentName | str) -> InertiaParametersReal:
         return self.inertial_table[_coerce_segment_name(segment_name)]
 
