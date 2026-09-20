@@ -9,8 +9,21 @@ from ..characteristics.yeadon import (
     YEADON_MEASUREMENT_SPECS,
     YeadonDensitySet,
     YeadonMeasurementSpec,
+    YeadonMeasures,
     YeadonTable,
 )
+from ..utils.enums import LengthUnits
+
+_METERS_PER_UNIT = {
+    LengthUnits.M: 1.0,
+    LengthUnits.CM: 0.01,
+    LengthUnits.MM: 0.001,
+}
+_UNIT_LABELS = {
+    LengthUnits.M: "m",
+    LengthUnits.CM: "cm",
+    LengthUnits.MM: "mm",
+}
 
 
 @dataclass(frozen=True)
@@ -76,9 +89,16 @@ def save_yeadon_model(table: YeadonTable, filepath: str | Path) -> None:
     table.to_simple_model().to_biomod(filepath=str(filepath), with_mesh=False)
 
 
-def launch_yeadon_measurement_editor() -> None:
+def launch_yeadon_measurement_editor(
+    yeadon_table: YeadonTable | None = None,
+) -> None:
     """
     Launch a Qt desktop editor for entering Yeadon anthropometric measurements.
+
+    Parameters
+    ----------
+    yeadon_table : YeadonTable, optional
+        An optional YeadonTable object to pre-fill the editor with existing measurements.
     """
     try:
         from PySide6.QtCore import Qt
@@ -177,11 +197,12 @@ def launch_yeadon_measurement_editor() -> None:
             painter.drawText(self.rect(), qt_alignment_center, self.measurement_name)
 
     class YeadonMeasurementEditor(QMainWindow):
-        def __init__(self):
+        def __init__(self, yeadon_table: YeadonTable | None = None):
             super().__init__()
             self.setWindowTitle("Yeadon measurements")
             self.measurement_fields: dict[str, QLineEdit] = {}
-            self.computed_table = None
+            self.yeadon_table: YeadonTable | None = None
+            self._highlighted_field: QLineEdit | None = None
 
             root = QWidget()
             root_layout = QVBoxLayout(root)
@@ -206,14 +227,20 @@ def launch_yeadon_measurement_editor() -> None:
                 self.density_field.addItem(density_set.value)
             self.symmetric_field = QCheckBox()
             self.symmetric_field.setChecked(True)
+            self.units_field = QComboBox()
+            for units in LengthUnits:
+                self.units_field.addItem(f"{units.value} ({_UNIT_LABELS[units]})", units)
+            self._current_units = self.units_field.currentData()
+            self.units_field.currentIndexChanged.connect(self._on_units_changed)
             settings_layout.addRow("Total mass (kg)", self.total_mass_field)
             settings_layout.addRow("Density set", self.density_field)
             settings_layout.addRow("Symmetric", self.symmetric_field)
+            settings_layout.addRow("Measurement units", self.units_field)
             form_layout.addWidget(settings)
 
-            measurements_group = QGroupBox("Measurements (m)")
-            measurements_layout = QGridLayout(measurements_group)
-            validator = QDoubleValidator(0.0, 10.0, 6)
+            self.measurements_group = QGroupBox(f"Measurements ({_UNIT_LABELS[self._current_units]})")
+            measurements_layout = QGridLayout(self.measurements_group)
+            validator = QDoubleValidator(0.0, 100000.0, 6)
             for index, spec in enumerate(YEADON_MEASUREMENT_SPECS):
                 label = QLabel(spec.name)
                 field = QLineEdit()
@@ -223,19 +250,21 @@ def launch_yeadon_measurement_editor() -> None:
                 column = (index % 3) * 2
                 measurements_layout.addWidget(label, row, column)
                 measurements_layout.addWidget(field, row, column + 1)
-            scroll = QScrollArea()
-            scroll.setWidget(measurements_group)
-            scroll.setWidgetResizable(True)
-            form_layout.addWidget(scroll)
+            self.measurements_scroll = QScrollArea()
+            self.measurements_scroll.setWidget(self.measurements_group)
+            self.measurements_scroll.setWidgetResizable(True)
+            form_layout.addWidget(self.measurements_scroll)
 
             action_layout = QHBoxLayout()
-            compute_button = QPushButton("Compute")
-            compute_button.clicked.connect(self._compute)
-            action_layout.addWidget(compute_button)
             self.save_button = QPushButton("Save as .bioMod")
-            self.save_button.setEnabled(False)
             self.save_button.clicked.connect(self._save_model)
             action_layout.addWidget(self.save_button)
+            self.export_button = QPushButton("Export measurements")
+            self.export_button.clicked.connect(self._export_measurements)
+            action_layout.addWidget(self.export_button)
+            self.import_button = QPushButton("Import measurements")
+            self.import_button.clicked.connect(self._import_measurements)
+            action_layout.addWidget(self.import_button)
             self.result_label = QLabel("")
             action_layout.addWidget(self.result_label)
             form_layout.addLayout(action_layout)
@@ -255,6 +284,9 @@ def launch_yeadon_measurement_editor() -> None:
             splitter.setSizes([180, 680, 360])
             self.measurement_list.setCurrentRow(0)
 
+            if yeadon_table is not None:
+                self._load_table_into_fields(yeadon_table)
+
         def _select_measurement(self, row: int) -> None:
             if row < 0:
                 return
@@ -263,28 +295,79 @@ def launch_yeadon_measurement_editor() -> None:
             self.selected_description.setText(spec.description)
             self.illustration.set_measurement(spec.name)
 
-        def _compute(self) -> None:
+            if self._highlighted_field is not None:
+                self._highlighted_field.setStyleSheet("")
+            field = self.measurement_fields[spec.name]
+            field.setStyleSheet("background-color: #fef08a; border: 1px solid #ca8a04;")
+            self._highlighted_field = field
+            self.measurements_scroll.ensureWidgetVisible(field)
+
+        def _on_units_changed(self, index: int) -> None:
+            new_units = self.units_field.itemData(index)
+            if new_units is None or new_units == self._current_units:
+                return
+            old_multiplier = _METERS_PER_UNIT[self._current_units]
+            new_multiplier = _METERS_PER_UNIT[new_units]
+            for field in self.measurement_fields.values():
+                text = field.text().strip()
+                if not text:
+                    continue
+                try:
+                    value = float(text)
+                except ValueError:
+                    continue
+                field.setText(f"{value * old_multiplier / new_multiplier:.6g}")
+            self._current_units = new_units
+            self.measurements_group.setTitle(f"Measurements ({_UNIT_LABELS[new_units]})")
+
+        def _build_table_from_fields(self) -> YeadonTable:
+            measurements = parse_yeadon_measurement_values(
+                {name: field.text() for name, field in self.measurement_fields.items()}
+            )
+            measures = YeadonMeasures(units=self._current_units, **measurements)
+            total_mass = self.total_mass_field.text().strip()
+            table = YeadonTable(
+                symmetric=self.symmetric_field.isChecked(),
+                density_set=self.density_field.currentText(),
+                total_mass=float(total_mass) if total_mass else None,
+            )
+            table.from_measurements(measures)
+            return table
+
+        def _load_table_into_fields(self, table: YeadonTable) -> None:
+            self.yeadon_table = table
+            self.symmetric_field.setChecked(bool(table.symmetric))
+            density_index = self.density_field.findText(table.density_set)
+            if density_index >= 0:
+                self.density_field.setCurrentIndex(density_index)
+            if table.total_mass is not None:
+                self.total_mass_field.setText(f"{table.total_mass:g}")
+            if table.measures is not None:
+                multiplier = _METERS_PER_UNIT[self._current_units]
+                for name in YEADON_MEASUREMENT_NAMES:
+                    value_in_meters = getattr(table.measures, name)
+                    self.measurement_fields[name].setText(f"{value_in_meters / multiplier:.6g}")
+            if table.human is not None:
+                self.result_label.setText(f"Mass: {table.mass:0.3f} kg")
+
+        def _build_table_or_show_error(self) -> YeadonTable | None:
+            """
+            Build a YeadonTable from the current fields, computing it on the fly. Used by every action
+            that needs an up-to-date table (saving the model, exporting measurements, ...) so there is no
+            separate "Compute" step to remember to run first.
+            """
             try:
-                measurements = parse_yeadon_measurement_values(
-                    {name: field.text() for name, field in self.measurement_fields.items()}
-                )
-                total_mass = self.total_mass_field.text().strip()
-                table = YeadonTable(
-                    measurements,
-                    symmetric=self.symmetric_field.isChecked(),
-                    density_set=self.density_field.currentText(),
-                    total_mass=float(total_mass) if total_mass else None,
-                )
+                table = self._build_table_from_fields()
             except Exception as error:
                 QMessageBox.critical(self, "Yeadon measurements", str(error))
-                return
-            self.computed_table = table
+                return None
+            self.yeadon_table = table
             self.result_label.setText(f"Mass: {table.mass:0.3f} kg")
-            self.save_button.setEnabled(True)
+            return table
 
         def _save_model(self) -> None:
-            if self.computed_table is None:
-                QMessageBox.information(self, "No Yeadon model", "Compute a Yeadon model before saving.")
+            table = self._build_table_or_show_error()
+            if table is None:
                 return
             filepath, _ = QFileDialog.getSaveFileName(
                 self,
@@ -295,12 +378,49 @@ def launch_yeadon_measurement_editor() -> None:
             if not filepath:
                 return
             try:
-                save_yeadon_model(self.computed_table, filepath)
+                save_yeadon_model(table, filepath)
             except Exception as error:
                 QMessageBox.critical(self, "Unable to save Yeadon model", str(error))
 
+        def _export_measurements(self) -> None:
+            table = self._build_table_or_show_error()
+            if table is None:
+                return
+            filepath, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export Yeadon measurements",
+                "yeadon_measures.txt",
+                "Text files (*.txt)",
+            )
+            if not filepath:
+                return
+            try:
+                table.to_file(filepath)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to export measurements", str(error))
+
+        def _import_measurements(self) -> None:
+            filepath, _ = QFileDialog.getOpenFileName(
+                self,
+                "Import Yeadon measurements",
+                "",
+                "Text files (*.txt);;All files (*)",
+            )
+            if not filepath:
+                return
+            table = YeadonTable(
+                symmetric=self.symmetric_field.isChecked(),
+                density_set=self.density_field.currentText(),
+            )
+            try:
+                table.from_file(filepath)
+            except Exception as error:
+                QMessageBox.critical(self, "Unable to import measurements", str(error))
+                return
+            self._load_table_into_fields(table)
+
     app = QApplication.instance() or QApplication([])
-    window = YeadonMeasurementEditor()
+    window = YeadonMeasurementEditor(yeadon_table)
     window.resize(1280, 760)
     window.show()
     app.exec()

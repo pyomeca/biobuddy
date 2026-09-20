@@ -131,4 +131,12 @@ if __name__ == "__main__":
     yeadon_table_file.from_file(file_path)
 
     # 3. GUI
-    launch_yeadon_measurement_editor()
+    # Please note that it is possible to fill all the field in the GUI as you take the measurements using:
+    # launch_yeadon_measurement_editor()
+
+    # But here we preset the values using the values from the measurement file to illustrate how to modify a table with the GUI.
+    launch_yeadon_measurement_editor(yeadon_table_file)
+
+    # 4. Create simple model from this inertia table
+    model = yeadon_table_file.to_simple_model()
+    model.animate()
