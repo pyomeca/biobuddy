@@ -59,10 +59,7 @@ def osim_biomod_convertion():
     model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # And convert it to an .osim file
-    model.to_osim(
-        osim_filepath.replace(".osim", "_from_biomod.osim"),
-        with_mesh=visualization_flag,
-    )
+    model.to_osim(osim_filepath.replace(".osim", "_from_biomod.osim"), with_mesh=visualization_flag)
 
     # Test that the model created is valid
     try:
@@ -210,8 +207,7 @@ def bvh_biomod_convertion():
     if visualization_flag:
         model.animate(view_as=ViewAs.BIORBD, model_path=biomod_filepath)
 
-    # --- Reading an .bioMod model and translating it to an .bvh model --- #
-    # Read a .bioMod file
+    # --- Reading an .bioMod model and translating it to an .fbx model --- #
     model = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
 
     # And convert it to an .bvh file

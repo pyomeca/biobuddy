@@ -41,9 +41,9 @@ class SegmentEditorData:
     parent_name
         The parent segment name.
     translations
-        The translation sequence, for example "xyz" or "".
+        The translation sequence, for example ``"xyz"`` or ``""``.
     rotations
-        The rotation sequence, for example "xyz" or "".
+        The rotation sequence, for example ``"xyz"`` or ``""``.
     q_min
         The minimum generalized coordinates for the segment.
     q_max

@@ -13,8 +13,8 @@ from ...components.real.rigidbody.segment_coordinate_system_real import (
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
-from ...utils.kinematics import Kinematics
-from ...utils.linear_algebra import RotationMatrix, RotoTransMatrix
+from ...kinematics.kinematics import Kinematics
+from ...utils.linear_algebra import RotoTransMatrix
 
 
 @dataclass

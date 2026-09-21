@@ -5,7 +5,7 @@ class Kinematics:
     """
     Generalized-coordinate samples associated with a biomechanical model.
 
-    from_bvh and from_fbx constructors extract kinematics independently from model parsing. Rotational coordinates.
+    from_bvh and from_fbx constructors extract kinematics independently from model parsing.
 
     Parameters
     ----------
