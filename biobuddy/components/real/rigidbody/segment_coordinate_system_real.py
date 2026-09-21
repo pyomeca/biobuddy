@@ -71,7 +71,9 @@ class SegmentCoordinateSystemReal:
         elif isinstance(rt_matrix, np.ndarray):
             scs = RotoTransMatrix.from_rt_matrix(rt_matrix)
         else:
-            raise TypeError(f"rt_matrix must be a numpy array or a RotoTransMatrix, got {rt_matrix} of type {type(rt_matrix)}.")
+            raise TypeError(
+                f"rt_matrix must be a numpy array or a RotoTransMatrix, got {rt_matrix} of type {type(rt_matrix)}."
+            )
 
         if not scs.rotation_matrix.is_orthonormal:
             scs.rotation_matrix.suggest_correction()  # Raise the error with recommendations

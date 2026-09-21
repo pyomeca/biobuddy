@@ -16,11 +16,12 @@ class Kinematics:
     dof_names
         The DoF names associated with the rows of q.
     """
+
     def __init__(
-            self,
-            q: np.ndarray = None,
-            time: np.ndarray = None,
-            dof_names: list[str] = None,
+        self,
+        q: np.ndarray = None,
+        time: np.ndarray = None,
+        dof_names: list[str] = None,
     ):
         if q is None:
             self.q = np.empty((0, 0))
@@ -36,7 +37,6 @@ class Kinematics:
             self.dof_names = []
         else:
             self.dof_names = dof_names
-
 
     @property
     def frame_count(self) -> int:
@@ -72,4 +72,3 @@ class Kinematics:
         from ..model_parser.fbx import FbxModelParser
 
         return FbxModelParser(filepath=filepath).to_kinematics()
-
