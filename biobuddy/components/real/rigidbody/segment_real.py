@@ -313,7 +313,7 @@ class SegmentReal(SegmentUtils):
         if self.mesh and with_mesh:
             out_string += self.mesh.to_biomod()
         if self.mesh_file and with_mesh:
-            if os.path.isabs(self.mesh_file.mesh_file_directory):
+            if self.mesh_file.mesh_file_directory and os.path.isabs(self.mesh_file.mesh_file_directory):
                 mesh_path = os.path.relpath(self.mesh_file.mesh_file_directory, model_parent_folder)
                 out_string += self.mesh_file.to_biomod(mesh_path)
             else:

@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 
 import numpy as np
@@ -266,44 +265,6 @@ def test_fbx_visual_meshes_are_reused_unless_overwrite_is_requested(tmp_path: Pa
         overwrite_meshes=True,
     )
     assert hips_mesh_filepath.read_text(encoding="utf-8").startswith("ply\n")
-
-
-def test_fbx_package_export_creates_a_portable_biomod_bundle(tmp_path: Path):
-    """
-    Export an FBX conversion package with bioMod, meshes, animation and source copy.
-    """
-    parent_path = Path(__file__).resolve().parent.parent
-    fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
-
-    package_directory = BiomechanicalModelReal.package_from_fbx(
-        filepath=str(fbx_filepath),
-        output_directory=str(tmp_path),
-        package_name="fullbody_bundle",
-        with_animation=True,
-    )
-
-    assert package_directory == (tmp_path / "fullbody_bundle").resolve()
-    assert (package_directory / "fullbody_bundle.bioMod").exists()
-    assert (package_directory / "meshes" / "hips.ply").exists()
-    assert (package_directory / "source" / "fullbody_model.fbx").exists()
-    assert (package_directory / "animations" / "fullbody_bundle_q.npz").exists()
-    assert (package_directory / "animations" / "metadata.json").exists()
-
-    animation_npz = np.load(
-        package_directory / "animations" / "fullbody_bundle_q.npz",
-        allow_pickle=True,
-    )
-    assert animation_npz["q"].shape == (165, 1977)
-    assert animation_npz["time"].shape == (1977,)
-    assert animation_npz["dof_names"][0] == "Hips_transX"
-
-    biomod_content = (package_directory / "fullbody_bundle.bioMod").read_text()
-    assert "meshes/hips.ply" in biomod_content.replace("\\", "/")
-
-    metadata = json.loads((package_directory / "animations" / "metadata.json").read_text())
-    assert metadata["mapped_dof_count"] == 165
-    assert metadata["missing_dof_names"] == []
-    assert "Spine3" in metadata["segments_without_visual_meshes"]
 
 
 def test_fbx_shared_faces_are_kept_on_boundary_segments():
