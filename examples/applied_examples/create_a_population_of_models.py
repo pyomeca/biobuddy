@@ -21,7 +21,7 @@ from biobuddy import (
     Rotations,
     DeLevaTable,
     Sex,
-    SegmentName,
+    DeLevaSegmentName,
     ViewAs,
     SegmentCoordinateSystemUtils,
     RotoTransMatrix,

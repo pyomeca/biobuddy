@@ -20,7 +20,7 @@ from biobuddy import (
     Rotations,
     DeLevaTable,
     Sex,
-    SegmentName,
+    DeLevaSegmentName,
     ViewAs,
     SegmentCoordinateSystemUtils,
     RotationMatrix,
@@ -65,7 +65,7 @@ def model_creation_from_measured_data(
             parent_name="Ground",
             translations=Translations.XYZ,
             rotations=Rotations.XYZ,
-            inertia_parameters=de_leva[SegmentName.TRUNK],
+            inertia_parameters=de_leva[DeLevaSegmentName.TRUNK],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "RPSIS", "LASIS", "RASIS"]),
                 first_axis=Axis(
@@ -91,7 +91,7 @@ def model_creation_from_measured_data(
             name="RFemur",
             parent_name="Pelvis",
             rotations=Rotations.XY,
-            inertia_parameters=de_leva[SegmentName.THIGH],
+            inertia_parameters=de_leva[DeLevaSegmentName.THIGH],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["RPSIS", "RASIS"])(static_trial, None)
                 - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
@@ -124,7 +124,7 @@ def model_creation_from_measured_data(
             name="RTibia",
             parent_name="RFemur",
             rotations=Rotations.X,
-            inertia_parameters=de_leva[SegmentName.SHANK],
+            inertia_parameters=de_leva[DeLevaSegmentName.SHANK],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=SegmentCoordinateSystemUtils.mean_markers(["RMFE", "RLFE"]),
                 first_axis=Axis(name=Axis.Name.X, start="RSPH", end="RLM"),
@@ -143,7 +143,7 @@ def model_creation_from_measured_data(
 
     # The foot is a special case since the position of the ankle relatively to the foot length is not given in De Leva
     # So here we assume that the foot com is in the middle of the three foot markers
-    foot_inertia_parameters = de_leva[SegmentName.FOOT]
+    foot_inertia_parameters = de_leva[DeLevaSegmentName.FOOT]
     rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="y",
         angles=np.array([-np.pi / 2]),
@@ -178,7 +178,7 @@ def model_creation_from_measured_data(
             name="LFemur",
             parent_name="Pelvis",
             rotations=Rotations.XY,
-            inertia_parameters=de_leva[SegmentName.THIGH],
+            inertia_parameters=de_leva[DeLevaSegmentName.THIGH],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=lambda m, bio: SegmentCoordinateSystemUtils.mean_markers(["LPSIS", "LASIS"])(static_trial, None)
                 - np.array([0.0, 0.0, 0.05 * total_height, 0.0]),
@@ -211,7 +211,7 @@ def model_creation_from_measured_data(
             name="LTibia",
             parent_name="LFemur",
             rotations=Rotations.X,
-            inertia_parameters=de_leva[SegmentName.SHANK],
+            inertia_parameters=de_leva[DeLevaSegmentName.SHANK],
             segment_coordinate_system=SegmentCoordinateSystem(
                 origin=SegmentCoordinateSystemUtils.mean_markers(["LMFE", "LLFE"]),
                 first_axis=Axis(name=Axis.Name.X, start="LLM", end="LSPH"),
@@ -228,7 +228,7 @@ def model_creation_from_measured_data(
     reduced_model.segments["LTibia"].add_marker(Marker("LLM", is_technical=True, is_anatomical=True))
     reduced_model.segments["LTibia"].add_marker(Marker("LSPH", is_technical=True, is_anatomical=True))
 
-    foot_inertia_parameters = de_leva[SegmentName.FOOT]
+    foot_inertia_parameters = de_leva[DeLevaSegmentName.FOOT]
     rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
         angle_sequence="y",
         angles=np.array([-np.pi / 2]),
