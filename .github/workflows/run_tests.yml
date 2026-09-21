@@ -119,7 +119,7 @@ jobs:
         id: archive
         uses: codecov/codecov-action@v5
         with:
-          path: .covergage
+          path: .coverage
           if-no-files-found: error
           fail_ci_if_error: true
           verbose: true
@@ -144,4 +144,3 @@ jobs:
           cd
           python -c "import biobuddy"
           cd $BASE_FOLDER
-  

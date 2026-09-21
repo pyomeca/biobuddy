@@ -127,7 +127,7 @@ model.add_segment(
             axis_to_keep=Axis.Name.Z,
         ),
         mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD")),
-        inertia_parameters=de_leva[SegmentName.HEAD],
+        inertia_parameters=de_leva[DeLevaSegmentName.HEAD],
     )
 )
 model.segments["HEAD"].add_marker(Marker("BOTTOM_HEAD"))
@@ -176,7 +176,7 @@ de_leva.from_static(static=C3dData(c3d_filepath))
 
 Once you have set your table, you can extract the inertial parameters from one segment like this:
 ```python3
-head_inertia_parameters = de_leva[SegmentName.HEAD]
+head_inertia_parameters = de_leva[DeLevaSegmentName.HEAD]
 ```
 
 or you can define a whole body model from a `DeLevaTable` like this:
@@ -185,6 +185,24 @@ model = de_leva.to_simple_model()
 ```
 ![DeLeva](docs/images/DeLeva.png)
 ![DeLeva_measures](docs/images/DeLeva_measures.png)
+
+The Yeadon model can also be used when the 95 Yeadon anthropometric measurements are available. BioBuddy delegates the
+solid geometry and inertia computation to the `yeadon` package, then exposes the resulting segment parameters through a
+table-like API:
+
+```python3
+measurements = {name: value_in_meters for name in YEADON_MEASUREMENT_NAMES}
+yeadon_table = YeadonTable()
+yeadon_table.from_measurement(measurements, total_mass=75.0)
+pelvis_inertia = yeadon_table[YeadonSegmentName.PELVIS]
+model = yeadon_table.to_simple_model()
+```
+
+```python3
+from biobuddy import launch_yeadon_measurement_editor
+
+launch_yeadon_measurement_editor()
+```
 
 
 ## Model personalization/modification
@@ -362,7 +380,7 @@ launch it with:
 
 ```bash
 pip install biobuddy[gui]
-python -m biobuddy.gui
+python examples/launch_model_editor_gui.py
 ```
 If you are working from sources, you will need to install :
 ```bash

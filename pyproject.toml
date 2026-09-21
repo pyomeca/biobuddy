@@ -27,6 +27,7 @@ dependencies = [
     "scipy", 
     "pandas",
     "graphviz",
+    "yeadon",
 ]
 
 [project.optional-dependencies]

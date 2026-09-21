@@ -30,6 +30,19 @@ git remote add origin https://github.com/$ORG/opensim-core.git
 git fetch --depth 1 origin $BRANCH
 git checkout -q FETCH_HEAD
 
+# The vendored numpy.i at this pinned commit still uses the Python 2 C API
+# (PyString_Check/PyInt_Check/PyInt_AsLong) in its hand-written pytype_string()
+# helper and array-dimension typemaps. Those symbols don't exist at all under
+# Python 3 (CPython removed them, no compatibility shim), so building the
+# SWIG-generated simbody/common/moco bindings against Python 3 fails with
+# "was not declared in this scope". Patch it to the Python 3 equivalents.
+NUMPY_I="$WORKING_DIR/opensim-core/Bindings/Python/swig/numpy.i"
+sed -i \
+    -e 's/PyString_Check/PyUnicode_Check/g' \
+    -e 's/PyInt_AsLong/PyLong_AsLong/g' \
+    -e 's/PyInt_Check/PyLong_Check/g' \
+    "$NUMPY_I"
+
 # Build opensim-core dependencies.
 mkdir -p "$WORKING_DIR/opensim-core/dependencies/build"
 cd "$WORKING_DIR/opensim-core/dependencies/build"

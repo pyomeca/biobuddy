@@ -24,7 +24,7 @@ from biobuddy import (
     MuscleType,
     MuscleStateType,
     Sex,
-    SegmentName,
+    DeLevaSegmentName,
     C3dData,
     MarkerData,
     RotoTransMatrix,
@@ -343,7 +343,7 @@ def test_model_creation_from_static():
             ),
             translations=Translations.YZ,
             rotations=Rotations.X,
-            inertia_parameters=de_leva[SegmentName.TRUNK],
+            inertia_parameters=de_leva[DeLevaSegmentName.TRUNK],
         )
     )
     model.segments["TRUNK"].add_marker(Marker("PELVIS"))
@@ -359,7 +359,7 @@ def test_model_creation_from_static():
                 axis_to_keep=Axis.Name.Z,
             ),
             mesh=Mesh(("BOTTOM_HEAD", "TOP_HEAD", "HEAD_Z", "HEAD_XZ", "BOTTOM_HEAD"), is_local=False),
-            inertia_parameters=de_leva[SegmentName.HEAD],
+            inertia_parameters=de_leva[DeLevaSegmentName.HEAD],
         )
     )
     model.segments["HEAD"].add_marker(Marker("BOTTOM_HEAD"))
@@ -378,7 +378,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.Y, start="SHOULDER", end="SHOULDER_XY"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva[SegmentName.UPPER_ARM],
+            inertia_parameters=de_leva[DeLevaSegmentName.UPPER_ARM],
         )
     )
     model.segments["UPPER_ARM"].add_marker(Marker("SHOULDER"))
@@ -395,7 +395,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.X, start="ELBOW", end="ELBOW_XY"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva[SegmentName.LOWER_ARM],
+            inertia_parameters=de_leva[DeLevaSegmentName.LOWER_ARM],
         )
     )
     model.segments["LOWER_ARM"].add_marker(Marker("ELBOW"))
@@ -412,7 +412,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.Z, start="WRIST", end="HAND_YZ"),
                 axis_to_keep=Axis.Name.Y,
             ),
-            inertia_parameters=de_leva[SegmentName.HAND],
+            inertia_parameters=de_leva[DeLevaSegmentName.HAND],
         )
     )
     model.segments["HAND"].add_marker(Marker("WRIST"))
@@ -431,7 +431,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.Y, start="THIGH_ORIGIN", end="THIGH_Y"),
                 axis_to_keep=Axis.Name.X,
             ),
-            inertia_parameters=de_leva[SegmentName.THIGH],
+            inertia_parameters=de_leva[DeLevaSegmentName.THIGH],
         )
     )
     model.segments["THIGH"].add_marker(Marker("THIGH_ORIGIN"))
@@ -449,7 +449,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.X, start="KNEE", end="KNEE_XZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            inertia_parameters=de_leva[SegmentName.SHANK],
+            inertia_parameters=de_leva[DeLevaSegmentName.SHANK],
         )
     )
     model.segments["SHANK"].add_marker(Marker("KNEE"))
@@ -467,7 +467,7 @@ def test_model_creation_from_static():
                 second_axis=Axis(name=Axis.Name.Y, start="ANKLE", end="ANKLE_YZ"),
                 axis_to_keep=Axis.Name.Z,
             ),
-            inertia_parameters=de_leva[SegmentName.FOOT],
+            inertia_parameters=de_leva[DeLevaSegmentName.FOOT],
         )
     )
     model.segments["FOOT"].add_marker(Marker("ANKLE"))
