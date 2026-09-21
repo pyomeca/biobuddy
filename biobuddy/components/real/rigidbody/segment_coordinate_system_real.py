@@ -53,7 +53,7 @@ class SegmentCoordinateSystemReal:
     @classmethod
     def from_rt_matrix(
         cls,
-        rt_matrix: np.ndarray,
+        rt_matrix: np.ndarray | RotoTransMatrix,
         is_scs_local: bool = False,
     ) -> "SegmentCoordinateSystemReal":
         """
@@ -61,12 +61,18 @@ class SegmentCoordinateSystemReal:
 
         Parameters
         ----------
-        rt_matrix: np.ndarray
+        rt_matrix: np.ndarray | RotoTransMatrix
             The RT matrix
         is_scs_local
             If the scs is already in local reference frame
         """
-        scs = RotoTransMatrix.from_rt_matrix(rt_matrix)
+        if isinstance(rt_matrix, RotoTransMatrix):
+            scs = rt_matrix
+        elif isinstance(rt_matrix, np.ndarray):
+            scs = RotoTransMatrix.from_rt_matrix(rt_matrix)
+        else:
+            raise TypeError(f"rt_matrix must be a numpy array or a RotoTransMatrix, got {rt_matrix} of type {type(rt_matrix)}.")
+
         if not scs.rotation_matrix.is_orthonormal:
             scs.rotation_matrix.suggest_correction()  # Raise the error with recommendations
 

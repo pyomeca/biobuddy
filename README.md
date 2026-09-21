@@ -101,6 +101,8 @@ model = BiomechanicalModelReal().from_osim(filepath=osim_filepath)
 model.to_biomod(biomod_filepath)
 ```
 
+See the example [read_and_write_models.py](examples/read_and_write_models.py) for more details.
+
 ## Model creation
 A model can also be created from scratch using the `BiomechanicalModel`. In this generic model, everything can be defined 
 through functions (i.e., without numerical values). The subject specific model (a `BiomechanicalModelReal`) can then be 

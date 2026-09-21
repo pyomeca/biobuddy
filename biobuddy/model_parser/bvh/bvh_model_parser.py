@@ -3,13 +3,11 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
-from ...components.real.rigidbody.segment_coordinate_system_real import (
-    SegmentCoordinateSystemReal,
-)
+from ...components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
 from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
-from ...utils.kinematics import Kinematics
+from ...kinematics.kinematics import Kinematics
 
 
 @dataclass

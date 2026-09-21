@@ -25,6 +25,9 @@ from .validation import *
 # GUI
 from .gui import *
 
+# Kinematics info to animate the models
+from .kinematics import *
+
 __all__ = (
     components.__all__
     + utils.__all__
@@ -34,5 +37,6 @@ __all__ = (
     + model_modifiers.__all__
     + validation.__all__
     + gui.__all__
+    + kinematics.__all__
     + ["__version__"]
 )

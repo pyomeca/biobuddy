@@ -105,10 +105,6 @@ jobs:
           echo "PYTHONPATH=$OPENSIM_PY_PKG_PARENT:$PYTHONPATH" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$LIB_DIRS:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
 
-      # - name: Animation dependencies
-      #   run: |
-      #     conda install -c conda-forge PySide6 rerun-sdk=0.27.2 trimesh tk imageio imageio-ffmpeg trc-data-reader
-
       - name: List conda packages
         run: conda list
 

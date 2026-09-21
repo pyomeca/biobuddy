@@ -4,7 +4,6 @@ import struct
 import zlib
 
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 from ...components.real.biomechanical_model_real import BiomechanicalModelReal
 from ...components.real.rigidbody.mesh_file_real import MeshFileReal
@@ -15,6 +14,7 @@ from ...components.real.rigidbody.segment_real import SegmentReal
 from ...utils.enums import Rotations, Translations
 from ..abstract_model_parser import AbstractModelParser
 from ...utils.kinematics import Kinematics
+from ...utils.linear_algebra import RotationMatrix, RotoTransMatrix
 
 
 @dataclass
@@ -385,34 +385,6 @@ class FbxModelParser(AbstractModelParser):
         """
         values = properties.get(property_name, [0.0, 0.0, 0.0])
         return np.array([float(values[0]), float(values[1]), float(values[2])], dtype=float)
-
-    @staticmethod
-    def _fbx_euler_xyz_rt_matrix(angles: np.ndarray, translation: np.ndarray) -> np.ndarray:
-        """
-        Convert an FBX XYZ Euler transform into a homogeneous matrix.
-
-        FBX stores the skeleton rest pose in ``PreRotation``/``Lcl Rotation``
-        properties using extrinsic XYZ Euler angles in degrees. BioBuddy's
-        generic Euler helper uses the internal generalized-coordinate
-        convention instead, so the FBX rest transform must be materialized as a
-        matrix before it is attached to the segment coordinate system.
-
-        Parameters
-        ----------
-        angles
-            FBX Euler angles in degrees.
-        translation
-            Local FBX translation.
-
-        Returns
-        -------
-        numpy.ndarray
-            The 4x4 homogeneous transform represented by the FBX properties.
-        """
-        rt_matrix = np.eye(4)
-        rt_matrix[:3, :3] = Rotation.from_euler("xyz", angles, degrees=True).as_matrix()
-        rt_matrix[:3, 3] = translation[:3]
-        return rt_matrix
 
     def _extract_skeleton(self) -> None:
         """
@@ -1022,18 +994,6 @@ class FbxModelParser(AbstractModelParser):
                 mesh_file_directory=str(output_directory),
             )
 
-    @staticmethod
-    def _translations_for_root(is_root: bool) -> Translations:
-        """
-        Return the translation sequence used for a node.
-
-        Parameters
-        ----------
-        is_root
-            Whether the node is a skeleton root.
-        """
-        return Translations.XYZ if is_root else Translations.NONE
-
     def _append_node(
         self,
         model: BiomechanicalModelReal,
@@ -1056,7 +1016,11 @@ class FbxModelParser(AbstractModelParser):
             Whether the node is a skeleton root.
         """
         node = self.skeleton_nodes[node_id]
-        rt_matrix = self._fbx_euler_xyz_rt_matrix(angles=node.rotation, translation=node.translation)
+        rt_matrix = RotoTransMatrix.from_euler_angles_and_translation(
+            angle_sequence="zyx",
+            angles=np.deg2rad(np.asarray(node.rotation, dtype=np.float64))[::-1],
+            translation=node.translation,
+        )
         model.add_segment(
             SegmentReal(
                 name=node.name,
@@ -1065,7 +1029,7 @@ class FbxModelParser(AbstractModelParser):
                     rt_matrix=rt_matrix,
                     is_scs_local=True,
                 ),
-                translations=self._translations_for_root(is_root=is_root),
+                translations=Translations.XYZ if is_root else Translations.NONE,
                 rotations=Rotations.ZYX,
             )
         )

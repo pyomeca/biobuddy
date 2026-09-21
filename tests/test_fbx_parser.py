@@ -46,7 +46,7 @@ def test_fbx_and_bvh_share_the_same_kinematic_topology():
 
 def test_fbx_model_can_be_exported_to_biomod(tmp_path: Path):
     """
-    Export a converted FBX hierarchy to a biorbd-compatible ``.bioMod`` file.
+    Export a converted FBX hierarchy to a biorbd-compatible .bioMod file.
     """
     parent_path = Path(__file__).resolve().parent.parent
     fbx_filepath = parent_path / "examples" / "models" / "fullbody_model.fbx"
@@ -127,7 +127,7 @@ def test_fbx_and_bvh_animation_reconstruct_the_same_joint_positions():
     """
     Compare joint positions reconstructed from coherent BVH and FBX animations.
 
-    The comparison is expressed relative to ``Hips`` so the test validates the
+    The comparison is expressed relative to Hips so the test validates the
     articulated pose, not the global root trajectory. This validates both the
     FBX rest pose convention and the conversion from FBX Euler animation curves
     to BioBuddy generalized coordinates.

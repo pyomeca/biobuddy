@@ -49,7 +49,7 @@ def test_fbx_and_bvh_share_the_same_kinematic_topology():
 
 def test_fbx_model_can_be_exported_to_biomod(tmp_path):
     """
-    Export a converted FBX hierarchy to a biorbd-compatible ``.bioMod`` file.
+    Export a converted FBX hierarchy to a biorbd-compatible .bioMod file.
     """
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     fbx_filepath = parent_path + f"/examples/models/fullbody_model.fbx"
@@ -83,9 +83,11 @@ def test_translation_fbx_to_biomod_to_fbx():
     biomod_filepath = parent_path + f"/examples/models/fullbody_model_from_fbx.bioMod"
     fbx_translated_filepath = parent_path + f"/examples/models/fullbody_model_translated.fbx"
 
+    # Convert fbx to biomod
     model_from_fbx = BiomechanicalModelReal().from_fbx(filepath=fbx_filepath)
     model_from_fbx.to_biomod(filepath=biomod_filepath, with_mesh=False)
 
+    # Convert biomod back to fbx
     model_from_biomod = BiomechanicalModelReal().from_biomod(filepath=biomod_filepath)
     model_from_biomod.to_fbx(
         filepath=fbx_translated_filepath,
@@ -93,7 +95,12 @@ def test_translation_fbx_to_biomod_to_fbx():
         blender_executable=blender_executable,
     )
 
+    # Read the translated (round trip) fbx
     model_from_fbx_2 = BiomechanicalModelReal().from_fbx(filepath=fbx_translated_filepath)
+
+    # Compare to make sure the model are equivalent
+    compare_models(model_from_fbx, model_from_biomod, decimal=4)
+    compare_models(model_from_biomod, model_from_fbx_2, decimal=4)
     compare_models(model_from_fbx, model_from_fbx_2, decimal=4)
 
     if os.path.exists(biomod_filepath):
