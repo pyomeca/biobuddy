@@ -27,6 +27,7 @@ dependencies = [
     "scipy", 
     "pandas",
     "graphviz",
+    "matplotlib",
     "yeadon",
 ]
 
@@ -50,9 +51,16 @@ Documentation = "https://github.com/pyomeca/biobuddy/tree/main#readme"
 Source = "https://github.com/pyomeca/biobuddy"
 Tracker = "https://github.com/pyomeca/biobuddy/issues"
 
+[project.scripts]
+biobuddy-model-editor = "biobuddy.gui.model_editor_cli:main"
+biobuddy-build-c3d-model = "biobuddy.gui.build_c3d_model:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["biobuddy*"]
+
+[tool.setuptools.package-data]
+biobuddy = ["gui/*.json"]
 
 [tool.setuptools.dynamic]
 version = { attr = "biobuddy.version.__version__" }

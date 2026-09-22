@@ -8,6 +8,43 @@ import pickle
 from ..utils.aliases import Points
 
 
+def c3d_point_unit_meter_divisor(unit: str) -> float:
+    """
+    Return the divisor used to convert C3D point coordinates to meters.
+    """
+    normalized_unit = str(unit).strip().lower()
+    if normalized_unit == "mm":
+        return 1000.0
+    if normalized_unit == "cm":
+        return 100.0
+    if normalized_unit == "m":
+        return 1.0
+    raise RuntimeError(f"The unit {unit} is not recognized (current options are mm, cm or m).")
+
+
+def marker_data_with_stripped_prefixes(marker_data: "MarkerData", prefixes: tuple[str, ...]) -> "MarkerData":
+    """
+    Return marker data with selected leading marker-name prefixes removed.
+    """
+    prefixes = tuple(prefix for prefix in prefixes if prefix)
+    if len(prefixes) == 0:
+        return marker_data
+    marker_dict = {}
+    for marker_name in marker_data.marker_names:
+        remapped_name = marker_name
+        for prefix in prefixes:
+            if marker_name.startswith(prefix):
+                remapped_name = marker_name.removeprefix(prefix)
+                break
+        if remapped_name in marker_dict:
+            raise ValueError(f"Cannot strip marker prefixes because '{remapped_name}' would be duplicated.")
+        marker_dict[remapped_name] = marker_data.get_position((marker_name,)).squeeze(axis=1)
+    remapped_data = DictData(marker_dict)
+    if hasattr(marker_data, "frame_rate"):
+        remapped_data.frame_rate = marker_data.frame_rate
+    return remapped_data
+
+
 class ReferenceFrame(Enum):
     """
     The reference frame for the C3D data.
@@ -22,7 +59,12 @@ class MarkerData(ABC):
     Abstract class to handle marker data.
     """
 
-    def __init__(self, first_frame: int | None = None, last_frame: int | None = None, total_nb_frames: int = 1):
+    def __init__(
+        self,
+        first_frame: int | None = None,
+        last_frame: int | None = None,
+        total_nb_frames: int = 1,
+    ):
 
         # Fix the value of the first and last frames for easy accessing
         if first_frame is None:
@@ -196,7 +238,12 @@ class C3dData(MarkerData):
     Handles .c3d files.
     """
 
-    def __init__(self, c3d_path: str, first_frame: int | None = None, last_frame: int | None = None):
+    def __init__(
+        self,
+        c3d_path: str,
+        first_frame: int | None = None,
+        last_frame: int | None = None,
+    ):
 
         try:
             import ezc3d
@@ -217,6 +264,17 @@ class C3dData(MarkerData):
         return self.ezc3d_data["parameters"]["POINT"]["LABELS"]["value"]
 
     @property
+    def frame_rate(self) -> float | None:
+        """
+        Return the point frame rate stored in the C3D header, if available.
+        """
+        try:
+            frame_rate = float(self.ezc3d_data["header"]["points"]["frame_rate"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        return frame_rate if np.isfinite(frame_rate) and frame_rate > 0 else None
+
+    @property
     def all_marker_positions(self) -> np.ndarray:
         return self.get_position(marker_names=self.marker_names)
 
@@ -229,7 +287,9 @@ class C3dData(MarkerData):
     def get_position(self, marker_names: tuple[str, ...] | list[str]):
         return self._to_meter(
             self.ezc3d_data["data"]["points"][
-                :, self.marker_indices(marker_names), self.first_frame : self.last_frame + 1
+                :,
+                self.marker_indices(marker_names),
+                self.first_frame : self.last_frame + 1,
             ]
         )
 
@@ -237,14 +297,7 @@ class C3dData(MarkerData):
         units = self.ezc3d_data["parameters"]["POINT"]["UNITS"]["value"]
         units = units[0] if len(units) > 0 else units
 
-        if units == "mm":
-            factor = 1000
-        elif units == "m":
-            factor = 1
-        else:
-            raise RuntimeError(f"The unit {units} is not recognized (current options are mm of m).")
-
-        data /= factor
+        data /= c3d_point_unit_meter_divisor(units)
         data[3] = 1
         return data
 
@@ -297,7 +350,12 @@ class CsvData(MarkerData):
     Handles .csv files.
     """
 
-    def __init__(self, csv_path: str, first_frame: int | None = None, last_frame: int | None = None):
+    def __init__(
+        self,
+        csv_path: str,
+        first_frame: int | None = None,
+        last_frame: int | None = None,
+    ):
 
         self.csv_path = csv_path
         pd_csv_data = pd.read_csv(csv_path)
@@ -373,7 +431,10 @@ class CsvData(MarkerData):
         for i_marker in range(nb_markers):
             marker_index = self.marker_index(marker_names[i_marker])
             positions[:3, i_marker, :] = self._to_meter(
-                self.csv_array[self.first_frame : self.last_frame + 1, marker_index * 3 : (marker_index + 1) * 3].T
+                self.csv_array[
+                    self.first_frame : self.last_frame + 1,
+                    marker_index * 3 : (marker_index + 1) * 3,
+                ].T
             )
         return positions
 
@@ -434,7 +495,11 @@ class CsvData(MarkerData):
         column_titles = []
         i_unnamed = 0
         for marker in self.marker_names:
-            column_titles += [marker, f"Unnamed: {i_unnamed + 1}", f"Unnamed: {i_unnamed + 2}"]
+            column_titles += [
+                marker,
+                f"Unnamed: {i_unnamed + 1}",
+                f"Unnamed: {i_unnamed + 2}",
+            ]
             i_unnamed += 2
 
         # Axis titles
@@ -458,7 +523,10 @@ class DictData(MarkerData):
     """
 
     def __init__(
-        self, marker_dict: dict[str, np.ndarray], first_frame: int | None = None, last_frame: int | None = None
+        self,
+        marker_dict: dict[str, np.ndarray],
+        first_frame: int | None = None,
+        last_frame: int | None = None,
     ):
 
         self.marker_dict = marker_dict
@@ -495,11 +563,8 @@ class DictData(MarkerData):
                 raise ValueError(f"Marker name '{name}' not found in the marker dictionary.")
 
         values = np.zeros((4, len(marker_names), self.nb_frames))
-        i_marker = 0
-        for name in self.marker_names:
-            if name in marker_names:
-                values[:, i_marker, :] = self.marker_dict[name][:, self.first_frame : self.last_frame + 1]
-                i_marker += 1
+        for i_marker, name in enumerate(marker_names):
+            values[:, i_marker, :] = self.marker_dict[name][:, self.first_frame : self.last_frame + 1]
         return values
 
     def save(self, new_path: str):

@@ -389,6 +389,18 @@ If you are working from sources, you will need to install :
 conda install -c conda-forge PySide6
 ```
 
+To open the C3D model workflow directly on the bundled lower-limb calibration example, use:
+
+```bash
+python examples/launch_model_editor_gui.py --lower-limbs-functional-example
+```
+
+To open the C3D workflow on the bundled full-body Model202 example, use:
+
+```bash
+python examples/launch_model_editor_gui.py --full-body-model202-example
+```
+
 The editor supports opening `.bioMod`, `.osim`, and `.urdf` files, browsing the segment hierarchy, editing segment
 parents, DoFs, joint ranges, segment inertia parameters, markers, muscle scalar parameters, and fixed via points, then
 saving the result as `.bioMod`. A synchronized 3D preview shows the kinematic chain, markers, and muscle paths while
@@ -396,6 +408,31 @@ the user edits the model. The muscle tab also exposes editable origin and insert
 model-level consistency issues, and clicking near a joint in the preview reselects the corresponding segment in the
 tree. The muscle tab can also create or remove muscle groups and muscles, and clicking near a marker in the preview
 selects it in the marker editor.
+
+The `New from C3D` workflow can start from a preset (`full body`, `lower-limbs & trunk`, `upper-limb`) or from a template-free
+`from scratch` draft. The draft workflow loads a main C3D, lists the available markers, lets users create technical or
+anatomical segments, assign markers to segments, mark each assigned marker as technical, and choose the parent segment.
+The `Technical segment` tab is used to group the markers that define technical frames for SCoRE/SARA computations. The
+`Anatomical segment` tab is used after virtual points such as CoR/AoR have been defined; it defines the anatomical
+frame from two start-to-end marker vectors, each with an axis name, and one vector selected as the one to keep during
+orthonormalization. Axis endpoints may contain several markers; they are averaged when converted to a model template.
+The segment axis panel also previews the marker cloud and saved/temporary vectors for the selected segment.
+
+The lower-limb preset follows the same calibration logic as the walking reconstruction example: a static/anatomical C3D
+defines marker-based segment frames and anthropometric measurements, hip and ankle centers are defined from SCoRE
+functional trials, knee axes are defined from SARA functional trials and oriented with condyle markers, then the
+personalized model is generated from the evaluated marker-defined frames. At the moment, the GUI can draft these
+ingredients and generate the existing lower-limb template; fully converting an arbitrary template-free draft to a
+BioMod model still requires the remaining template-builder bridge.
+The lightweight C3D files in `examples/data/lower_limb_calibration` provide a ready-to-use lower-limb calibration
+folder for this preset. The lightweight C3D files in `examples/data/full_body_model202` provide a ready-to-use
+full-body Model202 calibration folder; they are renamed to generic `Test_*` names, stripped from participant prefixes,
+filtered to frames where the markers required by the corresponding SCoRE/SARA/static role are valid, subsampled to one
+valid frame out of ten, and saved without analog channels. For this full-body preset, `Test_anato.c3d` is used as the
+main C3D so the model starts from the anatomical posture. The lightweight C3D files in
+`examples/data/motive_57_p6` provide a ready-to-use Motive (57) calibration folder; they are renamed to generic
+`Example_*` names, stripped from capture skeleton prefixes, filtered to valid static/SCoRE/SARA frames, subsampled to
+one valid frame out of five, and saved without analog channels.
 ![model_graph](docs/images/model_graph.png)
 
 

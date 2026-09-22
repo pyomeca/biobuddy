@@ -1,0 +1,35 @@
+{
+  "default": "Joint",
+  "pairs": [
+    {
+      "joint": "Hip",
+      "proximal_segments": ["Pelvis", "PelvisTech", "Bassin"],
+      "distal_segments": ["Thigh", "LThigh", "RThigh", "CuisseD", "CuisseG"]
+    },
+    {
+      "joint": "Knee",
+      "proximal_segments": ["Thigh", "LThigh", "RThigh", "CuisseD", "CuisseG"],
+      "distal_segments": ["Shank", "LShank", "RShank", "JambeD", "JambeG"]
+    },
+    {
+      "joint": "Ankle",
+      "proximal_segments": ["Shank", "LShank", "RShank", "JambeD", "JambeG"],
+      "distal_segments": ["Foot", "LFoot", "RFoot", "PiedD", "PiedG"]
+    },
+    {
+      "joint": "Shoulder",
+      "proximal_segments": ["Thorax", "Epaules", "Clavicule", "ClaviculeD", "ClaviculeG"],
+      "distal_segments": ["Arm", "BrasD", "BrasG", "Humerus", "HumerusD", "HumerusG"]
+    },
+    {
+      "joint": "Elbow",
+      "proximal_segments": ["Arm", "BrasD", "BrasG", "Humerus", "HumerusD", "HumerusG"],
+      "distal_segments": ["ForeArm", "LowerArm", "ABrasD", "ABrasG", "RadiusUlna"]
+    },
+    {
+      "joint": "Wrist",
+      "proximal_segments": ["ForeArm", "LowerArm", "ABrasD", "ABrasG", "RadiusUlna"],
+      "distal_segments": ["Hand", "MainD", "MainG"]
+    }
+  ]
+}

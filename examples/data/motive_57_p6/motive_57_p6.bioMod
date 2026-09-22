@@ -1,0 +1,550 @@
+version 4
+
+
+
+
+// --------------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------------
+
+segment	Pelvis
+	parent	base
+	RTinMatrix	1
+	RT
+		1.000000	0.000000	0.000000	0.000000
+		0.000000	1.000000	0.000000	0.000000
+		0.000000	0.000000	1.000000	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	translations	xyz
+	rotations	zxy
+endsegment
+
+marker	LIAS
+	parent	Pelvis
+	position	0.10979074	0.00153967	-0.12401396
+	technical	1
+	anatomical	1
+endmarker
+marker	RIAS
+	parent	Pelvis
+	position	0.10977403	-0.00153967	0.12350190
+	technical	1
+	anatomical	1
+endmarker
+marker	LIPS
+	parent	Pelvis
+	position	-0.10979074	-0.00153967	-0.03582481
+	technical	1
+	anatomical	1
+endmarker
+marker	RIPS
+	parent	Pelvis
+	position	-0.10977403	0.00153967	0.03633686
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	Thorax
+	parent	Pelvis
+	RTinMatrix	1
+	RT
+		0.892897	-0.450166	-0.009200	-0.090107
+		0.450162	0.892943	-0.002662	0.315781
+		0.009414	-0.001765	0.999954	-0.013110
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	SJN
+	parent	Thorax
+	position	0.09402138	0.07284573	0.00028027
+	technical	1
+	anatomical	1
+endmarker
+marker	SXS
+	parent	Thorax
+	position	0.13557403	-0.10679985	-0.00028027
+	technical	1
+	anatomical	1
+endmarker
+marker	TV2
+	parent	Thorax
+	position	-0.09402138	0.12661032	-0.00028027
+	technical	1
+	anatomical	1
+endmarker
+marker	TV7
+	parent	Thorax
+	position	-0.13557403	-0.09265619	0.00028027
+	technical	1
+	anatomical	1
+endmarker
+marker	CV7
+	parent	Thorax
+	position	-0.04142061	0.17183170	-0.00587093
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	Head
+	parent	Thorax
+	RTinMatrix	1
+	RT
+		0.990977	-0.112221	-0.073286	0.089126
+		0.111105	0.993624	-0.019151	0.298467
+		0.074968	0.010836	0.997127	-0.004724
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	LAH
+	parent	Head
+	position	0.08194669	0.00066629	-0.05916042
+	technical	1
+	anatomical	1
+endmarker
+marker	RAH
+	parent	Head
+	position	0.08596581	-0.00066629	0.05468159
+	technical	1
+	anatomical	1
+endmarker
+marker	LPH
+	parent	Head
+	position	-0.08194669	-0.00066629	-0.06433229
+	technical	1
+	anatomical	1
+endmarker
+marker	RPH
+	parent	Head
+	position	-0.08596581	0.00066629	0.06881113
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	RThigh
+	parent	Pelvis
+	RTinMatrix	1
+	RT
+		0.964550	-0.262574	-0.026416	-0.003033
+		0.263416	0.964004	0.036171	-0.052473
+		0.015967	-0.041847	0.998996	0.097429
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	RFTC
+	parent	RThigh
+	position	-0.01491397	-0.04184867	0.09009719
+	technical	1
+	anatomical	0
+endmarker
+marker	RTH
+	parent	RThigh
+	position	0.12048619	-0.24922845	0.03432392
+	technical	1
+	anatomical	0
+endmarker
+marker	RFLE
+	parent	RThigh
+	position	-0.03208850	-0.42133774	0.07862832
+	technical	1
+	anatomical	1
+endmarker
+marker	RFME
+	parent	RThigh
+	position	-0.02517496	-0.45158980	-0.07727842
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	RShank
+	parent	RThigh
+	RTinMatrix	1
+	RT
+		0.990379	0.138381	-0.000000	-0.000000
+		-0.138322	0.989952	-0.029350	-0.459451
+		-0.004061	0.029067	0.999569	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	z
+endsegment
+
+marker	RFAX
+	parent	RShank
+	position	-0.05368158	-0.01749001	0.07658477
+	technical	1
+	anatomical	0
+endmarker
+marker	RSK
+	parent	RShank
+	position	0.04337136	-0.24426798	0.00675739
+	technical	1
+	anatomical	0
+endmarker
+marker	RTTC
+	parent	RShank
+	position	0.03745154	-0.06205215	0.02288820
+	technical	1
+	anatomical	0
+endmarker
+marker	RFAL
+	parent	RShank
+	position	0.00971221	-0.42014952	0.03837257
+	technical	1
+	anatomical	1
+endmarker
+marker	RTAM
+	parent	RShank
+	position	0.03774502	-0.39792024	-0.04975462
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	RFoot
+	parent	RShank
+	RTinMatrix	1
+	RT
+		0.956979	-0.118727	-0.264755	0.000000
+		0.076100	0.983211	-0.165844	-0.434851
+		0.280000	0.138561	0.949948	0.000155
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zx
+endsegment
+
+marker	RFCC
+	parent	RFoot
+	position	-0.04006515	-0.01664584	0.00655681
+	technical	1
+	anatomical	1
+endmarker
+marker	RFM5
+	parent	RFoot
+	position	0.13933804	-0.01664584	0.05352160
+	technical	1
+	anatomical	1
+endmarker
+marker	RFM2
+	parent	RFoot
+	position	0.17682583	-0.01474679	0.00183421
+	technical	1
+	anatomical	1
+endmarker
+marker	RFM1
+	parent	RFoot
+	position	0.17236388	-0.01664584	-0.04040797
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	LThigh
+	parent	Pelvis
+	RTinMatrix	1
+	RT
+		0.948646	-0.277097	0.152604	-0.004219
+		0.277063	0.960602	0.021921	-0.057921
+		-0.152666	0.021485	0.988044	-0.101300
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	LFTC
+	parent	LThigh
+	position	-0.00817358	-0.04596539	-0.09025192
+	technical	1
+	anatomical	0
+endmarker
+marker	LTH
+	parent	LThigh
+	position	0.11204294	-0.31616488	0.01663933
+	technical	1
+	anatomical	0
+endmarker
+marker	LFLE
+	parent	LThigh
+	position	-0.00771602	-0.41929410	-0.08068805
+	technical	1
+	anatomical	1
+endmarker
+marker	LFME
+	parent	LThigh
+	position	-0.03739050	-0.44628476	0.07775375
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	LShank
+	parent	LThigh
+	RTinMatrix	1
+	RT
+		0.988815	0.149146	0.000000	0.000000
+		-0.148967	0.987631	0.048920	-0.462744
+		0.007296	-0.048373	0.998803	-0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	z
+endsegment
+
+marker	LFAX
+	parent	LShank
+	position	-0.02731970	-0.02887499	-0.08429541
+	technical	1
+	anatomical	0
+endmarker
+marker	LSK
+	parent	LShank
+	position	0.05191136	-0.15860552	-0.03129089
+	technical	1
+	anatomical	0
+endmarker
+marker	LTTC
+	parent	LShank
+	position	0.04827472	-0.05612297	-0.01119610
+	technical	1
+	anatomical	0
+endmarker
+marker	LFAL
+	parent	LShank
+	position	0.00064561	-0.41595944	-0.05342968
+	technical	1
+	anatomical	1
+endmarker
+marker	LTAM
+	parent	LShank
+	position	0.03171104	-0.39171488	0.03677823
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	LFoot
+	parent	LShank
+	RTinMatrix	1
+	RT
+		0.988599	-0.142696	0.048058	0.000000
+		0.133700	0.978714	0.155703	-0.431334
+		-0.069254	-0.147502	0.986634	-0.014038
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zx
+endsegment
+
+marker	LFCC
+	parent	LFoot
+	position	-0.04585327	-0.02149954	-0.00280701
+	technical	1
+	anatomical	1
+endmarker
+marker	LFM5
+	parent	LFoot
+	position	0.13589395	-0.02149954	-0.04711538
+	technical	1
+	anatomical	1
+endmarker
+marker	LFM2
+	parent	LFoot
+	position	0.16830612	-0.02109011	0.00697662
+	technical	1
+	anatomical	1
+endmarker
+marker	LFM1
+	parent	LFoot
+	position	0.16231770	-0.02149954	0.04150137
+	technical	1
+	anatomical	1
+endmarker
+
+
+
+segment	RUpperArm
+	parent	Thorax
+	RTinMatrix	1
+	RT
+		0.684929	-0.071711	-0.725072	-0.008575
+		0.725195	0.163333	0.668891	0.161926
+		0.070461	-0.983961	0.163876	0.192127
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	RUA
+	parent	RUpperArm
+	position	-0.04557803	-0.08707559	0.03072018
+	technical	1
+	anatomical	0
+endmarker
+marker	RHLE
+	parent	RUpperArm
+	position	-0.00000000	-0.23477782	0.05643761
+	technical	0
+	anatomical	1
+endmarker
+marker	RHME
+	parent	RUpperArm
+	position	0.00000000	-0.26248274	-0.05643761
+	technical	0
+	anatomical	1
+endmarker
+
+
+
+segment	RForearm
+	parent	RUpperArm
+	RTinMatrix	1
+	RT
+		0.645233	-0.255348	0.720050	-0.000000
+		-0.005661	0.940867	0.338728	-0.248630
+		-0.763965	-0.222635	0.605633	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zy
+endsegment
+
+marker	RUSP
+	parent	RForearm
+	position	-0.04319476	-0.25638626	-0.00105485
+	technical	0
+	anatomical	1
+endmarker
+marker	RRSP
+	parent	RForearm
+	position	0.04319476	-0.25619224	0.00105485
+	technical	0
+	anatomical	1
+endmarker
+
+
+
+segment	RHand
+	parent	RForearm
+	RTinMatrix	1
+	RT
+		0.024382	-0.195146	0.980471	0.000000
+		-0.195198	0.960956	0.196116	-0.256289
+		-0.980461	-0.196167	-0.014662	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zx
+endsegment
+
+marker	RHM2
+	parent	RHand
+	position	0.00000000	-0.11234542	0.00000000
+	technical	1
+	anatomical	1
+endmarker
+marker	RUSP
+	parent	RHand
+	position	-0.00000000	0.00854298	-0.04235477
+	technical	1
+	anatomical	0
+endmarker
+marker	RRSP
+	parent	RHand
+	position	-0.00000000	-0.00854298	0.04235477
+	technical	1
+	anatomical	0
+endmarker
+
+
+
+segment	LUpperArm
+	parent	Thorax
+	RTinMatrix	1
+	RT
+		0.854386	-0.011175	0.519519	0.002409
+		0.515835	0.138981	-0.845339	0.162006
+		-0.062756	0.990232	0.124508	-0.181444
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zxy
+endsegment
+
+marker	LUA
+	parent	LUpperArm
+	position	-0.05814826	-0.11143470	-0.02600693
+	technical	1
+	anatomical	0
+endmarker
+marker	LHLE
+	parent	LUpperArm
+	position	-0.00000000	-0.24108321	-0.06090851
+	technical	0
+	anatomical	1
+endmarker
+marker	LHME
+	parent	LUpperArm
+	position	0.00000000	-0.26756937	0.06090851
+	technical	0
+	anatomical	1
+endmarker
+
+
+
+segment	LForearm
+	parent	LUpperArm
+	RTinMatrix	1
+	RT
+		0.694769	-0.203920	-0.689719	-0.000000
+		0.001071	0.959257	-0.282533	-0.254326
+		0.719232	0.195556	0.666680	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zy
+endsegment
+
+marker	LUSP
+	parent	LForearm
+	position	-0.04379320	-0.25659509	0.00097399
+	technical	0
+	anatomical	1
+endmarker
+marker	LRSP
+	parent	LForearm
+	position	0.04379320	-0.26292178	-0.00097399
+	technical	0
+	anatomical	1
+endmarker
+
+
+
+segment	LHand
+	parent	LForearm
+	RTinMatrix	1
+	RT
+		0.011997	-0.098113	-0.995103	-0.000000
+		-0.138811	0.985375	-0.098827	-0.259758
+		0.990246	0.139316	-0.001798	0.000000
+		0.000000	0.000000	0.000000	1.000000
+	rotations	zx
+endsegment
+
+marker	LHM2
+	parent	LHand
+	position	0.00000000	-0.11750413	-0.00000000
+	technical	1
+	anatomical	1
+endmarker
+marker	LUSP
+	parent	LHand
+	position	0.00000000	0.00754946	0.04326437
+	technical	1
+	anatomical	0
+endmarker
+marker	LRSP
+	parent	LHand
+	position	0.00000000	-0.00754946	-0.04326437
+	technical	1
+	anatomical	0
+endmarker
+
+
+

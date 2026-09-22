@@ -6,6 +6,8 @@ import biorbd
 
 from biobuddy import BiomechanicalModelReal, MuscleType, MuscleStateType
 from biobuddy.components.real.model_dynamics import ModelDynamics
+from biobuddy.components.real.rigidbody.marker_weight import MarkerWeight
+from biobuddy.utils.named_list import NamedList
 
 
 def test_biomechanics_model_real_utils_functions():
@@ -586,6 +588,34 @@ def test_inverse_kinematics_basic():
     os.remove(tempo_leg_filepath)
 
 
+def test_inverse_kinematics_ignores_extra_weighted_markers():
+    """
+    C3D trials may contain markers that are not attached to the model.
+    """
+    parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    leg_filepath = parent_path + "/examples/models/leg_without_ghost_parents.bioMod"
+    leg_model = BiomechanicalModelReal().from_biomod(filepath=leg_filepath)
+    q_true = np.random.rand(leg_model.nb_q, 1) * 0.1
+    marker_positions = leg_model.markers_in_global(q_true)[:3, :, :]
+    marker_positions = np.concatenate((marker_positions, np.zeros((3, 1, marker_positions.shape[2]))), axis=1)
+    marker_names = list(leg_model.marker_names) + ["EXTRA_C3D_ONLY"]
+    marker_weights = NamedList[MarkerWeight]()
+    for marker_name in leg_model.marker_names:
+        marker_weights.append(MarkerWeight(marker_name, 1.0))
+
+    q_reconstructed, residuals = leg_model.inverse_kinematics(
+        marker_positions=marker_positions,
+        marker_names=marker_names,
+        q_regularization_weight=0.01,
+        marker_weights=marker_weights,
+        method="lm",
+        compute_residual_distance=True,
+    )
+
+    assert q_reconstructed.shape == (leg_model.nb_q, marker_positions.shape[2])
+    assert residuals.shape == (leg_model.nb_markers, marker_positions.shape[2])
+
+
 def test_inverse_kinematics_error_handling():
     """Test error handling in inverse kinematics."""
     parent_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -640,7 +670,14 @@ def test_rt_from_parent_offset_to_real_segment_basic():
     rt_result = model_with.rt_from_parent_offset_to_real_segment("femur_r").rt_matrix
     npt.assert_almost_equal(
         rt_result,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+        np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
         decimal=5,
     )
 

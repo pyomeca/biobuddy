@@ -1,14 +1,173 @@
 import os
 
 from biobuddy.utils.named_list import NamedList
-from biobuddy import BiomechanicalModelReal, JointCenterTool, Score, Sara, C3dData, MarkerWeight, Rotations, Axis
-from biobuddy.model_modifiers.joint_center_tool import RigidSegmentIdentification, JointCoordinateModifier, get_svd
+from biobuddy import (
+    BiomechanicalModelReal,
+    JointCenterTool,
+    Score,
+    Sara,
+    C3dData,
+    MarkerWeight,
+    Rotations,
+    Axis,
+    DictData,
+    SegmentCoordinateSystemUtils,
+)
+from biobuddy.model_modifiers.joint_center_tool import (
+    RigidSegmentIdentification,
+    JointCoordinateModifier,
+    get_svd,
+)
 from biobuddy.utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries
 import numpy as np
 import numpy.testing as npt
 import pytest
 
 from test_utils import remove_temporary_biomods, MockEmptyC3dData
+
+
+def _unit(vector: np.ndarray | list[float]) -> np.ndarray:
+    vector = np.asarray(vector, dtype=float)
+    return vector / np.linalg.norm(vector)
+
+
+def _basis_from_first_axis(first_axis: np.ndarray) -> np.ndarray:
+    first_axis = _unit(first_axis)
+    candidate = np.array([0.0, 0.0, 1.0])
+    if abs(float(np.dot(first_axis, candidate))) > 0.9:
+        candidate = np.array([0.0, 1.0, 0.0])
+    second_axis = _unit(np.cross(candidate, first_axis))
+    third_axis = np.cross(first_axis, second_axis)
+    return np.column_stack((first_axis, second_axis, third_axis))
+
+
+def _rotation_about_x(angle: float) -> np.ndarray:
+    cos_angle = np.cos(angle)
+    sin_angle = np.sin(angle)
+    return np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, cos_angle, -sin_angle],
+            [0.0, sin_angle, cos_angle],
+        ]
+    )
+
+
+def _global_direction(rt: RotoTransMatrixTimeSeries, local_axis: np.ndarray) -> np.ndarray:
+    global_directions = np.zeros((3, len(rt)))
+    local_axis = np.asarray(local_axis, dtype=float).reshape(3)
+    for frame_index in range(len(rt)):
+        global_direction = rt[frame_index].rotation_matrix.rotation_matrix @ local_axis
+        global_directions[:, frame_index] = global_direction / np.linalg.norm(global_direction)
+    return global_directions
+
+
+def _perfect_hinge_rt_and_markers(
+    nb_frames: int = 60,
+) -> tuple[
+    RotoTransMatrixTimeSeries,
+    RotoTransMatrixTimeSeries,
+    DictData,
+    DictData,
+    tuple[str, ...],
+    tuple[str, ...],
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
+    """
+    Build a perfect two-segment hinge with parent 6-DoF motion and child 1-DoF relative rotation.
+
+    The first frame is the static calibration pose. Marker clouds have zero centroid so
+    ``rigidify`` recovers the expected technical frames without an extra centroid offset.
+    """
+    parent_axis_local = _unit([0.25, 0.86, -0.44])
+    child_axis_local = _unit([0.0, 0.0, 1.0])
+    parent_axis_basis = _basis_from_first_axis(parent_axis_local)
+    child_axis_basis = _basis_from_first_axis(child_axis_local)
+    parent_hinge_local = np.array([0.08, -0.03, 0.02])
+    child_hinge_local = np.array([-0.04, 0.06, 0.03])
+    parent_marker_local = np.array(
+        [
+            [0.18, 0.02, -0.05],
+            [-0.12, 0.11, 0.03],
+            [0.04, -0.16, 0.10],
+            [-0.10, 0.03, -0.08],
+        ],
+        dtype=float,
+    )
+    child_marker_local = np.array(
+        [
+            [0.16, -0.04, 0.06],
+            [-0.08, 0.12, -0.07],
+            [0.02, -0.13, -0.10],
+            [-0.10, 0.05, 0.11],
+        ],
+        dtype=float,
+    )
+    parent_marker_local -= parent_marker_local.mean(axis=0)
+    child_marker_local -= child_marker_local.mean(axis=0)
+    parent_names = tuple(f"P{i + 1}" for i in range(4))
+    child_names = tuple(f"C{i + 1}" for i in range(4))
+    markers = {
+        **{name: np.ones((4, nb_frames)) for name in parent_names},
+        **{name: np.ones((4, nb_frames)) for name in child_names},
+    }
+    hinge_origin_global = np.ones((4, nb_frames))
+    rt_parent = RotoTransMatrixTimeSeries(nb_frames)
+    rt_child = RotoTransMatrixTimeSeries(nb_frames)
+    for frame_index in range(nb_frames):
+        parent_angles = np.array(
+            [
+                0.15 * np.sin(frame_index / 14.0),
+                0.10 * np.sin(frame_index / 19.0),
+                0.08 * np.sin(frame_index / 11.0),
+            ]
+        )
+        parent_translation = np.array(
+            [
+                0.10 * np.sin(frame_index / 17.0),
+                -0.04 * np.sin(frame_index / 23.0),
+                0.06 * np.sin(frame_index / 29.0),
+            ]
+        )
+        if frame_index == 0:
+            parent_angles = np.zeros(3)
+            parent_translation = np.zeros(3)
+        parent_rt = RotoTransMatrix.from_euler_angles_and_translation("xyz", parent_angles, parent_translation)
+        parent_rotation = parent_rt.rotation_matrix.rotation_matrix
+        parent_translation = parent_rt.translation.reshape(3)
+        hinge_angle = -1.2 + 2.4 * frame_index / (nb_frames - 1)
+        child_rotation = parent_rotation @ parent_axis_basis @ _rotation_about_x(hinge_angle) @ child_axis_basis.T
+        child_translation = (
+            parent_rotation @ parent_hinge_local + parent_translation - child_rotation @ child_hinge_local
+        )
+        rt_parent[frame_index] = parent_rt
+        rt_child[frame_index] = RotoTransMatrix.from_rotation_matrix_and_translation(child_rotation, child_translation)
+        hinge_origin_global[:3, frame_index] = parent_rotation @ parent_hinge_local + parent_translation
+        for marker_index, marker_position in enumerate(parent_marker_local):
+            markers[parent_names[marker_index]][:3, frame_index] = (
+                parent_rotation @ marker_position + parent_translation
+            )
+        for marker_index, marker_position in enumerate(child_marker_local):
+            markers[child_names[marker_index]][:3, frame_index] = child_rotation @ marker_position + child_translation
+    functional_data = DictData(markers)
+    static_data = DictData({marker_name: values[:, 0:1] for marker_name, values in markers.items()})
+    return (
+        rt_parent,
+        rt_child,
+        functional_data,
+        static_data,
+        parent_names,
+        child_names,
+        parent_axis_local,
+        child_axis_local,
+        parent_hinge_local,
+        child_hinge_local,
+        hinge_origin_global,
+    )
 
 
 def visualize_modified_model_output(
@@ -166,9 +325,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             # Both rotation and translation parts were modified
             np.array(
                 [
-                    [-0.99777445, 0.06656196, 0.00395634],
-                    [0.06658717, 0.9915182, 0.11161452],
-                    [0.0035065, 0.11162956, -0.9937437],
+                    [-0.99777445, 0.06657082, 0.00389257],
+                    [0.06658717, 0.99150906, 0.11169577],
+                    [0.00357613, 0.11170635, -0.9937342],
                 ]
             ),
             decimal=5,
@@ -185,9 +344,9 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             score_model.segments["tibia_r"].segment_coordinate_system.scs.rotation_matrix.rotation_matrix,
             np.array(
                 [
-                    [-0.99777, 0.06547, 0.01259],
-                    [0.06644, 0.9922, 0.10545],
-                    [-0.00559, 0.10605, -0.99435],
+                    [-0.99777, 0.06546, 0.01267],
+                    [0.06644, 0.9922, 0.10551],
+                    [-0.00566, 0.10612, -0.99434],
                 ]
             ),
             decimal=5,
@@ -260,7 +419,11 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
             show_labels=False,
         )
         visualize_modified_model_output(
-            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+            leg_model_filepath,
+            score_biomod_filepath,
+            original_optimal_q,
+            new_optimal_q,
+            pyomarkers,
         )
 
     # Knee
@@ -282,9 +445,17 @@ def test_score_and_sara_without_ghost_segments(initialize_whole_trial_reconstruc
     if animate:
         from pyorerun import PyoMarkers
 
-        pyomarkers = PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
+        pyomarkers = PyoMarkers(
+            data=knee_c3d.get_position(marker_names),
+            channels=marker_names,
+            show_labels=False,
+        )
         visualize_modified_model_output(
-            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+            leg_model_filepath,
+            score_biomod_filepath,
+            original_optimal_q,
+            new_optimal_q,
+            pyomarkers,
         )
 
     markers_index = scaled_model.markers_indices(marker_names)
@@ -480,7 +651,14 @@ def test_score_and_sara_with_ghost_segments():
     assert score_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         score_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+        np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
 
     # Test that the original model did not change
@@ -488,23 +666,49 @@ def test_score_and_sara_with_ghost_segments():
     npt.assert_almost_equal(
         scaled_model.segments["femur_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
         np.array(
-            [[1.0, 0.0, 0.0, -0.067759], [0.0, 1.0, 0.0, -0.06335], [0.0, 0.0, 1.0, 0.080026], [0.0, 0.0, 0.0, 1.0]]
+            [
+                [1.0, 0.0, 0.0, -0.067759],
+                [0.0, 1.0, 0.0, -0.06335],
+                [0.0, 0.0, 1.0, 0.080026],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
         ),
     )
     assert scaled_model.segments["femur_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         scaled_model.segments["femur_r"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+        np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
     assert scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         scaled_model.segments["tibia_r_parent_offset"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, -0.387741], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+        np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, -0.387741],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
     assert scaled_model.segments["tibia_r"].segment_coordinate_system.is_in_local
     npt.assert_almost_equal(
         scaled_model.segments["tibia_r"].segment_coordinate_system.scs.rt_matrix,
-        np.array([[1.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]),
+        np.array(
+            [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0],
+            ]
+        ),
     )
 
     # Test the reconstruction for the original model and the output model with the functional joint centers
@@ -543,7 +747,11 @@ def test_score_and_sara_with_ghost_segments():
             show_labels=False,
         )
         visualize_modified_model_output(
-            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+            leg_model_filepath,
+            score_biomod_filepath,
+            original_optimal_q,
+            new_optimal_q,
+            pyomarkers,
         )
 
     # Knee
@@ -565,9 +773,17 @@ def test_score_and_sara_with_ghost_segments():
     if animate:
         from pyorerun import PyoMarkers
 
-        pyomarkers = PyoMarkers(data=knee_c3d.get_position(marker_names), channels=marker_names, show_labels=False)
+        pyomarkers = PyoMarkers(
+            data=knee_c3d.get_position(marker_names),
+            channels=marker_names,
+            show_labels=False,
+        )
         visualize_modified_model_output(
-            leg_model_filepath, score_biomod_filepath, original_optimal_q, new_optimal_q, pyomarkers
+            leg_model_filepath,
+            score_biomod_filepath,
+            original_optimal_q,
+            new_optimal_q,
+            pyomarkers,
         )
 
     markers_index = scaled_model.markers_indices(marker_names)
@@ -686,7 +902,8 @@ def test_init_rigid_segment_identification():
 
     # Test with no markers
     with pytest.raises(
-        RuntimeError, match=r"The functional trial file does not contain any frame. Please check the trial again."
+        RuntimeError,
+        match=r"The functional trial file does not contain any frame. Please check the trial again.",
     ):
         rsi_no_markers = Score(
             MockEmptyC3dData(),
@@ -784,7 +1001,10 @@ def test_marker_residual():
     npt.assert_almost_equal(result[2], np.zeros((3, 2)), decimal=3)  # Static centered
 
     # Test with mismatched marker names
-    with pytest.raises(RuntimeError, match=r"The marker_names \['marker1'\] do not match the number of markers 2."):
+    with pytest.raises(
+        RuntimeError,
+        match=r"The marker_names \['marker1'\] do not match the number of markers 2.",
+    ):
         rsi.check_optimal_rt_inputs(markers, static_markers, ["marker1"])
 
     # Test with marker movement
@@ -1137,9 +1357,16 @@ def test_sara_perform_algorithm():
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
 
     # Run Sara algorithm
-    aor_global, aor_parent, aor_child, cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = (
-        Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
-    )
+    (
+        aor_global,
+        aor_parent,
+        aor_child,
+        cor_global,
+        cor_parent,
+        cor_child,
+        rt_parent_out,
+        rt_child_out,
+    ) = Sara.perform_algorithm(rt_parent, rt_child, recursive_outlier_removal=False)
 
     # Check that AoR is close to expected (X-axis)
     aor_global_normalized = aor_global / np.linalg.norm(aor_global)
@@ -1150,6 +1377,108 @@ def test_sara_perform_algorithm():
 
     # Check that output RT matrices have same length
     assert len(rt_parent_out) == len(rt_child_out)
+
+
+def test_sara_perfect_hinge_assigns_local_axes_to_the_correct_segments():
+    """
+    SARA should return the parent AoR in the parent local frame and the child AoR
+    in the child local frame when the input RTs are exact model segment frames.
+    """
+    (
+        rt_parent,
+        rt_child,
+        _functional_data,
+        _static_data,
+        _parent_names,
+        _child_names,
+        parent_axis_local,
+        child_axis_local,
+        parent_hinge_local,
+        child_hinge_local,
+        hinge_origin_global,
+    ) = _perfect_hinge_rt_and_markers()
+
+    (
+        _aor_global,
+        aor_parent_local,
+        aor_child_local,
+        _cor_global,
+        cor_parent_local,
+        cor_child_local,
+        _rt_parent_out,
+        _rt_child_out,
+    ) = Sara.perform_algorithm(
+        rt_parent,
+        rt_child,
+        origin_positions_global=hinge_origin_global,
+        recursive_outlier_removal=False,
+    )
+
+    assert abs(float(np.dot(aor_parent_local, parent_axis_local))) > 1.0 - 1e-10
+    assert abs(float(np.dot(aor_child_local, child_axis_local))) > 1.0 - 1e-10
+    parent_global_directions = _global_direction(rt_parent, aor_parent_local)
+    child_global_directions = _global_direction(rt_child, aor_child_local)
+    global_alignment = np.sum(parent_global_directions * child_global_directions, axis=0)
+    npt.assert_array_less(1.0 - 1e-10, np.abs(global_alignment))
+    npt.assert_almost_equal(cor_parent_local.reshape(3), parent_hinge_local, decimal=10)
+    npt.assert_almost_equal(cor_child_local.reshape(3), child_hinge_local, decimal=10)
+
+
+def test_sara_perfect_marker_hinge_uses_static_technical_frames_after_rigidify():
+    """
+    With marker-based rigidification, SARA local axes are expressed in the
+    static technical marker frames. This guards against swapping parent and child
+    columns while documenting why the child local axis can look different from a
+    nominal model-local axis.
+    """
+    (
+        _rt_parent,
+        _rt_child,
+        functional_data,
+        static_data,
+        parent_names,
+        child_names,
+        parent_axis_local,
+        _child_axis_local,
+        _parent_hinge_local,
+        _child_hinge_local,
+        _hinge_origin_global,
+    ) = _perfect_hinge_rt_and_markers()
+
+    parent_functional_data = functional_data.get_partial_dict_data(parent_names)
+    child_functional_data = functional_data.get_partial_dict_data(child_names)
+    parent_static_data = static_data.get_partial_dict_data(parent_names)
+    child_static_data = static_data.get_partial_dict_data(child_names)
+    rt_parent = SegmentCoordinateSystemUtils.rigidify(
+        functional_data=parent_functional_data,
+        static_data=parent_static_data,
+    )
+    rt_child = SegmentCoordinateSystemUtils.rigidify(
+        functional_data=child_functional_data,
+        static_data=child_static_data,
+    )
+
+    (
+        _aor_global,
+        aor_parent_local,
+        aor_child_local,
+        _cor_global,
+        _cor_parent_local,
+        _cor_child_local,
+        _rt_parent_out,
+        _rt_child_out,
+    ) = Sara.perform_algorithm(
+        rt_parent,
+        rt_child,
+        recursive_outlier_removal=False,
+    )
+
+    assert abs(float(np.dot(aor_parent_local, parent_axis_local))) > 1.0 - 1e-10
+    assert abs(float(np.dot(aor_child_local, parent_axis_local))) > 1.0 - 1e-10
+    parent_global_directions = _global_direction(rt_parent, aor_parent_local)
+    child_global_directions = _global_direction(rt_child, aor_child_local)
+    global_alignment = np.sum(parent_global_directions * child_global_directions, axis=0)
+    npt.assert_array_less(1.0 - 1e-10, np.abs(global_alignment))
 
 
 def test_sara_perform_algorithm_with_origin_positions():
@@ -1176,13 +1505,20 @@ def test_sara_perform_algorithm_with_origin_positions():
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation("xyz", np.array([angle, 0, 0]), cor_expected)
 
     # Run Sara algorithm
-    aor_global, aor_parent, aor_child, cor_global, cor_parent, cor_child, rt_parent_out, rt_child_out = (
-        Sara.perform_algorithm(
-            rt_parent,
-            rt_child,
-            origin_positions_global=np.repeat(cor_expected[:, np.newaxis], nb_frames, axis=1),
-            recursive_outlier_removal=False,
-        )
+    (
+        aor_global,
+        aor_parent,
+        aor_child,
+        cor_global,
+        cor_parent,
+        cor_child,
+        rt_parent_out,
+        rt_child_out,
+    ) = Sara.perform_algorithm(
+        rt_parent,
+        rt_child,
+        origin_positions_global=np.repeat(cor_expected[:, np.newaxis], nb_frames, axis=1),
+        recursive_outlier_removal=False,
     )
 
     # Check that AoR is close to expected (X-axis)

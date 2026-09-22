@@ -10,7 +10,9 @@ from scipy import optimize
 from ..components.real.biomechanical_model_real import BiomechanicalModelReal
 from ..components.real.rigidbody.marker_weight import MarkerWeight
 from ..components.real.rigidbody.segment_real import SegmentReal
-from ..components.real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSystemReal
+from ..components.real.rigidbody.segment_coordinate_system_real import (
+    SegmentCoordinateSystemReal,
+)
 from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Translations
 from ..utils.enums import Rotations
@@ -95,7 +97,8 @@ class JointCoordinateModifier:
                 [
                     new_rt_in_global.inverse
                     @ point_from_local_to_global(
-                        self.original_model.segments[segment_name].mesh.positions[:, i], global_jcs
+                        self.original_model.segments[segment_name].mesh.positions[:, i],
+                        global_jcs,
                     )
                     for i in range(len(mesh))
                 ],
@@ -282,7 +285,12 @@ class RigidSegmentIdentification(ABC):
         pass
 
     def _check_segment_names(self):
-        illegal_names = ["_parent_offset", "_translation", "_rotation_transform", "_reset_axis"]
+        illegal_names = [
+            "_parent_offset",
+            "_translation",
+            "_rotation_transform",
+            "_reset_axis",
+        ]
         for name in illegal_names:
             if name in self.parent_name:
                 raise RuntimeError(
@@ -440,13 +448,15 @@ class RigidSegmentIdentification(ABC):
     def check_marker_labeling(self):
         # Parent
         marker_movement_parent = np.linalg.norm(
-            self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1], axis=0
+            self.parent_markers_global[:, :, 1:] - self.parent_markers_global[:, :, :-1],
+            axis=0,
         )
         problematic_indices_parent = np.where(np.nanmax(marker_movement_parent, axis=0) > 0.03)[0]
 
         # Child
         marker_movement_child = np.linalg.norm(
-            self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1], axis=0
+            self.child_markers_global[:, :, 1:] - self.child_markers_global[:, :, :-1],
+            axis=0,
         )
         problematic_indices_child = np.where(np.nanmax(marker_movement_child, axis=0) > 0.03)[0]
 
@@ -597,7 +607,10 @@ class RigidSegmentIdentification(ABC):
                     ),
                     x0=init,
                     method="SLSQP",
-                    constraints={"type": "eq", "fun": lambda rt: self.rt_constraints(optimal_rt=rt)},
+                    constraints={
+                        "type": "eq",
+                        "fun": lambda rt: self.rt_constraints(optimal_rt=rt),
+                    },
                     bounds=optimize.Bounds(lbx.flatten(), ubx.flatten()),
                 )
                 if sol.success:
@@ -630,13 +643,13 @@ class RigidSegmentIdentification(ABC):
         rt_parent_functional = self.scipy_optimal_rt(
             markers_in_global=self.parent_markers_global,
             static_markers_in_local=self.parent_static_markers_in_local,
-            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init,
+            rt_init=(RotoTransMatrixTimeSeries(nb_frames=0) if parent_rt_init is None else parent_rt_init),
             marker_names=self.parent_marker_names,
         )
         rt_child_functional = self.scipy_optimal_rt(
             markers_in_global=self.child_markers_global,
             static_markers_in_local=self.child_static_markers_in_local,
-            rt_init=RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init,
+            rt_init=(RotoTransMatrixTimeSeries(nb_frames=0) if child_rt_init is None else child_rt_init),
             marker_names=self.child_marker_names,
         )
 
@@ -679,7 +692,13 @@ class Score(RigidSegmentIdentification):
         rt_parent: RotoTransMatrixTimeSeries,
         rt_child: RotoTransMatrixTimeSeries,
         recursive_outlier_removal: bool = True,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, RotoTransMatrixTimeSeries, RotoTransMatrixTimeSeries]:
+    ) -> Tuple[
+        np.ndarray,
+        np.ndarray,
+        np.ndarray,
+        RotoTransMatrixTimeSeries,
+        RotoTransMatrixTimeSeries,
+    ]:
         """
         Estimate the center of rotation (CoR) using the SCoRE algorithm (Ehrig et al., 2006).
 
@@ -921,18 +940,23 @@ class Sara(RigidSegmentIdentification):
         cor_parent_local = cor[3:]
         cor_child_local = cor[:3]
 
-        # Compute transformed AoR positions in global frame
+        # Compute transformed AoR directions in global frame. The AoR is a vector, not a point, so its homogeneous
+        # coordinate must be 0 to avoid applying the segment translation.
         aor_parent_global = np.zeros((4, nb_frames))
         aor_child_global = np.zeros((4, nb_frames))
         cor_parent_global = np.zeros((4, nb_frames))
         cor_child_global = np.zeros((4, nb_frames))
         residuals = np.zeros((nb_frames,))
         for i_frame in range(nb_frames):
-            aor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((aor_parent_local, 1)))[:, 0]
-            aor_child_global[:, i_frame] = (rt_child[i_frame] @ np.hstack((aor_child_local, 1)))[:, 0]
+            aor_parent_global[:3, i_frame] = rt_parent[i_frame].rotation_matrix.rotation_matrix @ aor_parent_local
+            aor_child_global[:3, i_frame] = rt_child[i_frame].rotation_matrix.rotation_matrix @ aor_child_local
+            denominator = np.linalg.norm(aor_parent_global[:3, i_frame]) * np.linalg.norm(aor_child_global[:3, i_frame])
             residuals[i_frame] = np.arccos(
-                np.dot(aor_parent_global[:, i_frame], aor_child_global[:, i_frame])
-                / (np.linalg.norm(aor_parent_global[:, i_frame]) * np.linalg.norm(aor_child_global[:, i_frame]))
+                np.clip(
+                    np.dot(aor_parent_global[:3, i_frame], aor_child_global[:3, i_frame]) / denominator,
+                    -1.0,
+                    1.0,
+                )
             )
 
             cor_parent_global[:, i_frame] = (rt_parent[i_frame] @ np.hstack((cor_parent_local, 1)))[:, 0]
@@ -971,16 +995,24 @@ class Sara(RigidSegmentIdentification):
                 origins_parent[:, i_frame] = (rt_parent[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
                 origins_child[:, i_frame] = (rt_child[i_frame].inverse @ origins_global[:, i_frame])[:, 0]
             cor_parent_local = project_points_on_axes(
-                origins_parent.mean(axis=1)[:3], start=cor_parent_local, end=cor_parent_local + aor_parent_local
+                origins_parent.mean(axis=1)[:3],
+                start=cor_parent_local,
+                end=cor_parent_local + aor_parent_local,
             )
             cor_child_local = project_points_on_axes(
-                origins_child.mean(axis=1)[:3], start=cor_child_local, end=cor_child_local + aor_child_local
+                origins_child.mean(axis=1)[:3],
+                start=cor_child_local,
+                end=cor_child_local + aor_child_local,
             )
             cor_parent_global = project_points_on_axes(
-                origins_global, start=cor_parent_global, end=aor_parent_global + cor_parent_global
+                origins_global,
+                start=cor_parent_global,
+                end=aor_parent_global + cor_parent_global,
             )
             cor_child_global = project_points_on_axes(
-                origins_global, start=cor_child_global, end=aor_child_global + cor_child_global
+                origins_global,
+                start=cor_child_global,
+                end=aor_child_global + cor_child_global,
             )
 
         # Final output

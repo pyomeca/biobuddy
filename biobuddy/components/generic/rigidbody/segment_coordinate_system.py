@@ -12,6 +12,11 @@ from ...real.rigidbody.segment_coordinate_system_real import SegmentCoordinateSy
 from ....utils.aliases import Points, Point
 from ....utils.marker_data import MarkerData
 from ....utils.linear_algebra import RotoTransMatrixTimeSeries, RotoTransMatrix
+from ....model_modifiers.functional_frame_selection import (
+    FunctionalFrameSelectionOptions,
+    prepare_functional_rt_pair,
+    subset_points_by_frame,
+)
 from ....model_modifiers.joint_center_tool import Score, Sara
 
 
@@ -247,6 +252,11 @@ class SegmentCoordinateSystemUtils:
         parent_marker_names: tuple[str, ...] | list[str],
         child_marker_names: tuple[str, ...] | list[str],
         visualize: bool = False,
+        average_parent_child_static_projection: bool = False,
+        use_diverse_functional_frames: bool = False,
+        max_functional_frames: int = 200,
+        min_functional_rotation_degrees: float = 2.0,
+        min_functional_translation: float = 0.005,
     ) -> Callable:
         """
         Compute the SCoRE (Symmetrical Center of Rotation Estimation) between two sets of markers
@@ -259,6 +269,9 @@ class SegmentCoordinateSystemUtils:
             The names of the markers on the child segment to compute the score point from
         visualize
             If True, a 3D visualization of the score point computation will be shown. Plotly is required for this.
+        average_parent_child_static_projection
+            If True, the final static global point is the mean of the CoR projected through the parent and child
+            static technical frames. If False, the historical behavior is kept and only the parent projection is used.
 
         Returns
         -------
@@ -296,23 +309,46 @@ class SegmentCoordinateSystemUtils:
                     functional_data=child_functional_marker_data,
                     static_data=child_static_marker_data,
                 )
+                rt_parent_func, rt_child_func, _ = prepare_functional_rt_pair(
+                    rt_parent_func,
+                    rt_child_func,
+                    FunctionalFrameSelectionOptions(
+                        enabled=use_diverse_functional_frames,
+                        max_frames=max_functional_frames,
+                        min_rotation_degrees=min_functional_rotation_degrees,
+                        min_translation=min_functional_translation,
+                    ),
+                )
 
                 # Compute the SCoRE point
-                _, cor_parent_local, _, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
-                score_cache[static_markers_hash] = [rt_parent_static, rt_parent_func, rt_child_func, cor_parent_local]
+                _, cor_parent_local, cor_child_local, _, _ = Score.perform_algorithm(rt_parent_func, rt_child_func)
+                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
+                score_cache[static_markers_hash] = [
+                    rt_parent_static,
+                    rt_parent_func,
+                    rt_child_func,
+                    cor_parent_local,
+                    cor_child_local,
+                    rt_child_static,
+                ]
 
             rt_parent_static = score_cache[static_markers_hash][0]
             cor_in_local = np.hstack((score_cache[static_markers_hash][3], 1))
+            child_cor_in_local = np.hstack((score_cache[static_markers_hash][4], 1))
+            rt_child_static = score_cache[static_markers_hash][5]
 
             # Project the optimal point into the static parent segment
             frame_count_static = len(rt_parent_static)
             cor_static = np.zeros((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                cor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
+                parent_projection = (rt_parent_static[i_frame] @ cor_in_local).reshape(4)
+                if average_parent_child_static_projection:
+                    child_projection = (rt_child_static[i_frame] @ child_cor_in_local).reshape(4)
+                    cor_static[:, i_frame] = 0.5 * (parent_projection + child_projection)
+                else:
+                    cor_static[:, i_frame] = parent_projection
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
-                child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
-                rt_child_static = SegmentCoordinateSystemUtils.rigidify(child_static_marker_data)
                 fig = _visualize_score(static_markers, rt_parent_static, rt_child_static, cor_static)
                 fig.show()
 
@@ -360,6 +396,10 @@ class SegmentCoordinateSystemUtils:
         expected_rotation_axis_orientation: Axis | None = None,
         origin_positions_global: Callable | None = None,
         visualize: bool = False,
+        use_diverse_functional_frames: bool = False,
+        max_functional_frames: int = 200,
+        min_functional_rotation_degrees: float = 2.0,
+        min_functional_translation: float = 0.005,
     ) -> Axis:
         """
         Compute the SARA (Symmetrical Axis of Rotation Approach) between two sets of markers
@@ -413,6 +453,16 @@ class SegmentCoordinateSystemUtils:
                     functional_data=child_functional_marker_data,
                     static_data=child_static_marker_data,
                 )
+                rt_parent_func, rt_child_func, frame_selection_report = prepare_functional_rt_pair(
+                    rt_parent_func,
+                    rt_child_func,
+                    FunctionalFrameSelectionOptions(
+                        enabled=use_diverse_functional_frames,
+                        max_frames=max_functional_frames,
+                        min_rotation_degrees=min_functional_rotation_degrees,
+                        min_translation=min_functional_translation,
+                    ),
+                )
 
                 # Compute the SARA axis
                 if expected_rotation_axis_orientation is not None:
@@ -424,6 +474,10 @@ class SegmentCoordinateSystemUtils:
                 origin_positions_global_evaluated = (
                     origin_positions_global(functional_data, bio_model) if origin_positions_global is not None else None
                 )
+                if use_diverse_functional_frames and origin_positions_global_evaluated is not None:
+                    origin_positions_global_evaluated = subset_points_by_frame(
+                        origin_positions_global_evaluated, frame_selection_report.selected_indices
+                    )
                 _, aor_parent, _, _, cor_parent, _, _, _ = Sara.perform_algorithm(
                     rt_parent=rt_parent_func,
                     rt_child=rt_child_func,
@@ -439,16 +493,19 @@ class SegmentCoordinateSystemUtils:
                 ]
 
             rt_parent_static = sara_cache[static_markers_hash][0]
-            aor_parent = sara_cache[static_markers_hash][3]
-            cor_parent = sara_cache[static_markers_hash][4]
+            aor_parent = np.asarray(sara_cache[static_markers_hash][3], dtype=float).reshape(3)
+            cor_parent = np.asarray(sara_cache[static_markers_hash][4], dtype=float).reshape(3)
 
-            # Project the optimal point into the static parent segment
+            # Build the axis line in the static parent segment. The origin is a point (w=1), while the AoR is a
+            # direction (w=0); only the origin should receive the parent segment translation.
             frame_count_static = len(rt_parent_static)
             end_aor_static = np.ones((4, frame_count_static))
             start_aor_static = np.ones((4, frame_count_static))
             for i_frame in range(frame_count_static):
-                end_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ aor_parent).reshape(4)
-                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ cor_parent).reshape(4)
+                start_aor_static[:, i_frame] = (rt_parent_static[i_frame] @ np.hstack((cor_parent, 1.0))).reshape(4)
+                direction_global = rt_parent_static[i_frame].rotation_matrix.rotation_matrix @ aor_parent
+                end_aor_static[:3, i_frame] = start_aor_static[:3, i_frame] + direction_global
+                end_aor_static[3, i_frame] = 1.0
 
             if visualize and not is_in_cache:  # Do not show twice the same visualization
                 child_static_marker_data = static_markers.get_partial_dict_data(child_marker_names)
@@ -466,8 +523,10 @@ class SegmentCoordinateSystemUtils:
                 end_aor_func = np.zeros((4, frame_count_func))
                 start_aor_func = np.zeros((4, frame_count_func))
                 for i_frame in range(frame_count_func):
-                    end_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ aor_parent).reshape(4)
-                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ cor_parent).reshape(4)
+                    start_aor_func[:, i_frame] = (rt_parent_func[i_frame] @ np.hstack((cor_parent, 1.0))).reshape(4)
+                    direction_global = rt_parent_func[i_frame].rotation_matrix.rotation_matrix @ aor_parent
+                    end_aor_func[:3, i_frame] = start_aor_func[:3, i_frame] + direction_global
+                    end_aor_func[3, i_frame] = 1.0
                 fig = _visualize_score(functional_data, rt_parent_func, rt_child_func, [start_aor_func, end_aor_func])
                 fig.show(renderer="browser")
 

@@ -6,10 +6,42 @@ import os
 import pandas as pd
 import pickle
 
-from biobuddy.utils.marker_data import MarkerData, CsvData, C3dData, DictData, ReferenceFrame
+from biobuddy.utils.marker_data import (
+    MarkerData,
+    CsvData,
+    C3dData,
+    DictData,
+    ReferenceFrame,
+    c3d_point_unit_meter_divisor,
+    marker_data_with_stripped_prefixes,
+)
 
 
 # ------- CsvData ------- #
+def test_c3d_point_unit_meter_divisor_accepts_cm_units():
+    assert c3d_point_unit_meter_divisor("mm") == 1000.0
+    assert c3d_point_unit_meter_divisor("cm") == 100.0
+    assert c3d_point_unit_meter_divisor("m") == 1.0
+    assert c3d_point_unit_meter_divisor("CM") == 100.0
+
+
+def test_marker_data_with_stripped_prefixes_remaps_marker_names():
+    data = DictData(
+        {
+            "Skeleton_001_A": np.asarray([[1.0], [2.0], [3.0], [1.0]]),
+            "Skeleton_001_B": np.asarray([[4.0], [5.0], [6.0], [1.0]]),
+        }
+    )
+
+    remapped = marker_data_with_stripped_prefixes(data, ("Skeleton_001_",))
+
+    assert remapped.marker_names == ["A", "B"]
+    npt.assert_allclose(
+        remapped.get_position(("B", "A"))[:, :, 0],
+        np.asarray(((4.0, 1.0), (5.0, 2.0), (6.0, 3.0), (1.0, 1.0))),
+    )
+
+
 def test_csv_data_initialization():
     current_path_file = Path(__file__).parent
     csv_path = f"{current_path_file}/../examples/data/static.csv"
@@ -53,26 +85,32 @@ def test_csv_data_initialization():
         csv_data_frame = pd.read_csv(csv_path)
         # Test the first marker
         npt.assert_almost_equal(
-            np.array(csv_data_frame[" WRA"])[1:].astype(float), marker_data.all_marker_positions[0, 0, :] * 100
+            np.array(csv_data_frame[" WRA"])[1:].astype(float),
+            marker_data.all_marker_positions[0, 0, :] * 100,
         )  # Convert back to cm for comparison
         npt.assert_almost_equal(
-            np.array(csv_data_frame["Unnamed: 1"])[1:].astype(float), marker_data.all_marker_positions[1, 0, :] * 100
+            np.array(csv_data_frame["Unnamed: 1"])[1:].astype(float),
+            marker_data.all_marker_positions[1, 0, :] * 100,
         )  # Convert back to cm for comparison
         npt.assert_almost_equal(
-            np.array(csv_data_frame["Unnamed: 2"])[1:].astype(float), marker_data.all_marker_positions[2, 0, :] * 100
+            np.array(csv_data_frame["Unnamed: 2"])[1:].astype(float),
+            marker_data.all_marker_positions[2, 0, :] * 100,
         )  # Convert back to cm for comparison
         npt.assert_almost_equal(
             np.ones((marker_data.nb_frames,)), marker_data.all_marker_positions[3, 0, :]
         )  # Convert back to cm for comparison
         # Test the 9th marker
         npt.assert_almost_equal(
-            np.array(csv_data_frame["H_1"])[1:].astype(float), marker_data.all_marker_positions[0, 8, :] * 100
+            np.array(csv_data_frame["H_1"])[1:].astype(float),
+            marker_data.all_marker_positions[0, 8, :] * 100,
         )
         npt.assert_almost_equal(
-            np.array(csv_data_frame["Unnamed: 25"])[1:].astype(float), marker_data.all_marker_positions[1, 8, :] * 100
+            np.array(csv_data_frame["Unnamed: 25"])[1:].astype(float),
+            marker_data.all_marker_positions[1, 8, :] * 100,
         )
         npt.assert_almost_equal(
-            np.array(csv_data_frame["Unnamed: 26"])[1:].astype(float), marker_data.all_marker_positions[2, 8, :] * 100
+            np.array(csv_data_frame["Unnamed: 26"])[1:].astype(float),
+            marker_data.all_marker_positions[2, 8, :] * 100,
         )
         npt.assert_almost_equal(
             np.ones((marker_data.nb_frames,)), marker_data.all_marker_positions[3, 8, :]
@@ -251,7 +289,21 @@ def test_csv_data_get_position_with_frame_range():
     assert position.shape == (4, 1, 11)
     npt.assert_almost_equal(
         position[0, 0, :],
-        np.array([2.63646, 2.63647, 2.63646, 2.63648, 2.63648, 2.63645, 2.63647, 2.63647, 2.63649, 2.63651, 2.63648]),
+        np.array(
+            [
+                2.63646,
+                2.63647,
+                2.63646,
+                2.63648,
+                2.63648,
+                2.63645,
+                2.63647,
+                2.63647,
+                2.63649,
+                2.63651,
+                2.63648,
+            ]
+        ),
     )
 
 
@@ -523,6 +575,7 @@ def test_c3d_data_initialization():
     assert marker_data.last_frame == 137
     assert marker_data.nb_frames == 138
     assert marker_data.nb_markers == 49
+    assert marker_data.frame_rate == 100.0
     assert len(marker_data.marker_names) == marker_data.nb_markers
     marker_names = marker_data.marker_names
     expected_marker_names = [
@@ -2586,7 +2639,14 @@ def test_dict_data_marker_indices():
 def test_dict_data_get_position_single_marker():
     marker_dict = {
         "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
-        "marker2": np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0], [16.0, 17.0, 18.0], [1.0, 1.0, 1.0]]),
+        "marker2": np.array(
+            [
+                [10.0, 11.0, 12.0],
+                [13.0, 14.0, 15.0],
+                [16.0, 17.0, 18.0],
+                [1.0, 1.0, 1.0],
+            ]
+        ),
     }
 
     marker_data = DictData(marker_dict=marker_dict)
@@ -2621,7 +2681,10 @@ def test_dict_data_get_position_invalid_marker():
 
     marker_data = DictData(marker_dict=marker_dict)
 
-    with pytest.raises(ValueError, match=r"Marker name 'invalid_marker' not found in the marker dictionary."):
+    with pytest.raises(
+        ValueError,
+        match=r"Marker name 'invalid_marker' not found in the marker dictionary.",
+    ):
         marker_data.get_position(["invalid_marker"])
 
 
@@ -2642,7 +2705,14 @@ def test_dict_data_all_marker_positions():
 def test_dict_data_markers_center_position():
     marker_dict = {
         "marker1": np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0], [1.0, 1.0, 1.0]]),
-        "marker2": np.array([[10.0, 11.0, 12.0], [13.0, 14.0, 15.0], [16.0, 17.0, 18.0], [1.0, 1.0, 1.0]]),
+        "marker2": np.array(
+            [
+                [10.0, 11.0, 12.0],
+                [13.0, 14.0, 15.0],
+                [16.0, 17.0, 18.0],
+                [1.0, 1.0, 1.0],
+            ]
+        ),
     }
 
     marker_data = DictData(marker_dict=marker_dict)

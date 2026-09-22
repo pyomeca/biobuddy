@@ -8,7 +8,11 @@ from pathlib import Path
 import numpy as np
 from scipy import optimize
 
-from ...utils.linear_algebra import RotoTransMatrix, RotoTransMatrixTimeSeries, point_from_local_to_global
+from ...utils.linear_algebra import (
+    RotoTransMatrix,
+    RotoTransMatrixTimeSeries,
+    point_from_local_to_global,
+)
 from ...utils.enums import ViewAs, ViewerType
 
 if TYPE_CHECKING:
@@ -351,15 +355,16 @@ class ModelDynamics:
                 marker_indices += [marker_names.index(m)]
                 marker_names_reordered += [m]
         markers_real = marker_positions[:, marker_indices, :]
+        nb_reordered_markers = len(marker_names_reordered)
 
-        marker_weights_reordered = np.ones((nb_markers,))
+        marker_weights_reordered = np.ones((nb_reordered_markers,))
         if marker_weights is not None and not marker_weights.is_empty:
             for marker_name in marker_names_reordered:
                 if marker_name not in marker_weights.keys():
                     raise ValueError(
                         f"Marker {marker_name} not found in marker_weights. Please provide a weight to each markers or None of them."
                     )
-            for i_marker in range(nb_markers):
+            for i_marker in range(nb_reordered_markers):
                 marker_weights_reordered[i_marker] = marker_weights[marker_names_reordered[i_marker]].weight
 
         init = np.ones((nb_q,)) * 0.0001
@@ -391,7 +396,7 @@ class ModelDynamics:
         optimal_q = np.zeros((self.nb_q, nb_frames))
         residuals = None
         if compute_residual_distance:
-            residuals = np.zeros((nb_markers, nb_frames))
+            residuals = np.zeros((nb_reordered_markers, nb_frames))
         for i_frame in range(nb_frames):
 
             if i_frame % 100 == 0 and i_frame != 0:
@@ -457,7 +462,11 @@ class ModelDynamics:
                 viz = pyorerun.PhaseRerun(t)
 
                 # Add the experimental markers from the static trial
-                pyomarkers = pyorerun.PyoMarkers(data=markers_real, channels=marker_names_reordered, show_labels=False)
+                pyomarkers = pyorerun.PyoMarkers(
+                    data=markers_real,
+                    channels=marker_names_reordered,
+                    show_labels=False,
+                )
                 viz_scaled_model = pyorerun.BiorbdModel(temporary_model_path)
                 viz_scaled_model.options.transparent_mesh = False
                 viz_scaled_model.options.show_gravity = True
@@ -527,7 +536,8 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for marker in segment.markers:
                     marker_in_global = point_from_local_to_global(
-                        point_in_local=marker.position, jcs_in_global=jcs_in_global[segment.name][i_frame]
+                        point_in_local=marker.position,
+                        jcs_in_global=jcs_in_global[segment.name][i_frame],
                     )
                     marker_positions[:, i_marker, i_frame] = marker_in_global.reshape(
                         -1,
@@ -555,7 +565,8 @@ class ModelDynamics:
             for i_segment, segment in enumerate(self.segments):
                 for contact in segment.contacts:
                     contact_in_global = point_from_local_to_global(
-                        point_in_local=contact.position, jcs_in_global=jcs_in_global[segment.name][i_frame]
+                        point_in_local=contact.position,
+                        jcs_in_global=jcs_in_global[segment.name][i_frame],
                     )
                     contact_positions[:, i_contact, i_frame] = contact_in_global.reshape(
                         -1,
@@ -665,7 +676,8 @@ class ModelDynamics:
                                 -1,
                             )
                         via_points_position = np.concatenate(
-                            (via_points_position, this_via_point[:, np.newaxis, :]), axis=1
+                            (via_points_position, this_via_point[:, np.newaxis, :]),
+                            axis=1,
                         )
 
         return via_points_position
@@ -737,7 +749,12 @@ class ModelDynamics:
         elif len(q.shape) > 2:
             raise RuntimeError("q must be of shape (nb_q, ) or (nb_q, nb_frames).")
 
-        muscle_origin_parent_name, muscle_insertion_parent_name, muscle_origin, muscle_insertion = (
+        (
+            muscle_origin_parent_name,
+            muscle_insertion_parent_name,
+            muscle_origin,
+            muscle_insertion,
+        ) = (
             None,
             None,
             None,

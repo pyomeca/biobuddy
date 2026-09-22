@@ -178,6 +178,7 @@ sandbox/
 
 .DS_Store
 examples/*.bioMod
+biobuddy/temporary_models/*.bioMod
 
 *.vtp
 
