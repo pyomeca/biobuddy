@@ -1,3 +1,4 @@
+import os
 from typing import TYPE_CHECKING
 
 from ..abstract_model_writer import AbstractModelWriter
@@ -12,6 +13,10 @@ class BiorbdModelWriter(AbstractModelWriter):
         """
         Writes the BiomechanicalModelReal into a text file of formal .bioMod
         """
+
+        # Biorbd assumes that the base path for the mesh files is the model parent folder,
+        # so we need to make the paths relative to the model parent folder.
+        parent_folder = os.path.dirname(self.filepath)
 
         # Collect the text to write
         out_string = "version 4\n\n"
@@ -30,7 +35,7 @@ class BiorbdModelWriter(AbstractModelWriter):
                 raise RuntimeError(
                     f"Something went wrong, the segment coordinate system of segment {segment.name} is expressed in the global."
                 )
-            out_string += segment.to_biomod(with_mesh=self.with_mesh)
+            out_string += segment.to_biomod(with_mesh=self.with_mesh, model_parent_folder=parent_folder)
             out_string += "\n\n\n"  # Give some space between segments
 
         if model.muscle_groups:
