@@ -20,10 +20,10 @@ from pathlib import Path
 import ezc3d
 import numpy as np
 
-from biobuddy.gui.full_body_bela_template import (
-    BELA_SEGMENTS,
-    full_body_bela_functional_trials,
-    full_body_bela_template,
+from biobuddy.gui.full_body_model202_template import (
+    MODEL202_SEGMENTS,
+    full_body_model202_functional_trials,
+    full_body_model202_template,
 )
 from biobuddy.gui.model_builder import required_static_markers
 
@@ -39,13 +39,13 @@ def full_body_model202_preparation_jobs() -> tuple[C3dPreparationJob, ...]:
     """
     Return every source/output pair needed by the full-body Model202 example.
     """
-    template = full_body_bela_template(use_functional=True)
+    template = full_body_model202_template(use_functional=True)
     jobs = [
         C3dPreparationJob("Anato.c3d", "Test_anato.c3d", required_static_markers(template)),
         C3dPreparationJob("BeLa_1.c3d", "Test_main.c3d", required_static_markers(template)),
     ]
-    trial_by_segment_name = {trial.name: trial for trial in full_body_bela_functional_trials()}
-    for segment_index, segment in enumerate(BELA_SEGMENTS, start=1):
+    trial_by_segment_name = {trial.name: trial for trial in full_body_model202_functional_trials()}
+    for segment_index, segment in enumerate(MODEL202_SEGMENTS, start=1):
         if segment.parent_name in {"", "base", "root"}:
             continue
         trial_name = (
