@@ -13,7 +13,7 @@ from .model_builder import (
     ModelTemplate,
     SegmentSpec,
 )
-from ..characteristics import DeLevaTable, SegmentName, Sex
+from ..characteristics import DeLevaTable, DeLevaSegmentName, Sex
 from ..components.generic.rigidbody.axis import Axis
 from ..utils.enums import Rotations, Translations
 
@@ -74,7 +74,7 @@ def lower_limb_template(use_functional: bool = True, include_de_leva: bool = Tru
                 parent_name="Pelvis",
                 translations=Translations.XYZ,
                 rotations=Rotations.XYZ,
-                inertia_name=SegmentName.TRUNK,
+                inertia_name=DeLevaSegmentName.TRUNK,
                 frame=LocalFrameSpec(
                     origin=_trunk_center_spec(use_functional),
                     first_axis=AxisSpec.from_markers(
@@ -329,7 +329,7 @@ def _thigh_segment(side: str, hip_fallback: str, knee_axis_start: tuple[str, str
         name=thigh,
         parent_name="Pelvis",
         rotations=Rotations.XZY,
-        inertia_name=SegmentName.THIGH,
+        inertia_name=DeLevaSegmentName.THIGH,
         frame=LocalFrameSpec(
             origin=origin,
             first_axis=AxisSpec(Axis.Name.Z, knee_projection, origin),
@@ -365,7 +365,7 @@ def _shank_segment(
         name=f"{side}Shank",
         parent_name=f"{side}Thigh",
         rotations=Rotations.X,
-        inertia_name=SegmentName.SHANK,
+        inertia_name=DeLevaSegmentName.SHANK,
         frame=LocalFrameSpec(
             origin=knee_projection,
             first_axis=AxisSpec(Axis.Name.Z, ankle_center, knee_projection),
@@ -395,7 +395,7 @@ def _foot_segment(
         name=f"{side}Foot",
         parent_name=f"{side}Shank",
         rotations=Rotations.XZ,
-        inertia_name=SegmentName.FOOT,
+        inertia_name=DeLevaSegmentName.FOOT,
         frame=LocalFrameSpec(
             origin=origin,
             first_axis=AxisSpec.from_markers(Axis.Name.Y, f"{side}HEE", (f"{side}TOE", f"{side}TOE5")),
@@ -474,13 +474,13 @@ def lower_limb_de_leva_inertia_parameters(
         foot_length=float(foot_length),
     )
     return {
-        "Trunk": de_leva[SegmentName.TRUNK],
-        "LThigh": de_leva[SegmentName.THIGH],
-        "LShank": de_leva[SegmentName.SHANK],
-        "LFoot": de_leva[SegmentName.FOOT],
-        "RThigh": de_leva[SegmentName.THIGH],
-        "RShank": de_leva[SegmentName.SHANK],
-        "RFoot": de_leva[SegmentName.FOOT],
+        "Trunk": de_leva[DeLevaSegmentName.TRUNK],
+        "LThigh": de_leva[DeLevaSegmentName.THIGH],
+        "LShank": de_leva[DeLevaSegmentName.SHANK],
+        "LFoot": de_leva[DeLevaSegmentName.FOOT],
+        "RThigh": de_leva[DeLevaSegmentName.THIGH],
+        "RShank": de_leva[DeLevaSegmentName.SHANK],
+        "RFoot": de_leva[DeLevaSegmentName.FOOT],
     }
 
 
