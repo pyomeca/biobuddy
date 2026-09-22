@@ -513,7 +513,13 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         model.validate_model()
         return model
 
-    def from_fbx(self, filepath: str) -> "BiomechanicalModelReal":
+    def from_fbx(
+        self,
+        filepath: str,
+        split_meshes_per_segment: bool = False,
+        mesh_output_dir: str = None,
+        overwrite_meshes: bool = False,
+    ) -> "BiomechanicalModelReal":
         """
         Create a biomechanical model from an FBX file.
 
@@ -521,11 +527,26 @@ class BiomechanicalModelReal(ModelDynamics, ModelUtils):
         ----------
         filepath
             The path to the FBX file to parse.
+        split_meshes_per_segment
+            Whether the skinned FBX visual mesh should be split into one mesh file
+            per segment and attached to the resulting model.
+        mesh_output_dir
+            The directory where the generated per-segment mesh files should be
+            written. If ``None`` and ``split_meshes_per_segment`` is ``True``, a
+            ``<fbx_stem>_meshes`` directory is created next to the FBX file.
+        overwrite_meshes
+            Whether existing generated mesh files should be replaced. By default,
+            existing files are reused.
         """
         from ...model_parser.fbx import FbxModelParser
 
         self.filepath = filepath
-        model = FbxModelParser(filepath=filepath).to_real()
+        model = FbxModelParser(
+            filepath=filepath,
+            split_meshes_per_segment=split_meshes_per_segment,
+            mesh_output_dir=mesh_output_dir,
+            overwrite_meshes=overwrite_meshes,
+        ).to_real()
         model.validate_model()
         return model
 

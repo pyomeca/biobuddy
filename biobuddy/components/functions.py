@@ -114,10 +114,13 @@ class SimmSpline(InterpolationFunction):
 
         # Handle the case with only 2 points (linear interpolation)
         if self.nb_nodes == 2:
-            t = self.safe_max(self.x_points[1] - self.x_points[0])
-            self.b[0] = self.b[1] = (self.y_points[1] - self.y_points[0]) / t
-            self.c[0] = self.c[1] = 0.0
-            self.d[0] = self.d[1] = 0.0
+            t = (self.safe_max(self.x_points[1] - self.x_points[0])).reshape(-1)[0]
+            self.b[0] = ((self.y_points[1] - self.y_points[0]) / t).reshape(-1)[0]
+            self.b[1] = self.b[0]
+            self.c[0] = 0.0
+            self.c[1] = 0.0
+            self.d[0] = 0.0
+            self.d[1] = 0.0
             return
 
         nm1 = self.nb_nodes - 1
@@ -125,13 +128,13 @@ class SimmSpline(InterpolationFunction):
 
         # Set up tridiagonal system:
         # b = diagonal, d = offdiagonal, c = right-hand side
-        self.d[0] = self.safe_max(self.x_points[1] - self.x_points[0])
-        self.c[1] = (self.y_points[1] - self.y_points[0]) / self.d[0]
+        self.d[0] = (self.safe_max(self.x_points[1] - self.x_points[0])).reshape(-1)[0]
+        self.c[1] = ((self.y_points[1] - self.y_points[0]) / self.d[0]).reshape(-1)[0]
 
         for i in range(1, nm1):
-            self.d[i] = self.safe_max(self.x_points[i + 1] - self.x_points[i])
+            self.d[i] = (self.safe_max(self.x_points[i + 1] - self.x_points[i])).reshape(-1)[0]
             self.b[i] = 2.0 * (self.d[i - 1] + self.d[i])
-            self.c[i + 1] = (self.y_points[i + 1] - self.y_points[i]) / self.d[i]
+            self.c[i + 1] = ((self.y_points[i + 1] - self.y_points[i]) / self.d[i]).reshape(-1)[0]
             self.c[i] = self.c[i + 1] - self.c[i]
 
         # End conditions. Third derivatives at x[0] and x[self.nb_nodes-1]
@@ -142,12 +145,12 @@ class SimmSpline(InterpolationFunction):
         self.c[nm1] = 0.0
 
         if self.nb_nodes > 3:
-            d31 = self.safe_max(self.x_points[3] - self.x_points[1])
-            d20 = self.safe_max(self.x_points[2] - self.x_points[0])
-            d1 = self.safe_max(self.x_points[nm1] - self.x_points[self.nb_nodes - 3])
-            d2 = self.safe_max(self.x_points[nm2] - self.x_points[self.nb_nodes - 4])
-            d30 = self.safe_max(self.x_points[3] - self.x_points[0])
-            d3 = self.safe_max(self.x_points[nm1] - self.x_points[self.nb_nodes - 4])
+            d31 = (self.safe_max(self.x_points[3] - self.x_points[1])).reshape(-1)[0]
+            d20 = (self.safe_max(self.x_points[2] - self.x_points[0])).reshape(-1)[0]
+            d1 = (self.safe_max(self.x_points[nm1] - self.x_points[self.nb_nodes - 3])).reshape(-1)[0]
+            d2 = (self.safe_max(self.x_points[nm2] - self.x_points[self.nb_nodes - 4])).reshape(-1)[0]
+            d30 = (self.safe_max(self.x_points[3] - self.x_points[0])).reshape(-1)[0]
+            d3 = (self.safe_max(self.x_points[nm1] - self.x_points[self.nb_nodes - 4])).reshape(-1)[0]
 
             self.c[0] = self.c[2] / d31 - self.c[1] / d20
             self.c[nm1] = self.c[nm2] / d1 - self.c[self.nb_nodes - 3] / d2
@@ -167,14 +170,14 @@ class SimmSpline(InterpolationFunction):
             self.c[i] = (self.c[i] - self.d[i] * self.c[i + 1]) / self.b[i]
 
         # Compute polynomial coefficients
-        self.b[nm1] = (self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] + self.d[nm2] * (
-            self.c[nm2] + 2.0 * self.c[nm1]
-        )
+        self.b[nm1] = (
+            (self.y_points[nm1] - self.y_points[nm2]) / self.d[nm2] + self.d[nm2] * (self.c[nm2] + 2.0 * self.c[nm1])
+        ).reshape(-1)[0]
 
         for i in range(nm1):
-            self.b[i] = (self.y_points[i + 1] - self.y_points[i]) / self.d[i] - self.d[i] * (
-                self.c[i + 1] + 2.0 * self.c[i]
-            )
+            self.b[i] = (
+                (self.y_points[i + 1] - self.y_points[i]) / self.d[i] - self.d[i] * (self.c[i + 1] + 2.0 * self.c[i])
+            ).reshape(-1)[0]
             self.d[i] = (self.c[i + 1] - self.c[i]) / self.d[i]
             self.c[i] *= 3.0
 

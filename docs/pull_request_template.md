@@ -10,7 +10,7 @@
 
 1. [ ] Does your submission pass the tests (if not please explain why this is intended)?
 2. [ ] Did you write a proper documentation (docstrings and ReadMe)
-3. [ ] Have you linted your code locally prior to submission (using the command: `black . -l120"`)?
+3. [ ] Have you linted your code locally prior to submission (using the command: `black . -l120 --exclude "external/*" --exclude "opensim/*"`)?
 
 ### Changes to Core Features:
 

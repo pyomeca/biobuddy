@@ -1254,19 +1254,17 @@ def test_get_svd():
     """Test the get_svd function"""
     np.random.seed(42)
 
-    # Create simple test RT matrices
+    # Create test RT matrices rotating about all 3 axes
     nb_frames = 10
     rt_parent = RotoTransMatrixTimeSeries(nb_frames)
     rt_child = RotoTransMatrixTimeSeries(nb_frames)
 
     for i in range(nb_frames):
-        # Parent rotates slightly around X
         rt_parent[i] = RotoTransMatrix.from_euler_angles_and_translation(
-            "xyz", np.array([i * 0.1, 0, 0]), np.array([0, 0, 0])
+            "xyz", np.array([0.31 * i + 0.05, 0.17 * i + 0.11, 0.23 * i + 0.02]), np.array([0, 0, 0])
         )
-        # Child rotates and translates
         rt_child[i] = RotoTransMatrix.from_euler_angles_and_translation(
-            "xyz", np.array([i * 0.15, 0, 0]), np.array([0.1, 0.2, 0.3])
+            "xyz", np.array([0.19 * i + 0.13, 0.29 * i + 0.07, 0.11 * i + 0.17]), np.array([0.1, 0.2, 0.3])
         )
 
     # Test get_svd
@@ -1281,19 +1279,23 @@ def test_get_svd():
     # U is too sensitive to be tested :(
     npt.assert_almost_equal(
         S,
-        np.array(
-            [
-                4.47213595e00,
-                4.46062656e00,
-                4.46062656e00,
-                3.20641084e-01,
-                3.20641084e-01,
-                5.40977915e-16,
-            ]
-        ),
+        np.array([4.42686475, 4.15458227, 4.11020407, 1.76244788, 1.65512723, 0.6347192]),
         decimal=3,
     )
-    npt.assert_almost_equal(V[0, :], np.array([-0.70710678, 0.0, 0.0, -0.0, 0.0, 0.70710678]), decimal=3)
+
+    # Fix the sign of each column of V, otherwise this would flip depending on the LAPACK backend even though the
+    # underlying subspace is identical.
+    V_sign = V.copy()
+    for i_col in range(V_sign.shape[1]):
+        i_max = np.argmax(np.abs(V_sign[:, i_col]))
+        if V_sign[i_max, i_col] < 0:
+            V_sign[:, i_col] *= -1
+    npt.assert_almost_equal(
+        V_sign[0, :],
+        np.array([0.44883262, 0.32753639, -0.43734333, 0.43734333, -0.32753639, -0.44883262]),
+        decimal=3,
+    )
+
     npt.assert_almost_equal(b[:6], np.array([-0.1, -0.2, -0.3, -0.1, -0.2, -0.3]), decimal=3)
 
 

@@ -47,6 +47,18 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Free disk space
+        run: |
+          # Building OpenSim from source (Simbody + the full OpenSim/Moco
+          # tree) plus conda/biorbd needs more disk than the ~14GB free by
+          # default on GitHub runners. Remove large preinstalled toolchains
+          # we don't use to make room, otherwise the build (or even the
+          # earlier `git clone` of opensim-core) can silently run out of
+          # space and fail with an unrelated-looking error.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          df -h /
+
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -54,25 +66,60 @@ jobs:
 
       - name: Set up Python
         run: |
-          conda install -cconda-forge python=3.11.11 pip 
+          conda install -cconda-forge python=3.11.11 pip
+
+      - name: Install system dependencies for building OpenSim
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build \
+            libblas-dev liblapack-dev \
+            freeglut3-dev libxi-dev libxmu-dev \
+            pkg-config
+          pip install swig
 
       - name: Install dependencies
         run: | 
           pip install . && pip uninstall -y biobuddy
           pip install scipy==1.17.0 numpy==2.4.1 lxml ezc3d matplotlib plotly
-          conda install biorbd=1.11.2=py311h9439bbc_1 graphviz -cconda-forge
+          conda install biorbd graphviz -cconda-forge
 
       - name: Install test dependencies
         run: |
           pip install pytest pytest-cov codecov
           conda install -c conda-forge deepdiff pinocchio pandas
-          conda install -c opensim-org opensim=4.5.1
+
+      - name: Build and install OpenSim from source
+        run: |
+          # Cap parallel compile jobs to the runner's core count: the script
+          # defaults to 24 jobs, which OOM-kills the compiler on standard
+          # (4-core) GitHub runners partway through the build.
+          export OPENSIM_BUILD_JOBS=$(nproc)
+          bash .github/workflows/install_opensim.sh "$CONDA_PREFIX"
+
+          OPENSIM_INSTALL="$(pwd)/opensim/opensim_core_install"
+          OPENSIM_PY_INIT=$(find "$OPENSIM_INSTALL" -path "*/opensim/__init__.py" | head -n1)
+          OPENSIM_PY_PKG_PARENT=$(dirname "$(dirname "$OPENSIM_PY_INIT")")
+          LIB_DIRS=$(find "$OPENSIM_INSTALL" -name "*.so*" -exec dirname {} \; | sort -u | paste -sd:)
+
+          echo "PYTHONPATH=$OPENSIM_PY_PKG_PARENT:$PYTHONPATH" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$LIB_DIRS:$LD_LIBRARY_PATH" >> "$GITHUB_ENV"
 
       - name: List conda packages
         run: conda list
 
       - name: Run tests with code coverage
         run: pytest -v --color=yes --cov-report=xml --cov=biobuddy tests
+
+      - name: Send Codecov report
+        id: archive
+        uses: codecov/codecov-action@v5
+        with:
+          path: .coverage
+          if-no-files-found: error
+          fail_ci_if_error: true
+          verbose: true
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Generate XML report
         run: |

@@ -22,8 +22,8 @@ class PathPointMovement:
     def evaluate(self, angles: np.ndarray) -> np.ndarray:
         """Evaluate the condition based on the current joint angles."""
         position = np.zeros((angles.shape[0],))
-        for i_angle, angle in enumerate(angles):
-            position[i_angle] = self.locations[i_angle].evaluate(angle)
+        for i_angle in range(angles.shape[0]):
+            position[i_angle] = self.locations[i_angle].evaluate(angles.reshape(-1)[i_angle]).reshape(-1)[0]
         return position
 
 

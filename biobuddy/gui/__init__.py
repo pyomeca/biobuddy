@@ -1,8 +1,13 @@
 from .model_editor import launch_model_editor
 from .segment_editor import (
+    DE_LEVA_MODEL_NAME,
+    YEADON_MODEL_NAME,
     SegmentEditorData,
     apply_segment_editor_data,
+    available_inertial_models,
+    build_inertial_parameters_from_model,
     get_segment_editor_data,
+    inertial_model_segment_names,
     load_model,
     validate_parent_name,
 )
@@ -187,11 +192,23 @@ from .full_body_model202_template import (
     subject_inertia_by_segment,
     translations_from_matlab_dof,
 )
+from .yeadon_measurement_editor import (
+    YeadonIllustrationPrimitive,
+    launch_yeadon_measurement_editor,
+    parse_yeadon_measurement_values,
+    save_yeadon_model,
+    yeadon_measurement_illustration,
+)
 
 __all__ = [
     SegmentEditorData.__name__,
+    "DE_LEVA_MODEL_NAME",
+    "YEADON_MODEL_NAME",
     apply_segment_editor_data.__name__,
+    available_inertial_models.__name__,
+    build_inertial_parameters_from_model.__name__,
     get_segment_editor_data.__name__,
+    inertial_model_segment_names.__name__,
     load_model.__name__,
     validate_parent_name.__name__,
     launch_model_editor.__name__,
@@ -360,4 +377,9 @@ __all__ = [
     signed_marker_groups.__name__,
     subject_inertia_by_segment.__name__,
     translations_from_matlab_dof.__name__,
+    YeadonIllustrationPrimitive.__name__,
+    launch_yeadon_measurement_editor.__name__,
+    parse_yeadon_measurement_values.__name__,
+    save_yeadon_model.__name__,
+    yeadon_measurement_illustration.__name__,
 ]

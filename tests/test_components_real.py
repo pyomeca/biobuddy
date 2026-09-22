@@ -2135,3 +2135,76 @@ def test_remove_muscles_without_segment():
     muscle_names = [m.name for mg in model.muscle_groups for m in mg.muscles]
     assert "m_keep" in muscle_names
     assert "m_drop" not in muscle_names
+
+
+def test_mesh_file_real_to_biomod_mesh_path():
+    mesh_file = MeshFileReal(mesh_file_name="test.obj", mesh_file_directory="mesh_file/dir")
+
+    # Without a mesh_path override, the stored directory is used
+    assert "\tmeshfile\tmesh_file/dir/test.obj\n" in mesh_file.to_biomod()
+
+    # The mesh_path override takes precedence over the stored directory
+    biomod_str = mesh_file.to_biomod(mesh_path="other/dir")
+    assert "\tmeshfile\tother/dir/test.obj\n" in biomod_str
+    assert "mesh_file/dir" not in biomod_str
+
+    # A mesh_path alone is enough when no directory is stored
+    mesh_file = MeshFileReal(mesh_file_name="test.obj", mesh_file_directory=None)
+    assert mesh_file.to_biomod() == ""
+    assert "\tmeshfile\tother/dir/test.obj\n" in mesh_file.to_biomod(mesh_path="other/dir")
+
+
+def test_segment_real_to_biomod_mesh_path(tmp_path):
+    model_folder = tmp_path / "model"
+    absolute_mesh_folder = tmp_path / "meshes"
+
+    # An absolute mesh directory is written relative to the model parent folder
+    segment = SegmentReal(
+        name="segment",
+        mesh_file=MeshFileReal(mesh_file_name="test.ply", mesh_file_directory=str(absolute_mesh_folder)),
+    )
+    biomod_str = segment.to_biomod(with_mesh=True, model_parent_folder=str(model_folder))
+    assert "\tmeshfile\t../meshes/test.ply\n" in biomod_str
+    assert str(tmp_path) not in biomod_str
+
+    # A relative mesh directory is kept as is
+    segment = SegmentReal(
+        name="segment",
+        mesh_file=MeshFileReal(mesh_file_name="test.ply", mesh_file_directory="relative/meshes"),
+    )
+    biomod_str = segment.to_biomod(with_mesh=True, model_parent_folder=str(model_folder))
+    assert "\tmeshfile\trelative/meshes/test.ply\n" in biomod_str
+
+    # A mesh file without a directory does not write any meshfile line (and does not crash)
+    segment = SegmentReal(name="segment", mesh_file=MeshFileReal(mesh_file_name="test.ply", mesh_file_directory=None))
+    biomod_str = segment.to_biomod(with_mesh=True, model_parent_folder=str(model_folder))
+    assert "meshfile" not in biomod_str
+
+    # Meshes are not written when with_mesh is False
+    segment = SegmentReal(
+        name="segment",
+        mesh_file=MeshFileReal(mesh_file_name="test.ply", mesh_file_directory=str(absolute_mesh_folder)),
+    )
+    assert "meshfile" not in segment.to_biomod(with_mesh=False, model_parent_folder=str(model_folder))
+
+
+def test_biomod_writer_writes_mesh_paths_relative_to_the_model_folder(tmp_path):
+    model_folder = tmp_path / "model"
+    model_folder.mkdir()
+    mesh_folder = tmp_path / "meshes"
+    mesh_folder.mkdir()
+
+    model = BiomechanicalModelReal()
+    model.add_segment(
+        SegmentReal(
+            name="segment",
+            segment_coordinate_system=SegmentCoordinateSystemReal(),
+            mesh_file=MeshFileReal(mesh_file_name="test.ply", mesh_file_directory=str(mesh_folder)),
+        )
+    )
+    biomod_path = model_folder / "model.bioMod"
+    model.to_biomod(str(biomod_path), with_mesh=True)
+
+    biomod_content = biomod_path.read_text().replace("\\", "/")
+    assert "meshfile\t../meshes/test.ply" in biomod_content
+    assert str(tmp_path).replace("\\", "/") not in biomod_content

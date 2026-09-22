@@ -28,6 +28,7 @@ dependencies = [
     "pandas",
     "graphviz",
     "matplotlib",
+    "yeadon",
 ]
 
 [project.optional-dependencies]
